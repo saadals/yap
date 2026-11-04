@@ -1,0 +1,12 @@
+{
+  "role": "business",
+  "steps": [
+    { "go": "/business/requests/r-101", "after": 3500 },
+    { "click": "Hire Noura", "after": 1500 },
+    { "click": "Hire Noura", "after": 2000 },
+    { "click": "Open commission", "after": 3000 },
+    { "text": "In production" },
+    { "wait": 29000 },
+    { "text": "Review version 1 from Noura" }
+  ]
+}

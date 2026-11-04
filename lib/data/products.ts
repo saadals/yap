@@ -1,0 +1,490 @@
+import type { Product } from "@/lib/types";
+import { at } from "@/lib/clock";
+
+export const products: Product[] = [
+  {
+    id: "p-daftar-invoices",
+    businessId: "b-daftar",
+    name: "Daftar Invoices",
+    oneLiner: "Make and send an invoice over WhatsApp in about 10 seconds.",
+    description:
+      "Daftar Invoices replaces the notebook behind the counter. Type an amount or pick items, tap send, and your customer gets a clean invoice on WhatsApp with a pay link. Daftar keeps track of who has paid and sends polite reminders on its own, so you never have to ask twice.",
+    website: "daftar.app/invoices",
+    niche: "fintech",
+    surfaces: ["ios", "android", "web"],
+    audience:
+      "Small shop owners and home businesses in Saudi Arabia and the Gulf, 25–45: grocery and perfume shops, tailors, phone repair, home bakers. Live on WhatsApp, not 'finance people'. Many still keep a paper notebook of who owes what.",
+    problem:
+      "They lose money and patience chasing customers who 'will pay tomorrow'. Asking for money feels awkward, the notebook gets messy, and at the end of the month they honestly don't know who still owes them.",
+    features: [
+      "Create an invoice in about 10 seconds and send it straight to WhatsApp",
+      "Payment reminders that send themselves, politely, on a schedule you pick",
+      "One screen that shows who owes you and how much",
+      "Pay link so customers can pay by card on the spot",
+      "Arabic and English invoices, VAT-ready",
+    ],
+    tone: ["Casual", "Warm", "Straight-talking"],
+    dos: [
+      "Film at a real counter or kitchen, with a real-looking customer chat",
+      "Show the WhatsApp send moment early and long enough to read",
+      "Talk about getting paid and skipping the awkward conversation",
+    ],
+    donts: [
+      "Don't say 'accounting', 'bookkeeping' or 'ERP'",
+      "Don't speed up the screen recording",
+      "Don't show or mention other apps",
+    ],
+    cta: "Download Daftar and send your first invoice free",
+    brandColor: "#0F7A5C",
+    assets: [
+      { id: "as-di-1", name: "daftar-logo-pack.zip", kind: "logo", size: "2.4 MB" },
+      { id: "as-di-2", name: "invoices-app-screens-ar-en.zip", kind: "screens", size: "18.6 MB" },
+      {
+        id: "as-di-3",
+        name: "Demo account login (shop: Al-Noor Perfumes)",
+        kind: "demo-account",
+        size: "Login details",
+      },
+      { id: "as-di-4", name: "daftar-brand-guide-2026.pdf", kind: "brand-guide", size: "6.1 MB" },
+    ],
+    learnings: [
+      {
+        id: "ln-1",
+        text: "Show the WhatsApp send moment within the first 5 seconds — it's the hook that converts.",
+        sourceCommissionId: "c-198",
+        creatorId: "cr-layla",
+        createdAt: at(-44, "11:30"),
+      },
+      {
+        id: "ln-2",
+        text: "Keep screen recordings at real speed or slower; viewers missed the scan step at 1.5x.",
+        sourceCommissionId: "c-198",
+        creatorId: "cr-layla",
+        createdAt: at(-38, "15:05"),
+      },
+      {
+        id: "ln-3",
+        text: "Say 'getting paid', never 'accounting'. Shop owners scroll past anything that sounds like finance.",
+        sourceCommissionId: "c-203",
+        creatorId: "cr-hana",
+        createdAt: at(-26, "12:10"),
+      },
+      {
+        id: "ln-4",
+        text: "Shop-counter setting outperformed home-office setting 2:1 on watch-through.",
+        sourceCommissionId: "c-203",
+        creatorId: "cr-hana",
+        createdAt: at(-15, "10:40"),
+      },
+    ],
+    updatedAt: at(-6, "09:10"),
+  },
+  {
+    id: "p-daftar-stock",
+    businessId: "b-daftar",
+    name: "Daftar Stock",
+    oneLiner: "Count your whole shop with your phone camera.",
+    description:
+      "Daftar Stock turns your phone into a barcode scanner. Walk the shelves, scan, and the count goes up. Set a minimum for each item and Daftar tells you on WhatsApp before you run out. Items sold through Daftar Invoices come off your stock automatically.",
+    website: "daftar.app/stock",
+    niche: "fintech",
+    surfaces: ["ios", "android"],
+    audience:
+      "Owners and staff of small shops and mini-markets in the Gulf who count stock by hand once a month, or only when something runs out.",
+    problem:
+      "Counting stock takes a whole Friday with a notebook and still ends up wrong. They only notice an item is out when a customer asks for it.",
+    features: [
+      "Scan barcodes with the phone camera to count stock",
+      "Low-stock alerts on WhatsApp",
+      "Works offline in the storeroom and syncs later",
+      "Sold items come off stock automatically with Daftar Invoices",
+    ],
+    tone: ["Calm", "Clear", "Practical"],
+    dos: [
+      "Show the count going up with each scan",
+      "Use a real small shop or storeroom, slightly messy is fine",
+      "Explain it like you would to your uncle who runs a mini-market",
+    ],
+    donts: [
+      "Don't say 'SKU', 'inventory valuation' or other jargon",
+      "Don't use warehouse stock footage",
+    ],
+    cta: "Try Daftar Stock free for 30 days",
+    brandColor: "#0F7A5C",
+    assets: [
+      { id: "as-ds-1", name: "stock-app-screens.zip", kind: "screens", size: "11.2 MB" },
+      {
+        id: "as-ds-2",
+        name: "Demo account login (shop: Baqala Al-Hay)",
+        kind: "demo-account",
+        size: "Login details",
+      },
+    ],
+    learnings: [],
+    updatedAt: at(-1, "08:50"),
+  },
+  {
+    id: "p-kanz",
+    businessId: "b-kanz",
+    name: "Kanz",
+    oneLiner: "Round up every card payment and save the change.",
+    description:
+      "Kanz rounds up every card payment to the nearest 5 dirhams and puts the difference into a savings pot. Set a goal, watch it fill, and move money out whenever you need it. No minimums, no lock-in.",
+    website: "kanz.money",
+    niche: "fintech",
+    surfaces: ["ios", "android"],
+    audience:
+      "Young salaried people in the UAE and Gulf, 22–35, who earn decently but never seem to have anything left at the end of the month.",
+    problem:
+      "Saving feels like a big decision they keep putting off. By the 25th the salary is gone and they can't say where.",
+    features: [
+      "Automatic round-ups on every card payment",
+      "Savings goals with a progress bar",
+      "Weekly 'where did it go' spending summary",
+      "Withdraw any time, no fees",
+    ],
+    tone: ["Friendly", "Light", "Honest"],
+    dos: [
+      "Use real, modest numbers (a coffee, a taxi, groceries)",
+      "Show the round-up notification",
+      "Keep it relatable: salary day, end of month",
+    ],
+    donts: [
+      "Don't promise returns or 'getting rich'",
+      "Don't shame people about spending",
+      "Don't show real bank cards",
+    ],
+    cta: "Start saving your change with Kanz",
+    brandColor: "#6D28D9",
+    assets: [
+      { id: "as-kz-1", name: "kanz-logo-kit.zip", kind: "logo", size: "1.8 MB" },
+      { id: "as-kz-2", name: "kanz-app-screens-2026.zip", kind: "screens", size: "14.9 MB" },
+      { id: "as-kz-3", name: "kanz-brand-voice.pdf", kind: "brand-guide", size: "3.2 MB" },
+    ],
+    learnings: [],
+    updatedAt: at(-7, "09:20"),
+  },
+  {
+    id: "p-shifta",
+    businessId: "b-shifta",
+    name: "Shifta",
+    oneLiner: "Build the week's rota in minutes and stop answering 'when am I on?'",
+    description:
+      "Shifta replaces the shift schedule in the WhatsApp group. Managers build the rota by dragging names, staff see their shifts in the app and swap with each other in one tap. Managers approve swaps with a thumbs up.",
+    website: "shifta.io",
+    niche: "b2b",
+    surfaces: ["ios", "android", "web"],
+    audience:
+      "Owners and managers of cafés and small restaurants in Jordan and the Levant with 5–30 staff, mostly part-timers and students.",
+    problem:
+      "The schedule lives in a WhatsApp group photo that gets buried. Every day someone asks when they're on, swaps happen in private chats, and nobody shows up for the closing shift.",
+    features: [
+      "Drag-and-drop weekly rota",
+      "Staff see their shifts and get reminders",
+      "One-tap shift swaps with manager approval",
+      "Hours summary for payroll",
+    ],
+    tone: ["Funny", "Warm", "Relatable"],
+    dos: [
+      "Show a real café behind the counter, not an office",
+      "Make the WhatsApp-group chaos instantly recognisable",
+      "Show a swap being approved",
+    ],
+    donts: ["Don't make staff look lazy", "Don't use 'workforce management' language"],
+    cta: "Try Shifta free with your team",
+    brandColor: "#B4232A",
+    assets: [
+      { id: "as-sh-1", name: "shifta-logo.zip", kind: "logo", size: "980 KB" },
+      { id: "as-sh-2", name: "Demo café account (Café Jabal)", kind: "demo-account", size: "Login details" },
+    ],
+    learnings: [
+      {
+        id: "ln-5",
+        text: "Open on the WhatsApp group notification sound — café owners recognise it instantly.",
+        sourceCommissionId: "c-303",
+        creatorId: "cr-layla",
+        createdAt: at(-11, "13:00"),
+      },
+    ],
+    updatedAt: at(-2, "11:00"),
+  },
+  {
+    id: "p-qalamy",
+    businessId: "b-qalamy",
+    name: "Qalamy",
+    oneLiner: "An AI writing assistant that actually writes good Arabic.",
+    description:
+      "Qalamy drafts, rewrites and fixes Arabic text: work emails, WhatsApp messages, posts and CVs. It switches between MSA and dialect, keeps your tone, and fixes grammar without making everything sound like a newspaper.",
+    website: "qalamy.ai",
+    niche: "ai",
+    surfaces: ["ios", "android", "web"],
+    audience:
+      "Arabic-speaking professionals and students, 20–40, who write a lot at work but find formal Arabic slow and stiff.",
+    problem:
+      "Writing a proper Arabic email takes three times as long as an English one, and most AI tools produce Arabic that sounds machine-translated.",
+    features: [
+      "Draft from a one-line prompt in MSA or dialect",
+      "Rewrite in a different tone (formal, friendly, short)",
+      "Grammar and spelling fixes with explanations",
+      "Works inside documents and email on web",
+    ],
+    tone: ["Smart", "Playful", "Confident"],
+    dos: [
+      "Show a real, relatable writing moment (email to a manager, landlord, client)",
+      "Show the before and after text on screen",
+      "Keep the on-screen Arabic readable for at least 2 seconds",
+    ],
+    donts: [
+      "Don't say it replaces writers or teachers",
+      "Don't mention other AI tools by name",
+      "Don't show students using it to cheat on exams",
+    ],
+    cta: "Write your first draft free on Qalamy",
+    brandColor: "#1D1D6B",
+    assets: [
+      { id: "as-qa-1", name: "qalamy-logo-pack.zip", kind: "logo", size: "2.1 MB" },
+      { id: "as-qa-2", name: "qalamy-screens-web-mobile.zip", kind: "screens", size: "22.4 MB" },
+      { id: "as-qa-3", name: "qalamy-brand-guide.pdf", kind: "brand-guide", size: "4.8 MB" },
+    ],
+    learnings: [],
+    updatedAt: at(-1, "15:30"),
+  },
+  {
+    id: "p-sahm",
+    businessId: "b-sahm",
+    name: "Sahm",
+    oneLiner: "Learn investing in Arabic, five minutes a day.",
+    description:
+      "Sahm teaches the basics of investing in short Arabic lessons: what a stock is, how funds work, what risk actually means. Each lesson ends with two questions and a practice portfolio so you can try without real money.",
+    website: "sahm.academy",
+    niche: "edtech",
+    surfaces: ["ios", "android"],
+    audience:
+      "Kuwaiti and Gulf young professionals, 22–35, curious about investing but intimidated by jargon and English-only content.",
+    problem:
+      "Everyone says they should invest, but every resource is in English, full of jargon, or trying to sell them something.",
+    features: [
+      "Five-minute lessons in Arabic",
+      "Practice portfolio with pretend money",
+      "Daily streaks and short quizzes",
+      "Glossary that explains terms in plain words",
+    ],
+    tone: ["Warm", "Reassuring", "Clear"],
+    dos: ["Admit it felt confusing at first", "Show a lesson and the practice portfolio"],
+    donts: [
+      "No promises of returns or 'get rich' talk",
+      "Don't recommend specific stocks",
+      "Don't call it financial advice",
+    ],
+    cta: "Start your first lesson free on Sahm",
+    brandColor: "#1F4FD1",
+    assets: [
+      { id: "as-sa-1", name: "sahm-logo.zip", kind: "logo", size: "1.1 MB" },
+      { id: "as-sa-2", name: "sahm-app-screens.zip", kind: "screens", size: "9.7 MB" },
+    ],
+    learnings: [
+      {
+        id: "ln-6",
+        text: "Viewers trusted the 'I was scared of this too' opening more than any stats about investing.",
+        sourceCommissionId: "c-304",
+        creatorId: "cr-layla",
+        createdAt: at(-60, "10:00"),
+      },
+    ],
+    updatedAt: at(-1, "12:00"),
+  },
+  {
+    id: "p-rihla",
+    businessId: "b-rihla",
+    name: "Rihla",
+    oneLiner: "Plan a group trip, split the costs, keep one itinerary.",
+    description:
+      "Rihla gives every group trip one shared plan: dates everyone can make, a vote on where to stay, a single itinerary, and costs split automatically so nobody has to chase anyone for their share.",
+    website: "rihla.travel",
+    niche: "travel",
+    surfaces: ["ios", "android"],
+    audience:
+      "Friends and cousins in Saudi Arabia and the Gulf, 20–35, who plan weekend trips, chalet bookings and holidays in WhatsApp groups.",
+    problem:
+      "Group trips die in the group chat: nobody agrees on dates, one person pays for everything, and the money conversation afterwards gets awkward.",
+    features: [
+      "Date poll that finds when everyone is free",
+      "Vote on places to stay",
+      "Shared day-by-day itinerary",
+      "Automatic cost splitting with reminders",
+    ],
+    tone: ["Fun", "Energetic", "Casual"],
+    dos: [
+      "Show a group chat that's going nowhere",
+      "Use realistic local trips (a chalet weekend, a road trip)",
+      "Show the split-the-cost screen",
+    ],
+    donts: ["Don't show alcohol or nightlife", "Don't show real hotel or airline brands"],
+    cta: "Plan your next trip on Rihla",
+    brandColor: "#C2410C",
+    assets: [
+      { id: "as-ri-1", name: "rihla-logo.zip", kind: "logo", size: "1.4 MB" },
+      { id: "as-ri-2", name: "rihla-screens.zip", kind: "screens", size: "16.0 MB" },
+      { id: "as-ri-3", name: "Demo trip: 'Chalet weekend'", kind: "demo-account", size: "Login details" },
+    ],
+    learnings: [],
+    updatedAt: at(-3, "17:00"),
+  },
+  {
+    id: "p-wasla",
+    businessId: "b-wasla",
+    name: "Wasla",
+    oneLiner: "Plan the day's delivery route in one tap.",
+    description:
+      "Wasla takes a list of drop-offs, even messy addresses typed by customers, and orders them into the fastest route. Drivers get turn-by-turn directions and customers get a WhatsApp message when the courier is close.",
+    website: "wasla.iq",
+    niche: "b2b",
+    surfaces: ["android", "web"],
+    audience:
+      "Owners of small courier and delivery businesses in Iraq with 2–15 drivers, often delivering for Instagram shops.",
+    problem:
+      "Routes are planned in the owner's head every morning. Drivers zigzag across the city, call customers for directions, and deliver 20 orders when they could do 30.",
+    features: [
+      "Paste a list of addresses, get an ordered route",
+      "Understands landmark-style addresses",
+      "Customer gets a WhatsApp 'courier nearby' message",
+      "Daily summary of deliveries per driver",
+    ],
+    tone: ["Straight-talking", "Practical", "Local"],
+    dos: ["Show a real street and a driver's phone", "Use landmark addresses like real customers do"],
+    donts: ["Don't show phone use while driving", "Don't name real courier companies"],
+    cta: "Try Wasla free for your first 100 drops",
+    brandColor: "#334155",
+    assets: [{ id: "as-wa-1", name: "wasla-screens-ar.zip", kind: "screens", size: "7.3 MB" }],
+    learnings: [],
+    updatedAt: at(-5, "14:00"),
+  },
+  {
+    id: "p-souqly",
+    businessId: "b-souqly",
+    name: "Souqly",
+    oneLiner: "Turn your Instagram shop into a real online store in one evening.",
+    description:
+      "Souqly builds a simple online store from your Instagram posts. Customers see prices, sizes and delivery fees, check out with cash on delivery or card, and you get the order on WhatsApp instead of answering the same DM fifty times.",
+    website: "souqly.shop",
+    niche: "ecommerce",
+    surfaces: ["ios", "android", "web"],
+    audience:
+      "Women in Egypt and the Gulf, 20–40, selling clothes, abayas, accessories or food through Instagram DMs.",
+    problem:
+      "They spend hours a day answering 'how much?', 'is it available?' and 'delivery?' in DMs, and lose orders when they can't reply fast enough.",
+    features: [
+      "Import products from Instagram posts",
+      "Prices, sizes and stock on one page",
+      "Cash on delivery and card checkout",
+      "Orders arrive on WhatsApp",
+    ],
+    tone: ["Funny", "Warm", "Encouraging"],
+    dos: ["Show the DM chaos honestly", "Show a real product being added", "Show the store link in the bio"],
+    donts: ["Don't mock customers", "Don't show real Instagram accounts or usernames"],
+    cta: "Open your Souqly store free tonight",
+    brandColor: "#BE185D",
+    assets: [
+      { id: "as-sq-1", name: "souqly-logo.zip", kind: "logo", size: "1.6 MB" },
+      { id: "as-sq-2", name: "souqly-screens-ar-en.zip", kind: "screens", size: "19.1 MB" },
+      { id: "as-sq-3", name: "Demo store (Bint Al-Souq)", kind: "demo-account", size: "Login details" },
+    ],
+    learnings: [],
+    updatedAt: at(0, "08:20"),
+  },
+  {
+    id: "p-tabeebi",
+    businessId: "b-tabeebi",
+    name: "Tabeebi",
+    oneLiner: "Book a clinic in three taps, with reminders for the whole family.",
+    description:
+      "Tabeebi lets you find and book clinics near you, for yourself or family members, without calling. Everyone gets reminders on WhatsApp the day before, and rescheduling takes one tap.",
+    website: "tabeebi.health",
+    niche: "health",
+    surfaces: ["ios", "android"],
+    audience:
+      "Saudi families, 25–45, especially the person who books appointments for parents and kids.",
+    problem:
+      "Booking a clinic means calling during working hours, waiting on hold, and then remembering to remind your dad the night before.",
+    features: [
+      "Book in three taps, see real available slots",
+      "Family profiles: book for parents and kids",
+      "WhatsApp reminders the day before",
+      "One-tap rescheduling",
+    ],
+    tone: ["Reassuring", "Warm", "Simple"],
+    dos: ["Show booking for a family member", "Show the reminder arriving"],
+    donts: [
+      "No medical advice or claims",
+      "Don't show real clinics, doctors or hospital interiors",
+    ],
+    cta: "Book your next appointment on Tabeebi",
+    brandColor: "#0E7490",
+    assets: [
+      { id: "as-tb-1", name: "tabeebi-logo.zip", kind: "logo", size: "1.2 MB" },
+      { id: "as-tb-2", name: "tabeebi-screens.zip", kind: "screens", size: "12.6 MB" },
+    ],
+    learnings: [],
+    updatedAt: at(-4, "10:00"),
+  },
+  {
+    id: "p-darsi",
+    businessId: "b-darsi",
+    name: "Darsi",
+    oneLiner: "Snap a homework question and get the steps explained in Darija.",
+    description:
+      "Darsi explains homework step by step. Take a photo of a maths or science question and Darsi walks you through the method in Darija or MSA, so parents can help their kids without just handing over the answer.",
+    website: "darsi.ma",
+    niche: "edtech",
+    surfaces: ["ios", "android"],
+    audience: "Moroccan parents of 10–15 year olds, and the kids themselves.",
+    problem:
+      "Parents want to help with homework but the methods have changed since they were at school, and kids get frustrated when nobody can explain.",
+    features: [
+      "Photo of a question, step-by-step explanation",
+      "Explanations in Darija, MSA or French",
+      "Practice questions after each explanation",
+      "Parent mode that hides the final answer",
+    ],
+    tone: ["Patient", "Friendly", "Encouraging"],
+    dos: ["Show a real-looking homework sheet", "Show the steps, not only the answer"],
+    donts: ["Don't show kids' faces without consent", "Don't suggest it does homework for kids"],
+    cta: "Try Darsi free tonight",
+    brandColor: "#4338CA",
+    assets: [{ id: "as-dr-1", name: "darsi-screens.zip", kind: "screens", size: "8.4 MB" }],
+    learnings: [],
+    updatedAt: at(-3, "15:00"),
+  },
+  {
+    id: "p-nabd",
+    businessId: "b-nabd",
+    name: "Nabd",
+    oneLiner: "Tiny habits, honest streaks.",
+    description:
+      "Nabd helps you build small daily habits (water, steps, sleep, stretching) and track them honestly. It asks for two minutes a day, celebrates streaks without guilt, and syncs with your phone's step counter.",
+    website: "nabd.fit",
+    niche: "health",
+    surfaces: ["ios", "android"],
+    audience:
+      "Busy professionals in Qatar and the UAE, 24–40, who've tried fitness apps before and dropped them within a week.",
+    problem:
+      "Fitness apps ask for a new life on day one. People feel guilty, quit, and assume they're just not 'habit people'.",
+    features: [
+      "Two-minute habit setup",
+      "Streaks with a 'pause day' so one miss doesn't reset everything",
+      "Step and water tracking",
+      "Free 14-day streak challenge",
+    ],
+    tone: ["Honest", "Light", "Encouraging"],
+    dos: ["Show your real numbers", "Admit what was hard"],
+    donts: ["No weight-loss or medical claims", "No gym or before/after body shots"],
+    cta: "Join the free 14-day challenge on Nabd",
+    brandColor: "#B45309",
+    assets: [
+      { id: "as-nb-1", name: "nabd-logo.zip", kind: "logo", size: "1.0 MB" },
+      { id: "as-nb-2", name: "nabd-screens.zip", kind: "screens", size: "10.8 MB" },
+    ],
+    learnings: [],
+    updatedAt: at(-2, "16:30"),
+  },
+];

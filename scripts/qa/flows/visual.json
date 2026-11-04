@@ -1,0 +1,10 @@
+{
+  "role": "business",
+  "theme": "dark",
+  "steps": [
+    { "go": "/business", "after": 3500 },
+    { "shot": "dark-business-home", "full": true },
+    { "go": "/creators", "after": 3500 },
+    { "shot": "dark-creators", "full": true }
+  ]
+}
