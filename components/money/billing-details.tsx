@@ -5,6 +5,7 @@ import { useState, useSyncExternalStore } from "react";
 import { isEmail } from "@/components/settings/controls";
 import { SelectField, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
+import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { cityById, me } from "@/lib/selectors";
@@ -85,31 +86,60 @@ function validate(form: BillingDetails) {
   };
 }
 
-export function BillingDetailsForm() {
+/** Billing details as a compact summary; editing happens in a sheet. */
+export function BillingDetailsCard({ titleId }: { titleId?: string }) {
   const hydrated = useHydrated();
   const details = useBillingDetails();
-  if (!hydrated) {
-    return (
-      <div className="flex flex-col gap-4" aria-hidden>
-        {[0, 1, 2, 3].map((index) => (
-          <div key={index} className="flex flex-col gap-2">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-13 w-full !rounded-full" />
-          </div>
-        ))}
+  const [editing, setEditing] = useState(false);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={titleId} className="y-head">
+          Billing details
+        </h3>
+        <PillButton variant="ghost" size="sm" onClick={() => setEditing(true)} disabled={!hydrated}>
+          Edit
+        </PillButton>
       </div>
-    );
-  }
-  return <Form initial={details} />;
+      {hydrated ? (
+        <dl className="y-small flex flex-col gap-1">
+          <div>
+            <dt className="sr-only">Billed to</dt>
+            <dd>
+              <span className="font-semibold">{details.companyName}</span>
+              <span className="y-fg-2">
+                {" · "}
+                {countries[details.country]?.name}
+                {details.vat ? ` · VAT ${details.vat}` : ""}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt className="sr-only">Billing email</dt>
+            <dd className="y-fg-2 break-all">Receipts go to {details.email}</dd>
+          </div>
+        </dl>
+      ) : (
+        <div className="flex flex-col gap-2" aria-hidden>
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-48" />
+          <Skeleton className="h-4 w-40" />
+        </div>
+      )}
+      <Sheet open={editing} onClose={() => setEditing(false)} title="Billing details" width="sm">
+        <Form initial={details} onSaved={() => setEditing(false)} />
+      </Sheet>
+    </div>
+  );
 }
 
-function Form({ initial }: { initial: BillingDetails }) {
+function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => void }) {
   const toast = useToast();
   const [form, setForm] = useState(initial);
-  const [saved, setSaved] = useState(initial);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const errors = validate(form);
-  const dirty = JSON.stringify(form) !== JSON.stringify(saved);
+  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
   const show = (field: keyof typeof errors) => (touched[field] ? errors[field] : null);
 
   const set = <K extends keyof BillingDetails>(key: K, value: BillingDetails[K]) =>
@@ -127,9 +157,8 @@ function Form({ initial }: { initial: BillingDetails }) {
         const next = { ...form, companyName: form.companyName.trim(), vat: form.vat.trim(), email: form.email.trim() };
         write({ companyName: next.companyName, vat: next.vat, country: next.country });
         actions.updateSettings("business", { invoiceEmail: next.email });
-        setForm(next);
-        setSaved(next);
         toast({ message: "Billing details saved. New receipts will use them." });
+        onSaved();
       }}
     >
       <TextField
@@ -141,6 +170,7 @@ function Form({ initial }: { initial: BillingDetails }) {
         onBlur={blur("companyName")}
         error={show("companyName")}
         autoComplete="organization"
+        data-autofocus
       />
       <TextField
         label="VAT or tax number"
@@ -156,7 +186,7 @@ function Form({ initial }: { initial: BillingDetails }) {
         label="Billing email"
         required
         type="email"
-        hint="Receipts are sent here when a payment is held, released or refunded."
+        hint="Receipts are sent here."
         value={form.email}
         onChange={(event) => set("email", event.target.value)}
         onBlur={blur("email")}
@@ -170,11 +200,10 @@ function Form({ initial }: { initial: BillingDetails }) {
         value={form.country}
         onChange={(event) => set("country", event.target.value as CountryId)}
       />
-      <div className="flex flex-wrap items-center gap-3 pt-1">
+      <div className="pt-1">
         <PillButton type="submit" variant="contrast" disabled={!dirty}>
           Save billing details
         </PillButton>
-        {!dirty ? <span className="y-micro y-fg-3">All changes saved</span> : null}
       </div>
     </form>
   );

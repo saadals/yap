@@ -3,7 +3,7 @@
  * market guidance from real creator packages, and pitch sorting. Safe in render.
  */
 
-import { HOUR, NOW, TZ_OFFSET, at } from "@/lib/clock";
+import { NOW, TZ_OFFSET, at } from "@/lib/clock";
 import { daysFromNow, lengthLabel, plural } from "@/lib/format";
 import { cityById, fit, type Fit } from "@/lib/selectors";
 import { ME, type DemoState, type RequestDraft } from "@/lib/store";
@@ -21,7 +21,6 @@ import type {
   PlatformId,
   Product,
   Reference,
-  Video,
 } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
@@ -333,22 +332,6 @@ export function previewRequest(form: WizardForm, product?: Product): ContentRequ
   };
 }
 
-/** A real portfolio piece in this format, preferring the requested language and shared stats. */
-export function exampleVideo(
-  s: DemoState,
-  format: FormatId | null,
-  languages: LanguageId[],
-): Video | undefined {
-  if (!format) return undefined;
-  const matches = s.videos.filter((v) => v.format === format);
-  return (
-    matches.find((v) => languages.includes(v.lang) && v.stats) ??
-    matches.find((v) => languages.includes(v.lang)) ??
-    matches.find((v) => v.stats) ??
-    matches[0]
-  );
-}
-
 export const typicalLength = (format: FormatId) => {
   const [lo, hi] = formatById[format].typical;
   const label = (sec: number) => (sec < 60 ? `${sec}s` : lengthLabel(sec));
@@ -616,15 +599,6 @@ export function sortPitches(list: RankedPitch[], sort: PitchSort): RankedPitch[]
 
 /** Pitches that still need a decision from the business. */
 export const isUndecided = (p: Pitch) => p.status === "sent" || p.status === "viewed";
-
-/** "3h", "40 min", "1.5 days" */
-export function durationLabel(ms: number): string {
-  if (ms < HOUR) return `${Math.max(1, Math.round(ms / 60000))} min`;
-  const hours = ms / HOUR;
-  if (hours < 36) return `${Math.round(hours)}h`;
-  const days = Math.round((hours / 24) * 2) / 2;
-  return `${Number.isInteger(days) ? days : days.toFixed(1)} days`;
-}
 
 export function median(values: number[]): number {
   const sorted = [...values].sort((a, b) => a - b);

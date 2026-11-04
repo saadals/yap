@@ -1,6 +1,5 @@
-import { daysFromNow, money, plural, relativeDay, timeAgo, timeOf, weekdayDate } from "@/lib/format";
+import { daysFromNow, money, plural, timeAgo, weekdayDate } from "@/lib/format";
 import {
-  commissionTotals,
   commissionsForBusiness,
   creatorById,
   latestDelivery,
@@ -14,13 +13,12 @@ import type { Pitch } from "@/lib/types";
 /** The single most useful thing for the business to do right now (shown as the neon block). */
 export type NextStep = {
   kind: "review" | "pitches" | "shortlist" | "draft" | "post";
-  eyebrow: string;
   title: string;
-  body: string;
+  /** One short supporting line. */
+  line: string;
+  /** Verb for the block's single action ("Review", "Read pitches"). */
+  action: string;
   href: string;
-  /** Short deadline line ("Auto-approves in 2 days · Fri 6 Nov, 20:00"). */
-  deadline?: string;
-  people?: { id: string; name: string }[];
 };
 
 /** Pitches the business hasn't opened yet. */
@@ -53,17 +51,16 @@ export function nextStep(s: DemoState): NextStep {
     const creator = creatorById(s, review.creatorId);
     const delivery = latestDelivery(review);
     const who = creator?.firstName ?? "Your creator";
-    const deadline = review.autoApproveAt
-      ? `Auto-approves ${relativeDay(review.autoApproveAt)} · ${weekdayDate(review.autoApproveAt)}, ${timeOf(review.autoApproveAt)}`
-      : undefined;
+    const parts = [
+      delivery ? `Version ${delivery.version} arrived ${agoLower(delivery.deliveredAt)}.` : "",
+      review.autoApproveAt ? `Auto-approves ${weekdayDate(review.autoApproveAt)}.` : "",
+    ];
     return {
       kind: "review",
-      eyebrow: "Ready for your review",
       title: `Review ${possessive(who)} ${formatById[review.brief.format].name.toLowerCase()}`,
-      body: `${delivery ? `Version ${delivery.version} arrived ${agoLower(delivery.deliveredAt)}. ` : ""}Approve to release ${money(commissionTotals(review).creatorEarns)} to ${creator?.firstName ?? "them"}, or leave notes on the video.`,
+      line: parts.filter(Boolean).join(" ") || "Approve it or leave notes on the video.",
+      action: "Review",
       href: `/business/commissions/${review.id}`,
-      deadline,
-      people: creator ? [{ id: creator.id, name: creator.name }] : [],
     };
   }
 
@@ -76,17 +73,12 @@ export function nextStep(s: DemoState): NextStep {
     .filter((entry) => entry.unread.length > 0)
     .sort((a, b) => b.unread.length - a.unread.length)[0];
   if (withUnread) {
-    const people = withUnread.unread
-      .map((p) => creatorById(s, p.creatorId))
-      .filter((c) => c !== undefined)
-      .map((c) => ({ id: c.id, name: c.name }));
     return {
       kind: "pitches",
-      eyebrow: "Pitches waiting",
       title: `Read ${plural(withUnread.unread.length, "waiting pitch", "waiting pitches")}`,
-      body: `On “${withUnread.request.title}”. Compare angles, prices and samples side by side.`,
+      line: `On “${withUnread.request.title}”.`,
+      action: "Read pitches",
       href: `/business/requests/${withUnread.request.id}`,
-      people,
     };
   }
 
@@ -104,11 +96,10 @@ export function nextStep(s: DemoState): NextStep {
     const who = creator?.firstName ?? "your shortlisted creator";
     return {
       kind: "shortlist",
-      eyebrow: "Decision to make",
       title: `Decide on ${possessive(who)} pitch`,
-      body: `You shortlisted ${who} for “${request.title}” at ${money(pitch.price)}. Hire, or keep looking.`,
+      line: `${money(pitch.price)} for “${request.title}”.`,
+      action: "Decide",
       href: `/business/requests/${request.id}`,
-      people: creator ? [{ id: creator.id, name: creator.name }] : [],
     };
   }
 
@@ -117,9 +108,9 @@ export function nextStep(s: DemoState): NextStep {
   if (draft) {
     return {
       kind: "draft",
-      eyebrow: "Almost there",
       title: "Finish your draft",
-      body: `“${draft.title}” is saved. Add the last details and post it to get pitches within a day.`,
+      line: `“${draft.title}” is saved but not posted.`,
+      action: "Finish draft",
       href: `/business/requests/new?draft=${draft.id}`,
     };
   }
@@ -127,9 +118,9 @@ export function nextStep(s: DemoState): NextStep {
   // 5. Nothing pending: start something.
   return {
     kind: "post",
-    eyebrow: "All caught up",
     title: "Post a content request",
-    body: "Describe the video you need. Creators who fit send pitches, usually within a day.",
+    line: "Creators who fit send pitches, usually within a day.",
+    action: "New request",
     href: "/business/requests/new",
   };
 }

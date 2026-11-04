@@ -390,32 +390,31 @@ export function CreatorOnboarding() {
   const titles: { title: React.ReactNode; description: string }[] = [
     {
       title: "Set up your creator profile",
-      description: "This is what businesses see first when you pitch or appear in search.",
+      description: "What businesses see first when you pitch.",
     },
     {
       title: "Languages and dialects",
-      description:
-        "Businesses search by dialect first. Only pick the ones you'd happily present a whole video in.",
+      description: "Only pick dialects you'd present a whole video in.",
     },
     {
       title: "What you make",
-      description: "We match you with requests for these formats and products.",
+      description: "We match you with requests for these.",
     },
     {
       title: "Show your best work",
-      description: `Add 1 to ${MAX_SAMPLES} videos. Samples matter more than follower counts: they're how businesses decide.`,
+      description: `Add 1 to ${MAX_SAMPLES} videos. This is how businesses decide.`,
     },
     {
       title: "Set your packages",
-      description: "Three clear packages make it easy for a business to say yes. You can change them any time.",
+      description: "Three clear packages. Change them any time.",
     },
     {
       title: "How you get paid",
-      description: "Payment is secured before you start and released when the business approves.",
+      description: "Where your earnings go when a client approves.",
     },
     {
       title: "Review and publish",
-      description: "Check everything once. You can edit any of it later from your profile.",
+      description: "You can edit any of it later.",
     },
   ];
 
@@ -576,7 +575,7 @@ function ProfileBasics({
         required
         autoComplete="name"
         placeholder="e.g. Layla Mansour"
-        hint="Your real name works best. Businesses hire people, not brands."
+        hint="Your real name works best."
         value={data.displayName}
         error={errors.displayName}
         onChange={(event) => {
@@ -763,11 +762,6 @@ function Languages({ data, set, errors }: StepProps) {
             </FilterChip>
           ))}
         </div>
-        <p className="y-micro y-fg-3 px-1">
-          {data.dialects.length
-            ? data.dialects.map((id) => languageById[id].region).join(" · ")
-            : "Pick every dialect you could carry a whole video in."}
-        </p>
         <GroupError>{errors.dialects}</GroupError>
       </div>
 
@@ -844,7 +838,7 @@ function Work({ data, set, errors }: StepProps) {
           onToggle={(id) => set({ formats: toggleIn(data.formats, id) })}
           options={formats.map((format) => {
             const Icon = format.icon;
-            return { value: format.id, title: format.name, body: format.description, icon: <Icon size={20} /> };
+            return { value: format.id, title: format.name, body: format.short, icon: <Icon size={20} /> };
           })}
         />
         <GroupError>{errors.formats}</GroupError>
@@ -902,9 +896,7 @@ function Work({ data, set, errors }: StepProps) {
         <p className="y-micro y-fg-3 px-1" aria-live="polite">
           {mismatch
             ? "Selfie demos, reviews and skits are usually on camera. Pick “Both” if you're open to it."
-            : data.camera === "voiceover"
-              ? "You'll be matched with walkthroughs and tutorials where your face isn't needed."
-              : "Businesses filter by this, so be honest. It saves everyone a call."}
+            : null}
         </p>
       </div>
     </>
@@ -1279,32 +1271,27 @@ function Review({
 
 function ProfilePreview({ data, languages: chosen }: { data: Data; languages: LanguageId[] }) {
   const city = cities.find((c) => c.id === data.cityId);
+  const meta = [
+    data.kind ? creatorKindById[data.kind].name : null,
+    chosen.map((id) => languageById[id].short).join(", ") || null,
+    data.formats.map((id) => formatById[id].name).join(", ") || null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <Block as="section" tone="lavender" pad="md" className="flex flex-col gap-4" aria-label="Profile preview">
+    <Block as="section" tone="lavender" pad="md" className="flex flex-col gap-3" aria-label="Profile preview">
       <p className="y-micro y-fg-2">How businesses will see you</p>
       <div className="flex items-center gap-3">
-        <FaceAvatar id={NEW_FACE} name="" size={64} />
+        <FaceAvatar id={NEW_FACE} name="" size={52} />
         <div className="flex min-w-0 flex-col">
-          <p className="y-display y-title truncate">{data.displayName.trim() || "Your name"}</p>
+          <p className="y-head truncate">{data.displayName.trim() || "Your name"}</p>
           <p className="y-small y-fg-2 truncate">
             @{data.handle || "handle"}
             {city ? ` · ${city.name}` : ""}
           </p>
         </div>
       </div>
-      {data.kind ? <Chip className="w-fit">{creatorKindById[data.kind].name}</Chip> : null}
-      {chosen.length || data.formats.length ? (
-        <div className="flex flex-wrap gap-1.5">
-          {chosen.map((id) => (
-            <Chip key={id}>{languageById[id].short}</Chip>
-          ))}
-          {data.formats.map((id) => (
-            <Chip key={id}>{formatById[id].name}</Chip>
-          ))}
-        </div>
-      ) : (
-        <p className="y-small y-fg-2">Your dialects and formats show up here as you pick them.</p>
-      )}
+      {meta ? <p className="y-small y-fg-2">{meta}</p> : null}
     </Block>
   );
 }
@@ -1312,27 +1299,22 @@ function ProfilePreview({ data, languages: chosen }: { data: Data; languages: La
 function PortfolioTips() {
   const titleId = useId();
   const tips = [
-    ["Hook in the first 2 seconds", "Say the problem before you say hello."],
-    ["Film a real phone demo", "The actual app on your own phone, not a mockup."],
-    ["Captions on", "Most people watch with the sound off."],
-    ["Keep it tight", "Under 45 seconds for selfie demos and reviews."],
-    ["One clear ask", "End with exactly what the viewer should do next."],
+    "Hook in the first 2 seconds",
+    "Film the real app on your own phone",
+    "Captions on, and one clear ask at the end",
   ];
   return (
-    <Block as="section" tone="sky" pad="md" className="flex flex-col gap-4" aria-labelledby={titleId}>
+    <Block as="section" tone="sky" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
       <h2 id={titleId} className="y-head">
         What converts
       </h2>
-      <ol className="flex flex-col gap-3">
-        {tips.map(([title, body], index) => (
-          <li key={title} className="flex gap-3">
-            <span aria-hidden className="y-num grid size-7 flex-none place-items-center rounded-full bg-(--b-chip) text-sm font-semibold">
+      <ol className="flex flex-col gap-2">
+        {tips.map((tip, index) => (
+          <li key={tip} className="y-small flex items-center gap-3">
+            <span aria-hidden className="y-num grid size-6 flex-none place-items-center rounded-full bg-(--b-chip) text-xs font-semibold">
               {index + 1}
             </span>
-            <span className="flex flex-col">
-              <span className="y-small font-semibold">{title}</span>
-              <span className="y-small y-fg-2">{body}</span>
-            </span>
+            {tip}
           </li>
         ))}
       </ol>
@@ -1344,28 +1326,20 @@ function KeepAll({ standardPrice }: { standardPrice: number }) {
   const titleId = useId();
   const breakdown = priceBreakdown(standardPrice);
   return (
-    <Block as="section" tone="butter" pad="md" className="flex flex-col gap-4" aria-labelledby={titleId}>
-      <h2 id={titleId} className="y-display y-title">
+    <Block as="section" tone="butter" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
+      <h2 id={titleId} className="y-head">
         You keep 100%
       </h2>
-      <p className="y-small y-fg-2">
-        Your price is what you earn. The business pays Yapp&apos;s 10% service fee on top, and only
-        when the work completes.
-      </p>
-      <dl className="flex flex-col gap-2 rounded-(--y-r-tile) bg-(--b-chip) p-4">
+      <dl className="flex flex-col gap-2">
         <div className="flex justify-between gap-3">
           <dt className="y-small">You earn</dt>
           <dd className="y-num y-head">{money(breakdown.creatorEarns)}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="y-small y-fg-2">Business pays</dt>
+          <dt className="y-small y-fg-2">Business pays, with the 10% fee</dt>
           <dd className="y-num y-small y-fg-2">{money(breakdown.total)}</dd>
         </div>
       </dl>
-      <p className="y-micro y-fg-2">
-        Payment is held before you start, then released when the business approves, or
-        automatically 3 days after you deliver.
-      </p>
     </Block>
   );
 }
@@ -1379,7 +1353,7 @@ function CreatorDone({ data }: { data: Data }) {
   return (
     <OnboardingDone
       title="Your profile is live"
-      lead="Here's how to get your first commission: pitch on open requests that match your dialects and formats. Lead with a sharp hook idea and your closest sample; businesses decide from those."
+      lead="Pitch on open requests that match your dialects and formats. Lead with a sharp hook and your closest sample."
       primary={{
         href: "/creator/opportunities",
         label: "Browse open requests",
@@ -1390,26 +1364,26 @@ function CreatorDone({ data }: { data: Data }) {
         {
           href: "/creators/laylatalks",
           label: "View profile",
-          body: "See what businesses see when you pitch.",
           icon: <UserRound size={20} aria-hidden />,
         },
         {
           href: "/creator",
           label: "Go to dashboard",
-          body: "Offers, commissions in progress and earnings.",
           icon: <LayoutDashboard size={20} aria-hidden />,
         },
       ]}
       note="This demo continues in Layla's creator workspace, where her pitches, commissions and payouts are already in motion."
     >
-      <div className="flex flex-wrap gap-1.5">
-        <Chip>@{data.handle}</Chip>
-        {city ? <Chip>{city.name}</Chip> : null}
-        {data.formats.slice(0, 3).map((id) => (
-          <Chip key={id}>{formatById[id].name}</Chip>
-        ))}
-        <Chip>From {money(Number(data.packages.basic.price) || 0)}</Chip>
-      </div>
+      <p className="y-small y-fg-2">
+        {[
+          `@${data.handle}`,
+          city?.name,
+          ...data.formats.slice(0, 3).map((id) => formatById[id].name),
+          `from ${money(Number(data.packages.basic.price) || 0)}`,
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
     </OnboardingDone>
   );
 }

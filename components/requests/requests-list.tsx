@@ -17,9 +17,7 @@ import { DAY, NOW } from "@/lib/clock";
 import { plural, timeOf } from "@/lib/format";
 import { pitchesForRequest, requestsForBusiness } from "@/lib/selectors";
 import { useDemo, useHydrated, type DemoState } from "@/lib/store";
-import type { ContentRequest, RequestStatus } from "@/lib/types";
-
-import { durationLabel, median } from "./shared";
+import type { RequestStatus } from "@/lib/types";
 
 type Tab = "open" | "drafts" | "hired" | "closed" | "all";
 const TABS: { id: Tab; label: string; status?: RequestStatus }[] = [
@@ -32,12 +30,19 @@ const TABS: { id: Tab; label: string; status?: RequestStatus }[] = [
 const isTab = (value: string | null): value is Tab => TABS.some((t) => t.id === value);
 
 export function RequestsListPage() {
+  const s = useDemo();
+  const hydrated = useHydrated();
+  const fresh = hydrated ? newPitchCount(s) : 0;
   return (
     <AppShell role="business">
       <Page>
         <PageHeader
           title="Requests"
-          description="Everything you've asked creators to pitch on. Open a request to compare pitches side by side and hire."
+          description={
+            fresh
+              ? `${plural(fresh, "new pitch", "new pitches")} since yesterday.`
+              : "Everything you've asked creators to pitch on."
+          }
           actions={
             <PillButton href="/business/requests/new" variant="neon" arrow icon={<Plus size={18} aria-hidden />}>
               New request
@@ -55,15 +60,7 @@ export function RequestsListPage() {
 function ListSkeleton() {
   return (
     <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading requests">
-      <div className="grid gap-2 sm:grid-cols-3">
-        {[0, 1, 2].map((i) => (
-          <div key={i} className="y-block y-pad-md flex flex-col gap-3" data-tone="paper">
-            <Skeleton className="h-10 w-16" />
-            <Skeleton className="h-3 w-3/5" />
-          </div>
-        ))}
-      </div>
-      <div className="flex gap-2 pt-6">
+      <div className="flex gap-2">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-11 w-24" />
         ))}
@@ -76,32 +73,13 @@ function ListSkeleton() {
   );
 }
 
-function stats(s: DemoState, requests: ContentRequest[]) {
-  const live = requests.filter((r) => r.status !== "draft");
+/** Pitches that arrived on published requests in the last day. */
+function newPitchCount(s: DemoState) {
   const since = NOW - DAY;
-  let newPitches = 0;
-  let total = 0;
-  const firstPitchMs: number[] = [];
-  const freshOn: ContentRequest[] = [];
-  for (const request of live) {
-    const pitches = pitchesForRequest(s, request.id);
-    total += pitches.length;
-    const fresh = pitches.filter((p) => Date.parse(p.sentAt) >= since).length;
-    newPitches += fresh;
-    if (fresh) freshOn.push(request);
-    if (pitches.length) {
-      const first = Math.min(...pitches.map((p) => Date.parse(p.sentAt)));
-      const gap = first - Date.parse(request.postedAt);
-      if (gap > 0) firstPitchMs.push(gap);
-    }
-  }
-  return {
-    newPitches,
-    freshOn,
-    average: live.length ? total / live.length : 0,
-    firstPitch: firstPitchMs.length ? durationLabel(median(firstPitchMs)) : null,
-    liveCount: live.length,
-  };
+  return requestsForBusiness(s)
+    .filter((r) => r.status !== "draft")
+    .flatMap((r) => pitchesForRequest(s, r.id))
+    .filter((p) => Date.parse(p.sentAt) >= since).length;
 }
 
 function RequestsList() {
@@ -123,7 +101,6 @@ function RequestsList() {
   const visible = requests
     .filter((r) => !active.status || r.status === active.status)
     .filter((r) => !q || r.title.toLowerCase().includes(q));
-  const summary = stats(s, requests);
   const unfinished = s.requestDraft;
 
   const setTab = (next: Tab) =>
@@ -131,47 +108,8 @@ function RequestsList() {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Summary */}
-      <div className="grid gap-2 sm:grid-cols-3">
-        <Block tone="lavender" pad="md" className="flex flex-col gap-1">
-          <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
-            {summary.newPitches}
-          </p>
-          <p className="y-small font-semibold">new {summary.newPitches === 1 ? "pitch" : "pitches"} since yesterday</p>
-          <p className="y-micro y-fg-2">
-            {summary.freshOn.length ? (
-              <>
-                On{" "}
-                <Link href={`/business/requests/${summary.freshOn[0].id}`} className="y-link font-semibold">
-                  {summary.freshOn[0].title}
-                </Link>
-                {summary.freshOn.length > 1 ? ` and ${plural(summary.freshOn.length - 1, "other")}` : ""}
-              </>
-            ) : (
-              "We'll let you know the moment one arrives."
-            )}
-          </p>
-        </Block>
-        <Block tone="paper" pad="md" className="flex flex-col gap-1">
-          <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
-            {summary.average ? summary.average.toFixed(1) : "0"}
-          </p>
-          <p className="y-small font-semibold">pitches per request, on average</p>
-          <p className="y-micro y-fg-2">Across {plural(summary.liveCount, "published request")}.</p>
-        </Block>
-        <Block tone="paper" pad="md" className="flex flex-col gap-1">
-          <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
-            {summary.firstPitch ?? "3h"}
-          </p>
-          <p className="y-small font-semibold">typical time to first pitch</p>
-          <p className="y-micro y-fg-2">
-            {summary.firstPitch ? "Median across your requests." : "Typical across Yapp. Yours will show here."}
-          </p>
-        </Block>
-      </div>
-
       {/* Toolbar */}
-      <div className="flex flex-col gap-2 pt-6 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-2 pb-1 lg:flex-row lg:items-center lg:justify-between">
         <div
           role="group"
           aria-label="Filter requests by status"

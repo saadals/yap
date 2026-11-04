@@ -59,7 +59,7 @@ export function ProductHistory({ productId }: { productId: string }) {
               {commission.status === "completed" && creator ? (
                 <PillButton
                   href={`/creators/${creator.handle}/commission?repeat=${commission.id}`}
-                  variant="contrast"
+                  variant="outline"
                   size="sm"
                   icon={<Repeat2 size={16} aria-hidden />}
                   className="relative z-[3]"

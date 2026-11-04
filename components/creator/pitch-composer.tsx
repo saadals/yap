@@ -265,10 +265,6 @@ export function PitchComposer({
       <div className="flex flex-col gap-1">
         <p className="y-micro y-fg-2">Step 1 of 2 · {existing ? "Edit your pitch" : "Write your pitch"}</p>
         <h2 className="y-display y-title">{existing ? "Update your pitch" : "Pitch on this request"}</h2>
-        <p className="y-small y-fg-2 max-w-[62ch]">
-          Businesses hire on three things: a clear idea, a fair price, and samples that look like
-          what they asked for.
-        </p>
       </div>
 
       {/* Angle */}

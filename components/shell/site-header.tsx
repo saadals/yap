@@ -44,11 +44,6 @@ export function SiteHeader({ role }: { role: SessionRole }) {
         className="y-block mx-auto flex h-16 max-w-[1360px] items-center gap-2 !rounded-full ps-4 pe-2 shadow-[0_1px_0_var(--y-line)] md:ps-5"
       >
         <Brand href={homeFor(role)} />
-        {role ? (
-          <span className="y-chip ms-1 hidden capitalize sm:inline-flex">
-            {role === "business" ? "Business" : "Creator"}
-          </span>
-        ) : null}
 
         <nav aria-label="Main" className="ms-3 hidden items-center gap-0.5 lg:flex">
           {links.map((link) => (
@@ -82,12 +77,7 @@ export function SiteHeader({ role }: { role: SessionRole }) {
                 >
                   New request
                 </PillButton>
-              ) : (
-                <AvailabilityChip />
-              )}
-              <span className="hidden md:inline-flex">
-                <ThemeToggle />
-              </span>
+              ) : null}
               <button
                 type="button"
                 className="y-round relative"
@@ -120,9 +110,6 @@ export function SiteHeader({ role }: { role: SessionRole }) {
             </>
           ) : (
             <>
-              <span className="hidden md:inline-flex">
-                <ThemeToggle />
-              </span>
               <PillButton href="/signin" variant="ghost" size="sm" className="hidden md:inline-flex">
                 Sign in
               </PillButton>
@@ -179,24 +166,5 @@ export function SiteHeader({ role }: { role: SessionRole }) {
         </Sheet>
       )}
     </header>
-  );
-}
-
-function AvailabilityChip() {
-  const s = useDemo();
-  const creator = me.creator(s);
-  const away = !creator.available || s.settings.creator.vacationMode;
-  return (
-    <Link
-      href="/creator/settings"
-      className="y-chip y-hoverable hidden md:inline-flex"
-      title="Change availability"
-    >
-      <span
-        aria-hidden
-        className={`size-2 rounded-full ${away ? "bg-(--y-warning)" : "bg-(--y-success)"}`}
-      />
-      {away ? "Away" : "Available"}
-    </Link>
   );
 }

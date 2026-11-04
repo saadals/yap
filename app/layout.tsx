@@ -1,9 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Funnel_Display, Funnel_Sans, Rubik, Zain } from "next/font/google";
-import { cookies } from "next/headers";
 
 import { AppRoot } from "@/components/shell/app-root";
-import type { SessionRole, Theme } from "@/lib/prefs";
+import { themeBootScript } from "@/lib/site";
 
 import "./globals.css";
 
@@ -65,25 +64,20 @@ export const viewport: Viewport = {
   ],
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const jar = await cookies();
-  const theme: Theme = jar.get("yapp_theme")?.value === "dark" ? "dark" : "light";
-  const roleCookie = jar.get("yapp_role")?.value;
-  const role: SessionRole =
-    roleCookie === "business" || roleCookie === "creator" ? roleCookie : null;
-
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
       dir="ltr"
-      className={`${display.variable} ${text.variable} ${arDisplay.variable} ${arText.variable} ${theme === "dark" ? "dark" : ""}`}
-      style={{ colorScheme: theme }}
+      className={`${display.variable} ${text.variable} ${arDisplay.variable} ${arText.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Applies the saved theme before first paint (works on static hosting too). */}
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+      </head>
       <body>
-        <AppRoot theme={theme} role={role} fontStyle={fontVars}>
-          {children}
-        </AppRoot>
+        <AppRoot fontStyle={fontVars}>{children}</AppRoot>
       </body>
     </html>
   );

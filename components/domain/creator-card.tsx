@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Heart, Megaphone, Zap } from "lucide-react";
+import { BadgeCheck, Heart } from "lucide-react";
 import Link from "next/link";
 
 import { FaceAvatar } from "@/components/ui/face-avatar";
@@ -56,14 +56,25 @@ export function SaveCreatorButton({
 }
 
 /**
- * Browse card: featured video up top (Airbnb-style), then who they are, trust and price.
- * The whole card links to the profile; the heart is a separate control.
+ * Browse card (Airbnb-style): the featured video, then name, rating, one meta line, price.
+ * Kept deliberately quiet: one badge on the media, no chip rows. The whole card links to the
+ * profile; the heart is a separate control.
  */
 export function CreatorCard({ creator, className = "" }: { creator: Creator; className?: string }) {
   const s = useDemo();
   const video = featuredVideo(s, creator);
   const city = cityById(creator.cityId);
-  const kind = creatorKindById[creator.kind];
+  const languages = creator.languages
+    .slice(0, 2)
+    .map((id) => languageById[id].short)
+    .join(", ");
+  const meta = [
+    city?.name,
+    languages,
+    creator.kind === "influencer" && creator.followers ? `${compact(creator.followers)} followers` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <article
@@ -71,61 +82,42 @@ export function CreatorCard({ creator, className = "" }: { creator: Creator; cla
       className={`y-block y-hoverable group relative flex flex-col overflow-hidden ${className}`}
     >
       <div className="relative p-2 pb-0">
-        {video ? <VideoThumb video={video} frame="4:5" hookAt="bottom" decorative /> : <div className="aspect-[4/5] rounded-(--y-r-tile) bg-(--y-mist)" />}
+        {video ? (
+          <VideoThumb video={video} frame="4:5" hookAt="bottom" showViews={false} decorative />
+        ) : (
+          <div className="aspect-[4/5] rounded-(--y-r-tile) bg-(--y-mist)" />
+        )}
         <div className="absolute inset-x-4 top-4 z-[3] flex items-start justify-between gap-2">
-          <span className="flex flex-wrap gap-1.5">
-            {creator.topRated ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-xs font-semibold text-[#0e0e10]">
-                <Zap size={12} aria-hidden className="fill-current" /> Top rated
-              </span>
-            ) : null}
-            {creator.kind === "influencer" && creator.followers ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-[#0e0e10] px-2.5 py-1 text-xs font-semibold text-white">
-                <Megaphone size={12} aria-hidden /> {compact(creator.followers)}
-              </span>
-            ) : null}
-          </span>
+          {!creator.available ? (
+            <span className="rounded-full bg-[#0e0e10]/80 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-sm">
+              Booked
+            </span>
+          ) : (
+            <span />
+          )}
           <SaveCreatorButton creator={creator} className="relative z-[4]" />
         </div>
       </div>
-      <div className="flex flex-1 flex-col gap-3 p-4 pt-3">
-        <div className="flex items-start gap-3">
-          <FaceAvatar id={creator.id} name="" size={40} className="mt-0.5" />
-          <div className="min-w-0 flex-1">
-            <h3 className="y-head flex items-center gap-1.5">
-              <Link
-                href={`/creators/${creator.handle}`}
-                className="truncate after:absolute after:inset-0 after:z-[2] after:content-['']"
-              >
-                {creator.name}
-              </Link>
-              {creator.verified ? (
-                <BadgeCheck size={17} aria-label="ID verified" className="flex-none" />
-              ) : null}
-            </h3>
-            <p className="y-small y-fg-2 truncate">
-              {kind.name} · {city?.name}
-            </p>
-          </div>
-          <Rating value={creator.rating} count={creator.reviewCount} />
+      <div className="flex flex-1 flex-col gap-1 px-4 pt-3 pb-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="y-head flex min-w-0 items-center gap-1.5">
+            <Link
+              href={`/creators/${creator.handle}`}
+              className="truncate after:absolute after:inset-0 after:z-[2] after:content-['']"
+            >
+              {creator.name}
+            </Link>
+            {creator.verified ? (
+              <BadgeCheck size={16} aria-label="ID verified" className="flex-none" />
+            ) : null}
+          </h3>
+          <Rating value={creator.rating} />
         </div>
-        <p className="y-small y-clamp-2 y-fg-2">{creator.headline}</p>
-        <div className="mt-auto flex items-end justify-between gap-3 border-t border-(--b-line) pt-3">
-          <span className="y-micro y-fg-2 flex flex-wrap gap-x-2">
-            {creator.languages.slice(0, 3).map((id) => (
-              <span key={id}>{languageById[id].short}</span>
-            ))}
-          </span>
-          <span className="y-small flex-none">
-            <span className="y-fg-2">From </span>
-            <span className="y-display y-num text-[22px] font-semibold tracking-[-0.02em]">
-              {money(startingPrice(creator))}
-            </span>
-          </span>
-        </div>
-        {!creator.available ? (
-          <span className="y-micro y-fg-3 -mt-1">Booked right now · taking new work soon</span>
-        ) : null}
+        <p className="y-small y-fg-2 truncate">{meta}</p>
+        <p className="y-small mt-2">
+          <span className="font-semibold">From {money(startingPrice(creator))}</span>
+          <span className="y-fg-2"> · {creatorKindById[creator.kind].name.toLowerCase()}</span>
+        </p>
       </div>
     </article>
   );

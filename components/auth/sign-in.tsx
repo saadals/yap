@@ -10,7 +10,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
 import { usePrefs } from "@/lib/prefs";
 import { businessById, creatorById, memberById } from "@/lib/selectors";
-import { ME, useDemo } from "@/lib/store";
+import { ME, useDemo, useHydrated } from "@/lib/store";
 import type { Role } from "@/lib/types";
 
 import {
@@ -23,7 +23,7 @@ import {
   roleHome,
   safeNext,
 } from "./auth-bits";
-import { AuthLayout, AuthVisual } from "./auth-layout";
+import { AuthLayout } from "./auth-layout";
 import { DemoAccounts } from "./demo-accounts";
 import { EmailCodeStep } from "./email-code";
 import { ForgotPasswordSheet } from "./forgot-password";
@@ -41,7 +41,11 @@ export function SignInScreen() {
 
   const router = useRouter();
   const toast = useToast();
-  const { role: sessionRole, setRole } = usePrefs();
+  const { role: cookieRole, setRole } = usePrefs();
+  // The session cookie is only readable in the browser: show the "signed in" note after hydration
+  // so the server HTML (always signed out) matches the first client render.
+  const hydrated = useHydrated();
+  const sessionRole = hydrated ? cookieRole : null;
   const s = useDemo();
   const business = businessById(s, ME.businessId);
   const member = memberById(s, ME.memberId);
@@ -102,10 +106,11 @@ export function SignInScreen() {
     window.setTimeout(() => signIn(fallback), 900);
   };
 
-  const demoHint =
+  const routing =
     fallback === "creator"
-      ? "Demo: any email and an 8+ character password works. Emails with “nour” or “daftar” open Daftar’s business workspace; anything else opens Layla’s creator workspace."
-      : "Demo: any email and an 8+ character password works. Emails with “layla” or “creator” open Layla’s creator workspace; anything else opens Daftar’s business workspace.";
+      ? "Emails with “nour” or “daftar” open Daftar; others open Layla."
+      : "Emails with “layla” or “creator” open Layla; others open Daftar.";
+  const demoHint = `Demo: any email and an 8+ character password. ${routing}`;
 
   const lead =
     preferred === "creator"
@@ -118,21 +123,13 @@ export function SignInScreen() {
 
   return (
     <AuthLayout
-      visual={
-        <AuthVisual
-          title={
-            <>
-              Videos that get your app <span className="y-strong">talked about</span>
-            </>
-          }
-          points={[
-            "Payment is held until you approve the video",
-            "Creators keep 100% of their price",
-            "Your product context carries into every brief",
-          ]}
+      aside={
+        <DemoAccounts
+          onPick={onDemo}
+          pending={busy === "business" || busy === "creator" ? busy : null}
+          preferred={preferred}
         />
       }
-      extra={<DemoAccounts onPick={onDemo} pending={busy === "business" || busy === "creator" ? busy : null} preferred={preferred} />}
     >
       {sessionRole ? (
         <div className="y-tile flex flex-col gap-3 p-4">
@@ -230,9 +227,7 @@ export function SignInScreen() {
             <p className="y-micro y-fg-3 flex gap-1.5 px-1">
               <Info size={14} aria-hidden className="mt-px flex-none" />
               <span>
-                {mode === "code"
-                  ? `Demo: the code is always 123456. ${fallback === "creator" ? "Emails with “nour” or “daftar” open Daftar’s workspace; anything else opens Layla’s." : "Emails with “layla” or “creator” open Layla’s creator workspace; anything else opens Daftar’s."}`
-                  : demoHint}
+                {mode === "code" ? `Demo: the code is always 123456. ${routing}` : demoHint}
               </span>
             </p>
 

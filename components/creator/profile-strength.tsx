@@ -105,14 +105,21 @@ export function StrengthMeter({ value, label }: { value: number; label: string }
 }
 
 /** Checklist rows. Done items show a check; open items link to where they are fixed. */
-export function StrengthList({ items, showDone = true }: { items: StrengthItem[]; showDone?: boolean }) {
-  const shown = showDone ? items : items.filter((i) => !i.done);
+export function StrengthList({
+  items,
+  onPick,
+}: {
+  items: StrengthItem[];
+  /** Called when an item is followed, e.g. to open the matching profile section. */
+  onPick?: (item: StrengthItem) => void;
+}) {
   return (
     <ul className="flex flex-col gap-2">
-      {shown.map((item) => (
+      {items.map((item) => (
         <li key={item.id}>
           <Link
             href={item.href}
+            onClick={() => onPick?.(item)}
             className="y-tile y-hoverable flex min-h-14 items-center gap-3 py-2 ps-2 pe-4"
           >
             <span

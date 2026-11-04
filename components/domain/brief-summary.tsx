@@ -8,7 +8,7 @@ import type { Brief, Product } from "@/lib/types";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="y-tile flex flex-col gap-1 p-4">
+    <div className="flex flex-col gap-0.5 border-t border-(--b-line) py-3">
       <dt className="y-micro y-fg-2">{label}</dt>
       <dd className="y-small font-semibold">{children}</dd>
     </div>
@@ -57,7 +57,7 @@ export function BriefSummary({
         </div>
       ) : null}
 
-      <dl className="grid grid-cols-2 gap-2 md:grid-cols-3">
+      <dl className="grid grid-cols-2 gap-x-6 md:grid-cols-3">
         <Fact label="Format">
           <span className="inline-flex items-center gap-1.5">
             <FormatIcon size={16} aria-hidden /> {format.name}
@@ -122,41 +122,59 @@ export function BriefSummary({
         </div>
       ) : null}
 
-      {brief.references.length ? (
-        <div className="flex flex-col gap-2">
-          <h3 className="y-micro y-fg-2">References</h3>
-          <ul className="flex flex-col gap-1.5">
-            {brief.references.map((ref) => (
-              <li key={ref.id} className="y-small flex items-start gap-2">
-                <Link2 size={15} aria-hidden className="mt-0.5 flex-none" />
-                <span>
-                  <span className="font-semibold">{ref.label}</span>
-                  {ref.note ? <span className="y-fg-2"> — {ref.note}</span> : null}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+      {brief.references.length || brief.addons.length || brief.notes ? (
+        <details className="group border-t border-(--b-line) pt-3">
+          <summary className="y-small flex cursor-pointer list-none items-center justify-between gap-2 py-1 font-semibold [&::-webkit-details-marker]:hidden">
+            More details
+            <span className="y-micro y-fg-2 font-normal group-open:hidden">
+              {[
+                brief.references.length ? plural(brief.references.length, "reference") : null,
+                brief.addons.length ? plural(brief.addons.length, "add-on") : null,
+                brief.notes ? "notes" : null,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </span>
+          </summary>
+          <div className="flex flex-col gap-5 pt-3">
+            {brief.references.length ? (
+              <div className="flex flex-col gap-2">
+                <h3 className="y-micro y-fg-2">References</h3>
+                <ul className="flex flex-col gap-1.5">
+                  {brief.references.map((ref) => (
+                    <li key={ref.id} className="y-small flex items-start gap-2">
+                      <Link2 size={15} aria-hidden className="mt-0.5 flex-none" />
+                      <span>
+                        <span className="font-semibold">{ref.label}</span>
+                        {ref.note ? <span className="y-fg-2"> — {ref.note}</span> : null}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
 
-      {brief.addons.length ? (
-        <div className="flex flex-col gap-2">
-          <h3 className="y-micro y-fg-2">Add-ons requested</h3>
-          <div className="flex flex-wrap gap-1.5">
-            {brief.addons.map((id) => {
-              const addon = addonById[id];
-              const Icon = addon.icon;
-              return (
-                <span key={id} className="y-chip">
-                  <Icon size={14} aria-hidden /> {addon.name}
-                </span>
-              );
-            })}
+            {brief.addons.length ? (
+              <div className="flex flex-col gap-2">
+                <h3 className="y-micro y-fg-2">Add-ons requested</h3>
+                <div className="flex flex-wrap gap-1.5">
+                  {brief.addons.map((id) => {
+                    const addon = addonById[id];
+                    const Icon = addon.icon;
+                    return (
+                      <span key={id} className="y-chip">
+                        <Icon size={14} aria-hidden /> {addon.name}
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            {brief.notes ? <Prose label="Notes">{brief.notes}</Prose> : null}
           </div>
-        </div>
+        </details>
       ) : null}
-
-      {brief.notes ? <Prose label="Notes">{brief.notes}</Prose> : null}
     </div>
   );
 }

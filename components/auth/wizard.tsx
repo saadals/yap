@@ -303,24 +303,3 @@ export function focusFirstError() {
     target.scrollIntoView({ block: "center", behavior: "smooth" });
   });
 }
-
-/** Section heading inside a step. */
-export function StepSection({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="flex flex-col gap-5 border-t border-(--b-line) pt-7 first:border-t-0 first:pt-0">
-      <div className="flex flex-col gap-1">
-        <h2 className="y-head">{title}</h2>
-        {description ? <p className="y-small y-fg-2 max-w-[56ch]">{description}</p> : null}
-      </div>
-      {children}
-    </section>
-  );
-}

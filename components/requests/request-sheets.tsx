@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Check, Eye, Globe, MailOpen, Send } from "lucide-react";
+import { BadgeCheck, Check, Globe, MailOpen, Send } from "lucide-react";
 import { useState } from "react";
 
 import { languageList } from "@/components/domain/chips";
@@ -489,18 +489,17 @@ export function SampleSheet({
     <Sheet open onClose={onClose} title={video.title} description={`Sample from ${creator.name}`} width="lg">
       <div className="flex flex-col gap-5">
         <VideoPlayer key={video.id} video={video} size="md" />
-        <div className="flex flex-wrap gap-1.5">
-          <span className="y-chip">{format.name}</span>
-          <span className="y-chip">{languageList([video.lang])}</span>
-          <span className="y-chip">{lengthLabel(video.durationSec)}</span>
-          {video.madeFor ? <span className="y-chip">Made for {video.madeFor}</span> : <span className="y-chip">Spec piece</span>}
-          {video.stats ? (
-            <span className="y-chip">
-              <Eye size={14} aria-hidden /> {compact(video.stats.views)} views
-              {video.stats.watchThroughPct ? ` · ${video.stats.watchThroughPct}% watched through` : ""}
-            </span>
-          ) : null}
-        </div>
+        <p className="y-small y-fg-2">
+          {[
+            format.name,
+            languageList([video.lang]),
+            lengthLabel(video.durationSec),
+            video.madeFor ? `Made for ${video.madeFor}` : "Spec piece",
+            video.stats ? `${compact(video.stats.views)} views` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
         {others.length > 1 ? (
           <div className="flex flex-col gap-2">
             <p className="y-micro y-fg-2">Other samples in this pitch</p>

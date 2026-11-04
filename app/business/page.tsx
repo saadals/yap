@@ -1,21 +1,18 @@
 "use client";
 
-import { ActiveCommissions } from "@/components/business/active-commissions";
-import { ActivityFeed } from "@/components/business/activity-feed";
 import { CommissionAgainBlock } from "@/components/business/commission-again";
 import { DashboardSkeleton } from "@/components/business/dashboard-skeleton";
-import { GreetingHero } from "@/components/business/greeting-hero";
-import { MoneyBlocks } from "@/components/business/money-blocks";
+import { Greeting } from "@/components/business/greeting";
+import { InProgress } from "@/components/business/in-progress";
 import { NextStepBlock } from "@/components/business/next-step-block";
 import { OpenRequests } from "@/components/business/open-requests";
-import { RecommendedCreators } from "@/components/business/recommended-creators";
 import { AppShell } from "@/components/shell/app-shell";
 import { Page } from "@/components/ui/page";
 import { useHydrated } from "@/lib/store";
 
 /**
- * Business home: what needs me (hero + the one neon next step), what's moving (commissions,
- * requests, money), and what to do next (commission again, good fits, activity).
+ * Business home: a greeting that says what's going on, the one neon next step, what's in flight
+ * (commissions, then requests) and "Commission again". Everything else lives on its own page.
  */
 export default function BusinessHomePage() {
   return (
@@ -31,18 +28,19 @@ function Dashboard() {
   const hydrated = useHydrated();
   if (!hydrated) return <DashboardSkeleton />;
   return (
-    <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 [&>*]:min-w-0">
-      <GreetingHero className="y-enter lg:col-span-8" />
-      <NextStepBlock className="y-enter lg:col-span-4" />
-
-      <ActiveCommissions className="lg:col-span-8" />
-      <MoneyBlocks className="lg:col-span-4" />
-
-      <OpenRequests className="lg:col-span-7" />
-      <CommissionAgainBlock className="lg:col-span-5" />
-
-      <ActivityFeed className="lg:col-span-7" />
-      <RecommendedCreators className="lg:col-span-5" />
-    </div>
+    <>
+      <Greeting className="y-enter" />
+      {/* Two columns on desktop; on mobile the columns dissolve so the neon comes right after the greeting. */}
+      <div className="grid grid-cols-1 items-start gap-2 lg:grid-cols-12">
+        <div className="contents lg:col-span-8 lg:flex lg:min-w-0 lg:flex-col lg:gap-2">
+          <InProgress className="order-2 min-w-0 lg:order-none" />
+          <OpenRequests className="order-3 min-w-0 lg:order-none" />
+        </div>
+        <div className="contents lg:col-span-4 lg:flex lg:min-w-0 lg:flex-col lg:gap-2">
+          <NextStepBlock className="y-enter order-1 min-w-0 lg:order-none" />
+          <CommissionAgainBlock className="order-4 min-w-0 lg:order-none" />
+        </div>
+      </div>
+    </>
   );
 }

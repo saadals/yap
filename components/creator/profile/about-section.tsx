@@ -45,7 +45,8 @@ export function AboutSection({ creator }: { creator: Creator }) {
     <ProfileSection
       id="about"
       title="About"
-      description="Your headline and bio sit at the top of your public profile and under every pitch."
+      description="Shown at the top of your public profile and under every pitch."
+      summary={creator.headline}
       dirty={dirty}
       attempted={attempted}
       errorCount={errorCount}

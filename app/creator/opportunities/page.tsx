@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff, Search, SlidersHorizontal, Sparkles } from "lucide-react";
+import { Eye, EyeOff, Search, SlidersHorizontal } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import {
@@ -167,7 +167,7 @@ function Opportunities() {
     <Page>
       <PageHeader
         title="Opportunities"
-        description="Open requests from businesses that need what you make. Pitch on the ones you'd be proud to post."
+        description="Open requests from businesses that need what you make."
         actions={
           <PillButton href="/creator/pitches" variant="outline">
             My pitches{activePitches ? ` · ${activePitches} active` : ""}
@@ -175,153 +175,124 @@ function Opportunities() {
         }
       />
 
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 [&>*]:min-w-0">
-        <aside className="hidden lg:col-span-4 lg:block xl:col-span-3" aria-label="Filters">
-          <Block tone="paper" pad="md" className="sticky top-24 flex flex-col gap-6">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="y-head">Filters</h2>
-              {activeFilterCount ? (
-                <PillButton size="sm" variant="ghost" onClick={clearFilters}>
-                  Clear all
-                </PillButton>
-              ) : null}
-            </div>
-            {filterPanel}
-          </Block>
-        </aside>
-
-        <section className="flex flex-col gap-2 lg:col-span-8 xl:col-span-9" aria-label="Requests">
-          <Block tone="paper" pad="sm" className="flex flex-col gap-3 md:p-5">
-            <div className="y-scroll-x -mx-1 px-1">
-              <div className="flex w-max gap-2" role="group" aria-label="Show">
-                {tabs.map((t) => (
-                  <FilterChip key={t.id} pressed={tab === t.id} count={t.count} onClick={() => setTab(t.id)}>
-                    {t.label}
-                  </FilterChip>
+      {/* One quiet row: what to show, search, sort, and the rest of the filters in a sheet. */}
+      <div data-tone="canvas" className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="y-scroll-x -mx-1 px-1 lg:flex-1">
+          <div className="flex w-max gap-2" role="group" aria-label="Show">
+            {tabs.map((t) => (
+              <FilterChip key={t.id} pressed={tab === t.id} count={t.count} onClick={() => setTab(t.id)}>
+                {t.label}
+              </FilterChip>
+            ))}
+          </div>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="relative flex-1 lg:w-72 lg:flex-none">
+            <span className="sr-only">Search requests</span>
+            <Search
+              size={18}
+              aria-hidden
+              className="y-fg-2 pointer-events-none absolute start-5 top-1/2 -translate-y-1/2"
+            />
+            <input
+              type="search"
+              className="y-input ps-12"
+              placeholder="Search by app or business"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+          <div className="flex gap-2">
+            <label className="flex-1 sm:w-44 sm:flex-none">
+              <span className="sr-only">Sort by</span>
+              <select className="y-input" value={sort} onChange={(e) => setSort(e.target.value as Sort)}>
+                {sortOptions.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label}
+                  </option>
                 ))}
-              </div>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <label className="relative flex-1">
-                <span className="sr-only">Search requests</span>
-                <Search
-                  size={18}
-                  aria-hidden
-                  className="y-fg-2 pointer-events-none absolute start-5 top-1/2 -translate-y-1/2"
-                />
-                <input
-                  type="search"
-                  className="y-input ps-12"
-                  placeholder="Search by app, business or idea"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-              </label>
-              <div className="flex gap-2">
-                <label className="flex-1 sm:w-48 sm:flex-none">
-                  <span className="sr-only">Sort by</span>
-                  <select
-                    className="y-input"
-                    value={sort}
-                    onChange={(e) => setSort(e.target.value as Sort)}
-                  >
-                    {sortOptions.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <PillButton
-                  variant="soft"
-                  className="lg:hidden !min-h-[52px]"
-                  icon={<SlidersHorizontal size={18} aria-hidden />}
-                  onClick={() => setSheetOpen(true)}
-                  aria-label={`Filters${activeFilterCount ? `, ${activeFilterCount} active` : ""}`}
-                >
-                  Filters{activeFilterCount ? ` · ${activeFilterCount}` : ""}
-                </PillButton>
-              </div>
-            </div>
-          </Block>
-
-          <p className="y-small y-fg-2 px-2 pt-2" aria-live="polite">
-            {loading
-              ? "Loading requests…"
-              : `${plural(results.length, "request")}${tab === "for-you" ? ` with ${FIT_THRESHOLD}%+ fit` : ""}`}
-          </p>
-
-          {loading ? (
-            <div className="grid gap-2 md:grid-cols-2" aria-busy="true">
-              {Array.from({ length: 4 }, (_, i) => (
-                <JobCardSkeleton key={i} />
-              ))}
-            </div>
-          ) : results.length ? (
-            <ul className="grid gap-2 md:grid-cols-2">
-              {results.map((o) => (
-                <li key={o.request.id} className="relative">
-                  <RequestCard
-                    request={o.request}
-                    perspective="creator"
-                    href={`/creator/opportunities/${o.request.id}`}
-                    fit={o.fit}
-                    pitch={o.pitch}
-                    invited={o.invited}
-                    className="h-full !pb-[76px] md:!pb-[80px]"
-                  />
-                  <div className="pointer-events-none absolute inset-x-5 bottom-4 flex items-center justify-between gap-2 md:inset-x-6 md:bottom-5">
-                    <p className="y-micro y-fg-2 flex min-w-0 items-center gap-1.5">
-                      {o.pitch ? (
-                        <span className="truncate">Your pitch: {money(o.pitch.price)}</span>
-                      ) : o.fit.reasons[0] ? (
-                        <>
-                          <Sparkles size={13} aria-hidden className="flex-none" />
-                          <span className="truncate">{o.fit.reasons[0]}</span>
-                        </>
-                      ) : null}
-                    </p>
-                    {o.hidden ? (
-                      <PillButton
-                        size="sm"
-                        variant="ghost"
-                        className="pointer-events-auto relative z-[3]"
-                        icon={<Eye size={16} aria-hidden />}
-                        onClick={() => unhide(o.request.id)}
-                        aria-label={`Unhide ${o.request.title}`}
-                      >
-                        Unhide
-                      </PillButton>
-                    ) : (
-                      <PillButton
-                        size="sm"
-                        variant="ghost"
-                        className="pointer-events-auto relative z-[3]"
-                        icon={<EyeOff size={16} aria-hidden />}
-                        onClick={() => hide(o.request.id, o.request.title)}
-                        aria-label={`Hide ${o.request.title}`}
-                      >
-                        Hide
-                      </PillButton>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <Block tone="paper" pad="md">
-              <EmptyForTab
-                tab={tab}
-                filtered={activeFilterCount > 0 || q.length > 0 || (minBudget > 0 && base.length > 0)}
-                minBudget={minBudget}
-                onClear={clearFilters}
-                onAnyBudget={() => setMinBudgetOverride(0)}
-                onShowAll={() => setTab("all")}
-              />
-            </Block>
-          )}
-        </section>
+              </select>
+            </label>
+            <PillButton
+              variant={activeFilterCount ? "contrast" : "soft"}
+              className="!min-h-[52px]"
+              icon={<SlidersHorizontal size={18} aria-hidden />}
+              onClick={() => setSheetOpen(true)}
+              aria-label={`Filters${activeFilterCount ? `, ${activeFilterCount} active` : ""}`}
+            >
+              Filters{activeFilterCount ? ` · ${activeFilterCount}` : ""}
+            </PillButton>
+          </div>
+        </div>
       </div>
+
+      <section className="flex flex-col gap-2" aria-label="Requests">
+        <p className="y-small y-fg-2 px-2 pt-2" aria-live="polite">
+          {loading
+            ? "Loading requests…"
+            : `${plural(results.length, "request")}${tab === "for-you" ? ` with ${FIT_THRESHOLD}%+ fit` : ""}`}
+        </p>
+
+        {loading ? (
+          <div className="grid gap-2 md:grid-cols-2" aria-busy="true">
+            {Array.from({ length: 4 }, (_, i) => (
+              <JobCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : results.length ? (
+          <ul className="grid gap-2 md:grid-cols-2">
+            {results.map((o) => (
+              <li key={o.request.id} className="relative">
+                <RequestCard
+                  request={o.request}
+                  perspective="creator"
+                  href={`/creator/opportunities/${o.request.id}`}
+                  fit={o.fit}
+                  pitch={o.pitch}
+                  invited={o.invited}
+                  className="h-full !pb-[68px] md:!pb-[72px]"
+                />
+                <div className="pointer-events-none absolute inset-x-5 bottom-3 flex justify-end md:inset-x-6 md:bottom-4">
+                  {o.hidden ? (
+                    <PillButton
+                      size="sm"
+                      variant="ghost"
+                      className="pointer-events-auto relative z-[3]"
+                      icon={<Eye size={16} aria-hidden />}
+                      onClick={() => unhide(o.request.id)}
+                      aria-label={`Unhide ${o.request.title}`}
+                    >
+                      Unhide
+                    </PillButton>
+                  ) : (
+                    <PillButton
+                      size="sm"
+                      variant="ghost"
+                      className="pointer-events-auto relative z-[3]"
+                      icon={<EyeOff size={16} aria-hidden />}
+                      onClick={() => hide(o.request.id, o.request.title)}
+                      aria-label={`Hide ${o.request.title}`}
+                    >
+                      Hide
+                    </PillButton>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <Block tone="paper" pad="md">
+            <EmptyForTab
+              tab={tab}
+              filtered={activeFilterCount > 0 || q.length > 0 || (minBudget > 0 && base.length > 0)}
+              minBudget={minBudget}
+              onClear={clearFilters}
+              onAnyBudget={() => setMinBudgetOverride(0)}
+              onShowAll={() => setTab("all")}
+            />
+          </Block>
+        )}
+      </section>
 
       <Sheet
         open={sheetOpen}

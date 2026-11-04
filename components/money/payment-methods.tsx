@@ -1,11 +1,10 @@
 "use client";
 
-import { Check, CreditCard, Plus, Smartphone, Trash2 } from "lucide-react";
+import { CreditCard, Plus, Smartphone, Trash2 } from "lucide-react";
 import { useState } from "react";
 
 import { paymentLabel } from "@/components/domain/money";
 import { ConfirmSheet } from "@/components/settings/confirm-sheet";
-import { Badge } from "@/components/ui/badge";
 import { FieldShell, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
@@ -21,7 +20,7 @@ const brandName: Record<PaymentMethod["brand"], string> = {
   applepay: "Apple Pay",
 };
 
-export function PaymentMethods() {
+export function PaymentMethods({ titleId }: { titleId?: string }) {
   const s = useDemo();
   const toast = useToast();
   const [adding, setAdding] = useState(false);
@@ -32,32 +31,33 @@ export function PaymentMethods() {
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={titleId} className="y-head">
+          Payment methods
+        </h3>
+        <PillButton variant="ghost" size="sm" icon={<Plus size={16} aria-hidden />} onClick={() => setAdding(true)}>
+          Add a card
+        </PillButton>
+      </div>
       {methods.length === 0 ? (
-        <p className="y-small y-fg-2">
-          No cards saved. Add one so you can fund a commission in one tap.
-        </p>
+        <p className="y-small y-fg-2">No cards saved. Add one to fund a commission in one tap.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col divide-y divide-(--b-line)">
           {methods.map((method) => {
             const held = heldWith(method.id);
+            const meta = [
+              method.isDefault ? "Default" : null,
+              method.brand === "applepay" ? "Touch ID or Face ID" : `Expires ${method.expiry}`,
+              held ? `Funding ${held} held payment${held === 1 ? "" : "s"}` : null,
+            ].filter(Boolean);
             return (
-              <li key={method.id} className="y-tile flex flex-wrap items-center gap-3 p-3 ps-4">
-                <span aria-hidden className="grid size-11 flex-none place-items-center rounded-full bg-(--b-bg)">
+              <li key={method.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+                <span aria-hidden className="y-fg-2 flex-none">
                   {method.brand === "applepay" ? <Smartphone size={18} /> : <CreditCard size={18} />}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="y-small flex flex-wrap items-center gap-2 font-semibold">
-                    {paymentLabel(method)}
-                    {method.isDefault ? (
-                      <Badge tone="ink" icon={<Check size={12} aria-hidden />} className="!min-h-6 !px-2 text-xs">
-                        Default
-                      </Badge>
-                    ) : null}
-                  </span>
-                  <span className="y-micro y-fg-2">
-                    {method.brand === "applepay" ? "Touch ID or Face ID" : `Expires ${method.expiry} · ${method.holder}`}
-                    {held ? ` · Funding ${held} protected payment${held === 1 ? "" : "s"}` : ""}
-                  </span>
+                  <span className="y-small font-semibold">{paymentLabel(method)}</span>
+                  <span className="y-micro y-fg-2 truncate">{meta.join(" · ")}</span>
                 </span>
                 <span className="flex flex-none items-center gap-1">
                   {!method.isDefault ? (
@@ -78,31 +78,24 @@ export function PaymentMethods() {
                       Make default
                     </PillButton>
                   ) : null}
-                  <PillButton
-                    variant="ghost"
-                    size="sm"
-                    icon={<Trash2 size={16} aria-hidden />}
-                    disabled={methods.length <= 1}
-                    title={methods.length <= 1 ? "Add another card before removing this one" : undefined}
-                    aria-label={`Remove ${paymentLabel(method)}`}
-                    onClick={() => setRemoving(method)}
-                  >
-                    Remove
-                  </PillButton>
+                  {methods.length > 1 ? (
+                    <PillButton
+                      variant="ghost"
+                      size="sm"
+                      icon={<Trash2 size={16} aria-hidden />}
+                      aria-label={`Remove ${paymentLabel(method)}`}
+                      title={`Remove ${paymentLabel(method)}`}
+                      onClick={() => setRemoving(method)}
+                    >
+                      <span className="sr-only">Remove</span>
+                    </PillButton>
+                  ) : null}
                 </span>
               </li>
             );
           })}
         </ul>
       )}
-      {methods.length === 1 ? (
-        <p className="y-micro y-fg-3 px-1">You need at least one card on file. Add another before removing this one.</p>
-      ) : null}
-      <div>
-        <PillButton variant="soft" icon={<Plus size={18} aria-hidden />} onClick={() => setAdding(true)}>
-          Add a card
-        </PillButton>
-      </div>
 
       <AddCardSheet open={adding} onClose={() => setAdding(false)} />
 

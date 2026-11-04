@@ -1,17 +1,17 @@
 "use client";
 
-import { MailPlus, Search, X } from "lucide-react";
+import { MailPlus, MessageCircle, Search, UserRound, X } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
 import { CollaboratorRow } from "@/components/business/collaborator-row";
 import { InviteToRequestSheet } from "@/components/business/invite-sheet";
-import { MessageCreatorButton } from "@/components/business/message-creator";
+import { useMessageCreator } from "@/components/business/message-creator";
+import { RowMenu } from "@/components/business/row-menu";
 import { CreatorCard } from "@/components/domain/creator-card";
 import { AppShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
-import { SelectField } from "@/components/ui/field";
 import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -112,7 +112,7 @@ function YourCreators() {
     <Page>
       <PageHeader
         title="Your creators"
-        description="People you've saved and people you've worked with. Book someone again in two taps: your product context and feedback go with it."
+        description="Book someone again and your product context and learnings go with them."
         actions={
           <PillButton href="/creators" variant="neon" arrow icon={<Search size={18} aria-hidden />}>
             Find creators
@@ -120,59 +120,45 @@ function YourCreators() {
         }
       />
 
-      <Block tone="paper" pad="sm" className="mb-2 flex flex-col gap-4 lg:flex-row lg:items-end">
-        <div className="flex flex-col gap-2">
-          <span className="y-label" aria-hidden>
-            Show
-          </span>
-          <SegmentedToggle
-            label="Show"
-            size="md"
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: "saved", label: `Saved · ${saved.length}` },
-              { value: "worked", label: `Worked with · ${worked.length}` },
-            ]}
-          />
-        </div>
-        <div className="flex min-w-0 flex-1 flex-col gap-2">
-          <label htmlFor="creator-search" className="y-label">
-            Search
-          </label>
-          <div className="relative">
+      <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-center">
+        <SegmentedToggle
+          label="Show"
+          size="md"
+          value={tab}
+          onChange={setTab}
+          options={[
+            { value: "saved", label: `Saved · ${saved.length}` },
+            { value: "worked", label: `Worked with · ${worked.length}` },
+          ]}
+        />
+        <div className="flex min-w-0 flex-1 gap-2">
+          <div className="relative min-w-0 flex-1">
             <Search size={18} aria-hidden className="pointer-events-none absolute start-5 top-1/2 -translate-y-1/2" />
             <input
-              id="creator-search"
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Name, city or dialect"
+              placeholder="Search creators"
+              aria-label="Search by name, city or dialect"
               className="y-input !ps-12"
               autoComplete="off"
             />
           </div>
+          <select
+            value={sort}
+            onChange={(event) => setSort(event.target.value as Sort)}
+            aria-label="Sort by"
+            className="y-input !w-auto flex-none"
+          >
+            <option value="recent">{tab === "saved" ? "Recently saved" : "Most recent"}</option>
+            <option value="rating">Highest rated</option>
+            <option value="price">Lowest price</option>
+          </select>
         </div>
-        <SelectField
-          label="Sort by"
-          optionalLabel={false}
-          value={sort}
-          onChange={(event) => setSort(event.target.value as Sort)}
-          className="lg:w-56"
-          options={[
-            { value: "recent", label: tab === "saved" ? "Recently saved" : "Most recent" },
-            { value: "rating", label: "Highest rated" },
-            { value: "price", label: "Lowest starting price" },
-          ]}
-        />
-      </Block>
+      </div>
 
-      <p className="y-small y-fg-2 px-1 pt-2 pb-3" role="status" aria-live="polite">
-        {needle
-          ? `${shownCount} of ${total} match “${query.trim()}”`
-          : tab === "saved"
-            ? `${total} saved ${total === 1 ? "creator" : "creators"}`
-            : `${total} ${total === 1 ? "creator" : "creators"} you've finished work with`}
+      <p className="sr-only" role="status" aria-live="polite">
+        {needle ? `${shownCount} of ${total} match “${query.trim()}”` : ""}
       </p>
 
       {tab === "saved" ? (
@@ -198,19 +184,7 @@ function YourCreators() {
             {savedShown.map((creator) => (
               <li key={creator.id} className="flex flex-col gap-2">
                 <CreatorCard creator={creator} className="flex-1" />
-                <div className="flex items-center gap-2">
-                  <PillButton
-                    variant="outline"
-                    size="sm"
-                    className="flex-1"
-                    icon={<MailPlus size={16} aria-hidden />}
-                    onClick={() => setInviting(creator)}
-                    aria-label={`Invite ${creator.firstName} to a request`}
-                  >
-                    Invite to a request
-                  </PillButton>
-                  <MessageCreatorButton creator={creator} iconOnly />
-                </div>
+                <SavedActions creator={creator} onInvite={() => setInviting(creator)} />
               </li>
             ))}
           </ul>
@@ -244,6 +218,38 @@ function YourCreators() {
 
       <InviteToRequestSheet creator={inviting} onClose={() => setInviting(null)} />
     </Page>
+  );
+}
+
+/** Under a saved creator's card: invite (primary) and a More menu for the rest. */
+function SavedActions({ creator, onInvite }: { creator: Creator; onInvite: () => void }) {
+  const message = useMessageCreator(creator);
+  return (
+    <div className="flex items-center gap-2">
+      <PillButton
+        variant="outline"
+        size="sm"
+        className="flex-1"
+        icon={<MailPlus size={16} aria-hidden />}
+        onClick={onInvite}
+        aria-label={`Invite ${creator.firstName} to a request`}
+      >
+        Invite to a request
+      </PillButton>
+      <RowMenu
+        label={`More for ${creator.firstName}`}
+        items={[
+          {
+            label: message.label,
+            icon: <MessageCircle size={16} aria-hidden />,
+            href: message.href,
+            onSelect: message.start,
+          },
+          { label: "View profile", icon: <UserRound size={16} aria-hidden />, href: `/creators/${creator.handle}` },
+        ]}
+      />
+      {message.sheet}
+    </div>
   );
 }
 

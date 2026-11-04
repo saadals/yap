@@ -9,8 +9,8 @@ import { FilterChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
-import { JobCardSkeleton, Skeleton } from "@/components/ui/skeleton";
-import { daysFromNow, plural } from "@/lib/format";
+import { JobCardSkeleton } from "@/components/ui/skeleton";
+import { plural } from "@/lib/format";
 import {
   businessById,
   businessSpend,
@@ -67,7 +67,7 @@ function matches(s: DemoState, c: Commission, role: Role, query: string) {
     .every((word) => haystack.includes(word));
 }
 
-/** Commissions list for either side: KPIs, filter chips with counts, search, card grid. */
+/** Commissions list for either side: one summary line, filter chips with counts, search, card grid. */
 export function CommissionList({ role }: { role: Role }) {
   const s = useDemo();
   const hydrated = useHydrated();
@@ -88,60 +88,16 @@ export function CommissionList({ role }: { role: Role }) {
   const trimmed = query.trim();
   const shown = all.filter((c) => filterTest[filter](c, role) && matches(s, c, role, trimmed));
 
-  const kpis =
+  // One line instead of KPI tiles: the money that's protected right now. Counts live on the chips.
+  const held = hydrated ? (role === "business" ? businessSpend(s).held : creatorEarnings(s).held) : 0;
+  const description =
     role === "business"
-      ? (() => {
-          const spend = businessSpend(s);
-          return [
-            {
-              tone: "night" as const,
-              label: "In production",
-              value: String(all.filter((c) => c.status === "in_progress" || c.status === "revision").length),
-              sub: "Creators working on them now",
-            },
-            {
-              tone: "paper" as const,
-              label: "Waiting for your review",
-              value: String(counts.needs),
-              sub: counts.needs ? "Auto-approves 3 days after delivery" : "You're all caught up",
-            },
-            {
-              tone: "sky" as const,
-              label: "Total protected",
-              value: cash(spend.held),
-              sub: spend.authorized
-                ? `Held until you approve · ${cash(spend.authorized)} authorised on offers`
-                : "Held until you approve each video",
-            },
-          ];
-        })()
-      : (() => {
-          const earnings = creatorEarnings(s);
-          const dueThisWeek = all.filter(
-            (c) => (c.status === "in_progress" || c.status === "revision") && daysFromNow(c.dueDate) <= 7,
-          );
-          const late = dueThisWeek.filter((c) => daysFromNow(c.dueDate) < 0).length;
-          return [
-            {
-              tone: "night" as const,
-              label: "Due this week",
-              value: String(dueThisWeek.length),
-              sub: late ? `${plural(late, "delivery", "deliveries")} past due` : "Videos to deliver in the next 7 days",
-            },
-            {
-              tone: "paper" as const,
-              label: "In review",
-              value: String(all.filter((c) => c.status === "delivered").length),
-              sub: "Waiting for clients to approve",
-            },
-            {
-              tone: "butter" as const,
-              label: "Earnings held",
-              value: cash(earnings.held),
-              sub: "Paid to you when clients approve",
-            },
-          ];
-        })();
+      ? held
+        ? `${cash(held)} held safely until you approve each video.`
+        : "Payment stays protected until you approve each video."
+      : held
+        ? `${cash(held)} held for you, paid when clients approve.`
+        : "Accept offers, deliver versions and get paid when clients approve.";
 
   const empty = emptyCopy(role, filter, counts);
 
@@ -149,11 +105,7 @@ export function CommissionList({ role }: { role: Role }) {
     <Page>
       <PageHeader
         title="Commissions"
-        description={
-          role === "business"
-            ? "Every video you've commissioned, from offer to approved. Payment stays protected until you approve."
-            : "Your client work in one place. Accept offers, deliver versions and get paid when clients approve."
-        }
+        description={description}
         actions={
           role === "business" ? (
             <PillButton href="/creators" variant="neon" arrow>
@@ -167,27 +119,7 @@ export function CommissionList({ role }: { role: Role }) {
         }
       />
 
-      <ul className="grid grid-cols-2 gap-2 lg:grid-cols-3" aria-label="Summary">
-        {kpis.map((kpi, index) => (
-          <li key={kpi.label} className={index === 2 ? "col-span-2 lg:col-span-1" : ""}>
-            <Block tone={kpi.tone} pad="md" className="flex h-full flex-col justify-between gap-5">
-              <span className="y-small font-semibold">{kpi.label}</span>
-              <div>
-                {hydrated ? (
-                  <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
-                    {kpi.value}
-                  </p>
-                ) : (
-                  <Skeleton className="h-11 w-24" />
-                )}
-                <p className="y-micro y-fg-2 mt-2">{kpi.sub}</p>
-              </div>
-            </Block>
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex flex-col gap-3 px-1 pt-8 pb-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3 px-1 pb-3 lg:flex-row lg:items-center lg:justify-between">
         <div
           role="group"
           aria-label="Filter commissions"

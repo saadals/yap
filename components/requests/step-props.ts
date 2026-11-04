@@ -1,5 +1,5 @@
 import type { DemoState } from "@/lib/store";
-import type { FormatId, Product } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
 import type { FieldKey, Market, WizardForm } from "./shared";
 
@@ -17,5 +17,4 @@ export type StepProps = {
   error: (field: FieldKey) => string | undefined;
   touch: (field: FieldKey) => void;
   goTo: (step: number) => void;
-  onHoverFormat: (format: FormatId | null) => void;
 };

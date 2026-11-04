@@ -33,6 +33,28 @@ Good paths to walk through:
 Other creators reply to messages, accept offers and deliver versions on their own after a few
 seconds, so business flows can be tried without switching roles.
 
+## Deploy to GitHub Pages
+
+The repo ships a workflow (`.github/workflows/deploy-pages.yml`) that builds a fully static
+export and publishes it on every push to `main`.
+
+1. Push the repo to GitHub (`origin` is `github.com/saadals/yap`).
+2. In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. Push to `main` (or run the workflow manually from the Actions tab). The site appears at
+   `https://saadals.github.io/yap/`.
+
+Private repos need a paid GitHub plan for Pages.
+
+Build the same thing locally:
+
+```bash
+NEXT_PUBLIC_BASE_PATH=/yap npm run build:pages   # → out/
+```
+
+How it works: `GITHUB_PAGES=true` switches `next.config.ts` to `output: "export"` with the base
+path; theme and the demo session are read in the browser; dynamic routes pre-render their seed
+ids plus 30 slots for items created in the browser (`lib/static-params.ts`).
+
 ## Docs
 
 - [CLAUDE.md](CLAUDE.md): what this is, decisions and why, architecture, status, next steps.

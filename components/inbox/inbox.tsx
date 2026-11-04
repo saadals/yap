@@ -1,6 +1,5 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -9,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { useMediaQuery } from "@/lib/hooks";
-import { threadById, threadsFor, unreadThreadCount } from "@/lib/selectors";
+import { threadById, threadsFor } from "@/lib/selectors";
 import { ME, useDemo, useHydrated } from "@/lib/store";
 import type { Role } from "@/lib/types";
 
@@ -35,7 +34,6 @@ export function Inbox({ role }: { role: Role }) {
   const [filter, setFilter] = useState<ThreadFilter>("all");
 
   const threads = threadsFor(s, role);
-  const unread = unreadThreadCount(s, role);
   const paramId = params.get("thread") ?? undefined;
   const fallbackId = (threads.find((t) => t.unread.includes(role)) ?? threads[0])?.id;
 
@@ -60,25 +58,9 @@ export function Inbox({ role }: { role: Role }) {
 
   return (
     <>
-      <PageHeader
-        title="Messages"
-        description={
-          role === "business"
-            ? "Every conversation with creators, before and after you hire."
-            : "Conversations with clients, from first pitch to final delivery."
-        }
-        className={showConversation ? "max-lg:sr-only" : ""}
-        actions={
-          hydrated && unread > 0 ? (
-            <span className="y-chip" aria-live="polite">
-              <MessageCircle size={14} aria-hidden />
-              {unread} unread
-            </span>
-          ) : null
-        }
-      />
+      <PageHeader title="Messages" className={showConversation ? "max-lg:sr-only" : ""} />
 
-      <div className="grid grid-cols-1 gap-2 lg:h-[calc(100dvh-236px)] lg:min-h-[600px] lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-2 lg:h-[calc(100dvh-196px)] lg:min-h-[600px] lg:grid-cols-12">
         <Block
           tone="paper"
           pad="none"
@@ -115,7 +97,7 @@ export function Inbox({ role }: { role: Role }) {
               role={role}
               thread={thread}
               backHref={pathname}
-              maxHeight={desktop ? "none" : "max(260px, calc(100dvh - 480px))"}
+              maxHeight={desktop ? "none" : "max(300px, calc(100dvh - 360px))"}
             />
           ) : paramId ? (
             <EmptyState
@@ -158,7 +140,7 @@ export function InboxFallback() {
   return (
     <>
       <PageHeader title="Messages" />
-      <div className="grid grid-cols-1 gap-2 lg:h-[calc(100dvh-236px)] lg:min-h-[600px] lg:grid-cols-12">
+      <div className="grid grid-cols-1 gap-2 lg:h-[calc(100dvh-196px)] lg:min-h-[600px] lg:grid-cols-12">
         <Block tone="paper" pad="none" className="lg:col-span-4">
           <ThreadListSkeleton />
         </Block>

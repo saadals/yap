@@ -12,7 +12,8 @@ import { PillButton } from "@/components/ui/pill-button";
 export type NextStep = {
   href: string;
   label: string;
-  body: string;
+  /** Shown for the primary step only; other steps are one-line links. */
+  body?: string;
   icon: React.ReactNode;
 };
 
@@ -90,18 +91,12 @@ export function OnboardingDone({
                 <li key={step.href}>
                   <Link
                     href={step.href}
-                    className="y-tile y-hoverable flex min-h-18 items-center gap-3 p-4"
+                    className="y-tile y-hoverable flex min-h-14 items-center gap-3 px-4 py-3"
                   >
-                    <span
-                      aria-hidden
-                      className="grid size-11 flex-none place-items-center rounded-full bg-(--b-bg)"
-                    >
+                    <span aria-hidden className="flex-none">
                       {step.icon}
                     </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="y-head">{step.label}</span>
-                      <span className="y-small y-fg-2">{step.body}</span>
-                    </span>
+                    <span className="y-head min-w-0 flex-1">{step.label}</span>
                     <ArrowRight size={18} aria-hidden className="y-flip flex-none" />
                   </Link>
                 </li>

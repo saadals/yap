@@ -4,15 +4,14 @@ import { ArrowRight, Repeat2 } from "lucide-react";
 import Link from "next/link";
 
 import { FaceAvatar } from "@/components/ui/face-avatar";
-import { dueLabel, money, shortDate } from "@/lib/format";
+import { dueLabel, money, shortDate, weekdayDate } from "@/lib/format";
 import { businessById, commissionTotals, creatorById, needsAction } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import { commissionStatus, formatById } from "@/lib/taxonomy";
 import type { Commission, Role } from "@/lib/types";
 
 import { BusinessLogo } from "./business-logo";
-import { CommissionBadge, DueBadge } from "./status-badge";
-import { StageTrack } from "./stage-track";
+import { CommissionBadge } from "./status-badge";
 
 /** A commission as a card, from either side. Whole card links to the workspace. */
 export function CommissionCard({
@@ -34,13 +33,28 @@ export function CommissionCard({
   const ended = ["completed", "cancelled", "declined"].includes(commission.status);
   const href = `/${role}/commissions/${commission.id}`;
 
+  const when =
+    commission.status === "completed" && commission.completedAt
+      ? `Completed ${shortDate(commission.completedAt)}`
+      : ended
+        ? commission.status === "declined"
+          ? "Declined"
+          : "Cancelled"
+        : commission.status === "offered"
+          ? role === "business"
+            ? "Waiting for them to accept"
+            : `Reply by ${shortDate(commission.dueDate)}`
+          : commission.status === "delivered" && commission.autoApproveAt
+            ? `Auto-approves ${weekdayDate(commission.autoApproveAt)}`
+            : due.text;
+
   return (
-    <article data-tone="paper" className={`y-block y-hoverable relative flex flex-col gap-4 p-5 ${className}`}>
+    <article data-tone="paper" className={`y-block y-hoverable relative flex flex-col gap-3 p-5 ${className}`}>
       <div className="flex items-start gap-3">
         {role === "business" && creator ? (
-          <FaceAvatar id={creator.id} name="" size={44} />
+          <FaceAvatar id={creator.id} name="" size={40} />
         ) : business ? (
-          <BusinessLogo business={business} size={44} />
+          <BusinessLogo business={business} size={40} />
         ) : null}
         <div className="min-w-0 flex-1">
           <p className="y-micro y-fg-2 truncate">
@@ -57,31 +71,30 @@ export function CommissionCard({
             </Link>
           </h3>
         </div>
-        <span className="y-display y-num flex-none text-[22px] font-semibold tracking-[-0.02em]">
+        <span className="y-display y-num flex-none text-[20px] font-semibold tracking-[-0.02em]">
           {money(role === "business" ? totals.total : totals.creatorEarns)}
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <CommissionBadge status={commission.status} />
-        {!ended && commission.status !== "offered" ? <DueBadge {...due} /> : null}
-        {ended ? (
-          <span className="y-micro y-fg-2">
-            {commission.status === "completed" && commission.completedAt
-              ? `Completed ${shortDate(commission.completedAt)}`
-              : commission.cancelReason}
-          </span>
-        ) : null}
+        <span
+          className={`y-micro ${!ended && due.urgency === "late" && commission.status !== "offered" ? "text-(--y-danger)" : "y-fg-2"}`}
+        >
+          {when}
+        </span>
       </div>
 
-      <StageTrack status={commission.status} compact />
-
-      <p className={`y-small flex items-center justify-between gap-2 ${actionable ? "font-semibold" : "y-fg-2"}`}>
-        <span>
-          {role === "business" ? commissionStatus[commission.status].business : commissionStatus[commission.status].creator}
-        </span>
-        {actionable ? <ArrowRight size={18} aria-hidden className="y-flip flex-none" /> : null}
-      </p>
+      {actionable ? (
+        <p className="y-small flex items-center justify-between gap-2 border-t border-(--b-line) pt-3 font-semibold">
+          <span>
+            {role === "business"
+              ? commissionStatus[commission.status].business
+              : commissionStatus[commission.status].creator}
+          </span>
+          <ArrowRight size={18} aria-hidden className="y-flip flex-none" />
+        </p>
+      ) : null}
     </article>
   );
 }

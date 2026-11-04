@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, Check, FilePlus2, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, FilePlus2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
@@ -15,7 +15,7 @@ import { useToast } from "@/components/ui/toast";
 import { NOW_ISO } from "@/lib/clock";
 import { plural, timeAgo } from "@/lib/format";
 import { omit } from "@/lib/omit";
-import { historyForProduct, isActive, me, productById } from "@/lib/selectors";
+import { isActive, me, productById } from "@/lib/selectors";
 import { ME, actions, useDemo } from "@/lib/store";
 import { niches } from "@/lib/taxonomy";
 import type { Learning, Product, ProductAsset } from "@/lib/types";
@@ -48,13 +48,11 @@ function Section({
   id,
   title,
   description,
-  aside,
   children,
 }: {
   id: string;
   title: string;
   description?: string;
-  aside?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -66,17 +64,44 @@ function Section({
       pad="md"
       className="flex scroll-mt-24 flex-col gap-5"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="flex max-w-[62ch] flex-col gap-1">
-          <h2 id={`${id}-title`} className="y-display y-title">
-            {title}
-          </h2>
-          {description ? <p className="y-small y-fg-2">{description}</p> : null}
-        </div>
-        {aside}
+      <div className="flex max-w-[62ch] flex-col gap-1">
+        <h2 id={`${id}-title`} className="y-display y-title">
+          {title}
+        </h2>
+        {description ? <p className="y-small y-fg-2">{description}</p> : null}
       </div>
       {children}
     </Block>
+  );
+}
+
+/** A secondary part of the editor, collapsed to one summary row until opened. */
+function Disclosure({
+  id,
+  title,
+  summary,
+  children,
+}: {
+  id: string;
+  title: string;
+  summary: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details id={id} className="group scroll-mt-24 border-t border-(--b-line) first:border-t-0">
+      <summary className="flex cursor-pointer list-none items-center gap-3 py-4 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <h2 className="y-head">{title}</h2>
+          <span className="y-small y-fg-2">{summary}</span>
+        </span>
+        <ChevronDown
+          size={20}
+          aria-hidden
+          className="flex-none transition-transform duration-(--y-dur-2) group-open:rotate-180"
+        />
+      </summary>
+      <div className="flex flex-col gap-4 pb-5">{children}</div>
+    </details>
   );
 }
 
@@ -139,13 +164,6 @@ const lowerAgo = (iso: string) => {
   return ago === "Yesterday" ? "yesterday" : ago;
 };
 
-const jump = [
-  { id: "basics", label: "Basics" },
-  { id: "story", label: "The story" },
-  { id: "voice", label: "Voice" },
-  { id: "files", label: "Files" },
-  { id: "learnings", label: "Learnings" },
-];
 
 /* -------------------------------------------------------------------------- */
 /* Editor                                                                      */
@@ -170,7 +188,6 @@ export function ProductEditor({
   const business = me.business(s);
   const formRef = useRef<HTMLFormElement>(null);
   const colorId = useId();
-  const surfacesId = useId();
 
   const [baseline, setBaseline] = useState<ProductForm>(() =>
     product ? formFromProduct(product) : emptyForm(business.industry),
@@ -397,7 +414,24 @@ export function ProductEditor({
     : product && live
       ? `Saved ${lowerAgo(live.updatedAt)}`
       : "Not saved yet";
-  const usedIn = product ? historyForProduct(s, product.id).length : 0;
+  const historyCount = product
+    ? s.commissions.filter((c) => c.businessId === ME.businessId && c.brief.productId === product.id).length
+    : 0;
+
+  const learningsSection = (
+    <Section
+      id="learnings"
+      title="Learnings"
+      description="Every new brief for this product includes these."
+    >
+      <LearningsEditor
+        learnings={learnings}
+        onAdd={addLearning}
+        onRemove={removeLearning}
+        live={Boolean(product)}
+      />
+    </Section>
+  );
 
   return (
     <Page>
@@ -413,14 +447,13 @@ export function ProductEditor({
       </div>
       <PageHeader
         className="!pt-1"
-        eyebrow={product ? "Product profile" : returnTo ? "New product for your request" : "New product"}
         title={product ? (live?.name ?? product.name) : "Add a product"}
         description={
           product
-            ? `Saved once, reused in every brief. ${usedIn ? `Used in ${plural(usedIn, "finished commission")}. ` : ""}${live ? `Last updated ${lowerAgo(live.updatedAt)}.` : ""}`
+            ? "Every brief for it starts from this page."
             : returnTo
-              ? "Describe it once. After saving, you'll go straight back to your request with it selected."
-              : "Tell creators about your app once. Every brief you send starts from this, so nobody has to ask twice."
+              ? "After saving, you'll go straight back to your request with it selected."
+              : "Describe your app once. Every brief you send starts from it."
         }
         actions={
           product ? (
@@ -437,14 +470,6 @@ export function ProductEditor({
         }
       />
 
-      <nav aria-label="Sections" className="y-scroll-x -mx-(--y-gutter) mb-3 flex gap-1.5 px-(--y-gutter) lg:hidden">
-        {[...jump, ...(product ? [{ id: "history", label: "History" }] : [])].map((item) => (
-          <a key={item.id} href={`#${item.id}`} className="y-filter flex-none">
-            {item.label}
-          </a>
-        ))}
-      </nav>
-
       <form
         ref={formRef}
         noValidate
@@ -455,8 +480,11 @@ export function ProductEditor({
         className="grid items-start gap-2 lg:grid-cols-12"
       >
         <div className="flex min-w-0 flex-col gap-2 lg:col-span-7 xl:col-span-8">
+          {/* Saved products lead with what's been learned: it's the part that keeps growing. */}
+          {product ? learningsSection : null}
+
           {/* ------------------------------------------------------ basics */}
-          <Section id="basics" title="Basics" description="What it's called and where it runs.">
+          <Section id="basics" title="Basics">
             <div className="grid gap-5 md:grid-cols-2">
               <TextField
                 label="Product name"
@@ -477,7 +505,6 @@ export function ProductEditor({
                 value={form.niche}
                 onChange={(event) => set("niche", event.target.value as ProductForm["niche"])}
                 options={niches.map((n) => ({ value: n.id, label: n.name }))}
-                hint="Helps us suggest creators who've made videos for similar apps."
               />
             </div>
             <TextField
@@ -504,7 +531,7 @@ export function ProductEditor({
               error={errorFor("website")}
             />
 
-            <fieldset className="flex flex-col gap-2" aria-describedby={`${surfacesId}-hint`}>
+            <fieldset className="flex flex-col gap-2">
               <legend className="y-label mb-2 w-full">
                 <span>Where it runs</span>
                 <span className="y-micro y-fg-3 font-medium">Optional</span>
@@ -515,7 +542,7 @@ export function ProductEditor({
                   return (
                     <label
                       key={option.id}
-                      className={`y-tile flex min-h-14 cursor-pointer items-center gap-3 py-2 ps-3 pe-4 transition-shadow ${
+                      className={`y-tile flex min-h-12 cursor-pointer items-center gap-3 py-2 ps-3 pe-4 transition-shadow ${
                         checked ? "shadow-[inset_0_0_0_1.5px_var(--b-fg)]" : "hover:shadow-[inset_0_0_0_1.5px_var(--b-line)]"
                       }`}
                     >
@@ -532,17 +559,11 @@ export function ProductEditor({
                           )
                         }
                       />
-                      <span className="flex flex-col">
-                        <span className="y-small font-semibold">{option.label}</span>
-                        <span className="y-micro y-fg-2">{option.hint}</span>
-                      </span>
+                      <span className="y-small font-semibold">{option.label}</span>
                     </label>
                   );
                 })}
               </div>
-              <p id={`${surfacesId}-hint`} className="y-micro y-fg-3 px-1">
-                Creators film on these, so a web-only product gets a laptop demo instead of a phone.
-              </p>
             </fieldset>
 
             <fieldset className="flex flex-col gap-2">
@@ -586,11 +607,7 @@ export function ProductEditor({
           </Section>
 
           {/* ------------------------------------------------------- story */}
-          <Section
-            id="story"
-            title="The story"
-            description="The problem and the people. Most good videos open with the problem in the viewer's own words."
-          >
+          <Section id="story" title="The story">
             <TextArea
               label="The problem it solves"
               name="problem"
@@ -615,7 +632,7 @@ export function ProductEditor({
               onChange={(event) => set("audience", event.target.value)}
               onBlur={() => touch("audience")}
               error={errorFor("audience")}
-              hint="Who, where, roughly what age, and what they care about. Creators use this to pick a dialect and setting."
+              hint="Who, where and roughly what age. Creators pick a dialect and setting from it."
             />
             <TextArea
               label="What it does"
@@ -638,12 +655,13 @@ export function ProductEditor({
           </Section>
 
           {/* ------------------------------------------------------- voice */}
-          <Section id="voice" title="Voice" description="How it should sound, and the lines not to cross.">
+          <Section id="voice" title="Voice">
             <TonePicker value={form.tone} onChange={(tone) => set("tone", tone)} />
             <div className="grid gap-6 xl:grid-cols-2">
               <ListEditor
                 label="Please do"
                 noun="do"
+                reorder={false}
                 items={form.dos}
                 onChange={(items) => set("dos", items)}
                 placeholder="e.g. Film at a real shop counter"
@@ -652,6 +670,7 @@ export function ProductEditor({
               <ListEditor
                 label="Please avoid"
                 noun="don't"
+                reorder={false}
                 items={form.donts}
                 onChange={(items) => set("donts", items)}
                 placeholder="e.g. Don't say “accounting”"
@@ -669,66 +688,51 @@ export function ProductEditor({
             />
           </Section>
 
-          {/* ------------------------------------------------------- files */}
-          <Section
-            id="files"
-            title="Files"
-            description="Shared with the creator once you hire them, so they never have to ask for screens or a login."
-          >
-            <AssetsEditor assets={form.assets} onAdd={addAssets} onRemove={removeAsset} />
-          </Section>
+          {product ? null : learningsSection}
 
-          {/* --------------------------------------------------- learnings */}
-          <Section
-            id="learnings"
-            title="Learnings"
-            description="What you learned from each video. Every new brief for this product includes these, so you never repeat the same feedback."
-            aside={<span className="y-chip">{plural(learnings.length, "learning")}</span>}
-          >
-            <LearningsEditor
-              learnings={learnings}
-              onAdd={addLearning}
-              onRemove={removeLearning}
-              live={Boolean(product)}
-            />
-          </Section>
-
-          {/* ----------------------------------------------------- history */}
-          {product ? (
-            <Section
-              id="history"
-              title="History"
-              description="Every commission made for this product. Repeat one and its brief, files and learnings come with it."
+          {/* ------------------------------------------ files and history */}
+          <Block as="section" aria-label={product ? "Files and history" : "Files"} tone="paper" pad="md" className="flex flex-col !py-1">
+            <Disclosure
+              id="files"
+              title="Files"
+              summary={
+                form.assets.length
+                  ? `${plural(form.assets.length, "file")} for the creator you hire`
+                  : "Screens, logo or a demo login for the creator you hire"
+              }
             >
-              <ProductHistory productId={product.id} />
-            </Section>
-          ) : null}
+              <AssetsEditor assets={form.assets} onAdd={addAssets} onRemove={removeAsset} />
+            </Disclosure>
+            {product ? (
+              <Disclosure
+                id="history"
+                title="History"
+                summary={historyCount ? plural(historyCount, "commission") : "No commissions yet"}
+              >
+                <ProductHistory productId={product.id} />
+              </Disclosure>
+            ) : null}
+          </Block>
 
           {product ? (
-            <Block tone="paper" pad="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="y-head">Delete this product</h2>
-                <p className="y-small y-fg-2">Finished commissions keep their own copy of the brief.</p>
-              </div>
+            <div className="flex justify-end px-1 pt-1">
               <PillButton
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 icon={<Trash2 size={16} aria-hidden />}
                 onClick={() => setDeleteOpen(true)}
               >
                 Delete product
               </PillButton>
-            </Block>
+            </div>
           ) : null}
         </div>
 
         {/* ------------------------------------------------------ preview */}
-        <aside className="min-w-0 lg:sticky lg:top-[88px] lg:col-span-5 xl:col-span-4" aria-label="Preview and save">
+        <aside className="hidden min-w-0 lg:sticky lg:top-[88px] lg:col-span-5 lg:block xl:col-span-4" aria-label="Preview and save">
           <Block tone="mist" pad="sm" className="flex flex-col gap-3">
-            <div className="lg:max-h-[calc(100dvh-236px)] lg:overflow-y-auto lg:[scrollbar-width:thin]">
-              <ProductPreview form={form} learnings={learnings} businessName={business.name} />
-            </div>
-            <div className="hidden flex-col gap-2 border-t border-(--b-line) pt-3 lg:flex">
+            <ProductPreview form={form} learnings={learnings} businessName={business.name} />
+            <div className="flex flex-col gap-2 border-t border-(--b-line) pt-3">
               <PillButton type="submit" variant="neon" size="lg" arrow className="w-full justify-between">
                 {product ? "Save changes" : "Save product"}
               </PillButton>
@@ -745,7 +749,7 @@ export function ProductEditor({
             data-tone="paper"
             className="y-block mx-auto flex max-w-md items-center gap-3 !rounded-full p-2 ps-5 shadow-(--y-shadow-float)"
           >
-            <span className="y-small y-fg-2 min-w-0 flex-1 truncate" aria-hidden>
+            <span className="y-small y-fg-2 min-w-0 flex-1 truncate" role="status" aria-live="polite">
               {status}
             </span>
             <PillButton type="submit" variant="neon" arrow>

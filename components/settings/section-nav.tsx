@@ -1,68 +1,44 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 
 import { FilterChip } from "@/components/ui/chip";
-import { useReducedMotion } from "@/lib/hooks";
 
-export type SettingsAnchor = { id: string; label: string; icon?: React.ReactNode };
+export type SettingsAnchor = { id: string; label: string };
+
+const subscribeHash = (onChange: () => void) => {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+};
 
 /**
- * Anchor tabs for a long settings page: a scrolling chip row on mobile, a sticky column on
- * desktop. The chip for the section in view is pressed (scrollspy).
+ * Which settings section is showing (one at a time). It starts from the URL hash, so links like
+ * `/creator/settings#account` open that section; `aliases` maps retired anchors to their new home.
  */
-export function SectionNav({ sections, label = "Settings sections" }: { sections: SettingsAnchor[]; label?: string }) {
-  const [active, setActive] = useState(sections[0]?.id);
-  const reduced = useReducedMotion();
-  /** After a click, let the smooth scroll settle before the scrollspy takes over again. */
-  const locked = useRef(false);
-  const unlockTimer = useRef<number | undefined>(undefined);
-  const ids = sections.map((section) => section.id).join(",");
-
-  useEffect(() => {
-    const nodes = ids
-      .split(",")
-      .map((id) => document.getElementById(id))
-      .filter((node): node is HTMLElement => Boolean(node));
-    if (!nodes.length || typeof IntersectionObserver === "undefined") return;
-    const visible = new Map<string, number>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) visible.set(entry.target.id, entry.isIntersecting ? entry.boundingClientRect.top : Infinity);
-        if (locked.current) return;
-        const best = [...visible.entries()]
-          .filter(([, top]) => top !== Infinity)
-          .sort((a, b) => a[1] - b[1])[0];
-        if (best) setActive(best[0]);
-      },
-      { rootMargin: "-96px 0px -55% 0px", threshold: 0 },
-    );
-    nodes.forEach((node) => observer.observe(node));
-    const timer = unlockTimer;
-    return () => {
-      observer.disconnect();
-      window.clearTimeout(timer.current);
-    };
-  }, [ids]);
-
-  const go = (id: string) => {
-    setActive(id);
-    locked.current = true;
-    window.clearTimeout(unlockTimer.current);
-    unlockTimer.current = window.setTimeout(() => {
-      locked.current = false;
-    }, 900);
-    const node = document.getElementById(id);
-    if (!node) return;
-    node.scrollIntoView({ behavior: reduced ? "auto" : "smooth", block: "start" });
+export function useSettingsSection(sections: SettingsAnchor[], aliases: Record<string, string> = {}) {
+  const hash = useSyncExternalStore(subscribeHash, () => window.location.hash.slice(1), () => "");
+  const [picked, setPicked] = useState<string | null>(null);
+  const fromHash = aliases[hash] ?? hash;
+  const active = picked ?? (sections.some((section) => section.id === fromHash) ? fromHash : sections[0]?.id);
+  const select = (id: string) => {
+    setPicked(id);
     window.history.replaceState(null, "", `#${id}`);
-    const heading = node.querySelector<HTMLElement>("h2");
-    if (heading) {
-      heading.setAttribute("tabindex", "-1");
-      heading.focus({ preventScroll: true });
-    }
   };
+  return [active, select] as const;
+}
 
+/** Section switcher for settings: a chip row on mobile, a sticky column on desktop. */
+export function SectionNav({
+  sections,
+  active,
+  onSelect,
+  label = "Settings sections",
+}: {
+  sections: SettingsAnchor[];
+  active: string;
+  onSelect: (id: string) => void;
+  label?: string;
+}) {
   return (
     <nav aria-label={label} className="lg:sticky lg:top-24">
       <ul className="y-scroll-x -mx-(--y-gutter) flex gap-1.5 px-(--y-gutter) pb-1 lg:mx-0 lg:flex-col lg:gap-1 lg:px-0">
@@ -70,8 +46,7 @@ export function SectionNav({ sections, label = "Settings sections" }: { sections
           <li key={section.id} className="flex-none">
             <FilterChip
               pressed={active === section.id}
-              onClick={() => go(section.id)}
-              icon={section.icon}
+              onClick={() => onSelect(section.id)}
               className="lg:w-full lg:justify-start"
             >
               {section.label}

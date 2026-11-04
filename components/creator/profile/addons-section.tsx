@@ -5,7 +5,7 @@ import { useState } from "react";
 import { TextField } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
 import { actions } from "@/lib/store";
-import { addons } from "@/lib/taxonomy";
+import { addonById, addons } from "@/lib/taxonomy";
 import type { AddonId, Creator, CreatorAddon } from "@/lib/types";
 
 import { ProfileSection, useDraft } from "./section";
@@ -67,7 +67,12 @@ export function AddonsSection({ creator }: { creator: Creator }) {
     <ProfileSection
       id="addons"
       title="Add-ons"
-      description="Extras clients can add to any package. Paid-ads usage is the most requested; organic use is always included."
+      description="Extras clients can add to any package. Organic use is always included."
+      summary={
+        creator.addons.length
+          ? `${creator.addons.length} offered · ${creator.addons.map((a) => addonById[a.id].name).join(", ")}`
+          : "None offered yet"
+      }
       dirty={dirty}
       attempted={attempted}
       errorCount={errorCount}

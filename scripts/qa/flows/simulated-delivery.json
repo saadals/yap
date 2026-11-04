@@ -2,6 +2,7 @@
   "role": "business",
   "steps": [
     { "go": "/business/requests/r-101", "after": 3500 },
+    { "click": "Noura Al-Qahtani", "after": 1200 },
     { "click": "Hire Noura", "after": 1500 },
     { "click": "Hire Noura", "after": 2000 },
     { "click": "Open commission", "after": 3000 },

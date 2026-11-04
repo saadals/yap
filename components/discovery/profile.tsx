@@ -1,30 +1,24 @@
 "use client";
 
-import { CalendarClock, CircleCheck, Clock, Eye, PencilLine, Repeat2 } from "lucide-react";
+import { Eye, PencilLine, Repeat2, ShieldCheck } from "lucide-react";
+import Link from "next/link";
 
 import { CreatorCard } from "@/components/domain/creator-card";
-import { ProtectedNote } from "@/components/domain/money";
 import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PillButton } from "@/components/ui/pill-button";
 import { SectionLabel } from "@/components/ui/page";
-import { money, plural, shortDate } from "@/lib/format";
+import { money } from "@/lib/format";
 import { usePrefs } from "@/lib/prefs";
-import {
-  creatorByHandle,
-  pastCollaborators,
-  productById,
-  similarCreators,
-  startingPrice,
-} from "@/lib/selectors";
+import { creatorByHandle, pastCollaborators, similarCreators, startingPrice } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { ME, useDemo, useHydrated } from "@/lib/store";
 import type { Creator } from "@/lib/types";
 
 import { PackagesBlock } from "./packages";
-import { FeaturedWork, PortfolioGrid } from "./portfolio";
-import { AboutBlock, ProfileHero, TrustStats } from "./profile-sections";
-import { availabilityLabel, cheapestPackage, responseLabel } from "./profile-utils";
+import { PortfolioBlock } from "./portfolio";
+import { AboutBlock, ProfileHero } from "./profile-sections";
+import { cheapestPackage } from "./profile-utils";
 import { ReviewsBlock } from "./reviews";
 import { ProfileSkeleton } from "./skeletons";
 
@@ -58,46 +52,22 @@ export function CreatorNotFound({ handle }: { handle: string }) {
   );
 }
 
-/** What a business carries into "commission again" with this creator, if they've worked together. */
-function repeatInfo(s: DemoState, creator: Creator, isBusiness: boolean) {
+/** "Commission again" link for a business that has completed work with this creator. */
+function repeatHref(s: DemoState, creator: Creator, isBusiness: boolean): string | null {
   if (!isBusiness) return null;
   const entry = pastCollaborators(s).find((e) => e.creator.id === creator.id);
-  if (!entry) return null;
-  const product = productById(s, entry.last.brief.productId);
-  return {
-    count: entry.count,
-    last: entry.last,
-    product,
-    learnings: product?.learnings.length ?? 0,
-    href: `/creators/${creator.handle}/commission?repeat=${entry.last.id}`,
-  };
+  return entry ? `/creators/${creator.handle}/commission?repeat=${entry.last.id}` : null;
 }
 
-function RepeatBlock({ creator, repeat }: { creator: Creator; repeat: NonNullable<ReturnType<typeof repeatInfo>> }) {
+function RepeatLink({ creator, href, className = "" }: { creator: Creator; href: string; className?: string }) {
   return (
-    <Block tone="lavender" pad="md" className="flex flex-col gap-4">
-      <div className="flex items-start gap-3">
-        <span className="grid size-11 flex-none place-items-center rounded-full bg-(--b-fg) text-(--b-bg)">
-          <Repeat2 size={20} aria-hidden />
-        </span>
-        <div className="flex flex-col gap-1">
-          <h2 className="y-head">You&apos;ve worked with {creator.firstName} before</h2>
-          <p className="y-small y-fg-2">
-            {plural(repeat.count, "completed commission")} · last one &ldquo;{repeat.last.title}&rdquo;
-            {repeat.last.completedAt ? `, ${shortDate(repeat.last.completedAt)}` : ""}.
-          </p>
-        </div>
-      </div>
-      <p className="y-small">
-        Commission again and your brief
-        {repeat.product ? `, ${repeat.product.name} context` : ""}
-        {repeat.learnings ? ` and ${plural(repeat.learnings, "learning")}` : ""} carry forward. Review,
-        tweak, send.
-      </p>
-      <PillButton href={repeat.href} variant="contrast" arrow className="w-full sm:w-fit lg:w-full">
+    <p className={`y-small flex flex-wrap items-center gap-x-1.5 ${className}`}>
+      <Repeat2 size={16} aria-hidden className="flex-none" />
+      <span className="y-fg-2">Worked with {creator.firstName} before?</span>
+      <Link href={href} className="y-link font-semibold">
         Commission again
-      </PillButton>
-    </Block>
+      </Link>
+    </p>
   );
 }
 
@@ -114,24 +84,8 @@ export function CreatorProfile({ handle }: { handle: string }) {
   const from = startingPrice(creator);
   const cheapest = cheapestPackage(creator);
   const commissionHref = `/creators/${creator.handle}/commission`;
-  const repeat = repeatInfo(s, creator, isBusiness);
+  const repeat = repeatHref(s, creator, isBusiness);
   const similar = similarCreators(s, creator, 4);
-
-  const availability = (
-    <p className="y-small flex items-center gap-2">
-      {creator.available ? (
-        <CircleCheck size={17} aria-hidden className="flex-none text-(--y-success)" />
-      ) : (
-        <CalendarClock size={17} aria-hidden className="flex-none" />
-      )}
-      <span>
-        {availabilityLabel(creator)}
-        {!creator.available ? (
-          <span className="y-fg-2"> · you can still send an offer for later</span>
-        ) : null}
-      </span>
-    </p>
-  );
 
   return (
     <div className="flex flex-col">
@@ -149,67 +103,54 @@ export function CreatorProfile({ handle }: { handle: string }) {
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 [&>*]:min-w-0">
         <div className="flex flex-col gap-2 lg:col-span-8">
-          <ProfileHero creator={creator} canMessage={isBusiness} />
-          <TrustStats creator={creator} />
-          {repeat ? (
-            <div className="lg:hidden">
-              <RepeatBlock creator={creator} repeat={repeat} />
-            </div>
-          ) : null}
-          <FeaturedWork s={s} creator={creator} />
-          <PortfolioGrid s={s} creator={creator} />
+          <ProfileHero
+            creator={creator}
+            canMessage={isBusiness}
+            footer={repeat ? <RepeatLink creator={creator} href={repeat} className="lg:hidden" /> : null}
+          />
+          <PortfolioBlock s={s} creator={creator} />
           <PackagesBlock creator={creator} showCta={!isOwn} />
-          <AboutBlock s={s} creator={creator} />
+          <AboutBlock creator={creator} />
           <ReviewsBlock s={s} creator={creator} />
         </div>
 
         <aside className="hidden lg:col-span-4 lg:block" aria-label={isOwn ? "Your profile" : `Commission ${creator.firstName}`}>
-          <div className="sticky top-24 flex flex-col gap-2">
-            <Block tone="paper" pad="md" className="flex flex-col gap-5">
-              <div className="flex flex-col gap-1">
-                <span className="y-small y-fg-2">From</span>
-                <span className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
-                  {money(from)}
+          <Block tone="paper" pad="md" className="sticky top-24 flex flex-col gap-5">
+            <div className="flex flex-col gap-1">
+              <span className="y-small y-fg-2">From</span>
+              <span className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
+                {money(from)}
+              </span>
+              {cheapest ? (
+                <span className="y-small y-fg-2">
+                  {cheapest.name} · {cheapest.deliveryDays}-day delivery
                 </span>
-                {cheapest ? (
-                  <span className="y-small y-fg-2">
-                    {cheapest.name} · {cheapest.deliveryDays}-day delivery ·{" "}
-                    {plural(cheapest.revisions, "revision")}
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex flex-col gap-2 border-t border-(--b-line) pt-4">
-                {availability}
-                <p className="y-small flex items-center gap-2">
-                  <Clock size={17} aria-hidden className="flex-none" />
-                  Usually replies {responseLabel(creator.responseHours)}
-                </p>
-              </div>
-              {isOwn ? (
-                <PillButton
-                  href="/creator/profile"
-                  variant="neon"
-                  size="lg"
-                  arrow
-                  icon={<PencilLine size={18} aria-hidden />}
-                  className="w-full"
-                >
-                  Edit profile
-                </PillButton>
-              ) : (
+              ) : null}
+            </div>
+            {isOwn ? (
+              <PillButton
+                href="/creator/profile"
+                variant="neon"
+                size="lg"
+                arrow
+                icon={<PencilLine size={18} aria-hidden />}
+                className="w-full"
+              >
+                Edit profile
+              </PillButton>
+            ) : (
+              <div className="flex flex-col gap-3">
                 <PillButton href={commissionHref} variant="neon" size="lg" arrow className="w-full">
                   Commission {creator.firstName}
                 </PillButton>
-              )}
-              {isOwn ? null : (
-                <p className="y-micro y-fg-2 -mt-2 text-center">
-                  You&apos;re only charged if {creator.firstName} accepts
+                <p className="y-micro y-fg-2 flex items-center justify-center gap-1.5">
+                  <ShieldCheck size={14} aria-hidden className="flex-none" />
+                  Payment held until you approve the video
                 </p>
-              )}
-            </Block>
-            {isOwn ? null : <ProtectedNote />}
-            {repeat ? <RepeatBlock creator={creator} repeat={repeat} /> : null}
-          </div>
+              </div>
+            )}
+            {repeat ? <RepeatLink creator={creator} href={repeat} className="border-t border-(--b-line) pt-4" /> : null}
+          </Block>
         </aside>
       </div>
 

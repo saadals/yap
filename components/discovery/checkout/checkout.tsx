@@ -1,15 +1,14 @@
 "use client";
 
-import { ArrowLeft, Lock, Repeat2 } from "lucide-react";
+import { ArrowLeft, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 
 import { Rating } from "@/components/domain/stars";
-import { PriceSummary, ProtectedNote, paymentLabel } from "@/components/domain/money";
+import { PriceSummary, paymentLabel } from "@/components/domain/money";
 import { Block } from "@/components/ui/block";
 import { Celebrate } from "@/components/ui/celebrate";
-import { Chip } from "@/components/ui/chip";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { lengthLabel, money, plural, shortDate, weekdayDate } from "@/lib/format";
@@ -198,7 +197,6 @@ export function Checkout({
           {formatById[d.format].name} · {d.languages.map((l) => languageById[l].short).join(", ")} ·{" "}
           {deliverablesLabel(d)} · {d.aspect} · {d.platforms.map((p) => platformById[p].short).join(", ")}
         </span>
-        {d.goal ? <span className="y-clamp-2">Goal: {d.goal}</span> : null}
       </span>
     ),
     addons: x.chosen.length
@@ -208,34 +206,36 @@ export function Checkout({
     message: <span className="y-clamp-2">{x.message}</span>,
     payment: (() => {
       const method = s.paymentMethods.find((m) => m.id === d.paymentMethodId);
-      return method ? `${paymentLabel(method)} · authorised now, charged only if accepted` : "Choose a card";
+      return method ? paymentLabel(method) : "Choose a card";
     })(),
   };
 
   const sections: { id: SectionId; title: string; hint?: React.ReactNode; body: React.ReactNode }[] = [
-    {
-      id: "package",
-      title: "Package",
-      hint: "Fixed price and deliverables. You can add extras below.",
-      body: <PackageEditor {...editor} />,
-    },
-    {
-      id: "product",
-      title: "Product",
-      hint: "Your saved product context fills the brief, so you don't explain your app twice.",
-      body: <ProductEditor {...editor} />,
-    },
-    {
-      id: "brief",
-      title: "Brief",
-      hint: `What ${creator.firstName} will make. Clear briefs get accepted faster.`,
-      body: <BriefEditor {...editor} />,
-    },
+    { id: "package", title: "Package", body: <PackageEditor {...editor} /> },
+    { id: "product", title: "Product", body: <ProductEditor {...editor} /> },
+    { id: "brief", title: "Brief", body: <BriefEditor {...editor} /> },
     { id: "addons", title: "Add-ons", body: <AddonsEditor {...editor} /> },
     { id: "timing", title: "Timing", body: <TimingEditor {...editor} /> },
     { id: "message", title: "Message", body: <MessageEditor {...editor} /> },
     { id: "payment", title: "Payment", body: <PaymentEditor {...editor} /> },
   ];
+
+  const sectionList = sections.map((section, index) => (
+    <Section
+      key={section.id}
+      id={`s-${section.id}`}
+      step={index + 1}
+      title={section.title}
+      hint={section.hint}
+      summary={summaries[section.id]}
+      open={isOpen(section.id)}
+      collapsible={collapsible}
+      onToggle={() => toggleSection(section.id)}
+      error={sectionError(section.id)}
+    >
+      {section.body}
+    </Section>
+  ));
 
   const todo = missing.length ? (
     <div className="flex flex-col gap-1.5" aria-live="polite">
@@ -271,17 +271,23 @@ export function Checkout({
           </div>
         </div>
         <p className="y-lead y-fg-2 max-w-[62ch]">
-          {repeat
-            ? "Everything below is ready from last time. Review it, change anything, and send."
-            : `Send a direct offer. ${creator.firstName} accepts or declines, usually ${responseLabel(creator.responseHours)}.`}
+          {repeat ? (
+            <>
+              Ready from{" "}
+              <Link href={`/business/commissions/${repeat.id}`} className="y-link font-semibold text-(--y-ink)">
+                {repeat.title}
+              </Link>
+              . Change anything, then send.
+            </>
+          ) : (
+            `Send a direct offer. ${creator.firstName} accepts or declines, usually ${responseLabel(creator.responseHours)}.`
+          )}
         </p>
       </div>
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 [&>*]:min-w-0">
         <div className="flex flex-col gap-2 lg:col-span-8">
-          {repeat ? (
-            <RepeatBanner creator={creator} repeat={repeat} x={x} />
-          ) : repeatMissing ? (
+          {repeatMissing ? (
             <Block tone="paper" pad="sm" className="!px-5">
               <p className="y-small y-fg-2">
                 We couldn&apos;t find that previous commission, so this is a fresh brief. Your product
@@ -300,32 +306,23 @@ export function Checkout({
             </Block>
           ) : null}
 
-          {sections.map((section, index) => (
-            <Section
-              key={section.id}
-              id={`s-${section.id}`}
-              step={index + 1}
-              title={section.title}
-              hint={section.hint}
-              summary={summaries[section.id]}
-              open={isOpen(section.id)}
-              collapsible={collapsible}
-              onToggle={() => toggleSection(section.id)}
-              error={sectionError(section.id)}
-            >
-              {section.body}
-            </Section>
-          ))}
+          {collapsible ? (
+            // Repeat: every prefilled section is a summary row inside one block.
+            <Block tone="paper" pad="none" className="flex flex-col divide-y divide-(--b-line) px-5 md:px-7">
+              {sectionList}
+            </Block>
+          ) : (
+            sectionList
+          )}
 
           {/* Mobile: inline order summary (the action lives in the bottom bar) */}
-          <div className="flex flex-col gap-2 lg:hidden">
+          <div className="lg:hidden">
             <OrderSummary creator={creator} d={d} x={x} />
-            <ProtectedNote compact />
           </div>
         </div>
 
         <aside className="hidden lg:col-span-4 lg:block" aria-label="Order summary">
-          <div className="sticky top-24 flex flex-col gap-2">
+          <div className="sticky top-24">
             <OrderSummary
               creator={creator}
               d={d}
@@ -346,7 +343,6 @@ export function Checkout({
                 </div>
               }
             />
-            <ProtectedNote compact />
           </div>
         </aside>
       </div>
@@ -382,45 +378,6 @@ export function Checkout({
 /* Pieces                                                                      */
 /* -------------------------------------------------------------------------- */
 
-function RepeatBanner({ creator, repeat, x }: { creator: Creator; repeat: Commission; x: Derived }) {
-  const carried = [
-    "Your last brief",
-    x.product ? `${x.product.name} context` : null,
-    x.learnings.length ? plural(x.learnings.length, "learning") : null,
-    `${tierName[x.pkg.tier]} package`,
-    ...x.chosen.map((a) => addonById[a.id].name),
-  ].filter(Boolean) as string[];
-  return (
-    <Block tone="lavender" pad="md" className="flex flex-col gap-4">
-      <div className="flex items-start gap-3">
-        <span className="grid size-11 flex-none place-items-center rounded-full bg-(--b-fg) text-(--b-bg)">
-          <Repeat2 size={20} aria-hidden />
-        </span>
-        <div className="flex flex-col gap-1">
-          <h2 className="y-head">
-            Commissioning {creator.firstName} again — your brief, product context and{" "}
-            {plural(x.product?.learnings.length ?? 0, "learning")} are carried forward
-          </h2>
-          <p className="y-small y-fg-2">
-            Based on{" "}
-            <Link href={`/business/commissions/${repeat.id}`} className="y-link font-semibold text-(--b-fg)">
-              {repeat.title}
-            </Link>
-            {repeat.completedAt ? `, completed ${shortDate(repeat.completedAt)}` : ""}.
-          </p>
-        </div>
-      </div>
-      <ul className="flex flex-wrap gap-1.5" aria-label="Carried forward">
-        {carried.map((item) => (
-          <li key={item}>
-            <Chip>{item}</Chip>
-          </li>
-        ))}
-      </ul>
-    </Block>
-  );
-}
-
 function OrderSummary({
   creator,
   d,
@@ -447,12 +404,6 @@ function OrderSummary({
       </div>
       <dl className="flex flex-col gap-2 border-t border-(--b-line) pt-4">
         <div className={row}>
-          <dt className="y-small y-fg-2">Package</dt>
-          <dd className="y-small text-end font-semibold">
-            {tierName[x.pkg.tier]} · {x.pkg.name}
-          </dd>
-        </div>
-        <div className={row}>
           <dt className="y-small y-fg-2">Deliverables</dt>
           <dd className="y-small text-end font-semibold">
             {d.videoCount} × {formatById[d.format].name.toLowerCase()}, up to {lengthLabel(d.durationSec)}
@@ -475,8 +426,9 @@ function OrderSummary({
       />
       {action}
       <p className="y-micro y-fg-2 flex items-start gap-2">
-        <Lock size={14} aria-hidden className="mt-0.5 flex-none" />
-        You&apos;re only charged if they accept; the service fee is only charged when you approve the work.
+        <ShieldCheck size={15} aria-hidden className="mt-px flex-none" />
+        Charged only if {creator.firstName} accepts, then held until you approve. Full refund if it
+        isn&apos;t delivered.
       </p>
     </Block>
   );

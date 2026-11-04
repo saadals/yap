@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 
-import { Block } from "@/components/ui/block";
 import { TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
@@ -125,26 +124,11 @@ export function SignUpScreen() {
   const visual = visuals[step === 1 && role ? role : "none"];
   const freeMailHint =
     role === "business" && isEmail(email) && !workDomain(email)
-      ? "Tip: a work address helps creators trust your requests. Personal emails work too."
-      : role === "business"
-        ? "Use your company address so creators know who they're working with."
-        : undefined;
+      ? "A work address helps creators trust your requests, but personal emails work too."
+      : undefined;
 
   return (
-    <AuthLayout
-      visual={<AuthVisual title={visual.title} points={visual.points} />}
-      extra={
-        <Block tone="night" pad="md" className="flex h-full flex-col justify-center gap-3">
-          <p className="y-head">Just looking around?</p>
-          <p className="y-small y-fg-2 max-w-[44ch]">
-            Explore the two demo accounts, a business and a creator, without signing up.
-          </p>
-          <PillButton href="/signin#demo" variant="contrast" size="sm" className="w-fit">
-            Explore the demo
-          </PillButton>
-        </Block>
-      }
-    >
+    <AuthLayout aside={<AuthVisual title={visual.title} points={visual.points} />}>
       {step === 0 ? (
         <>
           <div className="flex flex-col gap-2">
@@ -152,7 +136,6 @@ export function SignUpScreen() {
             <h1 id={groupLabel} className="y-display y-t-display">
               How will you use Yapp?
             </h1>
-            <p className="y-lead y-fg-2">You can add the other side later from the same account.</p>
           </div>
           <form
             noValidate
@@ -179,14 +162,14 @@ export function SignUpScreen() {
                 {
                   value: "business",
                   title: "I need videos for my product",
-                  body: "Post a request or hire a creator directly. Payment is held until you approve.",
+                  body: "Post a request or hire a creator directly.",
                   icon: <Building2 size={24} />,
                   tone: "night",
                 },
                 {
                   value: "creator",
                   title: "I make videos",
-                  body: "Film demos and reviews for apps. You keep 100% of your price.",
+                  body: "Film demos and reviews for apps.",
                   icon: <Video size={24} />,
                   tone: "butter",
                 },
@@ -197,12 +180,17 @@ export function SignUpScreen() {
               Continue
             </PillButton>
           </form>
-          <p className="y-small y-fg-2 text-center">
-            Already have an account?{" "}
-            <Link href="/signin" className="y-link font-semibold text-(--b-fg)">
-              Sign in
+          <div className="flex flex-col items-center gap-1 text-center">
+            <p className="y-small y-fg-2">
+              Already have an account?{" "}
+              <Link href="/signin" className="y-link font-semibold text-(--b-fg)">
+                Sign in
+              </Link>
+            </p>
+            <Link href="/signin#demo" className="y-link y-small y-fg-2">
+              Just looking? Explore the demo
             </Link>
-          </p>
+          </div>
         </>
       ) : (
         <>
@@ -221,9 +209,7 @@ export function SignUpScreen() {
             </div>
             <h1 className="y-display y-t-display">Create your account</h1>
             <p className="y-lead y-fg-2">
-              {role === "business"
-                ? "Signing up as a business. Next, you'll tell us about your product."
-                : "Signing up as a creator. Next, you'll set up your profile and prices."}{" "}
+              {role === "business" ? "Signing up as a business." : "Signing up as a creator."}{" "}
               <button
                 type="button"
                 className="y-link font-semibold text-(--b-fg)"
@@ -298,12 +284,7 @@ export function SignUpScreen() {
                   }}
                 />
                 <span className="y-small">
-                  I agree to Yapp&apos;s terms of service and privacy policy.{" "}
-                  <span className="y-fg-2">
-                    {role === "business"
-                      ? "You pay a 10% service fee only when a commission completes."
-                      : "You keep 100% of your price; the business pays the service fee."}
-                  </span>
+                  I agree to Yapp&apos;s terms of service and privacy policy.
                 </span>
               </label>
               <GroupError id={termsError}>{errors.terms}</GroupError>

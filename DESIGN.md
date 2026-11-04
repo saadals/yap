@@ -26,6 +26,32 @@ charged only when work completes. Deliveries auto-approve 3 days after delivery 
 doesn't respond. Organic use on the business's own accounts is always included; paid-ads usage is
 an add-on.
 
+## Calm first (owner feedback: "cluttered, too much going on at once")
+
+These rules override anything below when they conflict. The product promise is that outsourcing
+feels simple; every screen must feel that way too.
+
+1. **One job per screen.** Each screen answers "what should I do here?" with one thing: it's the
+   first thing you see and it holds the only neon. Everything else is clearly secondary.
+2. **Show less, link more.** If information lives on another page (activity → notifications,
+   stats → their list page, recommendations → Find creators), don't repeat it here. Dashboards
+   have at most ~5 blocks; detail pages one main column plus at most one slim side column.
+3. **Say it once.** A fact (due date, price, status, "review this") appears once per screen.
+4. **Progressive disclosure.** Lists show a summary row; details open on click (detail page, sheet,
+   or "Show more"). Long forms and briefs hide secondary sections behind a disclosure.
+5. **Quiet cards.** One title, one plain-text meta line ("Selfie demo · Saudi · 2 × 45s"), at most
+   two badges/chips, one key number. Pick one way to show status (badge *or* bar, not both).
+6. **Few colours.** Default to paper blocks. Use a pastel only when its meaning matters on that
+   screen, max two per screen, never stacked back to back. No night block unless it is the single
+   highlighted thing.
+7. **Short copy.** Headings say it; drop helper sentences that restate the heading. One line of
+   description at most under a page title.
+8. **Few actions.** One primary, up to two secondary; anything more goes in a "More" menu or the
+   detail view.
+9. **Room to breathe.** Prefer fewer, larger blocks with generous padding over many small tiles.
+   Avoid tiles inside tiles inside blocks.
+10. **One character moment per screen at most, and none on data-heavy screens.**
+
 ## Colour
 
 Tokens are CSS custom properties on `.yapp` (see `app/globals.css`), redefined for dark mode under

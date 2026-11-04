@@ -3,7 +3,6 @@
  * matching and "what happens next" copy. Safe in render.
  */
 
-import { DAY, NOW } from "@/lib/clock";
 import { plural } from "@/lib/format";
 import type { DemoState } from "@/lib/store";
 import { cityById } from "@/lib/selectors";
@@ -219,12 +218,6 @@ export function commissionForPitch(s: DemoState, pitch: Pitch): Commission | und
       (c) => c.requestId === pitch.requestId && c.creatorId === pitch.creatorId && c.source === "request",
     )
   );
-}
-
-/** Pitches sent within the last `days` days. */
-export function withinDays<T extends { sentAt: string }>(items: T[], days: number): T[] {
-  const from = NOW - days * DAY;
-  return items.filter((item) => Date.parse(item.sentAt) >= from);
 }
 
 /** Pitch funnel numbers. "Viewed" counts every pitch the business opened. */

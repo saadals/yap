@@ -91,15 +91,14 @@ export function DemoAccounts({
       pad="md"
       id={id}
       aria-labelledby={`${id}-title`}
-      className="flex h-full scroll-mt-24 flex-col gap-5"
+      className="flex h-full scroll-mt-24 flex-col gap-5 lg:justify-center"
     >
       <div className="flex flex-col gap-1.5">
         <h2 id={`${id}-title`} className="y-display y-title">
           Explore the demo
         </h2>
         <p className="y-small y-fg-2 max-w-[48ch]">
-          Two ready-made accounts with real history: requests, pitches, deliveries and payouts.
-          Nothing is real money, so try anything.
+          Two ready-made accounts with real history. Nothing is real money, so try anything.
         </p>
       </div>
       <ul className="flex flex-col gap-2">
@@ -117,8 +116,7 @@ export function DemoAccounts({
                 {tile.avatar}
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className="y-head">{tile.title}</span>
-                  <span className="y-small y-fg-2 truncate">{tile.who}</span>
-                  {tile.detail ? <span className="y-micro y-fg-3">{tile.detail}</span> : null}
+                  <span className="y-small y-fg-2">{tile.detail || tile.who}</span>
                 </span>
                 <span
                   aria-hidden

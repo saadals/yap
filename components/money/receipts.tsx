@@ -110,7 +110,6 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
               pressed={status === value}
               onClick={() => setStatus(value)}
               count={count(value)}
-              icon={statusInfo[value].icon}
               className="flex-none"
             >
               {statusInfo[value].label}
@@ -182,8 +181,6 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
                   <th scope="col" className="py-3 pe-3 text-start font-medium">Date</th>
                   <th scope="col" className="py-3 pe-3 text-start font-medium">Creator</th>
                   <th scope="col" className="py-3 pe-3 text-start font-medium">Commission</th>
-                  <th scope="col" className="py-3 pe-3 text-end font-medium">Amount</th>
-                  <th scope="col" className="py-3 pe-3 text-end font-medium">Fee</th>
                   <th scope="col" className="py-3 pe-3 text-end font-medium">Total</th>
                   <th scope="col" className="py-3 text-start font-medium">Status</th>
                 </tr>
@@ -214,7 +211,7 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
                         <span className="whitespace-nowrap">{row.creator?.name ?? "Creator"}</span>
                       </span>
                     </td>
-                    <td className="max-w-[260px] py-3 pe-3">
+                    <td className="max-w-[360px] py-3 pe-3">
                       <Link
                         href={`/business/commissions/${row.commission.id}`}
                         onClick={(event) => event.stopPropagation()}
@@ -223,8 +220,6 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
                         {row.commission.title}
                       </Link>
                     </td>
-                    <td className="y-num py-3 pe-3 text-end">{money(row.subtotal, true)}</td>
-                    <td className="y-num y-fg-2 py-3 pe-3 text-end">{money(row.fee, true)}</td>
                     <td className="y-num py-3 pe-3 text-end font-semibold">{money(row.total, true)}</td>
                     <td className="py-3">
                       <ReceiptStatusBadge status={row.status} />
@@ -235,33 +230,20 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
             </table>
           </div>
 
-          {/* Mobile: stacked cards */}
-          <ul className="flex flex-col gap-2 md:hidden">
+          {/* Mobile: compact rows */}
+          <ul className="flex flex-col divide-y divide-(--b-line) md:hidden">
             {shown.map((row) => (
               <li key={row.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpenId(row.id)}
-                  className="y-tile y-hoverable flex w-full flex-col gap-3 p-4 text-start"
-                >
-                  <span className="flex items-start justify-between gap-3">
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="y-small truncate font-semibold">{row.commission.title}</span>
-                      <span className="y-micro y-fg-2 truncate">
-                        {row.creator?.name ?? "Creator"} · {shortDate(row.date)}
-                      </span>
-                    </span>
-                    <span className="y-display y-num flex-none text-xl font-semibold tracking-[-0.02em]">
-                      {money(row.total)}
+                <button type="button" onClick={() => setOpenId(row.id)} className="flex w-full items-center gap-3 py-3 text-start">
+                  <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="y-small truncate font-semibold">{row.commission.title}</span>
+                    <span className="y-micro y-fg-2 truncate">
+                      {row.creator?.name ?? "Creator"} · {shortDate(row.date)} ·{" "}
+                      {statusInfo[row.status as ReceiptStatus]?.label ?? row.status}
                     </span>
                   </span>
-                  <span className="flex items-center justify-between gap-2">
-                    <span className="flex items-center gap-2">
-                      <ReceiptStatusBadge status={row.status} />
-                      <span className="y-micro y-fg-2 y-num">{row.id}</span>
-                    </span>
-                    <ChevronRight size={18} aria-hidden className="y-flip y-fg-2" />
-                  </span>
+                  <span className="y-small y-num flex-none font-semibold">{money(row.total)}</span>
+                  <ChevronRight size={16} aria-hidden className="y-flip y-fg-3 flex-none" />
                 </button>
               </li>
             ))}

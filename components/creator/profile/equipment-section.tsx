@@ -36,7 +36,8 @@ export function EquipmentSection({ creator }: { creator: Creator }) {
     <ProfileSection
       id="equipment"
       title="Equipment"
-      description="Phones, mics and lights you film with. Businesses use it to judge audio and picture quality."
+      description="What you film with. Businesses use it to judge audio and picture quality."
+      summary={creator.equipment.length ? creator.equipment.join(", ") : "Nothing listed yet"}
       dirty={dirty}
       saveLabel="Save equipment"
       onDiscard={() => {

@@ -3,7 +3,6 @@
 import { Check, History, Mic, Package, Plus, Video as VideoIcon } from "lucide-react";
 import Link from "next/link";
 
-import { VideoThumb } from "@/components/domain/video-thumb";
 import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { AvatarStack } from "@/components/ui/face-avatar";
@@ -12,7 +11,7 @@ import { lengthLabel, plural, timeAgo } from "@/lib/format";
 import { aspects, creatorKinds, formats, languages, platforms } from "@/lib/taxonomy";
 import type { Aspect, FormatId } from "@/lib/types";
 
-import { applyProduct, exampleVideo, lengthOptions, typicalLength } from "./shared";
+import { applyProduct, lengthOptions, typicalLength } from "./shared";
 import type { StepProps } from "./step-props";
 import { ChoiceTile, GroupError, Question, Stepper } from "./wizard-parts";
 
@@ -142,7 +141,7 @@ export function ProductStep({ form, set, product, products, error }: StepProps) 
 /* 2 · Format                                                                  */
 /* -------------------------------------------------------------------------- */
 
-export function FormatStep({ s, form, set, error, onHoverFormat }: StepProps) {
+export function FormatStep({ s, form, set, error }: StepProps) {
   const err = error("format");
   const choose = (id: FormatId) => {
     const [, hi] = formats.find((f) => f.id === id)!.typical;
@@ -178,14 +177,12 @@ export function FormatStep({ s, form, set, error, onHoverFormat }: StepProps) {
           const offering = s.creators.filter(
             (c) => c.formats.includes(format.id) && form.languages.some((l) => c.languages.includes(l)),
           ).length;
-          const example = checked ? exampleVideo(s, format.id, form.languages) : undefined;
           return (
             <ChoiceTile
               key={format.id}
               name="format"
               checked={checked}
               onChange={() => choose(format.id)}
-              onHover={(on) => onHoverFormat(on ? format.id : null)}
               label={format.name}
             >
               <span className="flex items-center gap-3">
@@ -203,24 +200,7 @@ export function FormatStep({ s, form, set, error, onHoverFormat }: StepProps) {
                 </span>
               </span>
               <span className="y-small y-fg-2 mt-1">{format.description}</span>
-              <span className="mt-2 flex flex-wrap gap-1" aria-label={`Typical structure: ${format.beats.join(", ")}`}>
-                {format.beats.map((beat, index) => (
-                  <span key={beat} className="y-chip !min-h-7 !bg-(--b-bg) !px-2.5 !text-xs" aria-hidden>
-                    <span className="y-num font-semibold">{index + 1}</span> {beat}
-                  </span>
-                ))}
-              </span>
-              {example ? (
-                <span className="mt-3 flex items-center gap-3 lg:hidden">
-                  <span className="w-20 flex-none">
-                    <VideoThumb video={example} showMeta={false} showHook={false} decorative />
-                  </span>
-                  <span className="y-micro y-fg-2">
-                    Example from the marketplace:
-                    <span className="block font-semibold text-(--b-fg)">{example.title}</span>
-                  </span>
-                </span>
-              ) : null}
+              <span className="y-micro y-fg-2 mt-1">{format.beats.join(" → ")}</span>
             </ChoiceTile>
           );
         })}

@@ -1,7 +1,5 @@
 "use client";
 
-import { ArrowRight, Repeat2, Star } from "lucide-react";
-
 import { Block } from "@/components/ui/block";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
@@ -9,6 +7,9 @@ import { plural, shortDate } from "@/lib/format";
 import { commissionTotals, pastCollaborators, productById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { ME, useDemo } from "@/lib/store";
+import { formatById } from "@/lib/taxonomy";
+
+import { BlockHeader } from "./in-progress";
 
 export type Collaborator = ReturnType<typeof pastCollaborators>[number];
 
@@ -40,89 +41,49 @@ export function collaboratorInfo(s: DemoState, entry: Collaborator) {
   };
 }
 
-/** "You rated 5" star chip (or a plain note when there's no rating). */
-export function YourRating({ rating }: { rating?: number }) {
-  if (!rating)
-    return <span className="y-micro y-fg-2">Not rated yet</span>;
-  return (
-    <span
-      className="y-small inline-flex flex-none items-center gap-1 font-semibold"
-      aria-label={`You rated ${rating} out of 5`}
-      title="Your rating"
-    >
-      <Star size={15} aria-hidden className="fill-current" />
-      <span aria-hidden className="y-num">
-        {rating.toFixed(1)}
-      </span>
-    </span>
-  );
-}
-
 /** Repeat business: people you've finished work with, one tap to book again. */
 export function CommissionAgainBlock({ className = "", limit = 3 }: { className?: string; limit?: number }) {
   const s = useDemo();
   const people = pastCollaborators(s);
 
   return (
-    <Block as="section" aria-labelledby="again-title" tone="night" pad="md" className={`flex flex-col gap-4 ${className}`}>
+    <Block as="section" aria-labelledby="again-title" tone="paper" pad="md" className={`flex flex-col gap-3 ${className}`}>
       <div className="flex flex-col gap-1">
-        <h2 id="again-title" className="y-display y-title">
-          Commission again
-        </h2>
-        <p className="y-small y-fg-2">
-          Same creator, no new brief. Your product context and feedback go with it.
-        </p>
+        <BlockHeader id="again-title" title="Commission again" href="/business/creators?tab=worked" linkLabel="All" />
+        <p className="y-small y-fg-2">No new brief. Your product context and learnings go with it.</p>
       </div>
 
       {people.length ? (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col">
           {people.slice(0, limit).map((entry) => {
             const info = collaboratorInfo(s, entry);
             return (
-              <li key={entry.creator.id} className="y-tile flex flex-col gap-3 p-3">
-                <div className="flex items-center gap-3">
-                  <FaceAvatar id={entry.creator.id} name="" size={44} />
-                  <div className="min-w-0 flex-1">
-                    <p className="y-small truncate font-semibold">{entry.creator.name}</p>
-                    <p className="y-micro y-fg-2 truncate">
-                      {entry.last.title} · {shortDate(info.lastDate)}
-                    </p>
-                  </div>
-                  <YourRating rating={info.review?.rating} />
+              <li key={entry.creator.id} className="flex items-center gap-3 py-2.5">
+                <FaceAvatar id={entry.creator.id} name="" size={40} />
+                <div className="min-w-0 flex-1">
+                  <p className="y-body truncate font-semibold">{entry.creator.name}</p>
+                  <p className="y-micro y-fg-2 truncate">
+                    {formatById[entry.last.brief.format].name}
+                    <span className="hidden sm:inline"> · {shortDate(info.lastDate)}</span>
+                  </p>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="y-micro y-fg-2 inline-flex items-center gap-1.5">
-                    <Repeat2 size={14} aria-hidden /> {info.carry}
-                  </span>
-                  <PillButton
-                    href={info.repeatHref}
-                    variant="contrast"
-                    size="sm"
-                    aria-label={`Commission ${entry.creator.firstName} again`}
-                  >
-                    Commission again
-                  </PillButton>
-                </div>
+                <PillButton
+                  href={info.repeatHref}
+                  variant="outline"
+                  size="sm"
+                  aria-label={`Commission ${entry.creator.firstName} again`}
+                >
+                  Commission again
+                </PillButton>
               </li>
             );
           })}
         </ul>
       ) : (
-        <p className="y-tile y-small y-fg-2 p-4">
-          When a commission is finished, the creator appears here so you can book them again with
-          everything they learned.
+        <p className="y-small y-fg-2">
+          When a commission is finished, the creator appears here so you can book them again.
         </p>
       )}
-
-      <PillButton
-        href="/business/creators?tab=worked"
-        variant="ghost"
-        size="sm"
-        className="mt-auto self-start !ps-0"
-        icon={<ArrowRight size={16} aria-hidden className="y-flip order-last" />}
-      >
-        All your creators
-      </PillButton>
     </Block>
   );
 }

@@ -33,12 +33,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/components/ui/toast";
-import { shortDate, timeAgo, timeOf } from "@/lib/format";
+import { shortDate, timeAgo, timeOf, weekdayDate } from "@/lib/format";
 import { creatorById, threadById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import type { CommissionEvent, ProductAsset } from "@/lib/types";
 
-import type { TabId, Workspace } from "./helpers";
+import { autoApproveDate, type TabId, type Workspace } from "./helpers";
 
 const tabs: { value: TabId; label: string }[] = [
   { value: "messages", label: "Messages" },
@@ -301,51 +301,86 @@ function Activity({ ws }: { ws: Workspace }) {
 
   if (!events.length) {
     return (
-      <EmptyState
-        headingLevel={3}
-        shape="pill"
-        tint="sun"
-        title="No activity yet"
-        body="Offers, deliveries, approvals and payments are logged here as they happen."
-      />
+      <div className="flex flex-col gap-6">
+        <KeyDates ws={ws} />
+        <EmptyState
+          headingLevel={3}
+          shape="pill"
+          tint="sun"
+          title="No activity yet"
+          body="Offers, deliveries, approvals and payments are logged here as they happen."
+        />
+      </div>
     );
   }
   return (
-    <ol className="flex flex-col" aria-label="Activity, newest first">
-      {events.map((event, index) => (
-        <li key={event.id} className="flex gap-4">
-          <div className="flex flex-col items-center">
-            <span
-              className={`grid size-9 flex-none place-items-center rounded-full ${
-                index === 0 ? "bg-(--b-fg) text-(--b-bg)" : "bg-(--b-chip) text-(--b-chip-fg)"
-              }`}
-            >
-              {eventIcon[event.kind] ?? <BadgeCheck size={16} aria-hidden />}
-            </span>
-            {index < events.length - 1 ? <span className="w-0.5 flex-1 bg-(--b-line)" aria-hidden /> : null}
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1.5 pb-5">
-            <p className="y-small font-medium">{event.text}</p>
-            <p className="y-micro y-fg-2">
-              {who(event.actor)} ·{" "}
-              <time dateTime={event.at}>
-                {timeAgo(event.at) === shortDate(event.at) ? (
-                  `${shortDate(event.at)}, ${timeOf(event.at)}`
-                ) : (
-                  <>
-                    {timeAgo(event.at)}
-                    <span className="y-fg-3">
-                      {" "}
-                      · {shortDate(event.at)}, {timeOf(event.at)}
-                    </span>
-                  </>
-                )}
-              </time>
-            </p>
-          </div>
-        </li>
+    <div className="flex flex-col gap-6">
+      <KeyDates ws={ws} />
+      <ol className="flex flex-col" aria-label="Activity, newest first">
+        {events.map((event, index) => (
+          <li key={event.id} className="flex gap-4">
+            <div className="flex flex-col items-center">
+              <span
+                className={`grid size-9 flex-none place-items-center rounded-full ${
+                  index === 0 ? "bg-(--b-fg) text-(--b-bg)" : "bg-(--b-chip) text-(--b-chip-fg)"
+                }`}
+              >
+                {eventIcon[event.kind] ?? <BadgeCheck size={16} aria-hidden />}
+              </span>
+              {index < events.length - 1 ? <span className="w-0.5 flex-1 bg-(--b-line)" aria-hidden /> : null}
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1.5 pb-5">
+              <p className="y-small font-medium">{event.text}</p>
+              <p className="y-micro y-fg-2">
+                {who(event.actor)} ·{" "}
+                <time dateTime={event.at}>
+                  {timeAgo(event.at) === shortDate(event.at) ? (
+                    `${shortDate(event.at)}, ${timeOf(event.at)}`
+                  ) : (
+                    <>
+                      {timeAgo(event.at)}
+                      <span className="y-fg-3">
+                        {" "}
+                        · {shortDate(event.at)}, {timeOf(event.at)}
+                      </span>
+                    </>
+                  )}
+                </time>
+              </p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Key dates at a glance, above the full log. */
+function KeyDates({ ws }: { ws: Workspace }) {
+  const { commission, latest } = ws;
+  const auto = commission.status === "delivered" ? autoApproveDate(commission, latest) : undefined;
+  const ended = ["completed", "cancelled", "declined"].includes(commission.status);
+  const rows: { label: string; value: string }[] = [
+    { label: commission.source === "request" ? "Hired" : "Offer sent", value: commission.createdAt },
+    ...(commission.acceptedAt && commission.source !== "request"
+      ? [{ label: "Accepted", value: commission.acceptedAt }]
+      : []),
+    ...(ended ? [] : [{ label: "Due", value: commission.dueDate }]),
+    ...(latest ? [{ label: `Version ${latest.version} delivered`, value: latest.deliveredAt }] : []),
+    ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
+    ...(commission.completedAt ? [{ label: "Completed", value: commission.completedAt }] : []),
+  ];
+  return (
+    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-(--b-line) pb-6 sm:grid-cols-3">
+      {rows.map((row) => (
+        <div key={row.label} className="flex flex-col gap-0.5">
+          <dt className="y-micro y-fg-2">{row.label}</dt>
+          <dd className="y-small y-num font-semibold">
+            {weekdayDate(row.value)} <span className="y-fg-2 font-normal">· {timeOf(row.value)}</span>
+          </dd>
+        </div>
       ))}
-    </ol>
+    </dl>
   );
 }
 

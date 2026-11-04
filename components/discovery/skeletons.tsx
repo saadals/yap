@@ -41,18 +41,22 @@ export function CreatorGridSkeleton({ count = 8 }: { count?: number }) {
 export function BrowseSkeleton() {
   return (
     <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading creators">
-      <div data-tone="paper" className="y-block y-pad-lg flex flex-col gap-4" aria-hidden>
-        <Skeleton className="h-10 w-3/4 max-w-xl" />
+      <div className="flex flex-col gap-3 px-1 pt-2 pb-3 md:pb-4" aria-hidden>
+        <Skeleton className="h-12 w-72" />
         <Skeleton className="h-4 w-1/2 max-w-md" />
-        <Skeleton className="h-14 w-full max-w-3xl !rounded-full" />
       </div>
-      <div data-tone="paper" className="y-block y-pad-sm flex gap-4" aria-hidden>
-        {Array.from({ length: 7 }, (_, i) => (
-          <div key={i} className="flex w-20 flex-none flex-col items-center gap-2 py-2">
-            <Skeleton className="size-6 !rounded-full" />
-            <Skeleton className="h-3 w-16" />
-          </div>
-        ))}
+      <div data-tone="paper" className="y-block flex flex-col" aria-hidden>
+        <div className="p-3 md:p-4">
+          <Skeleton className="h-14 w-full !rounded-full" />
+        </div>
+        <div className="flex gap-4 border-t border-(--b-line) px-4 py-2">
+          {Array.from({ length: 7 }, (_, i) => (
+            <div key={i} className="flex w-20 flex-none flex-col items-center gap-2 py-2">
+              <Skeleton className="size-6 !rounded-full" />
+              <Skeleton className="h-3 w-16" />
+            </div>
+          ))}
+        </div>
       </div>
       <div className="pt-4">
         <CreatorGridSkeleton />
@@ -73,15 +77,8 @@ export function ProfileSkeleton() {
             <Skeleton className="h-10 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
             <Skeleton className="h-5 w-4/5" />
+            <Skeleton className="mt-3 h-4 w-full max-w-md" />
           </div>
-        </div>
-        <div data-tone="paper" className="y-block y-pad-md grid grid-cols-2 gap-4 md:grid-cols-3" aria-hidden>
-          {Array.from({ length: 6 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-2">
-              <Skeleton className="h-9 w-20" />
-              <Skeleton className="h-3 w-24" />
-            </div>
-          ))}
         </div>
         <div data-tone="paper" className="y-block y-pad-md" aria-hidden>
           <Skeleton className="aspect-[16/9] w-full !rounded-(--y-r-tile)" />

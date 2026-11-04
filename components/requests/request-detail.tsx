@@ -1,14 +1,12 @@
 "use client";
 
 import {
-  ArrowLeft,
   Ban,
   Eye,
   FileText,
-  Globe,
   History,
   Link2,
-  Lock,
+  MoreHorizontal,
   Package,
   Pencil,
   RotateCcw,
@@ -16,31 +14,32 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 
 import { BriefSummary } from "@/components/domain/brief-summary";
 import { CreatorRow } from "@/components/domain/creator-card";
-import { PitchBadge, RequestBadge } from "@/components/domain/status-badge";
+import { PitchBadge } from "@/components/domain/status-badge";
 import { AppShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AvatarStack, FaceAvatar } from "@/components/ui/face-avatar";
-import { Page } from "@/components/ui/page";
+import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
-import { JobCardSkeleton, Skeleton } from "@/components/ui/skeleton";
+import { Sheet } from "@/components/ui/sheet";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { daysFromNow, money, moneyRange, num, plural, relativeDay, shortDate, timeAgo, weekdayDate } from "@/lib/format";
+import { money, moneyRange, plural, shortDate, timeAgo, weekdayDate } from "@/lib/format";
 import { pitchesForRequest, productById, requestById } from "@/lib/selectors";
+import { absoluteUrl } from "@/lib/site";
 import { ME, actions, useDemo, useHydrated } from "@/lib/store";
-import { addonById, formatById } from "@/lib/taxonomy";
+import { addonById } from "@/lib/taxonomy";
 import type { ContentRequest } from "@/lib/types";
 
 import { HireSheet } from "./hire-sheet";
-import { PitchCard } from "./pitch-card";
+import { PitchRow, PitchSheet } from "./pitch-card";
 import { PitchCompare } from "./pitch-compare";
 import { CloseRequestSheet, EditRequestSheet, InviteSheet, MessageSheet, SampleSheet } from "./request-sheets";
 import { briefComplete, isUndecided, rankPitches, sortPitches, type PitchSort, type RankedPitch } from "./shared";
@@ -59,19 +58,23 @@ function DetailSkeleton() {
   return (
     <Page>
       <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading request">
-        <div className="y-block y-pad-md flex flex-col gap-4" data-tone="paper">
-          <Skeleton className="h-9 w-32" />
-          <Skeleton className="h-7 w-48" />
-          <Skeleton className="h-12 w-4/5" />
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 !rounded-(--y-r-tile)" />
-            ))}
-          </div>
+        <div className="flex flex-col gap-3 px-1 pt-2 pb-5">
+          <Skeleton className="h-5 w-28" />
+          <Skeleton className="h-12 w-4/5 max-w-2xl" />
+          <Skeleton className="h-5 w-72" />
         </div>
-        <Skeleton className="mt-4 h-11 w-72" />
-        <JobCardSkeleton />
-        <JobCardSkeleton />
+        <Skeleton className="h-11 w-72" />
+        <div className="y-block flex flex-col gap-2 p-3" data-tone="paper">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="flex items-center gap-3 p-3">
+              <Skeleton className="size-11 flex-none !rounded-full" />
+              <div className="flex flex-1 flex-col gap-2">
+                <Skeleton className="h-4 w-40" />
+                <Skeleton className="h-4 w-3/4" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </Page>
   );
@@ -114,8 +117,6 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
   const toast = useToast();
   const router = useRouter();
   const product = productById(s, request.brief.productId);
-  const format = formatById[request.brief.format];
-  const FormatIcon = format.icon;
   const pitches = pitchesForRequest(s, request.id);
   const ranked = rankPitches(s, request, pitches);
   const isDraft = request.status === "draft";
@@ -126,10 +127,11 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<PitchSort>("fit");
   const [view, setView] = useState<"list" | "compare">("list");
+  const [openId, setOpenId] = useState<string | null>(null);
   const [hireId, setHireId] = useState<string | null>(null);
   const [messageCreatorId, setMessageCreatorId] = useState<string | null>(null);
   const [sample, setSample] = useState<{ pitchId: string; videoId: string } | null>(null);
-  const [sheet, setSheet] = useState<null | "invite" | "edit" | "close">(
+  const [sheet, setSheet] = useState<null | "more" | "invite" | "edit" | "close">(
     openInvite && request.status === "open" ? "invite" : null,
   );
 
@@ -175,10 +177,11 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
           "fit",
         ).slice(0, 3);
 
-  // Exactly one neon: Hire on the top shortlisted pitch (drafts use it for Publish instead).
+  // The list itself carries no neon: Hire turns neon inside an opened pitch. The compare table is
+  // a decision view, so its top shortlisted pitch gets the one neon Hire.
   const neonId =
-    canHire && tab === "pitches"
-      ? (view === "list" ? active : compareItems).find((r) => r.pitch.status === "shortlisted")?.pitch.id
+    canHire && tab === "pitches" && view === "compare"
+      ? compareItems.find((r) => r.pitch.status === "shortlisted")?.pitch.id
       : undefined;
 
   const hired = ranked.filter((r) => r.pitch.status === "hired");
@@ -188,7 +191,15 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
   const invited = request.invitedCreatorIds
     .map((id) => s.creators.find((c) => c.id === id))
     .filter((c) => c !== undefined);
-  const daysLeft = daysFromNow(request.dueDate);
+  // Filters with nothing in them stay out of the way (unless selected).
+  const filters = (
+    [
+      ["all", "All"],
+      ["new", "New"],
+      ["shortlisted", "Shortlisted"],
+      ["declined", "Declined"],
+    ] as [Filter, string][]
+  ).filter(([id]) => id === "all" || id === filter || counts[id] > 0);
 
   /* ------------------------------------------------------------ actions */
   const nameOf = (pitchId: string) => ranked.find((r) => r.pitch.id === pitchId)?.creator.firstName ?? "Creator";
@@ -229,7 +240,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
     toast({ message: "Your request is live. Most requests get their first pitch within 3 hours." });
   };
   const copyLink = async () => {
-    const url = `${window.location.origin}/creator/opportunities/${request.id}`;
+    const url = absoluteUrl(`/creator/opportunities/${request.id}`);
     try {
       await navigator.clipboard.writeText(url);
       toast({ message: "Link copied. Creators who open it can pitch right away." });
@@ -245,113 +256,66 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
   const hireItem = hireId ? ranked.find((r) => r.pitch.id === hireId) : undefined;
   const messageCreator = messageCreatorId ? s.creators.find((c) => c.id === messageCreatorId) : undefined;
   const sampleItem = sample ? ranked.find((r) => r.pitch.id === sample.pitchId) : undefined;
+  // The open pitch steps aside while a sample, message or hire sheet is on top, then comes back.
+  const openItem = openId ? ranked.find((r) => r.pitch.id === openId) : undefined;
+  const showPitch = openItem && !hireItem && !messageCreator && !sample;
+
+  const meta = [
+    product?.name,
+    moneyRange(request.budget.min, request.budget.max),
+    `Due ${weekdayDate(request.dueDate)}`,
+    isDraft ? "Not posted yet" : plural(request.views, "view"),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const moreItems: { label: string; icon: React.ReactNode; onClick: () => void }[] = isDraft
+    ? []
+    : [
+        ...(request.status !== "hired"
+          ? [{ label: "Edit request", icon: <Pencil size={18} aria-hidden />, onClick: () => setSheet("edit") }]
+          : []),
+        {
+          label: "Copy link for creators",
+          icon: <Link2 size={18} aria-hidden />,
+          onClick: () => {
+            setSheet(null);
+            void copyLink();
+          },
+        },
+        ...(request.status === "open"
+          ? [{ label: "Close request", icon: <Ban size={18} aria-hidden />, onClick: () => setSheet("close") }]
+          : []),
+      ];
 
   return (
     <Page>
       <div className="flex flex-col gap-2">
-        {/* Header */}
-        <Block tone="paper" pad="md" className="flex flex-col gap-5">
-          <Link href="/business/requests" className="y-pill w-fit !ps-2" data-variant="ghost" data-size="sm">
-            <ArrowLeft size={18} aria-hidden className="y-flip" />
-            All requests
-          </Link>
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="flex min-w-0 flex-col gap-3">
-              <div className="flex flex-wrap items-center gap-2">
-                <RequestBadge status={request.status} />
-                <span className="y-chip">
-                  <FormatIcon size={14} aria-hidden /> {format.name}
-                </span>
-                <span className="y-chip">
-                  {request.visibility === "invite" ? (
-                    <>
-                      <Lock size={14} aria-hidden /> Invite only
-                    </>
-                  ) : (
-                    <>
-                      <Globe size={14} aria-hidden /> Open to everyone who fits
-                    </>
-                  )}
-                </span>
-              </div>
-              <h1 className="y-display y-t-display max-w-[24ch]">{request.title}</h1>
-              <p className="y-small y-fg-2">
-                {product ? (
-                  <Link href={`/business/products/${product.id}`} className="y-link font-semibold text-(--b-fg)">
-                    {product.name}
-                  </Link>
-                ) : null}
-                {" · "}
-                {isDraft ? "Not posted yet" : `Posted ${timeAgo(request.postedAt)}`} · Due {weekdayDate(request.dueDate)}
-              </p>
-            </div>
-            <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:w-[560px] lg:flex-none">
-              <div className="y-tile flex flex-col p-3 px-4">
-                <dt className="y-micro y-fg-2 order-2">{pitches.length === 1 ? "pitch" : "pitches"}</dt>
-                <dd className="y-display y-num text-[32px] leading-none font-semibold">{pitches.length}</dd>
-              </div>
-              <div className="y-tile flex flex-col p-3 px-4">
-                <dt className="y-micro y-fg-2 order-2">budget</dt>
-                <dd className="y-display y-num text-[22px] leading-[32px] font-semibold">
-                  {moneyRange(request.budget.min, request.budget.max)}
-                </dd>
-              </div>
-              <div className="y-tile flex flex-col p-3 px-4">
-                <dt className="y-micro y-fg-2 order-2">{request.views === 1 ? "view" : "views"}</dt>
-                <dd className="y-display y-num text-[32px] leading-none font-semibold">{num(request.views)}</dd>
-              </div>
-              <div className="y-tile flex flex-col p-3 px-4">
-                <dt className="y-micro y-fg-2 order-2">
-                  {daysLeft < 0 ? "overdue" : daysLeft === 0 ? "due today" : "until due"}
-                </dt>
-                <dd
-                  className={`y-display y-num text-[22px] leading-[32px] font-semibold ${daysLeft < 0 ? "text-(--y-danger)" : ""}`}
-                >
-                  {daysLeft === 0 ? "Today" : plural(Math.abs(daysLeft), "day")}
-                </dd>
-              </div>
-            </dl>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {isDraft ? (
-              <PillButton href={`/business/requests/new?draft=${request.id}`} variant="outline" icon={<Pencil size={16} aria-hidden />}>
-                Continue editing
-              </PillButton>
-            ) : (
+        <PageHeader
+          back={{ href: "/business/requests", label: "All requests" }}
+          title={<span className="block max-w-[24ch]">{request.title}</span>}
+          description={meta}
+          className="!pb-3"
+          actions={
+            isDraft ? null : (
               <>
                 {request.status === "open" ? (
                   <PillButton variant="contrast" icon={<UserPlus size={18} aria-hidden />} onClick={() => setSheet("invite")}>
                     Invite creators
                   </PillButton>
                 ) : null}
-                {request.status !== "hired" ? (
-                  <PillButton variant="outline" icon={<Pencil size={16} aria-hidden />} onClick={() => setSheet("edit")}>
-                    Edit
-                  </PillButton>
-                ) : null}
-                <PillButton variant="outline" icon={<Link2 size={16} aria-hidden />} onClick={copyLink}>
-                  Copy link
+                <PillButton
+                  variant="outline"
+                  icon={<MoreHorizontal size={18} aria-hidden />}
+                  onClick={() => setSheet("more")}
+                  aria-haspopup="dialog"
+                >
+                  More
                 </PillButton>
-                {request.status === "open" ? (
-                  <PillButton variant="ghost" icon={<Ban size={16} aria-hidden />} onClick={() => setSheet("close")}>
-                    Close request
-                  </PillButton>
-                ) : request.status === "closed" ? (
-                  <PillButton
-                    variant="ghost"
-                    icon={<RotateCcw size={16} aria-hidden />}
-                    onClick={() => {
-                      actions.reopenRequest(request.id);
-                      toast({ message: "Reopened. Creators can pitch again." });
-                    }}
-                  >
-                    Reopen
-                  </PillButton>
-                ) : null}
               </>
-            )}
-          </div>
-        </Block>
+            )
+          }
+        />
 
         {/* State banners */}
         {isDraft ? (
@@ -398,7 +362,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
               );
             })}
             {waiting.length ? (
-              <div className="y-tile flex flex-wrap items-center gap-3 p-3 ps-4">
+              <div className="flex flex-wrap items-center gap-3 border-t border-(--b-line) pt-4">
                 <AvatarStack size={28} people={waiting.map((r) => ({ id: r.creator.id, name: r.creator.name }))} />
                 <p className="y-small min-w-0 flex-1">
                   {plural(waiting.length, "other creator")} {waiting.length === 1 ? "is" : "are"} still waiting to hear back.
@@ -415,7 +379,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
           <Block tone="mist" pad="md" className="flex flex-wrap items-center gap-3">
             <Ban size={20} aria-hidden />
             <p className="y-small min-w-0 flex-1">
-              <span className="font-semibold">This request is closed.</span> Creators can&apos;t pitch, and it&apos;s out of their feeds. Reopen it to hire from these pitches.
+              <span className="font-semibold">This request is closed.</span> Reopen it to hire from these pitches.
             </p>
             <PillButton
               variant="contrast"
@@ -480,43 +444,35 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
             </Block>
           ) : (
             <>
-              <div className="flex flex-col gap-2 pb-1 lg:flex-row lg:items-center">
+              <div className="flex flex-col gap-2 pb-1 md:flex-row md:items-center">
                 <div
                   role="group"
                   aria-label="Filter pitches"
-                  className="y-scroll-x -mx-(--y-gutter) flex gap-2 px-(--y-gutter) lg:mx-0 lg:px-0"
+                  className="y-scroll-x -mx-(--y-gutter) flex gap-2 px-(--y-gutter) md:mx-0 md:px-0"
                 >
-                  {(
-                    [
-                      ["all", "All"],
-                      ["new", "New"],
-                      ["shortlisted", "Shortlisted"],
-                      ["declined", "Declined"],
-                    ] as [Filter, string][]
-                  ).map(([id, label]) => (
+                  {filters.map(([id, label]) => (
                     <FilterChip key={id} pressed={filter === id} count={counts[id]} onClick={() => setFilter(id)}>
                       {label}
                     </FilterChip>
                   ))}
                 </div>
-                <div className="flex items-center justify-between gap-2 lg:ms-auto">
-                  <label className="flex items-center gap-2">
-                    <span className="y-small y-fg-2">Sort</span>
+                <div className="flex items-center justify-between gap-2 md:ms-auto">
+                  <label className="flex items-center">
+                    <span className="sr-only">Sort pitches</span>
                     <select
                       value={sort}
                       onChange={(event) => setSort(event.target.value as PitchSort)}
-                      className="y-input !min-h-11 !w-auto !bg-(--y-paper) text-sm font-semibold"
+                      className="y-input !min-h-11 !w-auto !bg-transparent text-sm font-semibold"
                     >
-                      <option value="fit">Best fit</option>
-                      <option value="price">Lowest price</option>
-                      <option value="fastest">Fastest</option>
-                      <option value="newest">Newest</option>
+                      <option value="fit">Best fit first</option>
+                      <option value="price">Lowest price first</option>
+                      <option value="fastest">Fastest first</option>
+                      <option value="newest">Newest first</option>
                     </select>
                   </label>
                   <SegmentedToggle
                     label="View"
                     size="md"
-                    className="bg-(--y-paper)"
                     value={view}
                     onChange={setView}
                     options={[
@@ -551,53 +507,46 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                   </Block>
                 )
               ) : active.length || declined.length ? (
-                <div className="flex flex-col gap-2">
+                <Block tone="paper" pad="none" className="flex flex-col p-2 md:p-3">
                   <p className="sr-only" aria-live="polite">
                     {plural(active.length + declined.length, "pitch", "pitches")} shown
                   </p>
-                  {active.map((item) => (
-                    <PitchCard
-                      key={item.pitch.id}
-                      s={s}
-                      request={request}
-                      item={item}
-                      isNew={newIds.has(item.pitch.id)}
-                      neon={neonId === item.pitch.id}
-                      canHire={canHire}
-                      commissionId={s.commissions.find((c) => c.pitchId === item.pitch.id)?.id}
-                      onHire={() => setHireId(item.pitch.id)}
-                      onMessage={() => setMessageCreatorId(item.creator.id)}
-                      onSample={(videoId) => setSample({ pitchId: item.pitch.id, videoId })}
-                      onDecline={() => decline(item.pitch.id)}
-                      onRestore={() => restore(item.pitch.id)}
-                      onShortlist={(on) => shortlist_(item.pitch.id, on)}
-                    />
-                  ))}
+                  {active.length ? (
+                    <ul className="flex flex-col">
+                      {active.map((item) => (
+                      <PitchRow
+                        key={item.pitch.id}
+                        request={request}
+                        item={item}
+                        isNew={newIds.has(item.pitch.id)}
+                        onOpen={() => setOpenId(item.pitch.id)}
+                        onShortlist={(on) => shortlist_(item.pitch.id, on)}
+                        onRestore={() => restore(item.pitch.id)}
+                      />
+                    ))}
+                    </ul>
+                  ) : null}
                   {declined.length ? (
                     <>
-                      {filter === "all" ? (
-                        <h2 className="y-micro y-fg-2 px-2 pt-4">Not selected</h2>
+                      {filter === "all" && active.length ? (
+                        <h2 className="y-micro y-fg-2 mt-2 border-t border-(--b-line) px-3 pt-4 pb-1 md:px-4">Not selected</h2>
                       ) : null}
-                      {declined.map((item) => (
-                        <PitchCard
-                          key={item.pitch.id}
-                          s={s}
-                          request={request}
-                          item={item}
-                          isNew={false}
-                          neon={false}
-                          canHire={false}
-                          onHire={() => undefined}
-                          onMessage={() => setMessageCreatorId(item.creator.id)}
-                          onSample={(videoId) => setSample({ pitchId: item.pitch.id, videoId })}
-                          onDecline={() => undefined}
-                          onRestore={() => restore(item.pitch.id)}
-                          onShortlist={() => undefined}
-                        />
-                      ))}
+                      <ul className="flex flex-col">
+                        {declined.map((item) => (
+                      <PitchRow
+                        key={item.pitch.id}
+                        request={request}
+                        item={item}
+                        isNew={false}
+                        onOpen={() => setOpenId(item.pitch.id)}
+                        onShortlist={(on) => shortlist_(item.pitch.id, on)}
+                        onRestore={() => restore(item.pitch.id)}
+                      />
+                    ))}
+                      </ul>
                     </>
                   ) : null}
-                </div>
+                </Block>
               ) : (
                 <Block tone="paper" pad="md">
                   <EmptyState
@@ -652,36 +601,6 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
               ) : null}
             </Block>
             <div className="flex flex-col gap-2 lg:col-span-4">
-              <Block as="section" aria-labelledby="terms-h" tone="paper" pad="md" className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2">
-                  <h2 id="terms-h" className="y-head">
-                    Budget and timing
-                  </h2>
-                  {!isDraft && request.status !== "hired" ? (
-                    <PillButton size="sm" variant="ghost" icon={<Pencil size={14} aria-hidden />} onClick={() => setSheet("edit")}>
-                      Edit
-                    </PillButton>
-                  ) : null}
-                </div>
-                <dl className="flex flex-col gap-2">
-                  <div className="y-tile p-4">
-                    <dt className="y-micro y-fg-2">Budget</dt>
-                    <dd className="y-display y-num text-[24px] font-semibold">{moneyRange(request.budget.min, request.budget.max)}</dd>
-                  </div>
-                  <div className="y-tile p-4">
-                    <dt className="y-micro y-fg-2">Due</dt>
-                    <dd className="y-small font-semibold">
-                      {weekdayDate(request.dueDate)} · {relativeDay(request.dueDate)}
-                    </dd>
-                  </div>
-                  <div className="y-tile p-4">
-                    <dt className="y-micro y-fg-2">Hiring</dt>
-                    <dd className="y-small font-semibold">
-                      {plural(request.slots, "creator")} · {request.visibility === "invite" ? "invite only" : "open to everyone who fits"}
-                    </dd>
-                  </div>
-                </dl>
-              </Block>
               {product ? (
                 <Block as="section" aria-labelledby="product-h" tone="paper" pad="md" className="flex flex-col gap-3">
                   <div className="flex items-center justify-between gap-2">
@@ -693,13 +612,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                     </PillButton>
                   </div>
                   <p className="y-small y-fg-2">{product.description}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {product.tone.map((t) => (
-                      <span key={t} className="y-chip">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
+                  {product.tone.length ? <p className="y-small y-fg-2">Tone: {product.tone.join(", ")}</p> : null}
                   {product.assets.length ? (
                     <ul className="flex flex-col gap-1.5">
                       {product.assets.map((asset) => (
@@ -718,20 +631,17 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                     </ul>
                   ) : null}
                   <p className="y-micro y-fg-3">Shared with the creator you hire, the moment work starts.</p>
-                </Block>
-              ) : null}
-              {product ? (
-                <Block as="section" aria-labelledby="learn-h" tone="mist" pad="md" className="flex flex-col gap-3">
-                  <h2 id="learn-h" className="y-head flex items-center gap-2">
-                    <History size={18} aria-hidden /> Carried forward
-                  </h2>
+
+                  <h3 className="y-small mt-3 flex items-center gap-2 border-t border-(--b-line) pt-5 font-semibold">
+                    <History size={16} aria-hidden /> Carried forward
+                  </h3>
                   {product.learnings.length ? (
-                    <ul className="flex flex-col gap-2">
+                    <ul className="flex flex-col gap-3">
                       {product.learnings.map((l) => {
                         const creator = s.creators.find((c) => c.id === l.creatorId);
                         const inBrief = request.brief.mustInclude.includes(l.text) || request.brief.avoid.includes(l.text);
                         return (
-                          <li key={l.id} className="y-tile flex flex-col gap-1 p-3">
+                          <li key={l.id} className="flex flex-col gap-0.5">
                             <p className="y-small">{l.text}</p>
                             <p className="y-micro y-fg-2">
                               {creator ? `From ${creator.firstName}'s commission` : "From a past commission"} · {shortDate(l.createdAt)}
@@ -749,11 +659,12 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                   )}
                 </Block>
               ) : null}
-              {request.brief.addons.length ? (
-                <p className="y-micro y-fg-3 px-2">
-                  Extras requested: {request.brief.addons.map((id) => addonById[id].name).join(", ")}.
-                </p>
-              ) : null}
+              <p className="y-micro y-fg-3 px-2">
+                Hiring {plural(request.slots, "creator")}, {request.visibility === "invite" ? "invite only" : "open to everyone who fits"}.
+                {request.brief.addons.length
+                  ? ` Extras requested: ${request.brief.addons.map((id) => addonById[id].name).join(", ")}.`
+                  : ""}
+              </p>
             </div>
           </div>
         ) : null}
@@ -835,9 +746,50 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
       </div>
 
       {/* Sheets (mounted only while open, so each visit starts fresh) */}
+      {sheet === "more" ? (
+        <Sheet open onClose={closeSheet} title="More" description={request.title} side="center" width="sm">
+          <ul className="-mx-2 flex flex-col">
+            {moreItems.map((item) => (
+              <li key={item.label}>
+                <button
+                  type="button"
+                  onClick={item.onClick}
+                  className="y-body flex min-h-12 w-full items-center gap-3 rounded-(--y-r-sm) px-2 text-start font-semibold transition-colors hover:bg-(--b-chip)"
+                >
+                  {item.icon}
+                  {item.label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Sheet>
+      ) : null}
       {sheet === "invite" ? <InviteSheet request={request} onClose={closeSheet} /> : null}
       {sheet === "edit" ? <EditRequestSheet request={request} onClose={closeSheet} /> : null}
       {sheet === "close" ? <CloseRequestSheet request={request} pitchCount={pitches.length} onClose={closeSheet} /> : null}
+      {showPitch ? (
+        <PitchSheet
+          key={openItem.pitch.id}
+          s={s}
+          request={request}
+          item={openItem}
+          canHire={canHire}
+          commissionId={s.commissions.find((c) => c.pitchId === openItem.pitch.id)?.id}
+          onClose={() => setOpenId(null)}
+          onHire={() => {
+            setOpenId(null);
+            setHireId(openItem.pitch.id);
+          }}
+          onMessage={() => setMessageCreatorId(openItem.creator.id)}
+          onSample={(videoId) => setSample({ pitchId: openItem.pitch.id, videoId })}
+          onDecline={() => {
+            setOpenId(null);
+            decline(openItem.pitch.id);
+          }}
+          onRestore={() => restore(openItem.pitch.id)}
+          onShortlist={(on) => shortlist_(openItem.pitch.id, on)}
+        />
+      ) : null}
       {hireItem ? <HireSheet key={hireItem.pitch.id} item={hireItem} request={request} onClose={() => setHireId(null)} /> : null}
       {messageCreator ? (
         <MessageSheet key={messageCreator.id} creator={messageCreator} request={request} onClose={() => setMessageCreatorId(null)} />

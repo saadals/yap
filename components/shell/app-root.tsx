@@ -1,22 +1,18 @@
 "use client";
 
-import { PrefsProvider, type SessionRole, type Theme } from "@/lib/prefs";
+import { PrefsProvider } from "@/lib/prefs";
 import { ToastProvider } from "@/components/ui/toast";
 
 /** Scoping class, font variables, toasts. Portals (sheets) mount into #yapp-root. */
 export function AppRoot({
-  theme,
-  role,
   fontStyle,
   children,
 }: {
-  theme: Theme;
-  role: SessionRole;
   fontStyle: React.CSSProperties;
   children: React.ReactNode;
 }) {
   return (
-    <PrefsProvider initialTheme={theme} initialRole={role}>
+    <PrefsProvider>
       <div id="yapp-root" className="yapp" style={fontStyle}>
         <a
           href="#main"

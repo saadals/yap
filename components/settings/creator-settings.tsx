@@ -59,8 +59,8 @@ export function AvailabilityControls() {
             vacation
               ? "Turn off vacation mode to change this."
               : creator.available
-                ? "Your profile shows “Available” and you appear in search and match alerts."
-                : "Your profile shows “Booked”. Businesses can still message you and send offers."
+                ? "You show as available in search and match alerts."
+                : "You show as booked. Businesses can still message you."
           }
           checked={creator.available}
           disabled={vacation}
@@ -75,7 +75,7 @@ export function AvailabilityControls() {
         <SwitchRow
           label="Vacation mode"
           icon={<Palmtree size={18} />}
-          description="Pauses new offers and hides you from search until you're back. Commissions already in progress carry on as normal."
+          description="Pauses new offers and hides you from search. Work in progress carries on."
           checked={vacation}
           onChange={(on) => {
             const before = { available: creator.available, availableFrom: creator.availableFrom };
@@ -135,7 +135,7 @@ export function AvailabilityControls() {
           <div className="flex flex-col gap-3">
             <TextArea
               label="Auto-reply"
-              hint={`Sent once to anyone who messages you while you're away. ${280 - reply.length} characters left.`}
+              hint={`Sent once to anyone who messages you. ${280 - reply.length} characters left.`}
               rows={3}
               maxLength={280}
               value={reply}
@@ -177,10 +177,6 @@ export function AlertControls() {
   const prefs = s.settings.creator;
   const [alertFormats, setAlertFormats] = useState<FormatId[]>(creator.formats);
   const [alertLangs, setAlertLangs] = useState<LanguageId[]>(creator.languages);
-  const [saved, setSaved] = useState({ formats: creator.formats, langs: creator.languages });
-  const dirty =
-    [...alertFormats].sort().join() !== [...saved.formats].sort().join() ||
-    [...alertLangs].sort().join() !== [...saved.langs].sort().join();
 
   const matching = opportunities(s).filter(
     ({ request, hidden }) =>
@@ -190,8 +186,15 @@ export function AlertControls() {
       request.brief.languages.some((l) => alertLangs.includes(l)),
   ).length;
 
-  const toggle = <T,>(list: T[], value: T) =>
-    list.includes(value) ? list.filter((item) => item !== value) : [...list, value];
+  /** Toggle a chip, keeping at least one selected. Applies straight away. */
+  const toggle = <T,>(list: T[], value: T, what: string): T[] => {
+    if (!list.includes(value)) return [...list, value];
+    if (list.length === 1) {
+      toast({ message: `Keep at least one ${what} so alerts can match`, tone: "info" });
+      return list;
+    }
+    return list.filter((item) => item !== value);
+  };
 
   return (
     <div className="flex flex-col gap-5">
@@ -199,7 +202,7 @@ export function AlertControls() {
         <SwitchRow
           label="Match alerts"
           icon={<BellRing size={18} />}
-          description="Hear about new requests that fit your formats, dialects and budget as soon as they're posted."
+          description="New requests that fit your formats, dialects and budget."
           checked={prefs.matchAlerts}
           onChange={(on) => {
             actions.updateSettings("creator", { matchAlerts: on });
@@ -216,7 +219,7 @@ export function AlertControls() {
         className={`flex flex-col gap-5 transition-opacity ${prefs.matchAlerts ? "" : "opacity-55"}`}
       >
         <legend className="sr-only">Alert preferences</legend>
-        <div className="y-tile flex flex-col gap-3 p-4">
+        <div className="flex flex-col gap-3">
           <label htmlFor="min-budget" className="y-label">
             <span>Minimum budget</span>
             <span className="y-display y-num text-2xl font-semibold">{money(prefs.minBudget)}</span>
@@ -233,12 +236,11 @@ export function AlertControls() {
             aria-describedby="min-budget-hint"
             onChange={(event) => actions.updateSettings("creator", { minBudget: Number(event.target.value) })}
           />
-          <p id="min-budget-hint" className="y-micro y-fg-2">
-            Only alert me when a request can pay at least this much. Right now{" "}
+          <p id="min-budget-hint" className="y-micro y-fg-2" aria-live="polite">
             <span className="font-semibold text-(--b-fg)">
               {matching} open request{matching === 1 ? "" : "s"}
             </span>{" "}
-            match.
+            match right now.
           </p>
         </div>
 
@@ -253,7 +255,7 @@ export function AlertControls() {
                 <FilterChip
                   key={format.id}
                   pressed={alertFormats.includes(format.id)}
-                  onClick={() => setAlertFormats((list) => toggle(list, format.id))}
+                  onClick={() => setAlertFormats(toggle(alertFormats, format.id, "format"))}
                   icon={<Icon size={16} aria-hidden />}
                 >
                   {format.name}
@@ -272,7 +274,7 @@ export function AlertControls() {
               <FilterChip
                 key={lang.id}
                 pressed={alertLangs.includes(lang.id)}
-                onClick={() => setAlertLangs((list) => toggle(list, lang.id))}
+                onClick={() => setAlertLangs(toggle(alertLangs, lang.id, "dialect"))}
               >
                 {lang.short}
                 {lang.id !== "en" ? (
@@ -283,24 +285,6 @@ export function AlertControls() {
               </FilterChip>
             ))}
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <PillButton
-            variant="contrast"
-            disabled={!dirty || alertFormats.length === 0 || alertLangs.length === 0}
-            onClick={() => {
-              setSaved({ formats: alertFormats, langs: alertLangs });
-              toast({ message: `Alerts saved. ${matching} open request${matching === 1 ? "" : "s"} match right now.` });
-            }}
-          >
-            Save alert preferences
-          </PillButton>
-          {alertFormats.length === 0 || alertLangs.length === 0 ? (
-            <span className="y-micro font-medium text-(--y-danger)">Pick at least one format and one dialect.</span>
-          ) : !dirty ? (
-            <span className="y-micro y-fg-3">All changes saved</span>
-          ) : null}
         </div>
       </fieldset>
     </div>
@@ -384,7 +368,7 @@ function AccountInner({ creator }: { creator: Creator }) {
           <FieldShell
             label="Handle"
             optionalLabel={false}
-            hint={`Part of your profile link, yapp.app/creators/${creator.handle}, and every past delivery, so it can't change. Need a new one? Contact support.`}
+            hint="Part of your profile link, so it can't change."
           >
             {({ id, describedBy }) => (
               <input
@@ -402,7 +386,7 @@ function AccountInner({ creator }: { creator: Creator }) {
           required
           type="email"
           autoComplete="email"
-          hint="For sign-in, offers and payout receipts. Clients never see it."
+          hint="Clients never see it."
           value={email}
           onChange={(event) => setEmail(event.target.value)}
           onBlur={() => setTouched((t) => ({ ...t, email: true }))}
@@ -418,16 +402,13 @@ function AccountInner({ creator }: { creator: Creator }) {
         </div>
       </form>
 
-      <div className="y-tile flex flex-wrap items-center gap-3 p-4">
-        <span aria-hidden className="grid size-11 flex-none place-items-center rounded-full bg-(--b-bg)">
-          <BadgeCheck size={20} />
-        </span>
+      <div className="flex flex-wrap items-center gap-3 border-t border-(--b-line) pt-5">
         <div className="min-w-0 flex-1">
-          <p className="y-small font-semibold">ID verification</p>
+          <h3 className="y-head">ID verification</h3>
           <p className="y-micro y-fg-2">
             {creator.verified
-              ? `Verified with your Emirates ID. Clients see a verified badge on your profile.`
-              : "Verify your ID to get a badge clients trust. It takes about 2 minutes."}
+              ? "Verified with your Emirates ID."
+              : "Get a badge clients trust. It takes about 2 minutes."}
           </p>
         </div>
         {creator.verified ? (
@@ -447,7 +428,7 @@ function AccountInner({ creator }: { creator: Creator }) {
         )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 border-t border-(--b-line) pt-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="y-head">Signed-in devices</h3>
           {devices.length > 1 ? (
@@ -494,19 +475,14 @@ function AccountInner({ creator }: { creator: Creator }) {
         </ul>
       </div>
 
-      <div className="flex flex-col gap-3 border-t border-(--b-line) pt-5">
-        <div>
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--b-line) pt-5">
+        <div className="min-w-0">
           <h3 className="y-head">Delete account</h3>
-          <p className="y-small y-fg-2 max-w-[62ch]">
-            Removes your profile, portfolio and pitches. Finish or cancel active commissions first;
-            anything in protection is paid out before your account closes.
-          </p>
+          <p className="y-micro y-fg-2">Finish active commissions first. Anything in protection is paid out.</p>
         </div>
-        <div>
-          <PillButton variant="outline" icon={<Trash2 size={18} aria-hidden />} onClick={() => setDeleting(true)}>
-            Delete account
-          </PillButton>
-        </div>
+        <PillButton variant="ghost" size="sm" icon={<Trash2 size={16} aria-hidden />} onClick={() => setDeleting(true)}>
+          Delete account
+        </PillButton>
       </div>
 
       <PasswordSheet open={password} onClose={() => setPassword(false)} />

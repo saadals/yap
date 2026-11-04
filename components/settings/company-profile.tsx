@@ -132,7 +132,7 @@ function Inner({ business }: { business: Business }) {
         <TextField
           label="Tagline"
           required
-          hint="One line creators read on every request. What does your product do?"
+          hint="Shown on every request."
           value={form.tagline}
           onChange={(event) => set("tagline", event.target.value)}
           onBlur={blur("tagline")}
@@ -221,9 +221,7 @@ function Inner({ business }: { business: Business }) {
             >
               Discard changes
             </PillButton>
-          ) : (
-            <span className="y-micro y-fg-3">All changes saved</span>
-          )}
+          ) : null}
         </div>
       </div>
 

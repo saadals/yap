@@ -1,6 +1,6 @@
 "use client";
 
-import { BriefcaseBusiness, FileText, MessageCircle, Search, X } from "lucide-react";
+import { MessageCircle, Search, X } from "lucide-react";
 import Link from "next/link";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
@@ -22,11 +22,9 @@ import {
   previewText,
 } from "./thread-meta";
 
-const filterLabels: { id: ThreadFilter; label: string; icon?: React.ReactNode }[] = [
+const filterLabels: { id: ThreadFilter; label: string }[] = [
   { id: "all", label: "All" },
   { id: "unread", label: "Unread" },
-  { id: "commissions", label: "Commissions", icon: <BriefcaseBusiness size={16} aria-hidden /> },
-  { id: "prehire", label: "Pre-hire", icon: <FileText size={16} aria-hidden /> },
 ];
 
 export function ThreadList({
@@ -72,7 +70,7 @@ export function ThreadList({
             type="search"
             value={query}
             onChange={(event) => onQuery(event.target.value)}
-            placeholder={role === "business" ? "Search creators, subjects, messages" : "Search clients, subjects, messages"}
+            placeholder="Search messages"
             className="y-input !min-h-12 !ps-11 !pe-11 [&::-webkit-search-cancel-button]:appearance-none"
           />
           {query ? (
@@ -86,14 +84,13 @@ export function ThreadList({
             </button>
           ) : null}
         </label>
-        <div className="y-scroll-x -mx-3 flex gap-1.5 px-3 md:-mx-4 md:px-4" role="group" aria-label="Filter conversations">
+        <div className="flex gap-1.5" role="group" aria-label="Filter conversations">
           {filterLabels.map((item) => (
             <FilterChip
               key={item.id}
               pressed={filter === item.id}
               onClick={() => onFilter(item.id)}
-              icon={item.icon}
-              count={item.id === "unread" ? unread : undefined}
+              count={item.id === "unread" && unread > 0 ? unread : undefined}
               className="flex-none"
             >
               {item.label}
@@ -136,7 +133,7 @@ export function ThreadList({
           body={
             filter === "unread" && !query
               ? "Every conversation has been read. New replies will show up here."
-              : "Try another name or word, or clear the filters to see every conversation."
+              : "Try another name or word."
           }
           shape="ball"
           tint="sea"
@@ -205,45 +202,36 @@ function ThreadRow({
         onClick={onPick}
         aria-current={selected ? "true" : undefined}
         data-tone={selected ? "night" : undefined}
-        className={`flex min-h-[76px] items-start gap-3 rounded-(--y-r-tile) p-3 transition-colors ${
+        className={`flex items-center gap-3 rounded-(--y-r-tile) px-3 py-2.5 transition-colors ${
           selected ? "bg-(--b-bg) text-(--b-fg)" : "hover:bg-(--b-chip)"
         }`}
       >
-        <span className="relative mt-0.5 flex-none">
+        <span className="flex-none">
           {other.kind === "creator" ? (
-            <FaceAvatar id={thread.creatorId} name="" size={44} />
+            <FaceAvatar id={thread.creatorId} name="" size={40} />
           ) : other.business ? (
-            <BusinessLogo business={other.business} size={44} />
+            <BusinessLogo business={other.business} size={40} />
           ) : (
-            <span className="y-tile grid size-11 place-items-center !rounded-full" aria-hidden>
+            <span className="y-tile grid size-10 place-items-center !rounded-full" aria-hidden>
               <MessageCircle size={18} />
             </span>
           )}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-baseline justify-between gap-2">
             <span className={`y-small truncate ${isUnread ? "font-bold" : "font-semibold"}`}>
               {other.name}
+              <span className="sr-only">, {thread.subject}</span>
             </span>
-            <span
-              className={`y-micro y-num flex-none ${isUnread ? "font-bold" : "y-fg-3"}`}
-            >
+            <span className={`y-micro y-num flex-none ${isUnread ? "font-bold" : "y-fg-3"}`}>
               {last ? stamp(last.at) : ""}
             </span>
           </span>
-          <span className={`y-micro truncate ${isUnread ? "font-semibold" : "y-fg-2"}`}>
-            {thread.commissionId ? (
-              <BriefcaseBusiness size={12} aria-hidden className="me-1 inline -mt-0.5" />
-            ) : (
-              <FileText size={12} aria-hidden className="me-1 inline -mt-0.5" />
-            )}
-            {thread.subject}
-          </span>
           <span className="flex items-center gap-2">
             <span
-              className={`y-small min-w-0 flex-1 truncate ${
-                isUnread ? "font-medium" : "y-fg-2"
-              } ${system ? "italic" : ""}`}
+              className={`y-small min-w-0 flex-1 truncate ${isUnread ? "font-medium" : "y-fg-2"} ${
+                system ? "italic" : ""
+              }`}
             >
               {previewText(last, role)}
             </span>
@@ -267,11 +255,10 @@ export function ThreadListSkeleton() {
       <div className="flex gap-1.5">
         <Skeleton className="h-10 w-14 !rounded-full" />
         <Skeleton className="h-10 w-24 !rounded-full" />
-        <Skeleton className="h-10 w-28 !rounded-full" />
       </div>
       {[0, 1, 2, 3, 4].map((index) => (
         <div key={index} className="flex items-center gap-3 p-1">
-          <Skeleton className="size-11 !rounded-full" />
+          <Skeleton className="size-10 !rounded-full" />
           <div className="flex flex-1 flex-col gap-2">
             <Skeleton className="h-3.5 w-2/5" />
             <Skeleton className="h-3 w-4/5" />

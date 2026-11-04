@@ -103,15 +103,9 @@ export function Section({
 }) {
   const headingId = `${id}-heading`;
   const bodyId = `${id}-body`;
-  return (
-    <Block
-      as="section"
-      tone="paper"
-      pad="md"
-      id={id}
-      aria-labelledby={headingId}
-      className="flex scroll-mt-24 flex-col gap-5"
-    >
+  const frame = "flex scroll-mt-24 flex-col gap-5";
+  const content = (
+    <>
       <div className="flex items-start gap-3">
         <span
           aria-hidden
@@ -138,7 +132,7 @@ export function Section({
         {collapsible ? (
           <PillButton
             size="sm"
-            variant={open ? "ghost" : "soft"}
+            variant="ghost"
             onClick={onToggle}
             aria-expanded={open}
             aria-controls={bodyId}
@@ -153,6 +147,16 @@ export function Section({
           {children}
         </div>
       ) : null}
+    </>
+  );
+  // Collapsible (repeat) sections are rows inside one shared block; the rest are their own block.
+  return collapsible ? (
+    <section id={id} aria-labelledby={headingId} className={`${frame} py-5`}>
+      {content}
+    </section>
+  ) : (
+    <Block as="section" tone="paper" pad="md" id={id} aria-labelledby={headingId} className={frame}>
+      {content}
     </Block>
   );
 }
@@ -722,10 +726,6 @@ export function PaymentEditor({ d, set, errorFor }: EditorProps) {
     <div className="flex flex-col gap-3" data-field="payment" tabIndex={-1}>
       <PaymentMethodPicker value={d.paymentMethodId} onChange={(paymentMethodId) => set({ paymentMethodId })} />
       <InlineError message={errorFor("payment")} />
-      <p className="y-small y-fg-2">
-        You&apos;re only charged if they accept; the service fee is only charged when you approve the
-        work.
-      </p>
     </div>
   );
 }

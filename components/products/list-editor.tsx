@@ -7,8 +7,9 @@ import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 
 /**
- * Editable list of short lines (features, dos, don'ts): edit in place, add, remove, reorder.
- * Reordering uses buttons (keyboard and touch friendly) and announces the new position.
+ * Editable list of short lines (features, dos, don'ts): edit in place, add, remove, and reorder
+ * where order matters. Reordering uses buttons (keyboard and touch friendly) and announces the
+ * new position.
  */
 export function ListEditor({
   label,
@@ -18,6 +19,7 @@ export function ListEditor({
   onChange,
   placeholder,
   max = 10,
+  reorder = true,
 }: {
   label: string;
   hint?: string;
@@ -27,6 +29,8 @@ export function ListEditor({
   onChange: (items: string[]) => void;
   placeholder: string;
   max?: number;
+  /** Show move up/down controls (for lists where order matters). */
+  reorder?: boolean;
 }) {
   const labelId = useId();
   const hintId = useId();
@@ -68,7 +72,12 @@ export function ListEditor({
   };
 
   return (
-    <div role="group" aria-labelledby={labelId} aria-describedby={hint ? hintId : undefined} className="flex flex-col gap-2">
+    <div
+      role="group"
+      aria-labelledby={labelId}
+      aria-describedby={hint ? hintId : undefined}
+      className="flex flex-col gap-2"
+    >
       <div className="flex items-baseline justify-between gap-2">
         <span id={labelId} className="y-label">
           {label}
@@ -86,7 +95,10 @@ export function ListEditor({
       {items.length ? (
         <ol className="flex flex-col gap-2">
           {items.map((item, index) => (
-            <li key={index} className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-2">
+            <li
+              key={index}
+              className={`group/item flex ${reorder ? "flex-col gap-1.5 sm:flex-row sm:items-start sm:gap-2" : "items-start gap-2"}`}
+            >
               <textarea
                 rows={1}
                 value={item}
@@ -100,42 +112,47 @@ export function ListEditor({
                   // One line per item; Enter would only add a stray line break.
                   if (event.key === "Enter") event.preventDefault();
                 }}
-                className="y-input min-h-[52px] flex-1 [field-sizing:content]"
+                className="y-input min-h-[52px] min-w-0 flex-1 [field-sizing:content]"
               />
               <span className="flex flex-none items-center justify-end gap-1">
-                <button
-                  type="button"
-                  ref={(node) => {
-                    upRefs.current[index] = node;
-                  }}
-                  className="y-round disabled:opacity-35"
-                  data-tone-btn="outline"
-                  data-size="sm"
-                  aria-label={`Move “${short(item)}” up`}
-                  title="Move up"
-                  disabled={index === 0}
-                  onClick={() => move(index, -1)}
-                >
-                  <ArrowUp size={18} aria-hidden />
-                </button>
-                <button
-                  type="button"
-                  ref={(node) => {
-                    downRefs.current[index] = node;
-                  }}
-                  className="y-round disabled:opacity-35"
-                  data-tone-btn="outline"
-                  data-size="sm"
-                  aria-label={`Move “${short(item)}” down`}
-                  title="Move down"
-                  disabled={index === items.length - 1}
-                  onClick={() => move(index, 1)}
-                >
-                  <ArrowDown size={18} aria-hidden />
-                </button>
                 <RoundIconButton label={`Remove “${short(item)}”`} size="sm" onClick={() => remove(index)}>
                   <X size={18} aria-hidden />
                 </RoundIconButton>
+                {reorder ? (
+                  // Reorder controls stay out of the way until the row is hovered or focused (mouse only).
+                  <span className="flex items-center gap-1 transition-opacity duration-(--y-dur-1) [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within/item:opacity-100 [@media(hover:hover)]:group-hover/item:opacity-100">
+                    <button
+                      type="button"
+                      ref={(node) => {
+                        upRefs.current[index] = node;
+                      }}
+                      className="y-round disabled:opacity-35"
+                      data-tone-btn="outline"
+                      data-size="sm"
+                      aria-label={`Move “${short(item)}” up`}
+                      title="Move up"
+                      disabled={index === 0}
+                      onClick={() => move(index, -1)}
+                    >
+                      <ArrowUp size={18} aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      ref={(node) => {
+                        downRefs.current[index] = node;
+                      }}
+                      className="y-round disabled:opacity-35"
+                      data-tone-btn="outline"
+                      data-size="sm"
+                      aria-label={`Move “${short(item)}” down`}
+                      title="Move down"
+                      disabled={index === items.length - 1}
+                      onClick={() => move(index, 1)}
+                    >
+                      <ArrowDown size={18} aria-hidden />
+                    </button>
+                  </span>
+                ) : null}
               </span>
             </li>
           ))}

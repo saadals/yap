@@ -85,13 +85,7 @@ export function EarningsEstimator() {
   return (
     <div className="grid gap-2 lg:grid-cols-12">
       <Block tone="paper" pad="lg" className="flex flex-col gap-8 lg:col-span-7">
-        <div className="flex flex-col gap-1.5">
-          <h3 className="y-display y-title">Estimate your month</h3>
-          <p className="y-small y-fg-2 max-w-[52ch]">
-            You set your own prices and packages. Drag the sliders to see what a steady month
-            could look like.
-          </p>
-        </div>
+        <h3 className="y-display y-title">Estimate your month</h3>
         <RangeField
           label="Videos per month"
           value={videos}
@@ -100,7 +94,6 @@ export function EarningsEstimator() {
           step={1}
           onChange={setVideos}
           format={(value) => plural(value, "video")}
-          hint="Most creators start with 2–6 a month alongside other work."
         />
         <RangeField
           label="Average price per video"
@@ -153,8 +146,7 @@ export function EarningsEstimator() {
         </dl>
         <p className="y-micro y-fg-2 flex items-start gap-1.5">
           <Info size={14} aria-hidden className="mt-px flex-none" />
-          An estimate, not a promise. Add-ons like rush delivery or paid-ads usage add to what
-          you earn.
+          An estimate, not a promise. Add-ons add to what you earn.
         </p>
       </Block>
     </div>
@@ -211,8 +203,7 @@ export function FeeCalculator() {
         <div className="flex flex-col gap-1.5">
           <h3 className="y-display y-title">Fee calculator</h3>
           <p className="y-small y-fg-2 max-w-[52ch]">
-            Try a creator&apos;s price and the add-ons you&apos;d want. Add-on prices are the
-            typical rates on Yapp; each creator sets their own.
+            Add-on prices are typical rates. Each creator sets their own.
           </p>
         </div>
 
@@ -226,7 +217,6 @@ export function FeeCalculator() {
             onChange={(event) => setFromInput(event.target.value)}
             onBlur={() => setTouched(true)}
             error={error}
-            hint="The price on the creator's package or pitch."
           />
           <div className="flex flex-wrap gap-2" role="group" aria-label="Example prices">
             {presets.map((value) => (
@@ -289,8 +279,8 @@ export function FeeCalculator() {
         </div>
         <p className="y-micro y-fg-2 mt-auto flex items-start gap-1.5">
           <ShieldCheck size={14} aria-hidden className="mt-px flex-none" />
-          The creator&apos;s price is held when work starts. The fee is charged only when you
-          approve, so a cancelled or refunded commission costs you nothing.
+          Held when work starts, released when you approve. A cancelled or refunded commission
+          costs you nothing.
         </p>
       </Block>
     </div>

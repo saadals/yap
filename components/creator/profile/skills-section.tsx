@@ -6,8 +6,9 @@ import { useState } from "react";
 import { Ar } from "@/components/ui/page";
 import { FilterChip } from "@/components/ui/chip";
 import { useToast } from "@/components/ui/toast";
+import { plural } from "@/lib/format";
 import { actions } from "@/lib/store";
-import { formats, languages, niches, platforms } from "@/lib/taxonomy";
+import { formats, languageById, languages, niches, platforms } from "@/lib/taxonomy";
 import type { Creator, FormatId, LanguageId, NicheId, PlatformId } from "@/lib/types";
 
 import { ProfileSection, useDraft } from "./section";
@@ -51,7 +52,12 @@ export function SkillsSection({ creator }: { creator: Creator }) {
     <ProfileSection
       id="skills"
       title="Languages, formats and niches"
-      description="These drive your fit score on every request. List only what you'd happily deliver."
+      description="These drive your fit score. List only what you'd happily deliver."
+      summary={[
+        creator.languages.map((l) => languageById[l].short).join(", "),
+        plural(creator.formats.length, "format"),
+        plural(creator.niches.length, "niche"),
+      ].join(" · ")}
       dirty={dirty}
       attempted={attempted}
       errorCount={errorCount}

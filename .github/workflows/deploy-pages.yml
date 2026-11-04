@@ -40,6 +40,14 @@ jobs:
           # "/yap" for https://<owner>.github.io/yap/, "" for a custom domain or user site.
           NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}
 
+      - name: Check the export exists
+        run: |
+          if [ ! -f out/index.html ]; then
+            echo "::error::No out/index.html. The build didn't run as a static export — check that next.config.ts enables output: 'export' when GITHUB_PAGES=true."
+            exit 1
+          fi
+          echo "Exported $(find out -name index.html | wc -l) pages"
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

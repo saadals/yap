@@ -2,7 +2,6 @@
 
 import { Star } from "lucide-react";
 
-import { languageList } from "@/components/domain/chips";
 import { PitchBadge } from "@/components/domain/status-badge";
 import { Rating } from "@/components/domain/stars";
 import { VideoThumb } from "@/components/domain/video-thumb";
@@ -59,7 +58,6 @@ export function PitchCompare({
   const bestFit = maxBy((i) => i.fit.score);
   const bestRated = maxBy((i) => i.creator.rating);
   const mostOnTime = maxBy((i) => i.creator.onTimeRate);
-  const mostRepeat = maxBy((i) => i.creator.repeatClientRate);
 
   const rowHead = "sticky start-0 z-[1] bg-(--b-bg) p-4 text-start align-top y-micro y-fg-2 font-medium w-32";
   const cell = "p-4 align-top border-s border-(--b-line)";
@@ -88,9 +86,7 @@ export function PitchCompare({
                       </span>
                     </span>
                   </span>
-                  {pitch.status === "shortlisted" || pitch.status === "hired" ? (
-                    <PitchBadge status={pitch.status} className="mt-2" />
-                  ) : null}
+                  {pitch.status === "hired" ? <PitchBadge status="hired" className="mt-2" /> : null}
                 </th>
               ))}
             </tr>
@@ -177,29 +173,6 @@ export function PitchCompare({
                     <span className="y-small y-num font-semibold">{creator.onTimeRate}%</span>
                     {mostOnTime === pitch.id ? <Best>Most reliable</Best> : null}
                   </span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className={rowHead}>
-                Repeat clients
-              </th>
-              {items.map(({ pitch, creator }) => (
-                <td key={pitch.id} className={cell}>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="y-small y-num font-semibold">{creator.repeatClientRate}%</span>
-                    {mostRepeat === pitch.id ? <Best>Most rehired</Best> : null}
-                  </span>
-                </td>
-              ))}
-            </tr>
-            <tr>
-              <th scope="row" className={rowHead}>
-                Languages
-              </th>
-              {items.map(({ pitch, creator }) => (
-                <td key={pitch.id} className={`${cell} y-small`}>
-                  {languageList(creator.languages)}
                 </td>
               ))}
             </tr>

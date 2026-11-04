@@ -33,13 +33,10 @@ export function previewText(message: Message | undefined, role: Role): string {
   return body;
 }
 
-export type ThreadFilter = "all" | "unread" | "commissions" | "prehire";
+export type ThreadFilter = "all" | "unread";
 
 export function matchesFilter(thread: Thread, filter: ThreadFilter, role: Role): boolean {
-  if (filter === "unread") return thread.unread.includes(role);
-  if (filter === "commissions") return Boolean(thread.commissionId);
-  if (filter === "prehire") return !thread.commissionId;
-  return true;
+  return filter === "unread" ? thread.unread.includes(role) : true;
 }
 
 export function matchesQuery(s: DemoState, thread: Thread, role: Role, query: string): boolean {

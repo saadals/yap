@@ -1,6 +1,5 @@
 "use client";
 
-import { Clock, Eye, Send, Star, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -65,36 +64,6 @@ function formatHours(hours: number): { value: string; unit: string } {
   return { value: String(days), unit: days === 1 ? "day" : "days" };
 }
 
-function Stat({
-  icon,
-  value,
-  unit,
-  label,
-  note,
-}: {
-  icon: React.ReactNode;
-  value: string;
-  unit?: string;
-  label: string;
-  note?: string;
-}) {
-  return (
-    <Block tone="paper" pad="md" className="flex flex-col justify-between gap-5">
-      <span className="y-round" data-tone-btn="soft" data-size="sm" aria-hidden>
-        {icon}
-      </span>
-      <div>
-        <p className="flex items-baseline gap-1">
-          <span className="y-display y-num text-[40px] leading-none font-semibold tracking-[-0.04em]">{value}</span>
-          {unit ? <span className="y-small font-semibold">{unit}</span> : null}
-        </p>
-        <p className="y-small mt-2 font-semibold">{label}</p>
-        {note ? <p className="y-micro y-fg-2">{note}</p> : null}
-      </div>
-    </Block>
-  );
-}
-
 function Pitches() {
   const s = useDemo();
   const [filter, setFilter] = useState<FilterId>("all");
@@ -102,6 +71,17 @@ function Pitches() {
   const funnel = pitchFunnel(pitches);
   const response = averageResponseHours(s, pitches);
   const responseLabel = response !== null ? formatHours(response) : null;
+  // The stats as one plain line under the title instead of a row of tiles.
+  const stats = funnel.sent
+    ? [
+        `${funnel.sent} sent`,
+        `${funnel.shortlisted} shortlisted`,
+        `${funnel.hired} hired`,
+        responseLabel ? `replies in about ${responseLabel.value} ${responseLabel.unit}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : "Everything you've pitched on and where it stands.";
 
   const counts = statusOrder
     .map((status) => ({ status, count: pitches.filter((p) => p.status === status).length }))
@@ -116,7 +96,7 @@ function Pitches() {
     <Page>
       <PageHeader
         title="My pitches"
-        description="Everything you've pitched on, where it stands, and what happens next."
+        description={stats}
         actions={
           <PillButton href="/creator/opportunities" variant="neon" arrow>
             Find requests
@@ -124,23 +104,7 @@ function Pitches() {
         }
       />
 
-      <section aria-label="Pitch stats" className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-5">
-        <Stat icon={<Send size={18} aria-hidden className="y-flip" />} value={String(funnel.sent)} label="Sent" note="All time, not counting withdrawn" />
-        <Stat icon={<Eye size={18} aria-hidden />} value={String(funnel.viewRate)} unit="%" label="Viewed" note={`${funnel.viewed} of ${funnel.sent} opened`} />
-        <Stat icon={<Star size={18} aria-hidden />} value={String(funnel.shortlisted)} label="Shortlisted" note="Including hires" />
-        <Stat icon={<Trophy size={18} aria-hidden />} value={String(funnel.hired)} label="Hired" note={`${funnel.hireRate}% hire rate`} />
-        <div className="col-span-2 md:col-span-1">
-          <Stat
-            icon={<Clock size={18} aria-hidden />}
-            value={responseLabel?.value ?? "None yet"}
-            unit={responseLabel?.unit}
-            label="Business reply time"
-            note={responseLabel ? "Average, from replies and hires" : "No replies to measure yet"}
-          />
-        </div>
-      </section>
-
-      <div className="flex flex-col gap-2 pt-8">
+      <div className="flex flex-col gap-2">
         <div className="y-scroll-x -mx-1 px-1 pb-1">
           <div className="flex w-max gap-2" role="group" aria-label="Filter by status">
             <FilterChip pressed={filter === "all"} count={pitches.length} onClick={() => setFilter("all")}>

@@ -31,7 +31,8 @@ const chrome = spawn(
     "--disable-gpu",
     "--hide-scrollbars",
     `--remote-debugging-port=${port}`,
-    `--user-data-dir=${join(OUT, "chrome-profile")}`,
+    // One profile per process so several runs can work in parallel (profiles live in .qa/, gitignored).
+    `--user-data-dir=${join(OUT, "profiles", String(process.pid))}`,
     "about:blank",
   ],
   { stdio: "ignore" },

@@ -1,6 +1,7 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { AboutSection } from "@/components/creator/profile/about-section";
 import { AddonsSection } from "@/components/creator/profile/addons-section";
@@ -8,6 +9,7 @@ import { AvailabilitySection } from "@/components/creator/profile/availability-s
 import { EquipmentSection } from "@/components/creator/profile/equipment-section";
 import { PackagesEditor } from "@/components/creator/profile/packages-editor";
 import { PortfolioManager } from "@/components/creator/profile/portfolio-manager";
+import { ProfileAccordion } from "@/components/creator/profile/section";
 import { SkillsSection } from "@/components/creator/profile/skills-section";
 import { StrengthList, StrengthMeter, profileChecklist, strengthScore } from "@/components/creator/profile-strength";
 import { Block } from "@/components/ui/block";
@@ -27,15 +29,25 @@ export default function CreatorProfilePage() {
   );
 }
 
-const sectionLinks = [
-  { href: "#about", label: "About" },
-  { href: "#skills", label: "Languages and formats" },
-  { href: "#portfolio", label: "Portfolio" },
-  { href: "#packages", label: "Packages" },
-  { href: "#addons", label: "Add-ons" },
-  { href: "#equipment", label: "Equipment" },
-  { href: "#availability", label: "Availability" },
-];
+/** Collapsible sections, in page order. Links like /creator/profile#portfolio open one. */
+const SECTION_IDS = ["about", "skills", "portfolio", "packages", "addons", "equipment"];
+
+const subscribeHash = (onChange: () => void) => {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+};
+const readHash = () => window.location.hash.slice(1);
+const serverHash = () => "";
+
+/** Scroll a section's top into view once the accordion has re-rendered. */
+function reveal(id: string, onlyIfHidden = false) {
+  window.requestAnimationFrame(() => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (onlyIfHidden && el.getBoundingClientRect().top >= 96) return;
+    el.scrollIntoView({ block: "start", behavior: "smooth" });
+  });
+}
 
 function SectionsSkeleton() {
   return (
@@ -44,8 +56,6 @@ function SectionsSkeleton() {
         <div key={i} data-tone="paper" className="y-block y-pad-md flex flex-col gap-4">
           <Skeleton className="h-7 w-48" />
           <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-14 w-full" />
-          <Skeleton className="h-14 w-full" />
         </div>
       ))}
     </div>
@@ -60,11 +70,31 @@ function Profile() {
   const score = strengthScore(checklist);
   const open = checklist.filter((i) => !i.done);
 
+  // One section open at a time. A hash in the URL (from another page or the back button) wins.
+  const hash = useSyncExternalStore(subscribeHash, readHash, serverHash);
+  const [accordion, setAccordion] = useState<{ openId: string | null; hash: string }>({
+    openId: "about",
+    hash: "",
+  });
+  let openId = accordion.openId;
+  if (accordion.hash !== hash) {
+    openId = SECTION_IDS.includes(hash) ? hash : accordion.openId;
+    setAccordion({ openId, hash });
+  }
+  const openSection = (id: string | null, onlyIfHidden = false) => {
+    setAccordion((a) => ({ ...a, openId: id }));
+    if (id) reveal(id, onlyIfHidden);
+  };
+
+  useEffect(() => {
+    if (hydrated && SECTION_IDS.includes(hash)) reveal(hash);
+  }, [hydrated, hash]);
+
   return (
     <Page>
       <PageHeader
         title="Your profile"
-        description="What businesses see when they find you or read your pitch. Each section saves on its own."
+        description="What businesses see when they find you or read your pitch."
         actions={
           <PillButton
             href={`/creators/${creator.handle}`}
@@ -100,7 +130,13 @@ function Profile() {
                     {open.length === 1 ? "One thing" : `${open.length} things`} left. Complete profiles
                     get invited to more requests.
                   </p>
-                  <StrengthList items={open} />
+                  <StrengthList
+                    items={open}
+                    onPick={(item) => {
+                      const id = item.href.split("#")[1];
+                      if (id && SECTION_IDS.includes(id)) openSection(id);
+                    }}
+                  />
                 </>
               ) : (
                 <p className="y-small">
@@ -108,36 +144,22 @@ function Profile() {
                 </p>
               )}
             </Block>
-            <nav aria-label="Profile sections" className="hidden lg:block">
-              <Block tone="paper" pad="sm" className="flex flex-col">
-                <ul className="flex flex-col">
-                  {sectionLinks.map((link) => (
-                    <li key={link.href}>
-                      <a
-                        href={link.href}
-                        className="y-small flex min-h-11 items-center rounded-full px-4 font-medium hover:bg-(--b-chip)"
-                      >
-                        {link.label}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </Block>
-            </nav>
+            {hydrated ? <AvailabilitySection creator={creator} /> : null}
           </div>
         </aside>
 
         <div className="flex flex-col gap-2 lg:order-1 lg:col-span-8">
           {hydrated ? (
-            <>
+            <ProfileAccordion
+              value={{ openId, toggle: (id) => openSection(openId === id ? null : id, true) }}
+            >
               <AboutSection creator={creator} />
               <SkillsSection creator={creator} />
               <PortfolioManager creator={creator} />
               <PackagesEditor creator={creator} />
               <AddonsSection creator={creator} />
               <EquipmentSection creator={creator} />
-              <AvailabilitySection creator={creator} />
-            </>
+            </ProfileAccordion>
           ) : (
             <SectionsSkeleton />
           )}

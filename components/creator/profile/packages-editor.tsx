@@ -99,7 +99,8 @@ export function PackagesEditor({ creator }: { creator: Creator }) {
     <ProfileSection
       id="packages"
       title="Packages"
-      description="Three clear tiers make direct offers easy. Prices must go up from Basic to Premium. You keep 100%; the client pays Yapp's fee."
+      description="Prices must go up from Basic to Premium. You keep 100%; the client pays Yapp's fee."
+      summary={creator.packages.map((p) => `${p.name} ${money(p.price)}`).join(" · ")}
       dirty={dirty}
       attempted={attempted}
       errorCount={errorCount}

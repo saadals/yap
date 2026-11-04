@@ -1,14 +1,17 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
 import type { Role } from "./types";
 
 /**
- * UI preferences that the server must know to render without a flash:
- * - theme (light/dark) → <html class="dark">
- * - signed-in role (business/creator/none) → which header/nav to show on shared pages
- * Both live in cookies; the root layout reads them and passes them in.
+ * UI preferences, stored in cookies (`yapp_theme`, `yapp_role`) and read in the browser so the
+ * app also works as a fully static site (GitHub Pages):
+ * - theme: an inline script in the root layout applies `html.dark` before first paint (no flash);
+ *   this provider mirrors it.
+ * - role (prototype session: business | creator | signed out): static HTML renders signed out,
+ *   then the header switches after hydration. Signed-in pages pass their role to <AppShell>, so
+ *   only public pages can briefly show the signed-out header.
  */
 
 export type Theme = "light" | "dark";
@@ -26,33 +29,45 @@ type Prefs = {
 
 const PrefsContext = createContext<Prefs | null>(null);
 
+const listeners = new Set<() => void>();
+const emit = () => listeners.forEach((listener) => listener());
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
+function readCookie(name: string): string | null {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 function writeCookie(name: string, value: string | null) {
   const maxAge = value === null ? 0 : 60 * 60 * 24 * 365;
   document.cookie = `${name}=${value ?? ""}; path=/; max-age=${maxAge}; samesite=lax`;
 }
 
-export function PrefsProvider({
-  initialTheme,
-  initialRole,
-  children,
-}: {
-  initialTheme: Theme;
-  initialRole: SessionRole;
-  children: React.ReactNode;
-}) {
-  const [theme, setThemeState] = useState<Theme>(initialTheme);
-  const [role, setRoleState] = useState<SessionRole>(initialRole);
+const themeSnapshot = (): Theme =>
+  document.documentElement.classList.contains("dark") ? "dark" : "light";
+
+const roleSnapshot = (): SessionRole => {
+  const value = readCookie("yapp_role");
+  return value === "business" || value === "creator" ? value : null;
+};
+
+export function PrefsProvider({ children }: { children: React.ReactNode }) {
+  const theme = useSyncExternalStore(subscribe, themeSnapshot, () => "light" as Theme);
+  const role = useSyncExternalStore(subscribe, roleSnapshot, () => null);
 
   const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
     writeCookie("yapp_theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
     document.documentElement.style.colorScheme = next;
+    emit();
   }, []);
 
   const setRole = useCallback((next: SessionRole) => {
-    setRoleState(next);
     writeCookie("yapp_role", next);
+    emit();
   }, []);
 
   const value = useMemo<Prefs>(

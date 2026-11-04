@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, History, Minus, Plus, Sparkles, Square } from "lucide-react";
+import { useState } from "react";
 
 import { Block } from "@/components/ui/block";
 import { TextArea, TextField } from "@/components/ui/field";
@@ -76,6 +77,8 @@ export function DirectionStep({
 }) {
   const words = wordCount(form.keyMessage);
   const learnings = product?.learnings ?? [];
+  // Optional extras stay folded away until asked for (or already filled in).
+  const [extras, setExtras] = useState(() => form.references.length > 0 || form.notes.trim().length > 0);
   const toggleIn = (key: "mustInclude" | "avoid", text: string) =>
     set((f) => {
       const list = f[key].includes(text) ? f[key].filter((x) => x !== text) : [...f[key], text];
@@ -163,7 +166,7 @@ export function DirectionStep({
       </Question>
 
       {learnings.length ? (
-        <Block as="section" aria-labelledby="q-learnings" tone="night" pad="md" className="flex flex-col gap-4">
+        <Block as="section" aria-labelledby="q-learnings" tone="paper" pad="md" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
             <h2 id="q-learnings" className="y-display y-title flex items-center gap-2">
               <History size={22} aria-hidden /> Carried forward from past commissions
@@ -264,24 +267,40 @@ export function DirectionStep({
         />
       </Question>
 
-      <Question
-        id="q-refs"
-        title="References you like"
-        optional
-        hint="A video or account, and what you like about it. One good reference saves a revision round."
-      >
-        <ReferenceEditor items={form.references} onChange={(references) => set({ references })} />
-      </Question>
+      {extras ? (
+        <>
+          <Question
+            id="q-refs"
+            title="References you like"
+            optional
+            hint="A video or account, and what you like about it. One good reference saves a revision round."
+          >
+            <ReferenceEditor items={form.references} onChange={(references) => set({ references })} />
+          </Question>
 
-      <Question id="q-notes" title="Anything else?" optional>
-        <TextArea
-          label="Notes for creators"
-          rows={3}
-          value={form.notes}
-          onChange={(event) => set({ notes: event.target.value })}
-          placeholder="Setting, wardrobe, what worked before, how you'll use the video"
-        />
-      </Question>
+          <Question id="q-notes" title="Anything else?" optional>
+            <TextArea
+              label="Notes for creators"
+              rows={3}
+              value={form.notes}
+              onChange={(event) => set({ notes: event.target.value })}
+              placeholder="Setting, wardrobe, what worked before, how you'll use the video"
+            />
+          </Question>
+        </>
+      ) : (
+        <Block tone="paper" pad="none" className="p-2">
+          <button
+            type="button"
+            aria-expanded={false}
+            onClick={() => setExtras(true)}
+            className="y-body flex min-h-14 w-full items-center gap-2 rounded-(--y-r-tile) px-4 text-start font-semibold transition-colors hover:bg-(--b-chip)"
+          >
+            <Plus size={18} aria-hidden /> Add references or notes
+            <span className="y-small y-fg-3 font-medium">Optional</span>
+          </button>
+        </Block>
+      )}
     </>
   );
 }

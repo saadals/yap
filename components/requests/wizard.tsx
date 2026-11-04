@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, Eye, History, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, History, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { moneyRange, plural, timeOf, weekdayDate } from "@/lib/format";
 import { ME, actions, useDemo, useHydrated, type DemoState, type RequestDraft } from "@/lib/store";
-import type { FormatId, Product } from "@/lib/types";
+import type { Product } from "@/lib/types";
 
 import {
   BUDGET_FLOOR,
@@ -41,7 +41,7 @@ import type { FormPatch, StepProps } from "./step-props";
 import { DeliverablesStep, FormatStep, LanguageStep, ProductStep } from "./steps-basics";
 import { BriefStrengthBlock, DirectionStep } from "./steps-direction";
 import { BudgetStep, ReviewStep, WhoStep } from "./steps-terms";
-import { FormatExample, RequestPreview } from "./wizard-preview";
+import { RequestPreview } from "./wizard-preview";
 
 /* -------------------------------------------------------------------------- */
 /* Entry: wait for the persisted store, then decide what we're editing         */
@@ -241,7 +241,6 @@ function Wizard({ init }: { init: WizardInit }) {
   );
   const [phase, setPhase] = useState<"edit" | "publishing" | "leaving" | "done">("edit");
   const [publishedId, setPublishedId] = useState<string | null>(null);
-  const [hoverFormat, setHoverFormat] = useState<FormatId | null>(null);
   const [helping, setHelping] = useState(false);
   const [helped, setHelped] = useState(false);
   const timers = useRef({ stream: 0, publish: 0 });
@@ -305,7 +304,6 @@ function Wizard({ init }: { init: WizardInit }) {
     const next = Math.max(0, Math.min(last, target));
     setStep(next);
     setMaxStep((m) => Math.max(m, next));
-    setHoverFormat(null);
     setDirty(true);
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
@@ -480,7 +478,6 @@ function Wizard({ init }: { init: WizardInit }) {
     error,
     touch,
     goTo,
-    onHoverFormat: setHoverFormat,
   };
   const current = STEPS[step];
   const missing = Object.values(stepErrors)[0];
@@ -686,17 +683,7 @@ function Wizard({ init }: { init: WizardInit }) {
         {/* Live preview (desktop) */}
         <aside className="hidden lg:col-span-5 lg:block" aria-label="Live preview">
           <div className="sticky top-20 flex flex-col gap-2">
-            <Block tone="night" pad="md" className="flex items-center justify-between gap-3">
-              <div>
-                <h2 className="y-head">Live preview</h2>
-                <p className="y-micro y-fg-2">What creators see in their feed once it&apos;s live.</p>
-              </div>
-              <span aria-hidden className="y-round" data-tone-btn="soft" data-size="sm">
-                <Eye size={18} />
-              </span>
-            </Block>
-            {step === 1 ? <FormatExample s={s} format={hoverFormat ?? form.format} languages={form.languages} /> : null}
-            {step >= 4 ? <BriefStrengthBlock strength={strength} /> : null}
+            {step === 4 ? <BriefStrengthBlock strength={strength} /> : null}
             <RequestPreview s={s} form={form} product={product} market={market} />
           </div>
         </aside>

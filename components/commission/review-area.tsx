@@ -1,12 +1,10 @@
 "use client";
 
-import { Check, Download, FileVideo, MessageSquarePlus, Pencil, Trash2 } from "lucide-react";
+import { Check, FileVideo, MessageSquarePlus, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 
 import { VideoPlayer } from "@/components/domain/video-player";
-import { Badge } from "@/components/ui/badge";
 import { FilterChip } from "@/components/ui/chip";
-import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useToast } from "@/components/ui/toast";
@@ -14,21 +12,15 @@ import { clock, plural, timeAgo } from "@/lib/format";
 import { actions } from "@/lib/store";
 import type { Delivery, DeliveryComment } from "@/lib/types";
 
-import { ago, cash, revisionsLeft, versionStatus, type Workspace } from "./helpers";
+import { ago, cash, versionStatus, type Workspace } from "./helpers";
 
 type Seek = { at: number; key: number; id: string };
 
 /**
- * Deliveries: version switcher, the simulated player with note markers, timestamped notes,
- * files and the creator's note. For the version in review, the business decides here.
+ * Deliveries: the player with note markers, timestamped notes and the creator's note. For the
+ * version in review, the business decides here. Files are one quiet line (full list in Files).
  */
-export function ReviewArea({
-  ws,
-  sectionRef,
-}: {
-  ws: Workspace;
-  sectionRef: React.RefObject<HTMLElement | null>;
-}) {
+export function ReviewArea({ ws }: { ws: Workspace }) {
   const { commission, role } = ws;
   const deliveries = commission.deliveries;
   const latest = deliveries[deliveries.length - 1];
@@ -56,26 +48,19 @@ export function ReviewArea({
   const inReview = isLatest && selected.status === "in_review" && commission.status === "delivered";
   const canNote = role === "business" && inReview;
   const canResolve = role === "creator" && isLatest && commission.status === "revision";
-  const status = versionStatus[selected.status];
 
   return (
     <section
-      ref={sectionRef}
-      tabIndex={-1}
       id="review"
       aria-labelledby="review-title"
       data-tone="paper"
-      className="y-block y-pad-md flex scroll-mt-24 flex-col gap-6 outline-none"
+      className="y-block y-pad-md flex scroll-mt-24 flex-col gap-6"
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex flex-col gap-1">
-          <h2 id="review-title" className="y-display y-title">
-            {inReview && role === "business" ? `Review version ${selected.version}` : "Deliveries"}
-          </h2>
-          <p className="y-small y-fg-2">
-            Version {selected.version} · delivered {ago(selected.deliveredAt)}
-          </p>
-        </div>
+        <h2 id="review-title" className="y-head">
+          Version {selected.version}
+          <span className="y-fg-2 font-normal"> · delivered {ago(selected.deliveredAt)}</span>
+        </h2>
         {deliveries.length > 1 ? (
           <div role="group" aria-label="Versions" className="y-scroll-x -mx-1 flex gap-1.5 px-1">
             {deliveries.map((delivery) => (
@@ -95,22 +80,16 @@ export function ReviewArea({
               </FilterChip>
             ))}
           </div>
-        ) : (
-          <Badge tone={status.tone} icon={status.icon} className="w-fit">
-            {status.label}
-          </Badge>
-        )}
+        ) : null}
       </div>
 
       {!isLatest ? (
-        <div className="y-tile flex flex-wrap items-center justify-between gap-3 p-4">
-          <p className="y-small">
-            You&apos;re looking at version {selected.version}. Version {latest.version} is the latest.
-          </p>
-          <PillButton size="sm" variant="contrast" onClick={() => setPicked(null)}>
+        <p className="y-small y-fg-2 -mt-3">
+          This is an earlier version.{" "}
+          <button type="button" className="y-link font-semibold" onClick={() => setPicked(null)}>
             Show version {latest.version}
-          </PillButton>
-        </div>
+          </button>
+        </p>
       ) : null}
 
       <div
@@ -134,17 +113,11 @@ export function ReviewArea({
 
         <div className="flex min-w-0 flex-col gap-6">
           {selected.note ? (
-            <figure className="flex items-start gap-3">
-              <FaceAvatar id={commission.creatorId} name="" size={36} />
-              <div className="flex min-w-0 flex-col gap-1">
-                <figcaption className="y-micro y-fg-2">
-                  {role === "creator" ? "Your note" : `Note from ${ws.creatorName}`}
-                </figcaption>
-                <blockquote className="y-small y-tile rounded-ss-[6px] px-4 py-3 whitespace-pre-line">
-                  {selected.note}
-                </blockquote>
-              </div>
-            </figure>
+            <DeliveryNote
+              key={selectedId}
+              label={role === "creator" ? "Your note" : `${ws.creatorName}'s note`}
+              text={selected.note}
+            />
           ) : null}
 
           <Notes
@@ -230,9 +203,9 @@ function Notes({
       {comments.length === 0 ? (
         <p className="y-small y-fg-2">
           {canEdit
-            ? "No notes yet. Pause on the moment you want changed and add a note. It's pinned to that second."
+            ? "No notes yet. Pause where you want a change and add one."
             : role === "creator" && delivery.status === "in_review"
-              ? `No notes yet. If ${ws.businessName} wants changes, their notes appear here, pinned to the exact second.`
+              ? `No notes yet. If ${ws.businessName} wants changes, they appear here.`
               : "No notes on this version."}
         </p>
       ) : (
@@ -395,7 +368,6 @@ function AddNote({
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="e.g. Hold the WhatsApp screen a second longer"
-          aria-describedby={`${id}-hint`}
         />
         <PillButton
           type="submit"
@@ -406,74 +378,66 @@ function AddNote({
           Add note at <span className="y-num">{stamp}</span>
         </PillButton>
       </div>
-      <p id={`${id}-hint`} className="y-micro y-fg-3 px-1">
-        Pause the video where you want a change. The note is pinned to that second.
-      </p>
     </form>
   );
 }
 
-function Files({ files }: { files: Delivery["files"] }) {
-  const toast = useToast();
-  if (!files.length) return null;
+/** The creator's note on a version: small, clamped to three lines with "Show more". */
+function DeliveryNote({ label, text }: { label: string; text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.length > 180;
   return (
-    <div className="flex flex-col gap-3">
-      <h3 className="y-head">Files</h3>
-      <ul className="flex flex-col gap-2">
-        {files.map((file) => (
-          <li key={file.name} className="y-tile flex items-center gap-3 py-2 ps-4 pe-2">
-            <FileVideo size={20} aria-hidden className="flex-none" />
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="y-small truncate font-semibold">{file.name}</span>
-              <span className="y-micro y-fg-2">{file.size}</span>
-            </span>
-            <RoundIconButton
-              size="sm"
-              label={`Download ${file.name}`}
-              className="!bg-(--b-bg)"
-              onClick={() =>
-                toast({ message: `Downloading ${file.name} (${file.size})`, tone: "info" })
-              }
-            >
-              <Download size={18} aria-hidden />
-            </RoundIconButton>
-          </li>
-        ))}
-      </ul>
+    <div className="flex flex-col gap-1">
+      <p className={`y-small y-fg-2 whitespace-pre-line ${long && !open ? "line-clamp-3" : ""}`}>
+        <span className="font-semibold text-(--b-fg)">{label}: </span>
+        {text}
+      </p>
+      {long ? (
+        <button
+          type="button"
+          className="y-micro y-link w-fit font-semibold"
+          aria-expanded={open}
+          onClick={() => setOpen((value) => !value)}
+        >
+          {open ? "Show less" : "Show more"}
+        </button>
+      ) : null}
     </div>
   );
 }
 
+/** One quiet line; every file is listed in the Files tab. */
+function Files({ files }: { files: Delivery["files"] }) {
+  const toast = useToast();
+  if (!files.length) return null;
+  return (
+    <p className="y-small y-fg-2 inline-flex items-center gap-2">
+      <FileVideo size={16} aria-hidden className="flex-none" />
+      {plural(files.length, "file")} ·
+      <button
+        type="button"
+        className="y-link font-semibold"
+        onClick={() => toast({ message: `Downloading ${plural(files.length, "file")}`, tone: "info" })}
+      >
+        Download
+      </button>
+    </p>
+  );
+}
+
 function Decision({ ws, delivery, drafting }: { ws: Workspace; delivery: Delivery; drafting: boolean }) {
-  const { commission, totals } = ws;
+  const { totals } = ws;
   const open = delivery.comments.filter((c) => !c.resolved).length;
   // Neon follows intent: approving by default, requesting changes once you're writing notes.
-  const pending = drafting ? open : 0;
-  const left = revisionsLeft(commission);
+  const pending = drafting && open > 0;
   return (
-    <div className="flex flex-col gap-4 border-t border-(--b-line) pt-5 lg:flex-row lg:items-center lg:justify-between">
-      <p className="y-small y-fg-2 max-w-[44ch]">
-        {pending
-          ? `${plural(pending, "note")} ready to send to ${ws.creatorName}. `
-          : `Happy with it? Approving releases ${cash(totals.creatorEarns)} to ${ws.creatorName}. `}
-        {left ? `${plural(left, "revision round")} left.` : "No included revision rounds left."}
-      </p>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <PillButton
-          variant={pending ? "neon" : "outline"}
-          arrow={pending > 0}
-          onClick={() => ws.openSheet("requestChanges")}
-        >
-          Request changes{open ? ` (${open})` : ""}
-        </PillButton>
-        <PillButton
-          variant={pending ? "outline" : "neon"}
-          arrow={!pending}
-          onClick={() => ws.openSheet("approve")}
-        >
-          Approve and release {cash(totals.creatorEarns)}
-        </PillButton>
-      </div>
+    <div className="flex flex-col gap-2 border-t border-(--b-line) pt-5 sm:flex-row sm:justify-end">
+      <PillButton variant={pending ? "neon" : "outline"} arrow={pending} onClick={() => ws.openSheet("requestChanges")}>
+        Request changes{open ? ` (${open})` : ""}
+      </PillButton>
+      <PillButton variant={pending ? "outline" : "neon"} arrow={!pending} onClick={() => ws.openSheet("approve")}>
+        Approve and release {cash(totals.creatorEarns)}
+      </PillButton>
     </div>
   );
 }

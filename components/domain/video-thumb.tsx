@@ -79,6 +79,7 @@ export function VideoThumb({
   showHook = true,
   hookAt = "top",
   showMeta = true,
+  showViews = true,
   playable = false,
   rounded = true,
   className = "",
@@ -91,6 +92,8 @@ export function VideoThumb({
   /** "bottom" keeps the caption clear of overlays placed on the top edge (badges, buttons). */
   hookAt?: "top" | "bottom";
   showMeta?: boolean;
+  /** Show the view count chip (when the video has stats). */
+  showViews?: boolean;
   /** Shows a centred play affordance. */
   playable?: boolean;
   rounded?: boolean;
@@ -139,7 +142,7 @@ export function VideoThumb({
             <Play size="1em" aria-hidden className="fill-current" />
             <span className="y-num">{clock(video.durationSec)}</span>
           </span>
-          {video.stats ? (
+          {video.stats && showViews ? (
             <span className="rounded-full bg-black/55 px-2 py-0.5 font-semibold backdrop-blur-sm">
               {compact(video.stats.views)} views
             </span>

@@ -58,12 +58,6 @@ function MemberInner({ member }: { member: TeamMember }) {
         toast({ message: "Saved" });
       }}
     >
-      <div className="flex items-center gap-3">
-        <FaceAvatar id={member.id} name="" size={56} />
-        <p className="y-small y-fg-2 max-w-[44ch]">
-          Creators see your name and role on offers and in messages.
-        </p>
-      </div>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <TextField
           label="Full name"
@@ -89,17 +83,15 @@ function MemberInner({ member }: { member: TeamMember }) {
         required
         type="email"
         autoComplete="email"
-        hint="Where we send your sign-in links and notifications."
         value={form.email}
         onChange={(event) => setForm({ ...form, email: event.target.value })}
         onBlur={blur("email")}
         error={show("email")}
       />
-      <div className="flex flex-wrap items-center gap-2">
+      <div>
         <PillButton type="submit" variant="contrast" disabled={!dirty}>
           Save your profile
         </PillButton>
-        {!dirty ? <span className="y-micro y-fg-3">All changes saved</span> : null}
       </div>
     </form>
   );
@@ -120,12 +112,12 @@ export function TeamSection() {
 
   return (
     <div className="flex flex-col gap-4">
-      <ul className="flex flex-col gap-2" aria-label={`${business.name} team`}>
+      <ul className="flex flex-col divide-y divide-(--b-line)" aria-label={`${business.name} team`}>
         {members.map((member) => {
           const isMe = member.id === ME.memberId;
           return (
-            <li key={member.id} className="y-tile flex flex-wrap items-center gap-3 p-3 ps-3">
-              <FaceAvatar id={member.id} name="" size={44} />
+            <li key={member.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+              <FaceAvatar id={member.id} name="" size={40} />
               <div className="min-w-0 flex-1">
                 <p className="y-small flex flex-wrap items-center gap-2 font-semibold">
                   {member.name}
@@ -140,9 +132,7 @@ export function TeamSection() {
                   {member.title} · {member.email}
                 </p>
               </div>
-              {isMe ? (
-                <span className="y-micro y-fg-3 px-2">Edit above</span>
-              ) : (
+              {isMe ? null : (
                 <PillButton
                   variant="ghost"
                   size="sm"

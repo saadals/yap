@@ -1,9 +1,8 @@
 "use client";
 
-import { Check, Landmark, Plus, Wallet } from "lucide-react";
+import { Landmark, Plus, Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { FieldShell, SelectField, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
@@ -19,83 +18,81 @@ export function PayoutMethodIcon({ kind, size = 18 }: { kind: PayoutMethod["kind
   return kind === "bank" ? <Landmark size={size} aria-hidden /> : <Wallet size={size} aria-hidden />;
 }
 
-export function PayoutMethods({ onAdd }: { onAdd: () => void }) {
+export function PayoutMethods({ onAdd, titleId }: { onAdd: () => void; titleId?: string }) {
   const s = useDemo();
   const toast = useToast();
   const methods = s.payoutMethods;
 
   return (
     <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={titleId} className="y-head">
+          Payout methods
+        </h3>
+        <PillButton variant="ghost" size="sm" icon={<Plus size={16} aria-hidden />} onClick={onAdd}>
+          Add
+          <span className="sr-only"> payout method</span>
+        </PillButton>
+      </div>
       {methods.length === 0 ? (
-        <p className="y-small y-fg-2">
-          Add a bank account or wallet so you can withdraw what you&apos;ve earned.
-        </p>
+        <p className="y-small y-fg-2">Add a bank account or wallet so you can withdraw what you&apos;ve earned.</p>
       ) : (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col divide-y divide-(--b-line)">
           {methods.map((method) => (
-            <li key={method.id} className="y-tile flex flex-wrap items-center gap-3 p-3 ps-4">
-              <span aria-hidden className="grid size-11 flex-none place-items-center rounded-full bg-(--b-bg)">
+            <li key={method.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+              <span aria-hidden className="y-fg-2 flex-none">
                 <PayoutMethodIcon kind={method.kind} />
               </span>
               <span className="flex min-w-0 flex-1 flex-col">
-                <span className="y-small flex flex-wrap items-center gap-2 font-semibold">
-                  {method.label}
-                  {method.isDefault ? (
-                    <Badge tone="ink" icon={<Check size={12} aria-hidden />} className="!min-h-6 !px-2 text-xs">
-                      Default
-                    </Badge>
-                  ) : null}
-                </span>
-                <span className="y-micro y-fg-2 y-num">
-                  {method.kind === "bank" ? "Bank transfer" : "Wallet"} · {method.detail}
+                <span className="y-small font-semibold">{method.label}</span>
+                <span className="y-micro y-fg-2 y-num truncate">
+                  {method.isDefault ? "Default · " : ""}
+                  {method.detail}
                 </span>
               </span>
               {!method.isDefault ? (
-                <PillButton
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    const previous = methods.find((m) => m.isDefault);
-                    actions.setDefaultPayoutMethod(method.id);
-                    toast({
-                      message: `Payouts will go to ${method.label} by default`,
-                      action: previous
-                        ? { label: "Undo", onClick: () => actions.setDefaultPayoutMethod(previous.id) }
-                        : undefined,
-                    });
-                  }}
-                >
-                  Make default
-                </PillButton>
-              ) : null}
-              {!method.isDefault ? (
-                <PillButton
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Remove ${method.label}`}
-                  onClick={() => {
-                    const { id: _id, isDefault: _default, ...rest } = method;
-                    void _id;
-                    void _default;
-                    actions.removePayoutMethod(method.id);
-                    toast({
-                      message: `Removed ${method.label}`,
-                      action: { label: "Undo", onClick: () => actions.addPayoutMethod(rest) },
-                    });
-                  }}
-                >
-                  Remove
-                </PillButton>
+                <span className="flex flex-none items-center gap-1">
+                  <PillButton
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      const previous = methods.find((m) => m.isDefault);
+                      actions.setDefaultPayoutMethod(method.id);
+                      toast({
+                        message: `Payouts will go to ${method.label} by default`,
+                        action: previous
+                          ? { label: "Undo", onClick: () => actions.setDefaultPayoutMethod(previous.id) }
+                          : undefined,
+                      });
+                    }}
+                  >
+                    Make default
+                  </PillButton>
+                  <PillButton
+                    variant="ghost"
+                    size="sm"
+                    icon={<Trash2 size={16} aria-hidden />}
+                    aria-label={`Remove ${method.label}`}
+                    title={`Remove ${method.label}`}
+                    onClick={() => {
+                      const { id: _id, isDefault: _default, ...rest } = method;
+                      void _id;
+                      void _default;
+                      actions.removePayoutMethod(method.id);
+                      toast({
+                        message: `Removed ${method.label}`,
+                        action: { label: "Undo", onClick: () => actions.addPayoutMethod(rest) },
+                      });
+                    }}
+                  >
+                    <span className="sr-only">Remove</span>
+                  </PillButton>
+                </span>
               ) : null}
             </li>
           ))}
         </ul>
       )}
-      <div>
-        <PillButton variant="soft" icon={<Plus size={18} aria-hidden />} onClick={onAdd}>
-          Add payout method
-        </PillButton>
-      </div>
     </div>
   );
 }

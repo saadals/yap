@@ -177,7 +177,7 @@ export function ThreadView({
       </div>
 
       <div className="flex flex-col gap-2 border-t border-(--b-line) pt-3">
-        {count < 3 ? (
+        {count === 0 ? (
           <div className="y-scroll-x -mx-1 flex gap-1.5 px-1">
             {quickReplies[role].map((reply) => (
               <button

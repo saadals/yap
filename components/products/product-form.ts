@@ -4,13 +4,11 @@ import type { Learning, NicheId, Product, ProductAsset } from "@/lib/types";
 
 export type Surface = Product["surfaces"][number];
 
-export const surfaceOptions: { id: Surface; label: string; hint: string }[] = [
-  { id: "ios", label: "iPhone", hint: "iOS app" },
-  { id: "android", label: "Android", hint: "Android app" },
-  { id: "web", label: "Web", hint: "Browser or desktop" },
+export const surfaceOptions: { id: Surface; label: string }[] = [
+  { id: "ios", label: "iPhone" },
+  { id: "android", label: "Android" },
+  { id: "web", label: "Web" },
 ];
-
-export const surfaceLabel: Record<Surface, string> = { ios: "iOS", android: "Android", web: "Web" };
 
 /** Suggested voice words; businesses can add their own. */
 export const toneSuggestions = [

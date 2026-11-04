@@ -66,6 +66,8 @@ export type DemoState = {
   /** Real wall-clock ms when this state was created; runtime timestamps advance from NOW. */
   epoch: number;
   lastStamp: number;
+  /** Sequence counters for routed ids (see `uid`). */
+  counters?: Record<string, number>;
   creators: Creator[];
   videos: Video[];
   businesses: Business[];
@@ -119,6 +121,8 @@ let state: DemoState = seedState;
 let hydrated = false;
 /** Monotonic runtime clock (ms); kept outside `state` so updates can't rewind it. */
 let lastStamp = NOW;
+/** Sequence counters for routed ids; kept outside `state` like `lastStamp`. */
+let counters: Record<string, number> = {};
 const listeners = new Set<() => void>();
 
 function load() {
@@ -131,6 +135,7 @@ function load() {
       if (parsed.version === VERSION) {
         state = parsed;
         lastStamp = Math.max(lastStamp, parsed.lastStamp ?? NOW);
+        counters = parsed.counters ?? {};
         return;
       }
     }
@@ -154,7 +159,7 @@ function persist() {
 }
 
 function set(next: DemoState) {
-  state = { ...next, lastStamp };
+  state = { ...next, lastStamp, counters };
   persist();
   listeners.forEach((listener) => listener());
 }
@@ -234,7 +239,17 @@ export function useTyping(threadId: string | undefined): Role | undefined {
 /* Helpers                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Requests, commissions and products have their own pages, so their ids are sequential
+ * (`r-n1`, `c-n1`, `p-n1`, …): the static build (GitHub Pages) pre-renders a page for each slot
+ * — see lib/static-params.ts. Everything else gets a short random id.
+ */
+const ROUTED_PREFIXES = new Set(["r", "c", "p"]);
 function uid(prefix: string) {
+  if (ROUTED_PREFIXES.has(prefix)) {
+    counters = { ...counters, [prefix]: (counters[prefix] ?? 0) + 1 };
+    return `${prefix}-n${counters[prefix]}`;
+  }
   return `${prefix}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
@@ -449,6 +464,7 @@ export const actions = {
   /** Restore the original seed (clears everything done in this browser). */
   reset() {
     lastStamp = NOW;
+    counters = {};
     try {
       // Other prototype-only keys (e.g. billing details) live beside the main state.
       Object.keys(window.localStorage)

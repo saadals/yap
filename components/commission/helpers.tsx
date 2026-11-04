@@ -40,7 +40,6 @@ export type Workspace = {
   otherName: string;
   latest?: Delivery;
   openSheet: (name: SheetName) => void;
-  goToReview: () => void;
   goToMessages: () => void;
   showTab: (tab: TabId) => void;
 };

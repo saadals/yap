@@ -11,14 +11,14 @@ import { RowList, SwitchRow } from "./controls";
 
 const channelCopy: Record<Role, Record<"email" | "whatsapp" | "push", string>> = {
   business: {
-    email: "New pitches, deliveries ready for review and every receipt.",
-    whatsapp: "Only time-sensitive things: a delivery to review or a creator's question.",
-    push: "Browser alerts while Yapp is open in a tab.",
+    email: "New pitches, deliveries to review and receipts.",
+    whatsapp: "Only time-sensitive things, like a delivery to review.",
+    push: "While Yapp is open in a tab.",
   },
   creator: {
     email: "New offers, client replies, approvals and payouts.",
-    whatsapp: "Only time-sensitive things: a new offer, a change request or a due date tomorrow.",
-    push: "Browser alerts while Yapp is open in a tab.",
+    whatsapp: "Only time-sensitive things, like a new offer.",
+    push: "While Yapp is open in a tab.",
   },
 };
 
@@ -30,7 +30,16 @@ const icons = {
 };
 
 /** Email / WhatsApp / push switches and the digest setting for one role. Saves immediately. */
-export function NotificationPrefsControls({ role, email }: { role: Role; email?: string }) {
+export function NotificationPrefsControls({
+  role,
+  email,
+  children,
+}: {
+  role: Role;
+  email?: string;
+  /** Extra switch rows shown after the channels. */
+  children?: React.ReactNode;
+}) {
   const s = useDemo();
   const toast = useToast();
   const prefs: NotificationPrefs = s.settings[role];
@@ -44,33 +53,24 @@ export function NotificationPrefsControls({ role, email }: { role: Role; email?:
   };
 
   return (
-    <div className="flex flex-col gap-5">
-      <RowList>
-        {(["email", "whatsapp", "push"] as const).map((key) => (
-          <SwitchRow
-            key={key}
-            label={labels[key]}
-            icon={icons[key]}
-            description={
-              key === "email" && email ? `${channelCopy[role][key]} Sent to ${email}.` : channelCopy[role][key]
-            }
-            checked={prefs[key]}
-            onChange={(on) => toggle(key, on)}
-          />
-        ))}
-      </RowList>
-      <div className="y-tile flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+    <RowList>
+      {(["email", "whatsapp", "push"] as const).map((key) => (
+        <SwitchRow
+          key={key}
+          label={labels[key]}
+          icon={icons[key]}
+          description={key === "email" && email ? `${channelCopy[role][key]} Sent to ${email}.` : channelCopy[role][key]}
+          checked={prefs[key]}
+          onChange={(on) => toggle(key, on)}
+        />
+      ))}
+      {children}
+      <div className="flex flex-col gap-3 py-4 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
           <p className="y-small font-semibold" id={`${role}-digest-label`}>
             Summary of less urgent updates
           </p>
-          <p className="y-micro y-fg-2">
-            {prefs.digest === "instant"
-              ? "Sent as they happen."
-              : prefs.digest === "daily"
-                ? "One email each morning at 9:00."
-                : "No summaries. You'll still get the alerts above."}
-          </p>
+          {prefs.digest === "daily" ? <p className="y-micro y-fg-2">One email each morning at 9:00.</p> : null}
         </div>
         <SegmentedToggle
           label="Summary frequency"
@@ -94,6 +94,6 @@ export function NotificationPrefsControls({ role, email }: { role: Role; email?:
           className="flex-none self-start sm:self-auto"
         />
       </div>
-    </div>
+    </RowList>
   );
 }

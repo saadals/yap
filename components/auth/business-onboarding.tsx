@@ -4,7 +4,7 @@ import { Ban, Check, FilePlus2, LayoutDashboard, Package, Plus, Search } from "l
 import { useSearchParams } from "next/navigation";
 import { useId, useState } from "react";
 
-import { Chip, FilterChip } from "@/components/ui/chip";
+import { FilterChip } from "@/components/ui/chip";
 import { SelectField, TextArea, TextField } from "@/components/ui/field";
 import { Ar } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
@@ -22,7 +22,6 @@ import { marketGuide } from "./market";
 import { OnboardingDone } from "./onboarding-done";
 import { PRODUCT_COLOUR, ProductPreview, surfaceLabels, type ProductDraft } from "./product-preview";
 import {
-  StepSection,
   WizardLayout,
   focusFirstError,
   useAutosave,
@@ -55,9 +54,16 @@ const steps: WizardStep[] = [
   { id: "you", label: "About you" },
   { id: "company", label: "Your company" },
   { id: "product", label: "Your first product" },
+  { id: "voice", label: "Tone and message" },
   { id: "wants", label: "What you need" },
   { id: "done", label: "Ready" },
 ];
+/** Step indexes: the product is split over two steps (what it is, how it should sound). */
+const PRODUCT = 2;
+const VOICE = 3;
+const WANTS = 4;
+const DONE = 5;
+const isProductStep = (step: number) => step === PRODUCT || step === VOICE;
 
 const teamSizes = ["Just me", "2–10 people", "11–50 people", "51–200 people", "200+ people"];
 const volumes = ["1–2 videos", "3–5 videos", "6–10 videos", "More than 10"];
@@ -105,17 +111,19 @@ function validate(step: number, d: Data): Errors {
     if (!d.cityId) e.cityId = "Choose where your team is based.";
     if (!d.industry) e.industry = "Choose the closest industry.";
   }
-  if (step === 2) {
+  if (step === PRODUCT) {
     if (d.productName.trim().length < 2) e.productName = "Name the product the videos are about.";
     if (d.oneLiner.trim().length < 8) e.oneLiner = "Describe what it does in one line.";
     if (d.oneLiner.length > 90) e.oneLiner = "Keep it under 90 characters.";
     if (d.surfaces.length === 0) e.surfaces = "Choose at least one place people use it.";
     if (d.problem.trim().length < 10) e.problem = "Describe the problem in a sentence or two.";
     if (d.audience.trim().length < 6) e.audience = "Describe who you want to reach.";
+  }
+  if (step === VOICE) {
     if (d.tone.length === 0) e.tone = "Pick at least one word for the tone.";
     if (d.cta.trim().length < 4) e.cta = "Tell viewers what to do next.";
   }
-  if (step === 3) {
+  if (step === WANTS) {
     if (d.formats.length === 0) e.formats = "Pick at least one format.";
     if (d.dialects.length === 0) e.dialects = "Pick at least one language or dialect.";
     if (!d.volume) e.volume = "Choose roughly how many videos a month.";
@@ -204,7 +212,7 @@ export function BusinessOnboarding() {
       setRole("business");
       setBusy(false);
       setFinished({ productId, productName });
-      setStep(4);
+      setStep(DONE);
     }, 700);
   };
 
@@ -220,8 +228,8 @@ export function BusinessOnboarding() {
 
   const next = () => {
     if (!stepValid()) return;
-    if (step === 2 && data.skipProduct) update({ skipProduct: false });
-    if (step === 3) {
+    if (isProductStep(step) && data.skipProduct) update({ skipProduct: false });
+    if (step === WANTS) {
       finish();
       return;
     }
@@ -232,8 +240,8 @@ export function BusinessOnboarding() {
   /** Rail links: going forward still validates the step you're on (a skipped product can stay skipped). */
   const jump = (index: number) => {
     if (index > step) {
-      if (step === 2) {
-        const complete = !Object.values(validate(2, data)).some(Boolean);
+      if (isProductStep(step)) {
+        const complete = !Object.values(validate(step, data)).some(Boolean);
         if (complete) update({ skipProduct: false });
         else if (!data.skipProduct && !stepValid()) return;
       } else if (!stepValid()) return;
@@ -249,12 +257,12 @@ export function BusinessOnboarding() {
 
   const skip = () => {
     setErrors({});
-    if (step === 2) {
+    if (isProductStep(step)) {
       update({ skipProduct: true });
       toast({ message: "Skipped. Add your product any time from Products.", tone: "info" });
-      setStep(3);
-      setFurthest((f) => Math.max(f, 3));
-    } else if (step === 3) {
+      setStep(WANTS);
+      setFurthest((f) => Math.max(f, WANTS));
+    } else if (step === WANTS) {
       finish();
     }
   };
@@ -266,20 +274,23 @@ export function BusinessOnboarding() {
   const titles: { title: React.ReactNode; description: string }[] = [
     {
       title: "First, a bit about you",
-      description: "Creators see your name and role on every request, so they know who they're working with.",
+      description: "Creators see your name and role on your requests.",
     },
     {
       title: "Your company",
-      description: "This appears on your requests and helps creators pitch for the right audience.",
+      description: "Shown on your requests.",
     },
     {
       title: "Your first product",
-      description:
-        "Write this once. It fills in every brief, so creators get your audience, tone and dos and don'ts without a call.",
+      description: "Write it once. It fills in every brief.",
+    },
+    {
+      title: "How should it sound?",
+      description: "Creators turn this into the hook and the ending.",
     },
     {
       title: "What do you want first?",
-      description: "We'll use this to suggest creators and fill in your first request. You can change it any time.",
+      description: "We'll use this to suggest creators. Change it any time.",
     },
   ];
 
@@ -295,17 +306,18 @@ export function BusinessOnboarding() {
       onJump={jump}
       onBack={step > 0 ? back : undefined}
       onNext={next}
-      nextLabel={step === 3 ? (busy ? "Setting up…" : "Finish setup") : "Continue"}
+      nextLabel={step === WANTS ? (busy ? "Setting up…" : "Finish setup") : "Continue"}
       busy={busy}
-      onSkip={step === 2 || step === 3 ? skip : undefined}
-      aside={step === 2 ? <ProductPreview draft={data} skipped={data.skipProduct} /> : undefined}
+      onSkip={isProductStep(step) || step === WANTS ? skip : undefined}
+      aside={isProductStep(step) ? <ProductPreview draft={data} skipped={data.skipProduct} /> : undefined}
     >
       {step === 0 ? <AboutYou data={data} set={set} errors={errors} /> : null}
       {step === 1 ? (
         <Company data={data} set={set} errors={errors} prefilled={params.get("domain") ?? ""} />
       ) : null}
-      {step === 2 ? <ProductStep data={data} set={set} errors={errors} /> : null}
-      {step === 3 ? <Wants data={data} set={set} errors={errors} creators={s.creators} /> : null}
+      {step === PRODUCT ? <ProductStep data={data} set={set} errors={errors} /> : null}
+      {step === VOICE ? <VoiceStep data={data} set={set} errors={errors} /> : null}
+      {step === WANTS ? <Wants data={data} set={set} errors={errors} creators={s.creators} /> : null}
     </WizardLayout>
   );
 }
@@ -423,8 +435,70 @@ function Company({ data, set, errors, prefilled }: StepProps & { prefilled: stri
 
 function ProductStep({ data, set, errors }: StepProps) {
   const surfacesId = useId();
+  return (
+    <>
+      <TextField
+        label="Product name"
+        required
+        placeholder="e.g. Daftar Invoices"
+        value={data.productName}
+        error={errors.productName}
+        onChange={(event) => set({ productName: event.target.value })}
+      />
+      <TextField
+        label="One-liner"
+        required
+        maxLength={90}
+        placeholder="e.g. Send an invoice over WhatsApp in about 10 seconds."
+        hint={`${data.oneLiner.length}/90 · What it does, in words your customers use.`}
+        value={data.oneLiner}
+        error={errors.oneLiner}
+        onChange={(event) => set({ oneLiner: event.target.value })}
+      />
+      <div className="flex flex-col gap-3">
+        <GroupLabel id={surfacesId} required>
+          Where people use it
+        </GroupLabel>
+        <div role="group" aria-labelledby={surfacesId} data-invalid={errors.surfaces ? true : undefined} className="flex flex-wrap gap-2">
+          {(["ios", "android", "web"] as const).map((surface) => (
+            <FilterChip
+              key={surface}
+              pressed={data.surfaces.includes(surface)}
+              onClick={() => set({ surfaces: toggleIn(data.surfaces, surface) })}
+            >
+              {surfaceLabels[surface]}
+            </FilterChip>
+          ))}
+        </div>
+        <GroupError>{errors.surfaces}</GroupError>
+      </div>
+      <TextArea
+        label="What problem does it solve?"
+        required
+        rows={3}
+        placeholder="e.g. Shop owners lose money chasing customers who 'will pay tomorrow'. Asking feels awkward and the notebook gets messy."
+        value={data.problem}
+        error={errors.problem}
+        onChange={(event) => set({ problem: event.target.value })}
+      />
+      <TextArea
+        label="Who is it for?"
+        required
+        rows={3}
+        placeholder="e.g. Small shop owners in Saudi Arabia, 25–45, who live on WhatsApp and still keep a paper notebook."
+        value={data.audience}
+        error={errors.audience}
+        onChange={(event) => set({ audience: event.target.value })}
+      />
+    </>
+  );
+}
+
+function VoiceStep({ data, set, errors }: StepProps) {
   const toneId = useId();
   const [customTone, setCustomTone] = useState("");
+  // Open the optional extras on return visits that already have some; never toggled by React after.
+  const [extrasOpen] = useState(() => data.features.length + data.dos.length + data.donts.length > 0);
   const addTone = () => {
     const word = customTone.trim();
     if (!word) return;
@@ -437,153 +511,106 @@ function ProductStep({ data, set, errors }: StepProps) {
 
   return (
     <>
-      <StepSection title="The basics">
-        <TextField
-          label="Product name"
-          required
-          placeholder="e.g. Daftar Invoices"
-          value={data.productName}
-          error={errors.productName}
-          onChange={(event) => set({ productName: event.target.value })}
-        />
-        <TextField
-          label="One-liner"
-          required
-          maxLength={90}
-          placeholder="e.g. Send an invoice over WhatsApp in about 10 seconds."
-          hint={`${data.oneLiner.length}/90 · What it does, in words your customers use.`}
-          value={data.oneLiner}
-          error={errors.oneLiner}
-          onChange={(event) => set({ oneLiner: event.target.value })}
-        />
-        <div className="flex flex-col gap-3">
-          <GroupLabel id={surfacesId} required>
-            Where people use it
-          </GroupLabel>
-          <div role="group" aria-labelledby={surfacesId} data-invalid={errors.surfaces ? true : undefined} className="flex flex-wrap gap-2">
-            {(["ios", "android", "web"] as const).map((surface) => (
-              <FilterChip
-                key={surface}
-                pressed={data.surfaces.includes(surface)}
-                onClick={() => set({ surfaces: toggleIn(data.surfaces, surface) })}
-              >
-                {surfaceLabels[surface]}
-              </FilterChip>
-            ))}
-          </div>
-          <GroupError>{errors.surfaces}</GroupError>
-        </div>
-      </StepSection>
-
-      <StepSection
-        title="The story"
-        description="Creators turn this into the hook and the demo. Plain words beat marketing copy."
-      >
-        <TextArea
-          label="What problem does it solve?"
-          required
-          rows={3}
-          placeholder="e.g. Shop owners lose money chasing customers who 'will pay tomorrow'. Asking feels awkward and the notebook gets messy."
-          value={data.problem}
-          error={errors.problem}
-          onChange={(event) => set({ problem: event.target.value })}
-        />
-        <TextArea
-          label="Who is it for?"
-          required
-          rows={3}
-          placeholder="e.g. Small shop owners in Saudi Arabia, 25–45, who live on WhatsApp and still keep a paper notebook."
-          value={data.audience}
-          error={errors.audience}
-          onChange={(event) => set({ audience: event.target.value })}
-        />
-        <ListInput
-          label="Features worth showing"
-          hint="The two or three things a viewer should see on screen."
-          items={data.features}
-          onChange={(features) => set({ features })}
-          placeholder="e.g. Send an invoice straight to WhatsApp"
-          itemNoun="feature"
-        />
-      </StepSection>
-
-      <StepSection title="How it should feel">
-        <div className="flex flex-col gap-3">
-          <GroupLabel id={toneId} required>
-            Tone
-          </GroupLabel>
-          <div role="group" aria-labelledby={toneId} data-invalid={errors.tone ? true : undefined} className="flex flex-wrap gap-2">
-            {[...toneWords, ...extraTones].map((word) => (
-              <FilterChip
-                key={word}
-                pressed={data.tone.includes(word)}
-                onClick={() => set({ tone: toggleIn(data.tone, word) })}
-              >
-                {word}
-              </FilterChip>
-            ))}
-          </div>
-          <div className="flex gap-2">
-            <label htmlFor={`${toneId}-custom`} className="sr-only">
-              Add your own tone word
-            </label>
-            <input
-              id={`${toneId}-custom`}
-              className="y-input flex-1"
-              placeholder="Add your own word"
-              maxLength={24}
-              value={customTone}
-              onChange={(event) => setCustomTone(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  addTone();
-                }
-              }}
-            />
-            <PillButton
-              variant="outline"
-              onClick={addTone}
-              disabled={!customTone.trim()}
-              icon={<Plus size={18} aria-hidden />}
-              aria-label="Add tone word"
-              className="flex-none !px-4"
+      <div className="flex flex-col gap-3">
+        <GroupLabel id={toneId} required>
+          Tone
+        </GroupLabel>
+        <div role="group" aria-labelledby={toneId} data-invalid={errors.tone ? true : undefined} className="flex flex-wrap gap-2">
+          {[...toneWords, ...extraTones].map((word) => (
+            <FilterChip
+              key={word}
+              pressed={data.tone.includes(word)}
+              onClick={() => set({ tone: toggleIn(data.tone, word) })}
             >
-              Add
-            </PillButton>
+              {word}
+            </FilterChip>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <label htmlFor={`${toneId}-custom`} className="sr-only">
+            Add your own tone word
+          </label>
+          <input
+            id={`${toneId}-custom`}
+            className="y-input flex-1"
+            placeholder="Add your own word"
+            maxLength={24}
+            value={customTone}
+            onChange={(event) => setCustomTone(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                addTone();
+              }
+            }}
+          />
+          <PillButton
+            variant="outline"
+            onClick={addTone}
+            disabled={!customTone.trim()}
+            icon={<Plus size={18} aria-hidden />}
+            aria-label="Add tone word"
+            className="flex-none !px-4"
+          >
+            Add
+          </PillButton>
+        </div>
+        <GroupError>{errors.tone}</GroupError>
+      </div>
+      <TextField
+        label="Call to action"
+        required
+        placeholder="e.g. Download Daftar and send your first invoice free"
+        hint="The last thing viewers hear."
+        value={data.cta}
+        error={errors.cta}
+        onChange={(event) => set({ cta: event.target.value })}
+      />
+
+      <details className="group border-t border-(--b-line) pt-6" open={extrasOpen || undefined}>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <span className="flex flex-col">
+            <span className="y-head">Features, dos and don&apos;ts</span>
+            <span className="y-small y-fg-2">Optional. Add them now or later from Products.</span>
+          </span>
+          <span
+            aria-hidden
+            className="y-round transition-transform group-open:rotate-45"
+            data-tone-btn="soft"
+            data-size="sm"
+          >
+            <Plus size={18} />
+          </span>
+        </summary>
+        <div className="flex flex-col gap-5 pt-5">
+          <ListInput
+            label="Features worth showing"
+            hint="The two or three things a viewer should see on screen."
+            items={data.features}
+            onChange={(features) => set({ features })}
+            placeholder="e.g. Send an invoice straight to WhatsApp"
+            itemNoun="feature"
+          />
+          <div className="grid gap-5 md:grid-cols-2">
+            <ListInput
+              label="Dos"
+              items={data.dos}
+              onChange={(dos) => set({ dos })}
+              placeholder="e.g. Show the send moment early"
+              icon={<Check size={16} strokeWidth={2.5} />}
+              itemNoun="do"
+            />
+            <ListInput
+              label="Don'ts"
+              items={data.donts}
+              onChange={(donts) => set({ donts })}
+              placeholder="e.g. Don't say 'accounting'"
+              icon={<Ban size={16} />}
+              itemNoun="don't"
+            />
           </div>
-          <GroupError>{errors.tone}</GroupError>
         </div>
-        <div className="grid gap-5 md:grid-cols-2">
-          <ListInput
-            label="Dos"
-            hint="Two or three is plenty."
-            items={data.dos}
-            onChange={(dos) => set({ dos })}
-            placeholder="e.g. Show the send moment early"
-            icon={<Check size={16} strokeWidth={2.5} />}
-            itemNoun="do"
-          />
-          <ListInput
-            label="Don'ts"
-            hint="Words, claims or competitors to avoid."
-            items={data.donts}
-            onChange={(donts) => set({ donts })}
-            placeholder="e.g. Don't say 'accounting'"
-            icon={<Ban size={16} />}
-            itemNoun="don't"
-          />
-        </div>
-        <TextField
-          label="Call to action"
-          required
-          placeholder="e.g. Download Daftar and send your first invoice free"
-          hint="The last thing viewers hear."
-          value={data.cta}
-          error={errors.cta}
-          onChange={(event) => set({ cta: event.target.value })}
-        />
-      </StepSection>
+      </details>
     </>
   );
 }
@@ -598,10 +625,10 @@ function Wants({ data, set, errors, creators }: StepProps & { creators: Creator[
   const high = guide.tiers.premium.price;
   const verdict =
     data.budget < low
-      ? "Below most basic packages. You'll still get pitches, mostly from newer creators."
+      ? "Below most basic packages."
       : data.budget > high
-        ? "Above most premium packages. Expect experienced producers to pitch."
-        : "Right in the range most creators quote.";
+        ? "Above most premium packages."
+        : "Right in the usual range.";
 
   return (
     <>
@@ -696,10 +723,10 @@ function Wants({ data, set, errors, creators }: StepProps & { creators: Creator[
             <span>$1,500+</span>
           </div>
           <p className="y-small" aria-live="polite">
-            {guide.matched && data.formats.length > 0
-              ? `Creators who make ${data.formats.map((f) => formatById[f].name.toLowerCase()).join(", ")} charge a median of ${money(low)} for a basic package and ${money(high)} for premium.`
-              : `Across Yapp, creators charge a median of ${money(low)} for a basic package and ${money(high)} for premium.`}{" "}
-            <span className="font-semibold">{verdict}</span>
+            <span className="font-semibold">{verdict}</span>{" "}
+            <span className="y-fg-2">
+              Typical: {money(low)} basic, {money(high)} premium.
+            </span>
           </p>
         </div>
       </div>
@@ -719,8 +746,8 @@ function BusinessDone({ data, productSaved }: { data: Data; productSaved: boolea
       title="Your workspace is ready"
       lead={
         productSaved
-          ? `${productName} is saved to Products. Its audience, tone and dos and don'ts will fill in your first brief automatically.`
-          : "Add your product from Products whenever you're ready. It fills in every brief so creators get the context without a call."
+          ? `${productName} is saved. It fills in your first brief automatically.`
+          : "Add your product from Products whenever you're ready."
       }
       primary={{
         href: "/business/requests/new",
@@ -732,13 +759,11 @@ function BusinessDone({ data, productSaved }: { data: Data; productSaved: boolea
         {
           href: "/creators",
           label: "Browse creators",
-          body: "Filter by dialect and format, then commission someone directly.",
           icon: <Search size={20} aria-hidden />,
         },
         {
           href: "/business",
           label: "Go to dashboard",
-          body: "Requests, commissions and payments in one place.",
           icon: <LayoutDashboard size={20} aria-hidden />,
         },
         ...(productSaved
@@ -746,7 +771,6 @@ function BusinessDone({ data, productSaved }: { data: Data; productSaved: boolea
               {
                 href: "/business/products",
                 label: `Add assets to ${productName}`,
-                body: "Screens, a demo account or a brand guide help creators get it right first time.",
                 icon: <Package size={20} aria-hidden />,
               },
             ]
@@ -754,14 +778,16 @@ function BusinessDone({ data, productSaved }: { data: Data; productSaved: boolea
       ]}
       note="This demo continues in Daftar's workspace, where Nour already has requests, deliveries and payments in motion."
     >
-      <div className="flex flex-wrap gap-1.5">
-        {data.company.trim() ? <Chip>{data.company.trim()}</Chip> : null}
-        {city ? <Chip>{city.name}</Chip> : null}
-        {data.industry ? <Chip>{nicheById[data.industry].name}</Chip> : null}
-        {data.formats.slice(0, 3).map((id) => (
-          <Chip key={id}>{formatById[id].name}</Chip>
-        ))}
-      </div>
+      <p className="y-small y-fg-2">
+        {[
+          data.company.trim(),
+          city?.name,
+          data.industry ? nicheById[data.industry].name : null,
+          ...data.formats.slice(0, 3).map((id) => formatById[id].name),
+        ]
+          .filter(Boolean)
+          .join(" · ")}
+      </p>
     </OnboardingDone>
   );
 }

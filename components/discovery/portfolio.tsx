@@ -4,12 +4,10 @@ import { Eye, Gauge, Star } from "lucide-react";
 import { useState } from "react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
-import { FormatChip } from "@/components/domain/chips";
 import { VideoPlayer } from "@/components/domain/video-player";
 import { VideoThumb } from "@/components/domain/video-thumb";
-import { Badge } from "@/components/ui/badge";
 import { Block } from "@/components/ui/block";
-import { Chip, FilterChip } from "@/components/ui/chip";
+import { FilterChip } from "@/components/ui/chip";
 import { Ar } from "@/components/ui/page";
 import { Sheet } from "@/components/ui/sheet";
 import { clock, compact, lengthLabel, plural } from "@/lib/format";
@@ -79,78 +77,57 @@ function Script({ video }: { video: Video }) {
   );
 }
 
-export function FeaturedWork({ s, creator }: { s: DemoState; creator: Creator }) {
-  const video = featuredVideo(s, creator);
-  if (!video) return null;
+/** The featured video, playable in place: the first and larger item of the portfolio. */
+function Featured({ s, video }: { s: DemoState; video: Video }) {
   const arabic = isArabic(video.lang);
   return (
-    <Block tone="paper" pad="md" aria-labelledby="featured-heading">
-      <div
-        className={`grid gap-6 ${
-          video.aspect === "16:9" ? "" : "md:grid-cols-[minmax(0,320px)_minmax(0,1fr)] md:items-start"
-        }`}
-      >
-        <VideoPlayer key={video.id} video={video} size="md" className="mx-auto w-full" />
-        <div className="flex min-w-0 flex-col gap-4">
-          <div className="flex flex-col gap-2">
-            <Badge tone="ink" icon={<Star size={13} aria-hidden className="fill-current" />} className="w-fit">
-              Featured work
-            </Badge>
-            <h2 id="featured-heading" className="y-display y-title">
-              {video.title}
-            </h2>
-            <MadeFor s={s} video={video} />
-            <Stats video={video} />
-          </div>
-          <div className="y-tile flex flex-col gap-1.5 p-4">
-            <span className="y-micro y-fg-2">Opening line</span>
-            {arabic ? (
-              <Ar as="p" className="y-display text-[22px] leading-snug">
-                {video.hook}
-              </Ar>
-            ) : (
-              <p className="y-display text-[22px] leading-snug">{video.hook}</p>
-            )}
-            {video.hookTranslation ? (
-              <p className="y-small y-fg-2">&ldquo;{video.hookTranslation}&rdquo;</p>
-            ) : null}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <FormatChip id={video.format} />
-            <Chip>{languageById[video.lang].name}</Chip>
-            <Chip>
-              {lengthLabel(video.durationSec)} · {video.aspect}
-            </Chip>
-          </div>
-          <div className="flex flex-col gap-2">
-            <span className="y-micro y-fg-2">How it&apos;s built</span>
-            <ol className="flex flex-wrap gap-x-4 gap-y-1">
-              {video.script.map((line) => (
-                <li key={line.at} className="y-small">
-                  <span className="y-num y-fg-3 me-1.5">{clock(line.at)}</span>
-                  {beatLabel[line.beat]}
-                </li>
-              ))}
-            </ol>
-          </div>
-          <p className="y-micro y-fg-3">
-            Press play for captions{arabic ? " with an English translation" : ""}. Playback is
-            simulated in this prototype.
-          </p>
+    <div
+      className={`grid gap-5 ${
+        video.aspect === "16:9" ? "" : "md:grid-cols-[minmax(0,280px)_minmax(0,1fr)] md:items-start md:gap-7"
+      }`}
+    >
+      <VideoPlayer key={video.id} video={video} size="sm" className="mx-auto w-full" />
+      <div className="flex min-w-0 flex-col gap-3">
+        <div className="flex flex-col gap-1.5">
+          <span className="y-micro y-fg-2 inline-flex items-center gap-1.5">
+            <Star size={13} aria-hidden className="fill-current" /> Featured
+          </span>
+          <h3 className="y-head">{video.title}</h3>
+          <MadeFor s={s} video={video} />
+          <Stats video={video} />
+        </div>
+        <div className="flex flex-col gap-1 border-s-2 border-(--b-line) ps-4">
+          <span className="y-micro y-fg-2">Opening line</span>
+          {arabic ? (
+            <Ar as="p" className="y-body self-start">
+              {video.hook}
+            </Ar>
+          ) : (
+            <p className="y-body">{video.hook}</p>
+          )}
+          {video.hookTranslation ? (
+            <p className="y-small y-fg-2">&ldquo;{video.hookTranslation}&rdquo;</p>
+          ) : null}
         </div>
       </div>
-    </Block>
+    </div>
   );
 }
 
-export function PortfolioGrid({ s, creator }: { s: DemoState; creator: Creator }) {
+/**
+ * Featured video first (larger, plays in place), then the rest as a grid. Filtering by format
+ * swaps to a plain grid of every matching video.
+ */
+export function PortfolioBlock({ s, creator }: { s: DemoState; creator: Creator }) {
   const videos = portfolio(s, creator);
+  const featured = featuredVideo(s, creator);
   const [format, setFormat] = useState<FormatId | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const present = creator.formats
     .concat(videos.map((v) => v.format))
     .filter((id, index, list) => list.indexOf(id) === index && videos.some((v) => v.format === id));
-  const shown = format ? videos.filter((v) => v.format === format) : videos;
+  const showFeatured = featured && format === null ? featured : null;
+  const shown = format ? videos.filter((v) => v.format === format) : videos.filter((v) => v.id !== showFeatured?.id);
   const open = videos.find((v) => v.id === openId) ?? null;
 
   if (!videos.length) {
@@ -167,15 +144,13 @@ export function PortfolioGrid({ s, creator }: { s: DemoState; creator: Creator }
 
   return (
     <Block tone="paper" pad="md" className="flex flex-col gap-5" aria-labelledby="portfolio-heading" id="portfolio">
-      <div className="flex flex-col gap-1">
+      <div className="flex items-baseline justify-between gap-3">
         <h2 id="portfolio-heading" className="y-display y-title">
           Portfolio
         </h2>
-        <p className="y-small y-fg-2">
-          {plural(videos.length, "video")} made for real apps. Open any to watch it with the script
-          and translation.
-        </p>
+        <span className="y-small y-fg-2">{plural(videos.length, "video")}</span>
       </div>
+      {showFeatured ? <Featured s={s} video={showFeatured} /> : null}
       {present.length > 1 ? (
         <div className="y-scroll-x -mx-1 flex gap-2 px-1" role="group" aria-label="Filter portfolio by format">
           <FilterChip pressed={format === null} onClick={() => setFormat(null)} count={videos.length}>
@@ -198,30 +173,32 @@ export function PortfolioGrid({ s, creator }: { s: DemoState; creator: Creator }
           })}
         </div>
       ) : null}
-      <ul className="grid grid-cols-2 gap-2 md:grid-cols-3">
-        {shown.map((video) => (
-          <li key={video.id}>
-            <button
-              type="button"
-              onClick={() => setOpenId(video.id)}
-              aria-label={`Watch ${video.title}`}
-              className="group flex w-full flex-col gap-2 rounded-(--y-r-tile) text-start"
-            >
-              <span className="block w-full transition-transform duration-(--y-dur-2) group-hover:scale-[0.985]">
-                <VideoThumb video={video} frame="4:5" playable decorative />
-              </span>
-              <span className="flex flex-col gap-0.5 px-1 pb-1">
-                <span className="y-small y-clamp-2 font-semibold">{video.title}</span>
-                <span className="y-micro y-fg-2 truncate">
-                  {video.madeFor ? `Made for ${video.madeFor}` : "Spec piece"} ·{" "}
-                  {languageById[video.lang].short}
-                  {video.stats ? ` · ${compact(video.stats.views)} views` : ""}
+      {shown.length ? (
+        <ul className="grid grid-cols-2 gap-2 md:grid-cols-3">
+          {shown.map((video) => (
+            <li key={video.id}>
+              <button
+                type="button"
+                onClick={() => setOpenId(video.id)}
+                aria-label={`Watch ${video.title}`}
+                className="group flex w-full flex-col gap-2 rounded-(--y-r-tile) text-start"
+              >
+                <span className="block w-full transition-transform duration-(--y-dur-2) group-hover:scale-[0.985]">
+                  <VideoThumb video={video} frame="4:5" playable decorative />
                 </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ul>
+                <span className="flex flex-col gap-0.5 px-1 pb-1">
+                  <span className="y-small y-clamp-2 font-semibold">{video.title}</span>
+                  <span className="y-micro y-fg-2 truncate">
+                    {video.madeFor ? `Made for ${video.madeFor}` : "Spec piece"} ·{" "}
+                    {languageById[video.lang].short}
+                    {video.stats ? ` · ${compact(video.stats.views)} views` : ""}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
 
       <Sheet
         open={open !== null}
@@ -241,11 +218,6 @@ export function PortfolioGrid({ s, creator }: { s: DemoState; creator: Creator }
               <div className="flex flex-col gap-2">
                 <MadeFor s={s} video={open} />
                 <Stats video={open} />
-                <div className="flex flex-wrap gap-1.5">
-                  <FormatChip id={open.format} />
-                  <Chip>{languageById[open.lang].short}</Chip>
-                  <Chip>{open.aspect}</Chip>
-                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <h3 className="y-head">Script</h3>

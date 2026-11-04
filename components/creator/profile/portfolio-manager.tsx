@@ -55,7 +55,8 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
     <ProfileSection
       id="portfolio"
       title="Portfolio"
-      description="Businesses hire from your samples. Star your strongest piece and put the most relevant ones first. Changes save as you go."
+      description="Star your strongest piece and put the most relevant first. Changes save as you go."
+      summary={`${videos.length} ${videos.length === 1 ? "video" : "videos"} · ${dialects} languages and dialects`}
       aside={
         <PillButton variant="neon" arrow onClick={() => setAdding(true)}>
           Add video

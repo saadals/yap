@@ -1,7 +1,6 @@
 "use client";
 
 import { Check, Plus } from "lucide-react";
-import Link from "next/link";
 import type { ReactNode } from "react";
 
 import type { BlockTone } from "@/components/ui/block";
@@ -126,26 +125,6 @@ export function IconTile({
     >
       {children}
     </span>
-  );
-}
-
-/** Chunky quick-pick link (filter pill look, 44px target) that deep-links into browse. */
-export function QuickLink({
-  href,
-  icon,
-  children,
-  className = "",
-}: {
-  href: string;
-  icon?: ReactNode;
-  children: ReactNode;
-  className?: string;
-}) {
-  return (
-    <Link href={href} className={`y-filter flex-none ${className}`}>
-      {icon}
-      {children}
-    </Link>
   );
 }
 
