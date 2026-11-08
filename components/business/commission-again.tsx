@@ -1,23 +1,24 @@
 "use client";
 
+import { BlockHeader } from "@/components/work/rows";
 import { Block } from "@/components/ui/block";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { plural, shortDate } from "@/lib/format";
-import { commissionTotals, pastCollaborators, productById } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { commissionTotals, me, pastCollaborators, productById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { ME, useDemo } from "@/lib/store";
+import { useDemo } from "@/lib/store";
 import { formatById } from "@/lib/taxonomy";
-
-import { BlockHeader } from "./in-progress";
 
 export type Collaborator = ReturnType<typeof pastCollaborators>[number];
 
 /** Everything needed to offer "commission again": what carries forward, what you rated, spend. */
 export function collaboratorInfo(s: DemoState, entry: Collaborator) {
   const { creator, last } = entry;
+  const businessId = me.ids(s).businessId;
   const theirs = s.reviews
-    .filter((r) => r.businessId === ME.businessId && r.creatorId === creator.id)
+    .filter((r) => r.businessId === businessId && r.creatorId === creator.id)
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
   const review = theirs.find((r) => r.commissionId === last.id) ?? theirs[0];
   const product = productById(s, last.brief.productId);
@@ -25,7 +26,7 @@ export function collaboratorInfo(s: DemoState, entry: Collaborator) {
   const spent = s.commissions
     .filter(
       (c) =>
-        c.businessId === ME.businessId &&
+        c.businessId === businessId &&
         c.creatorId === creator.id &&
         c.payment.status === "released",
     )
@@ -36,20 +37,23 @@ export function collaboratorInfo(s: DemoState, entry: Collaborator) {
     learnings,
     spent,
     lastDate: last.completedAt ?? last.createdAt,
-    repeatHref: `/creators/${creator.handle}/commission?repeat=${last.id}`,
+    repeatHref: paths.orderCreator(creator.handle, { again: last.id }),
     carry: product ? `Product context + ${plural(learnings, "learning")}` : "Your last brief carries over",
   };
 }
 
-/** Repeat business: people you've finished work with, one tap to book again. */
+/**
+ * Repeat business: people you've finished custom work with, one tap to book again. Campaign
+ * creators are left out (a campaign is re-run as a whole from its order page).
+ */
 export function CommissionAgainBlock({ className = "", limit = 3 }: { className?: string; limit?: number }) {
   const s = useDemo();
-  const people = pastCollaborators(s);
+  const people = pastCollaborators(s).filter((entry) => entry.last.source !== "campaign");
 
   return (
     <Block as="section" aria-labelledby="again-title" tone="paper" pad="md" className={`flex flex-col gap-3 ${className}`}>
       <div className="flex flex-col gap-1">
-        <BlockHeader id="again-title" title="Commission again" href="/business/creators?tab=worked" linkLabel="All" />
+        <BlockHeader id="again-title" title="Commission again" href={paths.saved} linkLabel="All" />
         <p className="y-small y-fg-2">No new brief. Your product context and learnings go with it.</p>
       </div>
 

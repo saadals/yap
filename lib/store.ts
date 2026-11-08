@@ -8,28 +8,46 @@
  * Read with `useDemo()` (whole snapshot, stable until something changes) and derive with the pure
  * helpers in lib/selectors.ts. Never mutate the snapshot directly.
  *
- * The business and the creator sides share this one store, so a pitch sent as the creator shows
- * up for the business, a delivery made as the creator shows up for review, and so on.
+ * One account type: every account can order (its buyer profile, `businessId`) and make videos (its
+ * creator profile, `creatorId`, once set up). The demo has two people, Nour and Layla, sharing this
+ * one store; `activeAccountId` says who this tab is signed in as. It is tab-local (sessionStorage),
+ * so two windows can play both sides at once.
  */
 
 import { useSyncExternalStore } from "react";
 
-import { HOUR, NOW, at } from "./clock";
+import { campaignMoney, eligibility, isCampaign, occupiesSlot, openSlotNumbers, slotHistory } from "./campaigns";
+import { HOUR, NOW, at, endOfMonth, monthKey } from "./clock";
+import { maskContacts } from "./contact";
 import * as seedData from "./data";
 import { money, priceBreakdown } from "./format";
-import { AUTO_APPROVE_DAYS, SERVICE_FEE_RATE, formatById } from "./taxonomy";
+import { hashString } from "./hash";
+import { paths } from "./paths";
+import {
+  AUTO_APPROVE_DAYS,
+  CAMPAIGN_FEE_RATE,
+  SERVICE_FEE_RATE,
+  formatById,
+  tierById,
+} from "./taxonomy";
 import type {
+  Account,
   AddonId,
   Attachment,
   Brief,
   Business,
+  CampaignPlatformId,
   Commission,
   CommissionEvent,
   ContentRequest,
   Creator,
   CreatorKind,
   Delivery,
+  FollowerTierId,
+  LanguageId,
+  FormatId,
   Learning,
+  LedgerEntry,
   Message,
   Notification,
   PaymentMethod,
@@ -40,14 +58,17 @@ import type {
   Review,
   Role,
   Settings,
+  SocialAccount,
   TeamMember,
   Thread,
   Video,
 } from "./types";
 
-export const ME = seedData.ME;
 const STORAGE_KEY = "yapp-demo-v1";
-const VERSION = 2;
+/** Tab-local signed-in account (sessionStorage) and the cross-tab default (cookie). */
+const SESSION_KEY = "yapp-account";
+export const ACCOUNT_COOKIE = "yapp_account";
+const VERSION = 3;
 
 export type RequestDraft = {
   step: number;
@@ -68,6 +89,9 @@ export type DemoState = {
   lastStamp: number;
   /** Sequence counters for routed ids (see `uid`). */
   counters?: Record<string, number>;
+  accounts: Account[];
+  /** Who this tab is signed in as (tab-local; see the header comment). */
+  activeAccountId: string;
   creators: Creator[];
   videos: Video[];
   businesses: Business[];
@@ -82,11 +106,16 @@ export type DemoState = {
   paymentMethods: PaymentMethod[];
   payoutMethods: PayoutMethod[];
   payouts: Payout[];
-  savedCreatorIds: string[];
-  settings: Settings;
-  requestDraft: RequestDraft | null;
-  /** Requests the creator dismissed from their Opportunities feed. */
-  hiddenRequestIds: string[];
+  /** Saved creators, per account. */
+  saved: Record<string, string[]>;
+  /** Settings, per account. */
+  settings: Record<string, Settings>;
+  /** Request wizard autosave, per account. */
+  requestDrafts: Record<string, RequestDraft | null>;
+  /** Orders an account dismissed from its feed and Explore, per account. */
+  hidden: Record<string, string[]>;
+  /** Months closed with the demo "Jump to month end" control ("2026-11"). */
+  closedMonths: string[];
 };
 
 function fromSeed(): DemoState {
@@ -95,6 +124,8 @@ function fromSeed(): DemoState {
     version: VERSION,
     epoch: 0,
     lastStamp: NOW,
+    accounts: clone(seedData.accounts),
+    activeAccountId: seedData.DEFAULT_ACCOUNT_ID,
     creators: clone(seedData.creators),
     videos: clone(seedData.videos),
     businesses: clone(seedData.businesses),
@@ -109,10 +140,11 @@ function fromSeed(): DemoState {
     paymentMethods: clone(seedData.paymentMethods),
     payoutMethods: clone(seedData.payoutMethods),
     payouts: clone(seedData.payouts),
-    savedCreatorIds: clone(seedData.savedCreatorIds),
+    saved: clone(seedData.savedCreatorIds),
     settings: clone(seedData.settings),
-    requestDraft: null,
-    hiddenRequestIds: [],
+    requestDrafts: {},
+    hidden: {},
+    closedMonths: [],
   };
 }
 
@@ -125,6 +157,30 @@ let lastStamp = NOW;
 let counters: Record<string, number> = {};
 const listeners = new Set<() => void>();
 
+function readCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+/** The account this tab should be signed in as: tab session, then the last sign-in, then default. */
+function initialAccount(accounts: Account[], persisted?: string): string {
+  let fromSession: string | null = null;
+  try {
+    fromSession = window.sessionStorage.getItem(SESSION_KEY);
+  } catch {
+    /* ignore */
+  }
+  const candidates = [fromSession, readCookie(ACCOUNT_COOKIE), persisted, seedData.DEFAULT_ACCOUNT_ID];
+  return candidates.find((id) => id && accounts.some((a) => a.id === id)) ?? accounts[0].id;
+}
+
+const mergeCounters = (a: Record<string, number> = {}, b: Record<string, number> = {}) => {
+  const out = { ...a };
+  for (const [key, value] of Object.entries(b)) out[key] = Math.max(out[key] ?? 0, value);
+  return out;
+};
+
 function load() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
@@ -133,7 +189,7 @@ function load() {
     if (raw) {
       const parsed = JSON.parse(raw) as DemoState;
       if (parsed.version === VERSION) {
-        state = parsed;
+        state = { ...parsed, activeAccountId: initialAccount(parsed.accounts, parsed.activeAccountId) };
         lastStamp = Math.max(lastStamp, parsed.lastStamp ?? NOW);
         counters = parsed.counters ?? {};
         return;
@@ -142,7 +198,7 @@ function load() {
   } catch {
     /* private mode or corrupt data: fall back to the seed */
   }
-  state = { ...seedState, epoch: Date.now() };
+  state = { ...seedState, epoch: Date.now(), activeAccountId: initialAccount(seedState.accounts) };
 }
 
 let saveTimer: number | undefined;
@@ -175,7 +231,13 @@ function subscribe(listener: () => void) {
   const onStorage = (event: StorageEvent) => {
     if (event.key !== STORAGE_KEY || !event.newValue) return;
     try {
-      state = JSON.parse(event.newValue) as DemoState;
+      const incoming = JSON.parse(event.newValue) as DemoState;
+      if (incoming.version !== VERSION) return;
+      // Another tab changed the shared data: take it, but stay signed in as this tab's account and
+      // never rewind id counters or the runtime clock (two tabs must not both create `c-n1`).
+      counters = mergeCounters(counters, incoming.counters);
+      lastStamp = Math.max(lastStamp, incoming.lastStamp ?? NOW);
+      state = { ...incoming, activeAccountId: state.activeAccountId, counters, lastStamp };
       listener();
     } catch {
       /* ignore */
@@ -210,6 +272,46 @@ export function useHydrated(): boolean {
     () => false,
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/* Accounts                                                                    */
+/* -------------------------------------------------------------------------- */
+
+export type AccountIds = {
+  accountId: string;
+  businessId: string;
+  memberId?: string;
+  creatorId?: string;
+};
+
+/** The signed-in account of this tab (falls back to the first account). */
+export function activeAccount(s: DemoState): Account {
+  return s.accounts.find((a) => a.id === s.activeAccountId) ?? s.accounts[0];
+}
+
+/** Ids of the signed-in account: who is acting. */
+export function activeIds(s: DemoState): AccountIds {
+  const a = activeAccount(s);
+  return { accountId: a.id, businessId: a.businessId, memberId: a.memberId, creatorId: a.creatorId };
+}
+
+/** The demo account that owns a buyer profile or a creator profile (undefined = a seeded stranger). */
+export function accountOwning(
+  s: DemoState,
+  party: { businessId?: string; creatorId?: string },
+): Account | undefined {
+  return s.accounts.find(
+    (a) =>
+      (party.businessId !== undefined && a.businessId === party.businessId) ||
+      (party.creatorId !== undefined && a.creatorId === party.creatorId),
+  );
+}
+
+/** Creators played by a demo person never act on their own (no simulated replies or deliveries). */
+export const isDemoCreator = (s: DemoState, creatorId: string) =>
+  s.accounts.some((a) => a.creatorId === creatorId);
+export const isDemoBusiness = (s: DemoState, businessId: string) =>
+  s.accounts.some((a) => a.businessId === businessId);
 
 /* -------------------------------------------------------------------------- */
 /* Typing indicator (not persisted)                                            */
@@ -260,6 +362,12 @@ function nowStamp(): string {
   return new Date(lastStamp).toISOString();
 }
 
+/** The runtime clock without advancing it (for comparisons in the simulation). */
+function peekNow(): number {
+  const elapsed = state.epoch ? Math.min(Date.now() - state.epoch, 8 * HOUR) : 0;
+  return Math.max(NOW + elapsed, lastStamp);
+}
+
 const other = (role: Role): Role => (role === "business" ? "creator" : "business");
 
 function replaceById<T extends { id: string }>(list: T[], id: string, fn: (item: T) => T): T[] {
@@ -287,15 +395,50 @@ function event(
   return { id: uid("ev"), at: nowStamp(), kind, actor, text };
 }
 
-function notify(
+/**
+ * Notify whichever demo account owns this buyer profile or creator profile (nobody else reads
+ * notifications). With `group`, repeated events merge into one unread notification
+ * ("3 creators took slots on …").
+ */
+function notifyParty(
   s: DemoState,
-  role: Role,
+  party: { businessId?: string; creatorId?: string },
   kind: Notification["kind"],
   text: string,
   href: string,
+  group?: { key: string; text: (count: number) => string },
 ): DemoState {
-  const item: Notification = { id: uid("n"), role, kind, text, href, at: nowStamp(), unread: true };
+  const account = accountOwning(s, party);
+  if (!account) return s;
+  if (group) {
+    const existing = s.notifications.find(
+      (n) => n.accountId === account.id && n.groupKey === group.key && n.unread,
+    );
+    if (existing) {
+      const count = (existing.count ?? 1) + 1;
+      const merged: Notification = { ...existing, count, text: group.text(count), href, at: nowStamp() };
+      return { ...s, notifications: [merged, ...s.notifications.filter((n) => n.id !== existing.id)] };
+    }
+  }
+  const item: Notification = {
+    id: uid("n"),
+    accountId: account.id,
+    kind,
+    text: group ? group.text(1) : text,
+    href,
+    at: nowStamp(),
+    unread: true,
+    groupKey: group?.key,
+    count: group ? 1 : undefined,
+  };
   return { ...s, notifications: [item, ...s.notifications] };
+}
+
+/** Handles a thread may mention (the campaign's brand account creators must tag). */
+function allowedHandles(s: DemoState, threadId: string): string[] {
+  const thread = s.threads.find((t) => t.id === threadId);
+  const request = thread?.requestId ? s.requests.find((r) => r.id === thread.requestId) : undefined;
+  return request?.campaign ? [request.campaign.brandHandle] : [];
 }
 
 function appendMessage(
@@ -304,7 +447,9 @@ function appendMessage(
   message: Omit<Message, "id" | "at">,
   unreadFor?: Role,
 ): DemoState {
-  const full: Message = { ...message, id: uid("m"), at: nowStamp() };
+  const text =
+    message.from === "system" ? message.text : maskContacts(message.text, allowedHandles(s, threadId)).text;
+  const full: Message = { ...message, text, id: uid("m"), at: nowStamp() };
   return {
     ...s,
     threads: replaceById(s.threads, threadId, (thread) => ({
@@ -375,6 +520,11 @@ const fallback: Record<Role, string> = {
 
 function scheduleReply(threadId: string, replier: Role, prompt: string) {
   if (typeof window === "undefined") return;
+  load();
+  const thread = state.threads.find((t) => t.id === threadId);
+  if (!thread) return;
+  // A demo person answers for themselves (switch account to reply).
+  if (replier === "creator" ? isDemoCreator(state, thread.creatorId) : isDemoBusiness(state, thread.businessId)) return;
   const rules = replier === "creator" ? creatorReplies : businessReplies;
   const text = rules.find(([pattern]) => pattern.test(prompt))?.[1] ?? fallback[replier];
   window.setTimeout(() => setTyping(threadId, replier), 900);
@@ -394,7 +544,7 @@ function simulateDelivery(commissionId: string, delayMs: number) {
   window.setTimeout(() => {
     load();
     const c = state.commissions.find((x) => x.id === commissionId);
-    if (!c || c.creatorId === ME.creatorId) return;
+    if (!c || isDemoCreator(state, c.creatorId)) return;
     if (c.status !== "in_progress" && c.status !== "revision") return;
     const version = c.deliveries.length + 1;
     const slug = c.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 28);
@@ -434,6 +584,19 @@ export type NewRequestInput = {
   status?: "open" | "draft";
 };
 
+export type CampaignInput = {
+  title: string;
+  productId: string;
+  /** Talking points (brief.mustInclude) and restrictions (brief.avoid) live on the brief. */
+  brief: Partial<Brief> & { mustInclude: string[]; avoid: string[] };
+  videos: number;
+  tierId: FollowerTierId;
+  platform: CampaignPlatformId;
+  brandHandle: string;
+  explainer?: { name: string; durationSec: number };
+  paymentMethodId: string;
+};
+
 export type OfferInput = {
   creatorId: string;
   packageId?: string;
@@ -460,8 +623,68 @@ export type ReviewInput = {
   learnings: string[];
 };
 
+export type CreatorProfileInput = {
+  name: string;
+  headline: string;
+  languages: LanguageId[];
+  formats: FormatId[];
+  cityId?: string;
+};
+
+export type TakeSlotResult =
+  | { ok: true; commissionId: string; slot: number }
+  | { ok: false; reason: string };
+
+const mask = (text: string, allow: string[] = []) => maskContacts(text, allow).text;
+
+function campaignBrief(input: CampaignInput, product: Product | undefined): Brief {
+  return {
+    productId: input.productId,
+    format: "ugc-review",
+    platforms: [input.platform],
+    languages: input.brief.languages?.length ? input.brief.languages : ["ar-saudi", "ar-gulf"],
+    aspect: "9:16",
+    videoCount: 1,
+    durationSec: input.brief.durationSec ?? 30,
+    audience: input.brief.audience ?? product?.audience ?? "",
+    goal: input.brief.goal ?? "",
+    keyMessage: input.brief.keyMessage ?? product?.oneLiner ?? "",
+    mustInclude: input.brief.mustInclude,
+    avoid: input.brief.avoid,
+    references: [],
+    onCamera: true,
+    addons: [],
+    notes: input.brief.notes,
+  };
+}
+
+/** Ledger entry when a slot reopens and its old price differs from the current tier price. */
+function repriceOnReopen(request: ContentRequest, oldPrice: number): LedgerEntry | undefined {
+  const terms = request.campaign;
+  if (!terms || terms.pricePerVideo === oldPrice) return undefined;
+  const diff = terms.pricePerVideo - oldPrice;
+  return {
+    id: uid("lg"),
+    at: nowStamp(),
+    kind: diff > 0 ? "top_up" : "refund",
+    amount: Math.abs(diff),
+    note: `Slot reopened at the current tier price (${money(terms.pricePerVideo)})`,
+  };
+}
+
+/** Re-derive "hired" (full) vs "open" after slots change. */
+function syncCampaignStatus(s: DemoState, requestId: string): DemoState {
+  return {
+    ...s,
+    requests: replaceById(s.requests, requestId, (r) => {
+      if (r.status === "closed" || r.status === "draft") return r;
+      return { ...r, status: openSlotNumbers(s, r).length === 0 ? "hired" : "open" };
+    }),
+  };
+}
+
 export const actions = {
-  /** Restore the original seed (clears everything done in this browser). */
+  /** Restore the original seed (clears everything done in this browser). Keeps this tab's account. */
   reset() {
     lastStamp = NOW;
     counters = {};
@@ -473,20 +696,180 @@ export const actions = {
     } catch {
       /* ignore */
     }
-    set({ ...fromSeed(), epoch: Date.now() });
+    const keep = state.activeAccountId;
+    set({ ...fromSeed(), epoch: Date.now(), activeAccountId: keep });
+  },
+
+  /* ---------------------------------------------------------- accounts */
+
+  /** Sign this tab in as another demo account (prefs also sets the cross-tab cookie). */
+  switchAccount(accountId: string) {
+    load();
+    if (!state.accounts.some((a) => a.id === accountId)) return;
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, accountId);
+    } catch {
+      /* ignore */
+    }
+    if (state.activeAccountId === accountId) return;
+    update((s) => ({ ...s, activeAccountId: accountId }));
+  },
+
+  /** Give the signed-in account a creator profile so it can pitch and take campaign slots. */
+  createCreatorProfile(input: CreatorProfileInput): string {
+    load();
+    const account = activeAccount(state);
+    if (account.creatorId) return account.creatorId;
+    const id = account.reserved.creatorId;
+    update((s) => {
+      const creator: Creator = {
+        id,
+        handle: account.reserved.handle,
+        name: input.name || account.name,
+        firstName: (input.name || account.name).split(" ")[0],
+        kind: "presenter",
+        cityId: input.cityId ?? "riyadh",
+        headline: input.headline || "New on Yapp",
+        bio: "",
+        languages: input.languages,
+        formats: input.formats,
+        niches: [],
+        platforms: [],
+        rating: 0,
+        reviewCount: 0,
+        completed: 0,
+        repeatClientRate: 0,
+        onTimeRate: 100,
+        responseHours: 2,
+        packages: [
+          {
+            id: `pk-${account.firstName.toLowerCase()}-basic`,
+            tier: "basic",
+            name: "One video",
+            summary: "One short video for your product, filmed on my phone.",
+            price: 150,
+            deliveryDays: 5,
+            revisions: 2,
+            videos: 1,
+            maxSeconds: 45,
+            includes: ["One edited video", "Captions"],
+          },
+        ],
+        addons: [],
+        portfolioIds: [],
+        featuredVideoId: "",
+        socials: [],
+        available: true,
+        verified: false,
+        topRated: false,
+        memberSince: nowStamp(),
+        equipment: [],
+        tints: ["sea", "sun"],
+      };
+      return {
+        ...s,
+        creators: [...s.creators, creator],
+        accounts: replaceById(s.accounts, account.id, (a) => ({ ...a, creatorId: id })),
+      };
+    });
+    return id;
+  },
+
+  /**
+   * Connect a social account read-only and "verify" real followers (simulated: the follower count
+   * comes from the account seed or a deterministic estimate).
+   */
+  connectSocial(creatorId: string, platform: CampaignPlatformId, handle: string): SocialAccount {
+    load();
+    const clean = handle.replace(/^@/, "").trim() || "me";
+    // Deterministic per handle, so a demo can show both outcomes (below and within campaign tiers).
+    const followers = 6_000 + (hashString(`${creatorId}:${platform}:${clean}`) % 30_000);
+    const social: SocialAccount = { platform, handle: clean, followers, verified: true, connectedAt: nowStamp() };
+    update((s) => ({
+      ...s,
+      creators: replaceById(s.creators, creatorId, (c) => ({
+        ...c,
+        socials: [...(c.socials ?? []).filter((x) => x.platform !== platform), social],
+      })),
+    }));
+    return social;
+  },
+
+  disconnectSocial(creatorId: string, platform: CampaignPlatformId) {
+    update((s) => ({
+      ...s,
+      creators: replaceById(s.creators, creatorId, (c) => ({
+        ...c,
+        socials: (c.socials ?? []).filter((x) => x.platform !== platform),
+      })),
+    }));
+  },
+
+  /**
+   * Edit the signed-in person's name and email. Keeps their team member record, creator profile
+   * and personal buyer profile in step (it's one person).
+   */
+  updateAccount(patch: { name?: string; email?: string }) {
+    load();
+    const account = activeAccount(state);
+    const name = patch.name?.trim().replace(/\s+/g, " ");
+    const email = patch.email?.trim().toLowerCase();
+    update((s) => ({
+      ...s,
+      accounts: replaceById(s.accounts, account.id, (a) => ({
+        ...a,
+        ...(name ? { name, firstName: name.split(" ")[0] } : {}),
+        ...(email ? { email } : {}),
+      })),
+      team: account.memberId
+        ? replaceById(s.team, account.memberId, (m) => ({ ...m, ...(name ? { name } : {}), ...(email ? { email } : {}) }))
+        : s.team,
+      creators: account.creatorId && name
+        ? replaceById(s.creators, account.creatorId, (c) => ({ ...c, name, firstName: name.split(" ")[0] }))
+        : s.creators,
+      businesses: name
+        ? replaceById(s.businesses, account.businessId, (b) =>
+            b.kind === "personal"
+              ? { ...b, name, monogram: name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase() }
+              : b,
+          )
+        : s.businesses,
+    }));
+  },
+
+  /** Turn a personal buyer profile into a business account (company details, VAT, team). */
+  upgradeToBusinessAccount(input: { name: string; website?: string; industry?: Business["industry"]; teamSize?: string }) {
+    load();
+    const account = activeAccount(state);
+    update((s) => ({
+      ...s,
+      accounts: replaceById(s.accounts, account.id, (a) => ({ ...a, kind: "business" })),
+      businesses: replaceById(s.businesses, account.businessId, (b) => ({
+        ...b,
+        kind: "company",
+        name: input.name || b.name,
+        monogram: (input.name || b.name).slice(0, 2).toUpperCase(),
+        website: input.website ?? b.website,
+        industry: input.industry ?? b.industry,
+        teamSize: input.teamSize ?? b.teamSize,
+        tagline: b.kind === "personal" ? "" : b.tagline,
+      })),
+    }));
   },
 
   /* ------------------------------------------------------------ saved */
 
   toggleSavedCreator(creatorId: string): boolean {
     load();
-    const saved = state.savedCreatorIds.includes(creatorId);
-    update((s) => ({
-      ...s,
-      savedCreatorIds: saved
-        ? s.savedCreatorIds.filter((id) => id !== creatorId)
-        : [creatorId, ...s.savedCreatorIds],
-    }));
+    const accountId = state.activeAccountId;
+    const saved = (state.saved[accountId] ?? []).includes(creatorId);
+    update((s) => {
+      const list = s.saved[accountId] ?? [];
+      return {
+        ...s,
+        saved: { ...s.saved, [accountId]: saved ? list.filter((id) => id !== creatorId) : [creatorId, ...list] },
+      };
+    });
     return !saved;
   },
 
@@ -508,7 +891,7 @@ export const actions = {
         ...(exists ? s.products.find((p) => p.id === id) : {}),
         ...input,
         id,
-        businessId: ME.businessId,
+        businessId: activeIds(s).businessId,
         updatedAt: nowStamp(),
       } as Product;
       return {
@@ -556,15 +939,22 @@ export const actions = {
   /* ---------------------------------------------------------- requests */
 
   saveRequestDraft(draft: Omit<RequestDraft, "savedAt"> | null) {
-    update((s) => ({ ...s, requestDraft: draft ? { ...draft, savedAt: nowStamp() } : null }));
+    update((s) => ({
+      ...s,
+      requestDrafts: {
+        ...s.requestDrafts,
+        [s.activeAccountId]: draft ? { ...draft, savedAt: nowStamp() } : null,
+      },
+    }));
   },
 
   createRequest(input: NewRequestInput): string {
     const id = uid("r");
     update((s) => {
+      const me = activeIds(s);
       const request: ContentRequest = {
         id,
-        businessId: ME.businessId,
+        businessId: me.businessId,
         title: input.title,
         brief: input.brief,
         budget: input.budget,
@@ -576,46 +966,47 @@ export const actions = {
         preferredKinds: input.preferredKinds,
         slots: input.slots ?? 1,
         views: 0,
+        kind: "custom",
       };
-      let next: DemoState = { ...s, requests: [request, ...s.requests], requestDraft: null };
-      if (request.status === "open" && (input.invitedCreatorIds.includes(ME.creatorId) || input.visibility === "public")) {
-        next = notify(
-          next,
-          "creator",
-          "request",
-          input.invitedCreatorIds.includes(ME.creatorId)
-            ? `${nameOfBusiness(s, ME.businessId)} invited you to pitch: ${input.title}`
-            : `New request that fits you: ${input.title}`,
-          `/creator/opportunities/${id}`,
-        );
-      }
+      let next: DemoState = {
+        ...s,
+        requests: [request, ...s.requests],
+        requestDrafts: { ...s.requestDrafts, [me.accountId]: null },
+      };
+      if (request.status === "open") next = notifyDemoCreatorsOfRequest(next, request);
       return next;
     });
     return id;
   },
 
+  /**
+   * Edit an order. For a campaign, title and brief changes (talking points, restrictions) also
+   * reach creators already working on a slot; approved slots keep what they were made against.
+   */
   updateRequest(id: string, patch: Partial<ContentRequest>) {
-    update((s) => ({ ...s, requests: replaceById(s.requests, id, (r) => ({ ...r, ...patch })) }));
+    update((s) => {
+      const request = s.requests.find((r) => r.id === id);
+      const next = { ...s, requests: replaceById(s.requests, id, (r) => ({ ...r, ...patch })) };
+      if (!isCampaign(request) || (!patch.brief && !patch.title)) return next;
+      return {
+        ...next,
+        commissions: next.commissions.map((c) =>
+          c.source === "campaign" && c.requestId === id && occupiesSlot(c) && c.status !== "completed"
+            ? { ...c, title: patch.title ?? c.title, brief: patch.brief ?? c.brief }
+            : c,
+        ),
+      };
+    });
   },
 
   publishDraft(id: string) {
     update((s) => {
-      const request = s.requests.find((r) => r.id === id);
       let next: DemoState = {
         ...s,
         requests: replaceById(s.requests, id, (r) => ({ ...r, status: "open", postedAt: nowStamp() })),
       };
-      if (request && (request.visibility === "public" || request.invitedCreatorIds.includes(ME.creatorId))) {
-        next = notify(
-          next,
-          "creator",
-          "request",
-          request.invitedCreatorIds.includes(ME.creatorId)
-            ? `${nameOfBusiness(s, request.businessId)} invited you to pitch: ${request.title}`
-            : `New request that fits you: ${request.title}`,
-          `/creator/opportunities/${id}`,
-        );
-      }
+      const request = next.requests.find((r) => r.id === id);
+      if (request) next = notifyDemoCreatorsOfRequest(next, request);
       return next;
     });
   },
@@ -649,27 +1040,32 @@ export const actions = {
           invitedCreatorIds: [...r.invitedCreatorIds, creatorId],
         })),
       };
-      if (creatorId === ME.creatorId) {
-        next = notify(
-          next,
-          "creator",
-          "request",
-          `${nameOfBusiness(s, request.businessId)} invited you to pitch: ${request.title}`,
-          `/creator/opportunities/${requestId}`,
-        );
-      }
+      next = notifyParty(
+        next,
+        { creatorId },
+        "request",
+        `${nameOfBusiness(s, request.businessId)} invited you to pitch: ${request.title}`,
+        paths.order(requestId),
+      );
       return next;
     });
   },
 
+  /** Dismiss an order from this account's feed and Explore. */
   hideRequest(requestId: string) {
-    update((s) => ({ ...s, hiddenRequestIds: [...s.hiddenRequestIds, requestId] }));
+    update((s) => ({
+      ...s,
+      hidden: { ...s.hidden, [s.activeAccountId]: [...(s.hidden[s.activeAccountId] ?? []), requestId] },
+    }));
   },
 
   unhideRequest(requestId: string) {
     update((s) => ({
       ...s,
-      hiddenRequestIds: s.hiddenRequestIds.filter((id) => id !== requestId),
+      hidden: {
+        ...s.hidden,
+        [s.activeAccountId]: (s.hidden[s.activeAccountId] ?? []).filter((id) => id !== requestId),
+      },
     }));
   },
 
@@ -685,34 +1081,41 @@ export const actions = {
   }): string {
     const id = uid("pt");
     update((s) => {
+      const creatorId = activeIds(s).creatorId;
       const request = s.requests.find((r) => r.id === input.requestId);
+      if (!creatorId || !request || accountOwning(s, { businessId: request.businessId })?.creatorId === creatorId) return s;
       const pitch: Pitch = {
         ...input,
+        message: mask(input.message),
+        angle: mask(input.angle),
         id,
-        creatorId: ME.creatorId,
+        creatorId,
         status: "sent",
         sentAt: nowStamp(),
       };
       let next: DemoState = {
         ...s,
-        pitches: [pitch, ...s.pitches.filter((p) => !(p.requestId === input.requestId && p.creatorId === ME.creatorId))],
+        pitches: [pitch, ...s.pitches.filter((p) => !(p.requestId === input.requestId && p.creatorId === creatorId))],
       };
-      if (request?.businessId === ME.businessId) {
-        next = notify(
-          next,
-          "business",
-          "pitch",
-          `${nameOfCreator(s, ME.creatorId)} pitched on "${request.title}" for ${money(input.price)}`,
-          `/business/requests/${request.id}`,
-        );
-      }
+      next = notifyParty(
+        next,
+        { businessId: request.businessId },
+        "pitch",
+        `${nameOfCreator(s, creatorId)} pitched on "${request.title}" for ${money(input.price)}`,
+        paths.order(request.id),
+      );
       return next;
     });
     return id;
   },
 
   updatePitch(id: string, patch: Partial<Pick<Pitch, "message" | "angle" | "price" | "deliveryDays" | "sampleIds">>) {
-    update((s) => ({ ...s, pitches: replaceById(s.pitches, id, (p) => ({ ...p, ...patch })) }));
+    const clean = {
+      ...patch,
+      ...(patch.message !== undefined ? { message: mask(patch.message) } : {}),
+      ...(patch.angle !== undefined ? { angle: mask(patch.angle) } : {}),
+    };
+    update((s) => ({ ...s, pitches: replaceById(s.pitches, id, (p) => ({ ...p, ...clean })) }));
   },
 
   withdrawPitch(id: string) {
@@ -736,9 +1139,9 @@ export const actions = {
         ...s,
         pitches: replaceById(s.pitches, id, (p) => ({ ...p, status: on ? "shortlisted" : "viewed" })),
       };
-      if (on && pitch?.creatorId === ME.creatorId) {
+      if (on && pitch) {
         const request = s.requests.find((r) => r.id === pitch.requestId);
-        next = notify(next, "creator", "pitch", `Your pitch was shortlisted${request ? ` for "${request.title}"` : ""}`, "/creator/pitches");
+        next = notifyParty(next, { creatorId: pitch.creatorId }, "pitch", `Your pitch was shortlisted${request ? ` for "${request.title}"` : ""}`, paths.pitches);
       }
       return next;
     });
@@ -751,14 +1154,14 @@ export const actions = {
         ...s,
         pitches: replaceById(s.pitches, id, (p) => ({ ...p, status: "declined" })),
       };
-      if (pitch?.creatorId === ME.creatorId) {
+      if (pitch) {
         const request = s.requests.find((r) => r.id === pitch.requestId);
-        next = notify(
+        next = notifyParty(
           next,
-          "creator",
+          { creatorId: pitch.creatorId },
           "pitch",
           `${request ? nameOfBusiness(s, request.businessId) : "The business"} went with another creator${request ? ` for "${request.title}"` : ""}. Thanks for pitching.`,
-          "/creator/pitches",
+          paths.pitches,
         );
       }
       return next;
@@ -838,13 +1241,11 @@ export const actions = {
       if (input.note?.trim()) {
         next = appendMessage(next, threadId, { from: "business", text: input.note.trim() }, "creator");
       }
-      if (pitch.creatorId === ME.creatorId) {
-        next = notify(next, "creator", "offer", `You're hired! ${nameOfBusiness(s, request.businessId)} accepted your pitch`, `/creator/commissions/${commissionId}`);
-      }
+      next = notifyParty(next, { creatorId: pitch.creatorId }, "offer", `You're hired! ${nameOfBusiness(s, request.businessId)} accepted your pitch`, paths.commission(commissionId));
       return next;
     });
     const hired = state.commissions.find((c) => c.id === commissionId);
-    if (hired && hired.creatorId !== ME.creatorId) simulateDelivery(commissionId, 25_000);
+    if (hired && !isDemoCreator(state, hired.creatorId)) simulateDelivery(commissionId, 25_000);
     return commissionId;
   },
 
@@ -854,8 +1255,10 @@ export const actions = {
   sendOffer(input: OfferInput): string {
     const commissionId = uid("c");
     update((s) => {
+      const me = activeIds(s);
+      if (me.creatorId === input.creatorId) return s; // no ordering from yourself
       const ensured = ensureThread(s, {
-        businessId: ME.businessId,
+        businessId: me.businessId,
         creatorId: input.creatorId,
         commissionId,
         subject: input.title,
@@ -865,7 +1268,7 @@ export const actions = {
       const totals = priceBreakdown(input.price, input.addons);
       const commission: Commission = {
         id: commissionId,
-        businessId: ME.businessId,
+        businessId: me.businessId,
         creatorId: input.creatorId,
         title: input.title,
         brief: input.brief,
@@ -884,7 +1287,7 @@ export const actions = {
         events: [],
         threadId,
         payment: { status: "authorized", methodId: input.paymentMethodId },
-        offerMessage: input.message,
+        offerMessage: mask(input.message),
       };
       commission.events = [
         event("offer_sent", "business", `Offer sent to ${nameOfCreator(s, input.creatorId)}`),
@@ -900,13 +1303,11 @@ export const actions = {
         },
         "creator",
       );
-      if (input.creatorId === ME.creatorId) {
-        next = notify(next, "creator", "offer", `${nameOfBusiness(s, ME.businessId)} sent you an offer: ${input.title} (${money(input.price + input.addons.reduce((a, b) => a + b.price, 0))})`, `/creator/commissions/${commissionId}`);
-      }
+      next = notifyParty(next, { creatorId: input.creatorId }, "offer", `${nameOfBusiness(s, me.businessId)} sent you an offer: ${input.title} (${money(input.price + input.addons.reduce((a, b) => a + b.price, 0))})`, paths.commission(commissionId));
       return next;
     });
     // Other creators accept on their own after a short pause so the demo keeps moving.
-    if (input.creatorId !== ME.creatorId && typeof window !== "undefined") {
+    if (!isDemoCreator(state, input.creatorId) && typeof window !== "undefined") {
       window.setTimeout(() => actions.acceptOffer(commissionId, "creator-auto"), 7000);
     }
     return commissionId;
@@ -946,7 +1347,7 @@ export const actions = {
         },
         "business",
       );
-      next = notify(next, "business", "offer", `${creator?.firstName ?? "The creator"} accepted your offer: ${c.title}`, `/business/commissions/${commissionId}`);
+      next = notifyParty(next, { businessId: c.businessId }, "offer", `${creator?.firstName ?? "The creator"} accepted your offer: ${c.title}`, paths.commission(commissionId));
       return next;
     });
     if (by === "creator-auto") simulateDelivery(commissionId, 25_000);
@@ -966,7 +1367,7 @@ export const actions = {
         })),
       };
       next = appendMessage(next, c.threadId, { from: "system", text: `Offer declined. The authorisation on your card was released.` }, "business");
-      next = notify(next, "business", "offer", `${nameOfCreator(s, c.creatorId)} declined your offer: ${c.title}`, `/business/commissions/${commissionId}`);
+      next = notifyParty(next, { businessId: c.businessId }, "offer", `${nameOfCreator(s, c.creatorId)} declined your offer: ${c.title}`, paths.commission(commissionId));
       return next;
     });
   },
@@ -987,7 +1388,7 @@ export const actions = {
 
   /* -------------------------------------------------------- production */
 
-  /** Creator uploads a new version for review. */
+  /** Creator uploads a new version for review (campaigns: a watermarked review copy). */
   deliver(input: {
     commissionId: string;
     note: string;
@@ -1007,11 +1408,15 @@ export const actions = {
         ownVideos[0] ??
         s.videos[0];
       const product = s.products.find((p) => p.id === c.brief.productId);
+      const campaign = c.source === "campaign";
+      // A new delivery has no performance yet (portfolio templates carry views).
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { stats, ...base } = template;
       const video: Video = {
-        ...template,
+        ...base,
         id: uid("v"),
         creatorId: c.creatorId,
-        title: `${product?.name ?? c.title} — v${c.deliveries.length + 1}`,
+        title: `${product?.name ?? c.title} — ${campaign ? "review copy " : ""}v${c.deliveries.length + 1}`,
         format: c.brief.format,
         aspect: c.brief.aspect,
         madeFor: nameOfBusiness(s, c.businessId),
@@ -1022,11 +1427,12 @@ export const actions = {
         id: deliveryId,
         version: c.deliveries.length + 1,
         video,
-        note: input.note,
+        note: mask(input.note),
         deliveredAt: nowStamp(),
         status: "in_review",
         comments: [],
         files: input.files,
+        reviewCopy: campaign || undefined,
       };
       let next: DemoState = {
         ...s,
@@ -1035,20 +1441,37 @@ export const actions = {
           status: "delivered",
           autoApproveAt: at(AUTO_APPROVE_DAYS, "20:00"),
           deliveries: [...x.deliveries, delivery],
-          events: [...x.events, event("delivered", "creator", `Version ${delivery.version} delivered`)],
+          events: [
+            ...x.events,
+            event("delivered", "creator", campaign ? `Review copy uploaded (version ${delivery.version})` : `Version ${delivery.version} delivered`),
+          ],
         })),
       };
-      next = appendMessage(
-        next,
-        c.threadId,
-        {
-          from: "creator",
-          text: input.note || `Version ${delivery.version} is up for review.`,
-          attachment: { kind: "video", name: input.files[0]?.name ?? `${video.title}.mp4`, size: input.files[0]?.size, videoId: video.id },
-        },
-        "business",
-      );
-      next = notify(next, "business", "delivery", `${creator?.firstName ?? "Your creator"} delivered version ${delivery.version} of "${c.title}"`, `/business/commissions/${c.id}`);
+      // Campaign review copies live on the slot's page; posting each one to the inbox would flood
+      // the business with one thread per creator.
+      if (!campaign) {
+        next = appendMessage(
+          next,
+          c.threadId,
+          {
+            from: "creator",
+            text: input.note || `Version ${delivery.version} is up for review.`,
+            attachment: { kind: "video", name: input.files[0]?.name ?? `${video.title}.mp4`, size: input.files[0]?.size, videoId: video.id },
+          },
+          "business",
+        );
+      }
+      if (campaign && c.requestId) {
+        next = notifyParty(next, { businessId: c.businessId }, "campaign", "", paths.order(c.requestId), {
+          key: `campaign:${c.requestId}:review`,
+          text: (n) =>
+            n === 1
+              ? `${creator?.firstName ?? "A creator"} uploaded a review copy for "${c.title}"`
+              : `${n} review copies are ready on "${c.title}"`,
+        });
+      } else {
+        next = notifyParty(next, { businessId: c.businessId }, "delivery", `${creator?.firstName ?? "Your creator"} delivered version ${delivery.version} of "${c.title}"`, paths.commission(c.id));
+      }
       return next;
     });
     return deliveryId;
@@ -1063,7 +1486,7 @@ export const actions = {
           ...d,
           comments: [
             ...d.comments,
-            { id: uid("dc"), atSec: input.atSec, text: input.text, author: input.author, resolved: false, createdAt: nowStamp() },
+            { id: uid("dc"), atSec: input.atSec, text: mask(input.text), author: input.author, resolved: false, createdAt: nowStamp() },
           ].sort((a, b) => a.atSec - b.atSec),
         })),
       })),
@@ -1071,13 +1494,14 @@ export const actions = {
   },
 
   updateComment(commissionId: string, deliveryId: string, commentId: string, patch: { text?: string; resolved?: boolean }) {
+    const clean = patch.text !== undefined ? { ...patch, text: mask(patch.text) } : patch;
     update((s) => ({
       ...s,
       commissions: replaceById(s.commissions, commissionId, (c) => ({
         ...c,
         deliveries: replaceById(c.deliveries, deliveryId, (d) => ({
           ...d,
-          comments: replaceById(d.comments, commentId, (m) => ({ ...m, ...patch })),
+          comments: replaceById(d.comments, commentId, (m) => ({ ...m, ...clean })),
         })),
       })),
     }));
@@ -1124,9 +1548,10 @@ export const actions = {
         { from: "business", text: note || `Left ${count} note${count === 1 ? "" : "s"} on version ${latest.version}. Thank you!` },
         "creator",
       );
-      if (c.creatorId === ME.creatorId) {
-        next = notify(next, "creator", "revision", `${nameOfBusiness(s, c.businessId)} requested changes on "${c.title}"`, `/creator/commissions/${c.id}`);
-      } else {
+      if (isDemoCreator(s, c.creatorId)) {
+        next = notifyParty(next, { creatorId: c.creatorId }, "revision", `${nameOfBusiness(s, c.businessId)} requested changes on "${c.title}"`, paths.commission(c.id));
+      } else if (c.source !== "campaign") {
+        // Campaign slots are driven by the simulation tick instead.
         scheduleReply(c.threadId, "creator", "thanks, notes");
         simulateDelivery(c.id, 20_000);
       }
@@ -1134,32 +1559,68 @@ export const actions = {
     });
   },
 
-  /** Approve the latest delivery and release payment to the creator. */
-  approve(commissionId: string) {
+  /**
+   * Approve the latest delivery. Custom and direct work: payment is released to the creator.
+   * Campaign slots: the full-quality file unlocks for the business and the price moves to the
+   * creator's wallet as pending until month end (and only if the post stays up).
+   */
+  approve(commissionId: string, options: { rating?: number } = {}) {
     update((s) => {
       const c = findCommission(s, commissionId);
       const latest = c.deliveries[c.deliveries.length - 1];
       const totals = priceBreakdown(c.price, c.addons, c.feeRate);
+      const campaign = c.source === "campaign";
+      const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
+      const completedAt = nowStamp();
       let next: DemoState = {
         ...s,
         commissions: replaceById(s.commissions, commissionId, (x) => ({
           ...x,
           status: "completed",
-          completedAt: nowStamp(),
+          completedAt,
           autoApproveAt: undefined,
-          payment: { ...x.payment, status: "released" },
+          payment: { ...x.payment, status: campaign ? "pending" : "released" },
           deliveries: latest ? replaceById(x.deliveries, latest.id, (d) => ({ ...d, status: "approved" })) : x.deliveries,
+          ...(campaign
+            ? {
+                withdrawableFrom: endOfMonth(completedAt),
+                post: { status: "due" as const },
+                quickRating: options.rating,
+              }
+            : {}),
           events: [
             ...x.events,
-            event("approved", "business", latest ? `Version ${latest.version} approved` : "Work approved"),
-            event("paid", "system", `${money(totals.creatorEarns)} released to ${nameOfCreator(s, x.creatorId)}`),
+            event(
+              "approved",
+              "business",
+              campaign
+                ? `${latest ? `Version ${latest.version}` : "Video"} approved. Full-quality file unlocked.`
+                : latest
+                  ? `Version ${latest.version} approved`
+                  : "Work approved",
+            ),
+            event(
+              "paid",
+              "system",
+              campaign
+                ? `${money(c.price)} added to ${nameOfCreator(s, x.creatorId)}'s wallet as pending`
+                : `${money(totals.creatorEarns)} released to ${nameOfCreator(s, x.creatorId)}`,
+            ),
           ],
         })),
         creators: replaceById(s.creators, c.creatorId, (cr) => ({ ...cr, completed: cr.completed + 1 })),
       };
-      next = appendMessage(next, c.threadId, { from: "system", text: `Approved. ${money(totals.creatorEarns)} was released to ${nameOfCreator(s, c.creatorId)}.` }, "creator");
-      if (c.creatorId === ME.creatorId) {
-        next = notify(next, "creator", "payment", `${money(totals.creatorEarns)} released by ${nameOfBusiness(s, c.businessId)}`, "/creator/earnings");
+      if (campaign) {
+        next = notifyParty(
+          next,
+          { creatorId: c.creatorId },
+          "payment",
+          `Approved! ${money(c.price)} is in your wallet as pending. Post it with ${request?.campaign?.brandHandle ?? "the brand tag"} to unlock it at month end.`,
+          paths.commission(c.id),
+        );
+      } else {
+        next = appendMessage(next, c.threadId, { from: "system", text: `Approved. ${money(totals.creatorEarns)} was released to ${nameOfCreator(s, c.creatorId)}.` }, "creator");
+        next = notifyParty(next, { creatorId: c.creatorId }, "payment", `${money(totals.creatorEarns)} released by ${nameOfBusiness(s, c.businessId)}`, paths.wallet);
       }
       return next;
     });
@@ -1169,7 +1630,10 @@ export const actions = {
     const reviewId = uid("rv");
     update((s) => {
       const c = findCommission(s, input.commissionId);
-      const member = s.team.find((m) => m.id === ME.memberId);
+      const me = activeIds(s);
+      const member = me.memberId ? s.team.find((m) => m.id === me.memberId) : undefined;
+      const account = activeAccount(s);
+      const business = s.businesses.find((b) => b.id === c.businessId);
       const review: Review = {
         id: reviewId,
         commissionId: c.id,
@@ -1182,8 +1646,8 @@ export const actions = {
         text: input.text,
         wouldRehire: input.wouldRehire,
         createdAt: nowStamp(),
-        authorName: member?.name ?? "Daftar team",
-        authorTitle: `${member?.title ?? "Team"}, ${nameOfBusiness(s, c.businessId)}`,
+        authorName: member?.name ?? account.name,
+        authorTitle: business?.kind === "personal" ? "Ordered in their own name" : `${member?.title ?? "Team"}, ${nameOfBusiness(s, c.businessId)}`,
         format: c.brief.format,
       };
       let next: DemoState = {
@@ -1214,9 +1678,7 @@ export const actions = {
           })),
         };
       }
-      if (c.creatorId === ME.creatorId) {
-        next = notify(next, "creator", "review", `${nameOfBusiness(s, c.businessId)} left you a ${input.rating}-star review`, `/creators/${s.creators.find((x) => x.id === c.creatorId)?.handle ?? ""}`);
-      }
+      next = notifyParty(next, { creatorId: c.creatorId }, "review", `${nameOfBusiness(s, c.businessId)} left you a ${input.rating}-star review`, paths.creator(s.creators.find((x) => x.id === c.creatorId)?.handle ?? ""));
       return next;
     });
     return reviewId;
@@ -1226,12 +1688,12 @@ export const actions = {
   leaveClientFeedback(commissionId: string, rating: number, text: string) {
     update((s) => ({
       ...s,
-      commissions: replaceById(s.commissions, commissionId, (c) => ({ ...c, clientFeedback: { rating, text } })),
+      commissions: replaceById(s.commissions, commissionId, (c) => ({ ...c, clientFeedback: { rating, text: mask(text) } })),
     }));
   },
 
   replyToReview(reviewId: string, reply: string) {
-    update((s) => ({ ...s, reviews: replaceById(s.reviews, reviewId, (r) => ({ ...r, reply })) }));
+    update((s) => ({ ...s, reviews: replaceById(s.reviews, reviewId, (r) => ({ ...r, reply: mask(reply) })) }));
   },
 
   cancelCommission(commissionId: string, reason: string, by: Role) {
@@ -1291,6 +1753,321 @@ export const actions = {
     });
   },
 
+  /* ---------------------------------------------------------- campaigns */
+
+  /** Hold the full budget and publish a UGC campaign. Returns the new campaign id. */
+  publishCampaign(input: CampaignInput): string {
+    const id = uid("r");
+    update((s) => {
+      const me = activeIds(s);
+      const tier = tierById[input.tierId];
+      const product = s.products.find((p) => p.id === input.productId);
+      const total = input.videos * tier.pricePerVideo;
+      const request: ContentRequest = {
+        id,
+        businessId: me.businessId,
+        title: input.title,
+        brief: campaignBrief(input, product),
+        budget: { min: tier.pricePerVideo, max: tier.pricePerVideo },
+        dueDate: at(30, "18:00"),
+        postedAt: nowStamp(),
+        status: "open",
+        visibility: "public",
+        invitedCreatorIds: [],
+        preferredKinds: [],
+        slots: input.videos,
+        views: 0,
+        kind: "campaign",
+        campaign: {
+          tierId: input.tierId,
+          pricePerVideo: tier.pricePerVideo,
+          platform: input.platform,
+          brandHandle: input.brandHandle.startsWith("@") ? input.brandHandle : `@${input.brandHandle}`,
+          explainer: input.explainer,
+          paymentMethodId: input.paymentMethodId,
+          ledger: [
+            {
+              id: uid("lg"),
+              at: nowStamp(),
+              kind: "charge",
+              amount: total,
+              note: `${input.videos} videos × ${money(tier.pricePerVideo)} held`,
+            },
+          ],
+          excludedCreatorIds: [],
+          simulate: true,
+        },
+      };
+      let next: DemoState = { ...s, requests: [request, ...s.requests] };
+      next = notifyDemoCreatorsOfRequest(next, request);
+      return next;
+    });
+    return id;
+  },
+
+  /** Take the first open slot on a campaign (first come, first served). */
+  acceptCampaignSlot(requestId: string, creatorId?: string): TakeSlotResult {
+    load();
+    const who = creatorId ?? activeIds(state).creatorId;
+    const request = state.requests.find((r) => r.id === requestId);
+    const creator = who ? state.creators.find((c) => c.id === who) : undefined;
+    if (!request || !request.campaign) return { ok: false, reason: "closed" };
+    const check = eligibility(state, creator, request);
+    if (!check.ok) return { ok: false, reason: check.reason };
+    const slot = openSlotNumbers(state, request)[0];
+    const commissionId = uid("c");
+    update((s) => {
+      const terms = request.campaign!;
+      const ensured = ensureThread(s, {
+        businessId: request.businessId,
+        creatorId: creator!.id,
+        commissionId,
+        requestId,
+        subject: request.title,
+      });
+      let next = ensured[0];
+      const commission: Commission = {
+        id: commissionId,
+        businessId: request.businessId,
+        creatorId: creator!.id,
+        title: request.title,
+        brief: request.brief,
+        source: "campaign",
+        requestId,
+        price: terms.pricePerVideo,
+        addons: [],
+        feeRate: CAMPAIGN_FEE_RATE,
+        revisionsIncluded: 2,
+        revisionsUsed: 0,
+        status: "in_progress",
+        createdAt: nowStamp(),
+        acceptedAt: nowStamp(),
+        dueDate: at(14, "18:00"),
+        deliveries: [],
+        events: [event("slot_accepted", "creator", `Took slot ${slot}`)],
+        threadId: ensured[1],
+        payment: { status: "held", methodId: terms.paymentMethodId },
+        campaignSlot: slot,
+      };
+      next = { ...next, commissions: [commission, ...next.commissions] };
+      next = syncCampaignStatus(next, requestId);
+      next = notifyParty(next, { businessId: request.businessId }, "campaign", "", paths.order(requestId), {
+        key: `campaign:${requestId}:joined`,
+        text: (n) =>
+          n === 1
+            ? `${creator!.firstName} took a slot on "${request.title}"`
+            : `${n} creators took slots on "${request.title}"`,
+      });
+      return next;
+    });
+    return { ok: true, commissionId, slot };
+  },
+
+  /** Business removes an accepted creator before filming; the slot reopens for others. */
+  removeCampaignCreator(commissionId: string, reason = "") {
+    update((s) => {
+      const c = findCommission(s, commissionId);
+      const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
+      if (!request?.campaign || !occupiesSlot(c)) return s;
+      const reprice = repriceOnReopen(request, c.price);
+      let next: DemoState = {
+        ...s,
+        commissions: replaceById(s.commissions, commissionId, (x) => ({
+          ...x,
+          status: "cancelled",
+          cancelCode: "replaced",
+          cancelReason: reason || undefined,
+          autoApproveAt: undefined,
+          payment: { ...x.payment, status: "returned" },
+          events: [...x.events, event("creator_replaced", "business", "Removed from the campaign. The slot reopened for other creators.")],
+        })),
+        requests: replaceById(s.requests, request.id, (r) => ({
+          ...r,
+          campaign: {
+            ...r.campaign!,
+            excludedCreatorIds: [...new Set([...r.campaign!.excludedCreatorIds, c.creatorId])],
+            ledger: reprice ? [...r.campaign!.ledger, reprice] : r.campaign!.ledger,
+          },
+        })),
+      };
+      next = syncCampaignStatus(next, request.id);
+      next = notifyParty(
+        next,
+        { creatorId: c.creatorId },
+        "campaign",
+        `${nameOfBusiness(s, c.businessId)} went with another creator for your slot on "${c.title}". Thanks for taking it.`,
+        paths.commission(c.id),
+      );
+      return next;
+    });
+  },
+
+  /** Business rejects a review copy: the slot goes to another creator; the money stays held. */
+  rejectCampaignVideo(commissionId: string, reason = "") {
+    update((s) => {
+      const c = findCommission(s, commissionId);
+      const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
+      if (!request?.campaign || !occupiesSlot(c)) return s;
+      const latest = c.deliveries[c.deliveries.length - 1];
+      const reprice = repriceOnReopen(request, c.price);
+      let next: DemoState = {
+        ...s,
+        commissions: replaceById(s.commissions, commissionId, (x) => ({
+          ...x,
+          status: "cancelled",
+          cancelCode: "video_rejected",
+          cancelReason: mask(reason) || undefined,
+          autoApproveAt: undefined,
+          payment: { ...x.payment, status: "returned" },
+          deliveries: latest ? replaceById(x.deliveries, latest.id, (d) => ({ ...d, status: "rejected" })) : x.deliveries,
+          events: [
+            ...x.events,
+            event("video_rejected", "business", `Review copy rejected${reason ? `: ${reason}` : ""}. The slot reopened for another creator.`),
+          ],
+        })),
+        requests: replaceById(s.requests, request.id, (r) => ({
+          ...r,
+          campaign: {
+            ...r.campaign!,
+            excludedCreatorIds: [...new Set([...r.campaign!.excludedCreatorIds, c.creatorId])],
+            ledger: reprice ? [...r.campaign!.ledger, reprice] : r.campaign!.ledger,
+          },
+        })),
+      };
+      next = syncCampaignStatus(next, request.id);
+      next = notifyParty(
+        next,
+        { creatorId: c.creatorId },
+        "campaign",
+        `${nameOfBusiness(s, c.businessId)} didn't approve your video for "${c.title}"${reason ? `: "${reason}"` : ""}. The slot went back to the campaign.`,
+        paths.commission(c.id),
+      );
+      return next;
+    });
+  },
+
+  /** Creator posts the approved video on their own account; verification runs on the next tick. */
+  submitPost(commissionId: string, url: string) {
+    update((s) => ({
+      ...s,
+      commissions: replaceById(s.commissions, commissionId, (x) => ({
+        ...x,
+        post: { status: "checking", url: url.trim(), at: nowStamp() },
+        events: [...x.events, event("posted", "creator", "Posted on their account. Checking the tag and disclosure…")],
+      })),
+    }));
+  },
+
+  /** Demo control: pretend the creator took the post down (pending money stays locked). */
+  markPostRemoved(commissionId: string) {
+    update((s) => ({
+      ...s,
+      commissions: replaceById(s.commissions, commissionId, (x) =>
+        x.post ? { ...x, post: { ...x.post, status: "removed" } } : x,
+      ),
+    }));
+  },
+
+  /** Change the follower tier once after publishing. Taken slots keep their price. */
+  changeCampaignTier(requestId: string, tierId: FollowerTierId): { ok: boolean; diff: number } {
+    load();
+    const request = state.requests.find((r) => r.id === requestId);
+    const terms = request?.campaign;
+    if (!request || !terms || terms.tierChangedAt || terms.tierId === tierId) return { ok: false, diff: 0 };
+    const tier = tierById[tierId];
+    const open = openSlotNumbers(state, request).length;
+    const diff = (tier.pricePerVideo - terms.pricePerVideo) * open;
+    update((s) => ({
+      ...s,
+      requests: replaceById(s.requests, requestId, (r) => ({
+        ...r,
+        budget: { min: tier.pricePerVideo, max: tier.pricePerVideo },
+        campaign: {
+          ...r.campaign!,
+          tierId,
+          previousTierId: r.campaign!.tierId,
+          pricePerVideo: tier.pricePerVideo,
+          tierChangedAt: nowStamp(),
+          ledger:
+            diff === 0
+              ? r.campaign!.ledger
+              : [
+                  ...r.campaign!.ledger,
+                  {
+                    id: uid("lg"),
+                    at: nowStamp(),
+                    kind: diff > 0 ? "top_up" : "refund",
+                    amount: Math.abs(diff),
+                    note: `Tier changed to ${tier.label}: ${open} open slot${open === 1 ? "" : "s"} × ${money(Math.abs(tier.pricePerVideo - terms.pricePerVideo))}`,
+                  },
+                ],
+        },
+      })),
+    }));
+    return { ok: true, diff };
+  },
+
+  /** Stop new acceptances. Open slots are refunded; slots in progress carry on. */
+  closeCampaign(requestId: string) {
+    load();
+    const request = state.requests.find((r) => r.id === requestId);
+    if (!request?.campaign) return;
+    const open = openSlotNumbers(state, request).length;
+    const refund = open * request.campaign.pricePerVideo;
+    update((s) => ({
+      ...s,
+      requests: replaceById(s.requests, requestId, (r) => ({
+        ...r,
+        status: "closed",
+        campaign: {
+          ...r.campaign!,
+          ledger: refund
+            ? [
+                ...r.campaign!.ledger,
+                { id: uid("lg"), at: nowStamp(), kind: "refund", amount: refund, note: `Closed with ${open} open slot${open === 1 ? "" : "s"}: refunded` },
+              ]
+            : r.campaign!.ledger,
+        },
+      })),
+    }));
+  },
+
+  /**
+   * Demo control ("Jump to month end"): pending campaign earnings whose post is still live become
+   * withdrawable. Earnings whose post was taken down stay locked.
+   */
+  closeMonth(): { released: number; locked: number } {
+    load();
+    const key = monthKey(new Date(peekNow()).toISOString());
+    let released = 0;
+    let locked = 0;
+    update((s) => {
+      let next: DemoState = { ...s, closedMonths: [...new Set([...s.closedMonths, key])] };
+      const due = s.commissions.filter((c) => c.payment.status === "pending");
+      for (const c of due) {
+        if (c.post?.status === "live") {
+          released += c.price;
+          next = {
+            ...next,
+            commissions: replaceById(next.commissions, c.id, (x) => ({
+              ...x,
+              payment: { ...x.payment, status: "released" },
+              events: [...x.events, event("payout_available", "system", `Month closed with the post still up: ${money(x.price)} is ready to withdraw`)],
+            })),
+          };
+          next = notifyParty(next, { creatorId: c.creatorId }, "payment", "", paths.wallet, {
+            key: `month:${key}:released`,
+            text: (n) => (n === 1 ? `${money(c.price)} from "${c.title}" is ready to withdraw` : `${n} campaign payments are ready to withdraw`),
+          });
+        } else {
+          locked += c.price;
+        }
+      }
+      return next;
+    });
+    return { released, locked };
+  },
+
   /* ----------------------------------------------------------- messages */
 
   sendMessage(threadId: string, from: Role, text: string, attachment?: Attachment) {
@@ -1298,13 +2075,13 @@ export const actions = {
     scheduleReply(threadId, other(from), text);
   },
 
-  /** Open (or reuse) a conversation between the current business and a creator. */
+  /** Open (or reuse) a conversation between the signed-in account's buyer profile and a creator. */
   startThread(input: { creatorId: string; subject: string; text: string; requestId?: string; from?: Role }): string {
     let threadId = "";
     const from = input.from ?? "business";
     update((s) => {
       const [next, id] = ensureThread(s, {
-        businessId: ME.businessId,
+        businessId: activeIds(s).businessId,
         creatorId: input.creatorId,
         requestId: input.requestId,
         subject: input.subject,
@@ -1334,10 +2111,11 @@ export const actions = {
     }));
   },
 
-  markAllNotificationsRead(role: Role) {
+  /** Mark all of the signed-in account's notifications read. */
+  markAllNotificationsRead() {
     update((s) => ({
       ...s,
-      notifications: s.notifications.map((n) => (n.role === role ? { ...n, unread: false } : n)),
+      notifications: s.notifications.map((n) => (n.accountId === s.activeAccountId ? { ...n, unread: false } : n)),
     }));
   },
 
@@ -1352,7 +2130,11 @@ export const actions = {
     update((s) => ({
       ...s,
       videos: [{ ...video, id, creatorId }, ...s.videos],
-      creators: replaceById(s.creators, creatorId, (c) => ({ ...c, portfolioIds: [id, ...c.portfolioIds] })),
+      creators: replaceById(s.creators, creatorId, (c) => ({
+        ...c,
+        portfolioIds: [id, ...c.portfolioIds],
+        featuredVideoId: c.featuredVideoId || id,
+      })),
     }));
     return id;
   },
@@ -1384,7 +2166,7 @@ export const actions = {
 
   inviteMember(input: { name: string; email: string; title: string }): string {
     const id = uid("m");
-    update((s) => ({ ...s, team: [...s.team, { ...input, id, businessId: ME.businessId }] }));
+    update((s) => ({ ...s, team: [...s.team, { ...input, id, businessId: activeIds(s).businessId }] }));
     return id;
   },
 
@@ -1394,63 +2176,283 @@ export const actions = {
 
   /* -------------------------------------------------------------- money */
 
-  addPaymentMethod(input: Omit<PaymentMethod, "id" | "isDefault">, makeDefault = false): string {
+  /** Add a card to the signed-in account's buyer profile. */
+  addPaymentMethod(input: Omit<PaymentMethod, "id" | "isDefault" | "businessId">, makeDefault = false): string {
     const id = uid("pm");
-    update((s) => ({
-      ...s,
-      paymentMethods: [
-        ...s.paymentMethods.map((m) => (makeDefault ? { ...m, isDefault: false } : m)),
-        { ...input, id, isDefault: makeDefault || s.paymentMethods.length === 0 },
-      ],
-    }));
+    update((s) => {
+      const businessId = activeIds(s).businessId;
+      const mine = s.paymentMethods.filter((m) => m.businessId === businessId);
+      return {
+        ...s,
+        paymentMethods: [
+          ...s.paymentMethods.map((m) => (makeDefault && m.businessId === businessId ? { ...m, isDefault: false } : m)),
+          { ...input, id, businessId, isDefault: makeDefault || mine.length === 0 },
+        ],
+      };
+    });
     return id;
   },
 
   removePaymentMethod(id: string) {
     update((s) => {
-      const rest = s.paymentMethods.filter((m) => m.id !== id);
-      if (rest.length && !rest.some((m) => m.isDefault)) rest[0] = { ...rest[0], isDefault: true };
+      const removed = s.paymentMethods.find((m) => m.id === id);
+      let rest = s.paymentMethods.filter((m) => m.id !== id);
+      const mine = rest.filter((m) => m.businessId === removed?.businessId);
+      if (mine.length && !mine.some((m) => m.isDefault)) {
+        rest = rest.map((m) => (m.id === mine[0].id ? { ...m, isDefault: true } : m));
+      }
       return { ...s, paymentMethods: rest };
     });
   },
 
   setDefaultPaymentMethod(id: string) {
-    update((s) => ({ ...s, paymentMethods: s.paymentMethods.map((m) => ({ ...m, isDefault: m.id === id })) }));
+    update((s) => {
+      const target = s.paymentMethods.find((m) => m.id === id);
+      return {
+        ...s,
+        paymentMethods: s.paymentMethods.map((m) =>
+          m.businessId === target?.businessId ? { ...m, isDefault: m.id === id } : m,
+        ),
+      };
+    });
   },
 
-  addPayoutMethod(input: Omit<PayoutMethod, "id" | "isDefault">): string {
+  /** Add a payout destination to the signed-in account's creator profile. */
+  addPayoutMethod(input: Omit<PayoutMethod, "id" | "isDefault" | "creatorId">): string {
     const id = uid("po");
-    update((s) => ({ ...s, payoutMethods: [...s.payoutMethods, { ...input, id, isDefault: s.payoutMethods.length === 0 }] }));
+    update((s) => {
+      const creatorId = activeIds(s).creatorId ?? "";
+      const mine = s.payoutMethods.filter((m) => m.creatorId === creatorId);
+      return { ...s, payoutMethods: [...s.payoutMethods, { ...input, id, creatorId, isDefault: mine.length === 0 }] };
+    });
     return id;
   },
 
   removePayoutMethod(id: string) {
     update((s) => {
-      const rest = s.payoutMethods.filter((m) => m.id !== id);
-      if (rest.length && !rest.some((m) => m.isDefault)) rest[0] = { ...rest[0], isDefault: true };
+      const removed = s.payoutMethods.find((m) => m.id === id);
+      let rest = s.payoutMethods.filter((m) => m.id !== id);
+      const mine = rest.filter((m) => m.creatorId === removed?.creatorId);
+      if (mine.length && !mine.some((m) => m.isDefault)) {
+        rest = rest.map((m) => (m.id === mine[0].id ? { ...m, isDefault: true } : m));
+      }
       return { ...s, payoutMethods: rest };
     });
   },
 
   setDefaultPayoutMethod(id: string) {
-    update((s) => ({ ...s, payoutMethods: s.payoutMethods.map((m) => ({ ...m, isDefault: m.id === id })) }));
+    update((s) => {
+      const target = s.payoutMethods.find((m) => m.id === id);
+      return {
+        ...s,
+        payoutMethods: s.payoutMethods.map((m) =>
+          m.creatorId === target?.creatorId ? { ...m, isDefault: m.id === id } : m,
+        ),
+      };
+    });
   },
 
   requestPayout(amount: number, methodId: string): string {
     const id = uid("pay");
     update((s) => ({
       ...s,
-      payouts: [{ id, amount, methodId, status: "processing", at: nowStamp() }, ...s.payouts],
+      payouts: [{ id, creatorId: activeIds(s).creatorId ?? "", amount, methodId, status: "processing", at: nowStamp() }, ...s.payouts],
     }));
     return id;
   },
 
   /* ----------------------------------------------------------- settings */
 
+  /** Update the signed-in account's settings for one side (ordering or making). */
   updateSettings<R extends Role>(role: R, patch: Partial<Settings[R]>) {
-    update((s) => ({ ...s, settings: { ...s.settings, [role]: { ...s.settings[role], ...patch } } }));
+    update((s) => {
+      const accountId = s.activeAccountId;
+      const current = s.settings[accountId] ?? s.settings[seedData.DEFAULT_ACCOUNT_ID];
+      return {
+        ...s,
+        settings: { ...s.settings, [accountId]: { ...current, [role]: { ...current[role], ...patch } } },
+      };
+    });
   },
 };
 
+/** Tell demo creators about a new open order they can act on (invited, or public and eligible). */
+function notifyDemoCreatorsOfRequest(s: DemoState, request: ContentRequest): DemoState {
+  let next = s;
+  for (const account of s.accounts) {
+    if (!account.creatorId || account.businessId === request.businessId) continue;
+    const creatorId = account.creatorId;
+    if (isCampaign(request)) {
+      const creator = s.creators.find((c) => c.id === creatorId);
+      if (!eligibility(s, creator, request).ok) continue;
+      next = notifyParty(
+        next,
+        { creatorId },
+        "campaign",
+        `New campaign for you: "${request.title}". ${money(request.campaign!.pricePerVideo)} per yapp, ${request.slots} slots open.`,
+        paths.order(request.id),
+      );
+      continue;
+    }
+    const invited = request.invitedCreatorIds.includes(creatorId);
+    if (!invited && request.visibility !== "public") continue;
+    next = notifyParty(
+      next,
+      { creatorId },
+      "request",
+      invited
+        ? `${nameOfBusiness(s, request.businessId)} invited you to pitch: ${request.title}`
+        : `New request that fits you: ${request.title}`,
+      paths.order(request.id),
+    );
+  }
+  return next;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Simulation tick (campaigns)                                                 */
+/* -------------------------------------------------------------------------- */
+
+const SIM_LOCK_KEY = "yapp-sim-lock";
+const tabId = typeof window === "undefined" ? "server" : Math.random().toString(36).slice(2);
+
+/** Only one visible tab drives the simulation, so two tabs never double-accept a slot. */
+function holdsSimLock(): boolean {
+  try {
+    if (document.visibilityState !== "visible") return false;
+    const raw = window.localStorage.getItem(SIM_LOCK_KEY);
+    const lock = raw ? (JSON.parse(raw) as { tab: string; at: number }) : null;
+    const now = Date.now();
+    if (!lock || lock.tab === tabId || now - lock.at > 6000) {
+      window.localStorage.setItem(SIM_LOCK_KEY, JSON.stringify({ tab: tabId, at: now }));
+      return true;
+    }
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+const SIM_JOIN_MS = 6_000;
+const SIM_DELIVER_MS = 16_000;
+const SIM_POST_MS = 10_000;
+const SIM_VERIFY_MS = 2_500;
+
+/**
+ * Moves campaigns created in this browser along: other creators take slots (stopping one short
+ * while a demo creator could still join), upload review copies, redo them after changes, and post
+ * approved videos. Post verification runs for everyone, demo creators included. Resumable: it
+ * reads state each tick, so a reload picks up where it left off. Mounted by <AppRoot>.
+ */
+export function simulationTick() {
+  if (typeof window === "undefined") return;
+  load();
+  if (!holdsSimLock()) return;
+  const now = peekNow();
+  const since = (iso?: string) => (iso ? now - Date.parse(iso) : Number.POSITIVE_INFINITY);
+
+  // 1. Verify posts that are being checked (any creator).
+  for (const c of state.commissions) {
+    if (c.source === "campaign" && c.post?.status === "checking" && since(c.post.at) > SIM_VERIFY_MS) {
+      verifyPost(c.id);
+      return;
+    }
+  }
+
+  for (const request of state.requests) {
+    const terms = request.campaign;
+    if (!terms?.simulate) continue;
+    const history = slotHistory(state, request.id);
+
+    // 2. Simulated creators work on their slots.
+    for (const c of history) {
+      if (isDemoCreator(state, c.creatorId) || !occupiesSlot(c)) continue;
+      const lastEvent = c.events[c.events.length - 1]?.at;
+      if (c.status === "in_progress" && c.deliveries.length === 0 && since(c.acceptedAt) > SIM_DELIVER_MS) {
+        simulatedUpload(c);
+        return;
+      }
+      if (c.status === "revision" && since(lastEvent) > SIM_DELIVER_MS) {
+        simulatedUpload(c);
+        return;
+      }
+      if (c.status === "completed" && c.post?.status === "due" && since(c.completedAt) > SIM_POST_MS) {
+        actions.submitPost(c.id, `https://www.tiktok.com/@${state.creators.find((x) => x.id === c.creatorId)?.handle ?? "creator"}/video/${7300000000 + (hashString(c.id) % 99999)}`);
+        return;
+      }
+    }
+
+    // 3. Another creator takes an open slot.
+    if (request.status !== "open") continue;
+    const open = openSlotNumbers(state, request).length;
+    const demoCouldJoin = state.accounts.some((a) => {
+      if (!a.creatorId || a.businessId === request.businessId) return false;
+      const creator = state.creators.find((c) => c.id === a.creatorId);
+      return eligibility(state, creator, request).ok;
+    });
+    if (open <= (demoCouldJoin ? 1 : 0)) continue;
+    const lastJoin = history.reduce((latest, c) => Math.max(latest, Date.parse(c.createdAt)), Date.parse(request.postedAt));
+    if (now - lastJoin < SIM_JOIN_MS) continue;
+    const candidates = state.creators
+      .filter((c) => !isDemoCreator(state, c.id) && eligibility(state, c, request).ok)
+      .sort((a, b) => hashString(`${request.id}:${a.id}`) - hashString(`${request.id}:${b.id}`));
+    if (candidates[0]) {
+      actions.acceptCampaignSlot(request.id, candidates[0].id);
+      return;
+    }
+  }
+}
+
+function simulatedUpload(c: Commission) {
+  const version = c.deliveries.length + 1;
+  actions.deliver({
+    commissionId: c.id,
+    note:
+      version === 1
+        ? "Review copy is up (watermarked). I kept it natural and hit every talking point."
+        : `Version ${version} is up. I fixed what you asked for.`,
+    files: [{ name: `review_copy_v${version}.mp4`, size: `${(9 + version * 1.4).toFixed(1)} MB` }],
+  });
+  if (version > 1) {
+    const previous = c.deliveries[c.deliveries.length - 1];
+    previous?.comments.forEach((comment) => actions.updateComment(c.id, previous.id, comment.id, { resolved: true }));
+  }
+}
+
+/** Simulated read-only check of the post: tag and paid-partnership disclosure found. */
+function verifyPost(commissionId: string) {
+  update((s) => {
+    const c = s.commissions.find((x) => x.id === commissionId);
+    if (!c?.post) return s;
+    const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
+    const handle = request?.campaign?.brandHandle ?? "the brand";
+    let next: DemoState = {
+      ...s,
+      commissions: replaceById(s.commissions, commissionId, (x) => ({
+        ...x,
+        post: { ...x.post!, status: "live", tagFound: true, disclosureFound: true },
+        events: [...x.events, event("post_verified", "system", `Post verified: ${handle} tagged, paid partnership label on`)],
+      })),
+    };
+    next = notifyParty(next, { creatorId: c.creatorId }, "campaign", `Your post for "${c.title}" is verified. ${money(c.price)} unlocks at month end if it stays up.`, paths.commission(c.id));
+    if (c.requestId) {
+      next = notifyParty(next, { businessId: c.businessId }, "campaign", "", paths.order(c.requestId), {
+        key: `campaign:${c.requestId}:posted`,
+        text: (n) =>
+          n === 1
+            ? `${nameOfCreator(s, c.creatorId)} posted their video for "${c.title}" (tag and disclosure verified)`
+            : `${n} videos for "${c.title}" are live (tag and disclosure verified)`,
+      });
+    }
+    return next;
+  });
+}
+
 /** Format label for event texts built outside this file. */
 export const formatName = (id: Brief["format"]) => formatById[id]?.name ?? id;
+
+/** Campaign money for a request id (convenience for event texts). */
+export const campaignHeld = (s: DemoState, requestId: string) => {
+  const request = s.requests.find((r) => r.id === requestId);
+  return request ? campaignMoney(s, request).held : 0;
+};

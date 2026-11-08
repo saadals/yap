@@ -10,6 +10,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { DAY, NOW } from "@/lib/clock";
 import { money, weekdayDate } from "@/lib/format";
+import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 
 import { payoutLabel } from "./payout-methods";
@@ -39,14 +40,15 @@ export function PayoutSheet({
 }) {
   const s = useDemo();
   const toast = useToast();
-  const defaultId = (s.payoutMethods.find((m) => m.isDefault) ?? s.payoutMethods[0])?.id ?? "";
+  const methods = me.payoutMethods(s);
+  const defaultId = (methods.find((m) => m.isDefault) ?? methods[0])?.id ?? "";
   /** null until edited: the field starts at the full available balance. */
   const [amount, setAmount] = useState<string | null>(null);
   const [methodId, setMethodId] = useState("");
   const [touched, setTouched] = useState(false);
   const [done, setDone] = useState<{ amount: number; label: string } | null>(null);
 
-  const chosen = s.payoutMethods.find((m) => m.id === (methodId || defaultId));
+  const chosen = methods.find((m) => m.id === (methodId || defaultId));
   const display = amount ?? String(available);
   const value = Number(display);
   const error =
@@ -115,7 +117,7 @@ export function PayoutSheet({
       description={`${money(available)} available. Payouts are free.`}
       width="sm"
       footer={
-        s.payoutMethods.length ? (
+        methods.length ? (
           <div className="flex flex-wrap gap-2">
             <PillButton
               type="submit"
@@ -132,7 +134,7 @@ export function PayoutSheet({
         ) : null
       }
     >
-      {s.payoutMethods.length === 0 ? (
+      {methods.length === 0 ? (
         <div className="flex flex-col items-start gap-3">
           <p className="y-body">Add a bank account or wallet first, then come back to withdraw.</p>
           <PillButton
@@ -193,7 +195,7 @@ export function PayoutSheet({
           <SelectField
             label="Send to"
             required
-            options={s.payoutMethods.map((m) => ({
+            options={methods.map((m) => ({
               value: m.id,
               label: `${payoutLabel(m)}${m.isDefault ? " (default)" : ""}`,
             }))}

@@ -1,0 +1,122 @@
+{
+  "account": "layla",
+  "steps": [
+    {
+      "go": "/orders/r-150",
+      "after": 3500
+    },
+    {
+      "text": "Only 3 yapps left"
+    },
+    {
+      "click": "Take a slot",
+      "after": 1000
+    },
+    {
+      "click": "I'll post with the tag and the paid partnership label",
+      "after": 400
+    },
+    {
+      "click": "Take a slot",
+      "after": 3500
+    },
+    {
+      "text": "Slot 8 of"
+    },
+    {
+      "click": "Upload your review copy",
+      "after": 1200
+    },
+    {
+      "click": "No file handy? Use a sample",
+      "after": 6000
+    },
+    {
+      "eval": "(() => { document.querySelectorAll('[role=dialog] input[type=checkbox]').forEach((b) => { if (!b.checked) b.click() }); return true })()"
+    },
+    {
+      "click": "Send your review copy for review",
+      "after": 2500
+    },
+    {
+      "text": "Waiting for Daftar's review"
+    },
+    {
+      "notText": "138K views"
+    },
+    {
+      "account": "nour",
+      "after": 3500
+    },
+    {
+      "text": "Reject"
+    },
+    {
+      "click": "Approve",
+      "after": 1000
+    },
+    {
+      "click": "5 stars, Excellent",
+      "after": 300
+    },
+    {
+      "click": "Approve video",
+      "after": 2000
+    },
+    {
+      "text": "Full-quality file unlocked"
+    },
+    {
+      "account": "layla",
+      "after": 3500
+    },
+    {
+      "text": "Post it to unlock $30"
+    },
+    {
+      "type": {
+        "sel": "main input[type=url]",
+        "text": "https://www.tiktok.com/@laylatalks/video/7301234567"
+      }
+    },
+    {
+      "click": "Submit post",
+      "after": 6500
+    },
+    {
+      "text": "Verified"
+    },
+    {
+      "go": "/wallet",
+      "after": 3000
+    },
+    {
+      "text": "Pending"
+    },
+    {
+      "after": 800,
+      "clickSel": "button[aria-label^=\"Account menu\"]"
+    },
+    {
+      "click": "Jump to month end (demo)",
+      "after": 1500
+    },
+    {
+      "text": "Month closed"
+    },
+    {
+      "go": "/wallet",
+      "after": 3000
+    },
+    {
+      "text": "$770"
+    },
+    {
+      "text": "Show us your first invoice on WhatsApp"
+    },
+    {
+      "shot": "campaign-creator-wallet",
+      "full": true
+    }
+  ]
+}

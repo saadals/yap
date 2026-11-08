@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { useSimulatedLoading } from "@/lib/hooks";
+import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 import { useDemo } from "@/lib/store";
 import { plural } from "@/lib/format";
@@ -31,9 +32,14 @@ import { CategoryBar } from "./category-bar";
 import { FilterSheet } from "./filter-sheet";
 import { CreatorGridSkeleton } from "./skeletons";
 
-export function Browse() {
+/**
+ * Creator discovery: search, formats, filters, sort and results. Public at `paths.creators`;
+ * `embedded` renders it inside Explore's Creators tab (no page header of its own, and filter
+ * changes stay on the Explore URL).
+ */
+export function Browse({ embedded = false }: { embedded?: boolean }) {
   const s = useDemo();
-  const { role } = usePrefs();
+  const { account } = usePrefs();
   const router = useRouter();
   const params = useSearchParams();
   const urlFilters = useMemo(() => parseFilters(params), [params]);
@@ -52,7 +58,10 @@ export function Browse() {
   const commit = (next: BrowseFilters) => {
     setQ(next.q);
     const query = toQuery(next);
-    router.replace(query ? `/creators?${query}` : "/creators", { scroll: false });
+    const href = embedded
+      ? `${paths.explore("creators")}${query ? `&${query}` : ""}`
+      : `${paths.creators}${query ? `?${query}` : ""}`;
+    router.replace(href, { scroll: false });
   };
 
   const results = useMemo(() => filterCreators(s, filters), [s, filters]);
@@ -69,17 +78,19 @@ export function Browse() {
 
   const dialectValue = filters.langs.length === 1 ? filters.langs[0] : filters.langs.length > 1 ? "multi" : "";
   const cityCount = new Set(s.creators.map((c) => c.cityId)).size;
-  const isBusiness = role === "business";
+  const signedIn = Boolean(account);
 
   const clearAll = () => commit({ ...emptyFilters, sort: filters.sort });
 
   return (
     <div className="flex flex-col gap-2">
-      <PageHeader
-        className="!pb-3 md:!pb-4"
-        title="Find creators"
-        description={`${plural(s.creators.length, "ID-verified creator")} in ${cityCount} cities. Your payment is held until you approve.`}
-      />
+      {embedded ? null : (
+        <PageHeader
+          className="!pb-3 md:!pb-4"
+          title="Find creators"
+          description={`${plural(s.creators.length, "ID-verified creator")} in ${cityCount} cities. Your payment is held until you approve.`}
+        />
+      )}
 
       {/* Search, then formats + filters + sort: one block */}
       <Block tone="paper" pad="none" className="flex flex-col">
@@ -234,8 +245,8 @@ export function Browse() {
             <EmptyState
               title="No creators match all of that"
               body={
-                isBusiness
-                  ? "Try removing a filter or two. Or post a request and let creators who fit come to you with pitches."
+                signedIn
+                  ? "Try removing a filter or two. Or post an order and let creators who fit come to you."
                   : "Try removing a filter or two, or search for a niche like “fintech” or “skit”."
               }
               shape="bean"
@@ -246,8 +257,8 @@ export function Browse() {
                   <PillButton variant="contrast" onClick={clearAll}>
                     Clear filters
                   </PillButton>
-                  <PillButton variant="outline" href="/business/requests/new">
-                    Post a request instead
+                  <PillButton variant="outline" href={paths.newOrder()}>
+                    Post an order instead
                   </PillButton>
                 </div>
               }

@@ -54,7 +54,7 @@ export function IdVerification({
               ? "Your profile shows the Verified badge, and payouts are unlocked."
               : status === "pending"
                 ? "This usually takes under a minute. You can keep going while we check."
-                : "Required before your first payout. Businesses see a Verified badge on your profile. Takes about a minute."}
+                : "Required before your first payout. Buyers see a Verified badge on your profile. Takes about a minute."}
           </p>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function IdVerification({
         open={open}
         onClose={() => setOpen(false)}
         title="Verify with your ID"
-        description="Your document is only used to confirm it's you. Businesses never see it."
+        description="Your document is only used to confirm it's you. Buyers never see it."
         width="sm"
       >
         {open ? (

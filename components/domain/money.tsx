@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import { PillButton } from "@/components/ui/pill-button";
 import { money, priceBreakdown } from "@/lib/format";
+import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { addonById, includedRights, SERVICE_FEE_RATE } from "@/lib/taxonomy";
 import type { AddonId, PaymentMethod } from "@/lib/types";
@@ -46,13 +47,15 @@ export function PriceSummary({
       ))}
       {perspective === "business" ? (
         <>
-          <div className={`${row} border-t border-(--b-line) pt-2.5`}>
-            <span className="y-small y-fg-2">
-              Service fee ({Math.round(feeRate * 100)}%)
-              <span className="y-micro y-fg-3 block">Only charged if the work is approved</span>
-            </span>
-            <span className="y-small y-num">{money(totals.fee, true)}</span>
-          </div>
+          {feeRate > 0 ? (
+            <div className={`${row} border-t border-(--b-line) pt-2.5`}>
+              <span className="y-small y-fg-2">
+                Service fee ({Math.round(feeRate * 100)}%)
+                <span className="y-micro y-fg-3 block">Only charged if the work is approved</span>
+              </span>
+              <span className="y-small y-num">{money(totals.fee, true)}</span>
+            </div>
+          ) : null}
           <div className={`${row} border-t border-(--b-line) pt-2.5`}>
             <span className="y-head">Total</span>
             <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
@@ -64,7 +67,9 @@ export function PriceSummary({
         <div className={`${row} border-t border-(--b-line) pt-2.5`}>
           <span className="y-head">
             You earn
-            <span className="y-micro y-fg-3 block font-normal">You keep 100%. The client pays Yapp&apos;s fee.</span>
+            <span className="y-micro y-fg-3 block font-normal">
+              {feeRate > 0 ? "You keep 100%. The client pays Yapp’s fee." : "You keep 100%."}
+            </span>
           </span>
           <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
             {money(totals.creatorEarns)}
@@ -114,6 +119,7 @@ export function PaymentMethodPicker({
   onChange: (id: string) => void;
 }) {
   const s = useDemo();
+  const methods = me.paymentMethods(s);
   const [adding, setAdding] = useState(false);
   const [card, setCard] = useState({ number: "", expiry: "", holder: "" });
   const digits = card.number.replace(/\D/g, "");
@@ -122,7 +128,7 @@ export function PaymentMethodPicker({
   return (
     <fieldset className="flex flex-col gap-2">
       <legend className="y-label mb-2">Pay with</legend>
-      {s.paymentMethods.map((method) => (
+      {methods.map((method) => (
         <label
           key={method.id}
           className={`y-tile flex min-h-14 cursor-pointer items-center gap-3 px-4 ${value === method.id ? "shadow-[inset_0_0_0_2px_var(--b-fg)]" : ""}`}

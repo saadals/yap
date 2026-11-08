@@ -13,7 +13,7 @@ const subscribeHash = (onChange: () => void) => {
 
 /**
  * Which settings section is showing (one at a time). It starts from the URL hash, so links like
- * `/creator/settings#account` open that section; `aliases` maps retired anchors to their new home.
+ * `paths.settings("account")` open that section; `aliases` maps retired anchors to their new home.
  */
 export function useSettingsSection(sections: SettingsAnchor[], aliases: Record<string, string> = {}) {
   const hash = useSyncExternalStore(subscribeHash, () => window.location.hash.slice(1), () => "");

@@ -8,20 +8,19 @@ import { useState } from "react";
 import { TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
+import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
-import { businessById, creatorById, memberById } from "@/lib/selectors";
-import { ME, useDemo, useHydrated } from "@/lib/store";
-import type { Role } from "@/lib/types";
+import { businessById } from "@/lib/selectors";
+import { useDemo, useHydrated, type DemoState } from "@/lib/store";
 
 import {
   GoogleButton,
   OrDivider,
   PasswordField,
+  accountForEmail,
   isEmail,
-  parseRole,
-  roleForEmail,
-  roleHome,
   safeNext,
+  type DemoAccountId,
 } from "./auth-bits";
 import { AuthLayout } from "./auth-layout";
 import { DemoAccounts } from "./demo-accounts";
@@ -29,27 +28,31 @@ import { EmailCodeStep } from "./email-code";
 import { ForgotPasswordSheet } from "./forgot-password";
 
 type Mode = "password" | "code" | "verify";
-type Busy = null | "password" | "code" | "google" | Role;
+type Busy = null | "password" | "code" | "google" | DemoAccountId;
 
 const emailError = "Enter your email address, like name@company.com.";
+const routing = "Emails with “layla” or “creator” open Layla's account; anything else opens Nour's.";
+
+/** "Nour Haddad at Daftar" / "Layla Mansour". */
+function personFor(s: DemoState, accountId: string): string {
+  const account = s.accounts.find((a) => a.id === accountId);
+  if (!account) return "your demo account";
+  const business = businessById(s, account.businessId);
+  return account.kind === "business" && business ? `${account.name} at ${business.name}` : account.name;
+}
 
 export function SignInScreen() {
   const params = useSearchParams();
-  const preferred = parseRole(params.get("role"));
   const next = params.get("next");
-  const fallback: Role = preferred ?? "business";
 
   const router = useRouter();
   const toast = useToast();
-  const { role: cookieRole, setRole } = usePrefs();
+  const { account: cookieAccount, signIn: startSession, signOut } = usePrefs();
   // The session cookie is only readable in the browser: show the "signed in" note after hydration
   // so the server HTML (always signed out) matches the first client render.
   const hydrated = useHydrated();
-  const sessionRole = hydrated ? cookieRole : null;
+  const sessionAccount = hydrated ? cookieAccount : null;
   const s = useDemo();
-  const business = businessById(s, ME.businessId);
-  const member = memberById(s, ME.memberId);
-  const creator = creatorById(s, ME.creatorId);
 
   const [mode, setMode] = useState<Mode>("password");
   const [email, setEmail] = useState("");
@@ -58,15 +61,10 @@ export function SignInScreen() {
   const [busy, setBusy] = useState<Busy>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
 
-  const personFor = (role: Role) =>
-    role === "business"
-      ? `${member?.name ?? "Nour Haddad"} at ${business?.name ?? "Daftar"}`
-      : (creator?.name ?? "Layla Mansour");
-
-  const signIn = (role: Role) => {
-    setRole(role);
-    toast({ message: `Signed in as ${personFor(role)}` });
-    router.push(safeNext(next, role));
+  const signIn = (accountId: DemoAccountId) => {
+    startSession(accountId);
+    toast({ message: `Signed in as ${personFor(s, accountId)}` });
+    router.push(safeNext(next));
   };
 
   const checkEmail = () => (isEmail(email) ? null : emailError);
@@ -82,7 +80,7 @@ export function SignInScreen() {
     setErrors(found);
     if (found.email || found.password) return;
     setBusy("password");
-    window.setTimeout(() => signIn(roleForEmail(email, fallback)), 700);
+    window.setTimeout(() => signIn(accountForEmail(email)), 700);
   };
 
   const onSendCode = () => {
@@ -96,56 +94,39 @@ export function SignInScreen() {
     }, 600);
   };
 
-  const onDemo = (role: Role) => {
-    setBusy(role);
-    window.setTimeout(() => signIn(role), 450);
+  const onDemo = (accountId: DemoAccountId) => {
+    setBusy(accountId);
+    window.setTimeout(() => signIn(accountId), 450);
   };
 
   const onGoogle = () => {
     setBusy("google");
-    window.setTimeout(() => signIn(fallback), 900);
+    window.setTimeout(() => signIn("nour"), 900);
   };
 
-  const routing =
-    fallback === "creator"
-      ? "Emails with “nour” or “daftar” open Daftar; others open Layla."
-      : "Emails with “layla” or “creator” open Layla; others open Daftar.";
   const demoHint = `Demo: any email and an 8+ character password. ${routing}`;
-
-  const lead =
-    preferred === "creator"
-      ? "Pick up your pitches, deliver work and get paid."
-      : preferred === "business"
-        ? "Brief creators, review deliveries and approve payments."
-        : "Pick up where you left off.";
-
-  const signupHref = preferred ? `/signup?role=${preferred}` : "/signup";
 
   return (
     <AuthLayout
       aside={
-        <DemoAccounts
-          onPick={onDemo}
-          pending={busy === "business" || busy === "creator" ? busy : null}
-          preferred={preferred}
-        />
+        <DemoAccounts onPick={onDemo} pending={busy === "nour" || busy === "layla" ? busy : null} />
       }
     >
-      {sessionRole ? (
+      {sessionAccount ? (
         <div className="y-tile flex flex-col gap-3 p-4">
           <p className="y-small">
-            You&apos;re signed in as <span className="font-semibold">{personFor(sessionRole)}</span>.
+            You&apos;re signed in as <span className="font-semibold">{personFor(s, sessionAccount)}</span>.
           </p>
           <div className="flex flex-wrap gap-2">
-            <PillButton href={roleHome(sessionRole)} variant="contrast" size="sm">
-              Go to dashboard
+            <PillButton href={paths.home} variant="contrast" size="sm">
+              Go to Home
             </PillButton>
             <PillButton
               variant="ghost"
               size="sm"
               icon={<LogOut size={16} aria-hidden />}
               onClick={() => {
-                setRole(null);
+                signOut();
                 toast({ message: "Signed out", tone: "info" });
               }}
             >
@@ -159,7 +140,7 @@ export function SignInScreen() {
         <EmailCodeStep
           email={email.trim()}
           onBack={() => setMode("code")}
-          onVerified={() => signIn(roleForEmail(email, fallback))}
+          onVerified={() => signIn(accountForEmail(email))}
         />
       ) : (
         <>
@@ -170,7 +151,7 @@ export function SignInScreen() {
             <p className="y-lead y-fg-2">
               {mode === "code"
                 ? "No password needed. We'll email you a 6-digit code."
-                : lead}
+                : "One account to order videos and to make them."}
             </p>
           </div>
 
@@ -269,7 +250,7 @@ export function SignInScreen() {
           <div className="flex flex-col items-center gap-1 text-center">
             <p className="y-small y-fg-2">
               New to Yapp?{" "}
-              <Link href={signupHref} className="y-link font-semibold text-(--b-fg)">
+              <Link href={paths.signUp} className="y-link font-semibold text-(--b-fg)">
                 Create an account
               </Link>
             </p>

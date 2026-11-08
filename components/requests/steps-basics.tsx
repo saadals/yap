@@ -8,6 +8,7 @@ import { FilterChip } from "@/components/ui/chip";
 import { AvatarStack } from "@/components/ui/face-avatar";
 import { Ar } from "@/components/ui/page";
 import { lengthLabel, plural, timeAgo } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { aspects, creatorKinds, formats, languages, platforms } from "@/lib/taxonomy";
 import type { Aspect, FormatId } from "@/lib/types";
 
@@ -77,7 +78,7 @@ export function ProductStep({ form, set, product, products, error }: StepProps) 
         </div>
         <GroupError id="q-product-error" message={err} />
         <Link
-          href="/business/products/new?return=/business/requests/new"
+          href={`${paths.newProduct}?return=${encodeURIComponent(paths.newOrder({ type: "custom" }))}`}
           className="y-dropzone flex items-center gap-3 p-4 font-semibold"
         >
           <span className="y-round" data-tone-btn="contrast" data-size="sm" aria-hidden>
@@ -101,7 +102,7 @@ export function ProductStep({ form, set, product, products, error }: StepProps) 
               </h2>
               <p className="y-small y-fg-2">Sent with every request for this product.</p>
             </div>
-            <Link href={`/business/products/${product.id}`} className="y-pill flex-none" data-variant="ghost" data-size="sm">
+            <Link href={paths.product(product.id)} className="y-pill flex-none" data-variant="ghost" data-size="sm">
               Edit product
             </Link>
           </div>

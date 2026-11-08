@@ -2,11 +2,19 @@
  * Pure helpers over the demo state. Safe in render; never mutate what they return.
  */
 
+import {
+  campaignMoney,
+  campaignProgress,
+  eligibility,
+  isCampaign,
+  mySlot,
+  openSlotCount,
+} from "./campaigns";
 import { DAY, NOW } from "./clock";
 import { cities, payouts as seedPayouts } from "./data";
 import { daysFromNow, priceBreakdown } from "./format";
 import type { DemoState } from "./store";
-import { ME } from "./store";
+import { activeAccount, activeIds } from "./store";
 import { countries, formatById, languageById, nicheById } from "./taxonomy";
 import type {
   Commission,
@@ -16,9 +24,22 @@ import type {
   Delivery,
   Pitch,
   Role,
+  Settings,
   Thread,
   Video,
 } from "./types";
+
+export {
+  campaignMoney,
+  campaignProgress,
+  campaignSlots,
+  eligibility,
+  isCampaign,
+  mySlot,
+  openSlotCount,
+  slotHistory,
+} from "./campaigns";
+export type { Eligibility, IneligibleReason, SlotView } from "./campaigns";
 
 /* -------------------------------------------------------------------------- */
 /* Lookups                                                                     */
@@ -53,11 +74,53 @@ export function videoById(s: DemoState, id: string): Video | undefined {
   return undefined;
 }
 
+/**
+ * The signed-in account (this tab). Every account has a buyer profile (`business`, a company or
+ * the person themselves); `member` exists for business accounts and `creator` once a creator
+ * profile is set up, so check before using those two.
+ */
 export const me = {
-  business: (s: DemoState) => businessById(s, ME.businessId)!,
-  member: (s: DemoState) => memberById(s, ME.memberId)!,
-  creator: (s: DemoState) => creatorById(s, ME.creatorId)!,
+  ids: (s: DemoState) => activeIds(s),
+  account: (s: DemoState) => activeAccount(s),
+  business: (s: DemoState) => businessById(s, activeIds(s).businessId)!,
+  member: (s: DemoState) => {
+    const id = activeIds(s).memberId;
+    return id ? memberById(s, id) : undefined;
+  },
+  creator: (s: DemoState) => {
+    const id = activeIds(s).creatorId;
+    return id ? creatorById(s, id) : undefined;
+  },
+  settings: (s: DemoState): Settings =>
+    s.settings[s.activeAccountId] ?? Object.values(s.settings)[0],
+  /** The request wizard's autosaved draft for this account. */
+  draft: (s: DemoState) => s.requestDrafts[s.activeAccountId] ?? null,
+  paymentMethods: (s: DemoState) =>
+    s.paymentMethods.filter((m) => m.businessId === activeIds(s).businessId),
+  payoutMethods: (s: DemoState) =>
+    s.payoutMethods.filter((m) => m.creatorId === activeIds(s).creatorId),
+  payouts: (s: DemoState) => s.payouts.filter((p) => p.creatorId === activeIds(s).creatorId),
+  team: (s: DemoState) => s.team.filter((m) => m.businessId === activeIds(s).businessId),
+  hiddenRequestIds: (s: DemoState) => s.hidden[s.activeAccountId] ?? [],
 };
+
+/**
+ * Which side of a deal the signed-in account is on (undefined = not theirs). Pass a commission,
+ * a thread, or a request ({ businessId } only: the owner is the ordering side).
+ */
+export function sideOf(
+  s: DemoState,
+  item: { businessId: string; creatorId?: string },
+): Role | undefined {
+  const ids = activeIds(s);
+  if (item.businessId === ids.businessId) return "business";
+  if (item.creatorId && item.creatorId === ids.creatorId) return "creator";
+  return undefined;
+}
+
+/** Is this buyer profile someone ordering in their own name? */
+export const isPersonal = (s: DemoState, businessId: string) =>
+  businessById(s, businessId)?.kind === "personal";
 
 /* -------------------------------------------------------------------------- */
 /* Creators                                                                    */
@@ -82,7 +145,9 @@ export function reviewsForCreator(s: DemoState, creatorId: string) {
     .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
 }
 
-export const isSaved = (s: DemoState, creatorId: string) => s.savedCreatorIds.includes(creatorId);
+/** Saved creators of the signed-in account. */
+export const savedCreatorIds = (s: DemoState) => s.saved[s.activeAccountId] ?? [];
+export const isSaved = (s: DemoState, creatorId: string) => savedCreatorIds(s).includes(creatorId);
 
 /** Creators similar to this one (shared formats/languages), excluding itself. */
 export function similarCreators(s: DemoState, creator: Creator, count = 4): Creator[] {
@@ -97,7 +162,7 @@ export function similarCreators(s: DemoState, creator: Creator, count = 4): Crea
 }
 
 /** Creators this business has completed work with, most recent first. */
-export function pastCollaborators(s: DemoState, businessId: string = ME.businessId) {
+export function pastCollaborators(s: DemoState, businessId: string = activeIds(s).businessId) {
   const map = new Map<string, { creator: Creator; count: number; last: Commission }>();
   for (const c of s.commissions) {
     if (c.businessId !== businessId || c.status !== "completed") continue;
@@ -187,7 +252,8 @@ export function fit(s: DemoState, creator: Creator, request: ContentRequest): Fi
 /* Requests and pitches                                                        */
 /* -------------------------------------------------------------------------- */
 
-export function requestsForBusiness(s: DemoState, businessId: string = ME.businessId) {
+/** Orders a buyer profile placed (custom requests and campaigns), newest first. */
+export function requestsForBusiness(s: DemoState, businessId: string = activeIds(s).businessId) {
   return s.requests
     .filter((r) => r.businessId === businessId)
     .sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt));
@@ -199,24 +265,39 @@ export function pitchesForRequest(s: DemoState, requestId: string): Pitch[] {
     .sort((a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt));
 }
 
-export function pitchesForCreator(s: DemoState, creatorId: string = ME.creatorId): Pitch[] {
+export function pitchesForCreator(
+  s: DemoState,
+  creatorId: string | undefined = activeIds(s).creatorId,
+): Pitch[] {
+  if (!creatorId) return [];
   return s.pitches
     .filter((p) => p.creatorId === creatorId)
     .sort((a, b) => Date.parse(b.sentAt) - Date.parse(a.sentAt));
 }
 
-export const myPitchFor = (s: DemoState, requestId: string, creatorId: string = ME.creatorId) =>
+export const myPitchFor = (
+  s: DemoState,
+  requestId: string,
+  creatorId: string | undefined = activeIds(s).creatorId,
+) =>
   s.pitches.find(
     (p) => p.requestId === requestId && p.creatorId === creatorId && p.status !== "withdrawn",
   );
 
-/** Open requests a creator can pitch on (public or invited), best fit first. */
-export function opportunities(s: DemoState, creatorId: string = ME.creatorId) {
-  const creator = creatorById(s, creatorId);
-  if (!creator) return [];
+/**
+ * Open custom requests a creator can pitch on (public or invited), best fit first. Excludes UGC
+ * campaigns (see `openCampaigns`) and the account's own orders.
+ */
+export function opportunities(s: DemoState, creatorId: string | undefined = activeIds(s).creatorId) {
+  const creator = creatorId ? creatorById(s, creatorId) : undefined;
+  if (!creator || !creatorId) return [];
+  const myBusinessId = activeIds(s).businessId;
+  const hidden = s.hidden[s.activeAccountId] ?? [];
   return s.requests
     .filter(
       (r) =>
+        !isCampaign(r) &&
+        r.businessId !== myBusinessId &&
         r.status === "open" &&
         (r.visibility === "public" || r.invitedCreatorIds.includes(creatorId)),
     )
@@ -225,7 +306,7 @@ export function opportunities(s: DemoState, creatorId: string = ME.creatorId) {
       fit: fit(s, creator, request),
       invited: request.invitedCreatorIds.includes(creatorId),
       pitch: myPitchFor(s, request.id, creatorId),
-      hidden: s.hiddenRequestIds.includes(request.id),
+      hidden: hidden.includes(request.id),
       pitchCount: pitchesForRequest(s, request.id).length,
     }))
     .sort(
@@ -246,6 +327,9 @@ export const commissionTotals = (c: Commission) => priceBreakdown(c.price, c.add
 /** Statuses where the given side has something to do. */
 export function needsAction(c: Commission, role: Role): boolean {
   if (role === "business") return c.status === "delivered";
+  // Approved campaign video: post it (or post it again if it was taken down) to unlock the pay.
+  if (c.source === "campaign" && c.status === "completed")
+    return c.post?.status === "due" || c.post?.status === "removed";
   return c.status === "offered" || c.status === "in_progress" || c.status === "revision";
 }
 
@@ -272,14 +356,29 @@ function sortForRole(list: Commission[], role: Role) {
   });
 }
 
-export function commissionsForBusiness(s: DemoState, businessId: string = ME.businessId) {
+/**
+ * Work a buyer profile ordered. Campaign slots are left out (a campaign is one row on the ordering
+ * side, managed from its order page); pass `includeCampaignSlots` to get them too.
+ */
+export function commissionsForBusiness(
+  s: DemoState,
+  businessId: string = activeIds(s).businessId,
+  options: { includeCampaignSlots?: boolean } = {},
+) {
   return sortForRole(
-    s.commissions.filter((c) => c.businessId === businessId),
+    s.commissions.filter(
+      (c) => c.businessId === businessId && (options.includeCampaignSlots || c.source !== "campaign"),
+    ),
     "business",
   );
 }
 
-export function commissionsForCreator(s: DemoState, creatorId: string = ME.creatorId) {
+/** Work a creator is making (campaign slots included: each is a real job for them). */
+export function commissionsForCreator(
+  s: DemoState,
+  creatorId: string | undefined = activeIds(s).creatorId,
+) {
+  if (!creatorId) return [];
   return sortForRole(
     s.commissions.filter((c) => c.creatorId === creatorId),
     "creator",
@@ -291,7 +390,45 @@ export const isActive = (c: Commission) =>
   c.status === "in_progress" ||
   c.status === "delivered" ||
   c.status === "revision" ||
-  c.status === "disputed";
+  c.status === "disputed" ||
+  // An approved campaign video still needs posting (or posting again).
+  (c.source === "campaign" && c.status === "completed" && (c.post?.status === "due" || c.post?.status === "removed"));
+
+/* -------------------------------------------------------------------------- */
+/* Campaigns                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/** Campaigns the signed-in account placed. */
+export const myCampaigns = (s: DemoState) =>
+  requestsForBusiness(s).filter((r) => isCampaign(r));
+
+/**
+ * Open UGC campaigns for the signed-in account's creator profile (or for browsing without one):
+ * with eligibility, open slots and the slot this creator holds. Own campaigns excluded.
+ */
+export function openCampaigns(s: DemoState) {
+  const ids = activeIds(s);
+  const creator = ids.creatorId ? creatorById(s, ids.creatorId) : undefined;
+  const hidden = s.hidden[s.activeAccountId] ?? [];
+  return s.requests
+    .filter((r) => isCampaign(r) && r.businessId !== ids.businessId && (r.status === "open" || r.status === "hired"))
+    .map((request) => ({
+      request,
+      eligibility: eligibility(s, creator, request),
+      openSlots: openSlotCount(s, request),
+      slot: mySlot(s, request.id, ids.creatorId),
+      hidden: hidden.includes(request.id),
+    }))
+    .sort((a, b) => Number(b.eligibility.ok) - Number(a.eligibility.ok) || Date.parse(b.request.postedAt) - Date.parse(a.request.postedAt));
+}
+
+/** What needs the owner on their campaigns: review copies waiting, and so on. */
+export function campaignAttention(s: DemoState) {
+  return myCampaigns(s)
+    .filter((r) => r.status !== "closed" && r.status !== "draft")
+    .map((request) => ({ request, progress: campaignProgress(s, request), money: campaignMoney(s, request) }))
+    .filter((item) => item.progress.review > 0);
+}
 
 /** Previous commissions for the same product (for "carry forward" context). */
 export function historyForProduct(s: DemoState, productId: string, excludeId?: string) {
@@ -304,28 +441,41 @@ export function historyForProduct(s: DemoState, productId: string, excludeId?: s
 /* Messages and notifications                                                  */
 /* -------------------------------------------------------------------------- */
 
+const lastMessageAt = (t: Thread) => Date.parse(t.messages[t.messages.length - 1]?.at ?? "0");
+
+/** The signed-in account's conversations on one side (ordering or making), newest first. */
 export function threadsFor(s: DemoState, role: Role): Thread[] {
+  const ids = activeIds(s);
   return s.threads
-    .filter((t) =>
-      role === "business" ? t.businessId === ME.businessId : t.creatorId === ME.creatorId,
-    )
+    .filter((t) => (role === "business" ? t.businessId === ids.businessId : t.creatorId === ids.creatorId))
     .filter((t) => t.messages.length > 0)
-    .sort((a, b) => {
-      const last = (t: Thread) => Date.parse(t.messages[t.messages.length - 1]?.at ?? "0");
-      return last(b) - last(a);
-    });
+    .sort((a, b) => lastMessageAt(b) - lastMessageAt(a));
 }
 
-export const unreadThreadCount = (s: DemoState, role: Role) =>
-  threadsFor(s, role).filter((t) => t.unread.includes(role)).length;
+/** All the signed-in account's conversations, with the side they're on in each. */
+export function myThreads(s: DemoState): { thread: Thread; side: Role }[] {
+  const ids = activeIds(s);
+  return s.threads
+    .filter((t) => t.messages.length > 0)
+    .flatMap((thread) => {
+      const side = thread.businessId === ids.businessId ? "business" : thread.creatorId === ids.creatorId ? "creator" : undefined;
+      return side ? [{ thread, side: side as Role }] : [];
+    })
+    .sort((a, b) => lastMessageAt(b.thread) - lastMessageAt(a.thread));
+}
 
-export const notificationsFor = (s: DemoState, role: Role) =>
+/** Unread conversations: on one side, or across both when `role` is omitted. */
+export const unreadThreadCount = (s: DemoState, role?: Role) =>
+  myThreads(s).filter(({ thread, side }) => (!role || side === role) && thread.unread.includes(side)).length;
+
+/** The signed-in account's notifications, newest first. */
+export const notificationsFor = (s: DemoState) =>
   s.notifications
-    .filter((n) => n.role === role)
+    .filter((n) => n.accountId === s.activeAccountId)
     .sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
 
-export const unreadNotificationCount = (s: DemoState, role: Role) =>
-  s.notifications.filter((n) => n.role === role && n.unread).length;
+export const unreadNotificationCount = (s: DemoState) =>
+  s.notifications.filter((n) => n.accountId === s.activeAccountId && n.unread).length;
 
 /* -------------------------------------------------------------------------- */
 /* Money                                                                       */
@@ -339,20 +489,26 @@ export const unreadNotificationCount = (s: DemoState, role: Role) =>
  * paying out that earlier work, "available" = released earnings minus payouts made in this
  * browser, and lifetime/monthly figures add a deterministic estimate of the earlier work.
  */
-export function creatorEarnings(s: DemoState, creatorId: string = ME.creatorId) {
-  const creator = creatorById(s, creatorId);
-  const mine = s.commissions.filter((c) => c.creatorId === creatorId);
+export function creatorEarnings(s: DemoState, creatorId: string | undefined = activeIds(s).creatorId) {
+  const creator = creatorId ? creatorById(s, creatorId) : undefined;
+  const mine = creatorId ? s.commissions.filter((c) => c.creatorId === creatorId) : [];
   const earned = (c: Commission) => commissionTotals(c).creatorEarns;
   const released = mine.filter((c) => c.payment.status === "released");
   const releasedTotal = released.reduce((sum, c) => sum + earned(c), 0);
   const held = mine
     .filter((c) => c.payment.status === "held")
     .reduce((sum, c) => sum + earned(c), 0);
+  /** Approved campaign work: in the wallet, withdrawable at month end if the post stays up. */
+  const pendingItems = mine.filter((c) => c.payment.status === "pending");
+  const pending = pendingItems.reduce((sum, c) => sum + earned(c), 0);
+  const pendingLocked = pendingItems
+    .filter((c) => c.post?.status !== "live")
+    .reduce((sum, c) => sum + earned(c), 0);
   const seededPayoutIds = new Set(seedPayouts.map((p) => p.id));
-  const newPayouts = s.payouts.filter((p) => !seededPayoutIds.has(p.id));
+  const newPayouts = s.payouts.filter((p) => p.creatorId === creatorId && !seededPayoutIds.has(p.id));
   const available = Math.max(0, releasedTotal - newPayouts.reduce((sum, p) => sum + p.amount, 0));
 
-  const typical = creator ? startingPrice(creator) * 1.4 : 0;
+  const typical = creator?.packages.length ? startingPrice(creator) * 1.4 : 0;
   const earlierCount = Math.max(0, (creator?.completed ?? 0) - released.length);
   const lifetime = Math.round((earlierCount * typical + releasedTotal) / 10) * 10;
 
@@ -364,7 +520,7 @@ export function creatorEarnings(s: DemoState, creatorId: string = ME.creatorId) 
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     months.push(d.toISOString().slice(0, 7));
   }
-  const seed = creatorId.split("").reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+  const seed = (creatorId ?? "").split("").reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
   const monthly = months.map((key, index) => {
     const fromCommissions = released
       .filter((c) => monthKey(c.completedAt ?? c.createdAt) === key)
@@ -381,6 +537,10 @@ export function creatorEarnings(s: DemoState, creatorId: string = ME.creatorId) 
   return {
     available,
     held,
+    pending,
+    /** Part of `pending` whose post isn't live (yet), so it won't unlock at month end as things stand. */
+    pendingLocked,
+    pendingItems,
     lifetime,
     thisMonth: monthly[monthly.length - 1],
     monthly,
@@ -389,9 +549,17 @@ export function creatorEarnings(s: DemoState, creatorId: string = ME.creatorId) 
   };
 }
 
-/** Business money: currently protected in escrow, spent, and receipts. */
-export function businessSpend(s: DemoState, businessId: string = ME.businessId) {
-  const mine = s.commissions.filter((c) => c.businessId === businessId);
+/**
+ * Business money: currently protected, spent, and fees. Campaigns count through their own hold
+ * (`campaignMoney`); their slot commissions are left out so nothing is counted twice.
+ */
+export function businessSpend(s: DemoState, businessId: string = activeIds(s).businessId) {
+  const mine = s.commissions.filter((c) => c.businessId === businessId && c.source !== "campaign");
+  const campaigns = s.requests
+    .filter((r) => r.businessId === businessId && isCampaign(r))
+    .map((r) => campaignMoney(s, r));
+  const campaignHeld = campaigns.reduce((sum, m) => sum + m.held, 0);
+  const campaignPaid = campaigns.reduce((sum, m) => sum + m.paidOut, 0);
   const total = (c: Commission) => commissionTotals(c).total;
   const held = mine.filter((c) => c.payment.status === "held").reduce((a, c) => a + total(c), 0);
   const authorized = mine
@@ -401,16 +569,35 @@ export function businessSpend(s: DemoState, businessId: string = ME.businessId) 
   const spent = released.reduce((a, c) => a + total(c), 0);
   const fees = released.reduce((a, c) => a + commissionTotals(c).fee, 0);
   const thisMonthKey = new Date(NOW).toISOString().slice(0, 7);
-  const thisMonth = released
-    .filter((c) => (c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey)
-    .reduce((a, c) => a + total(c), 0);
-  return { held, authorized, spent, fees, thisMonth, completedCount: released.length };
+  const campaignThisMonth = s.commissions
+    .filter(
+      (c) =>
+        c.businessId === businessId &&
+        c.source === "campaign" &&
+        (c.payment.status === "pending" || c.payment.status === "released") &&
+        (c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey,
+    )
+    .reduce((a, c) => a + c.price, 0);
+  const thisMonth =
+    released
+      .filter((c) => (c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey)
+      .reduce((a, c) => a + total(c), 0) + campaignThisMonth;
+  return {
+    held: held + campaignHeld,
+    /** Of `held`, the part sitting in campaign holds. */
+    campaignHeld,
+    authorized,
+    spent: spent + campaignPaid,
+    fees,
+    thisMonth,
+    completedCount: released.length,
+  };
 }
 
-/** Receipts: one line per commission with money movement. */
-export function receipts(s: DemoState, businessId: string = ME.businessId) {
+/** Receipts: one line per commission with money movement (campaigns: see `campaignReceipts`). */
+export function receipts(s: DemoState, businessId: string = activeIds(s).businessId) {
   return s.commissions
-    .filter((c) => c.businessId === businessId && c.payment.status !== "authorized")
+    .filter((c) => c.businessId === businessId && c.source !== "campaign" && c.payment.status !== "authorized")
     .map((c) => ({
       id: `INV-${c.id.toUpperCase()}`,
       commission: c,
@@ -419,6 +606,24 @@ export function receipts(s: DemoState, businessId: string = ME.businessId) {
       ...commissionTotals(c),
       status: c.payment.status,
     }))
+    .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+}
+
+/** Campaign money movements (hold, top-ups, refunds) as receipt lines, newest first. */
+export function campaignReceipts(s: DemoState, businessId: string = activeIds(s).businessId) {
+  return s.requests
+    .filter((r): r is ContentRequest & { campaign: NonNullable<ContentRequest["campaign"]> } =>
+      r.businessId === businessId && Boolean(r.campaign),
+    )
+    .flatMap((request) =>
+      request.campaign.ledger.map((entry) => ({
+        id: `INV-${request.id.toUpperCase()}-${entry.id.slice(-4).toUpperCase()}`,
+        request,
+        entry,
+        date: entry.at,
+        amount: entry.kind === "refund" ? -entry.amount : entry.amount,
+      })),
+    )
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
 }
 

@@ -8,6 +8,7 @@ import { Block } from "@/components/ui/block";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { lengthLabel, money, plural } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { addonById } from "@/lib/taxonomy";
 import type { Creator, Package } from "@/lib/types";
 
@@ -58,7 +59,7 @@ function PackageCard({
       </ul>
       {showCta ? (
         <PillButton
-          href={`/creators/${creator.handle}/commission?package=${pkg.id}`}
+          href={paths.orderCreator(creator.handle, { package: pkg.id })}
           variant="outline"
           size="sm"
           className="mt-auto w-full"

@@ -14,11 +14,13 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { at } from "@/lib/clock";
 import { compact, daysFromNow, lengthLabel, money, plural, timeOf, weekdayDate } from "@/lib/format";
-import { cityById, fit, pitchesForRequest, videoById } from "@/lib/selectors";
-import { ME, actions, useDemo } from "@/lib/store";
+import { paths } from "@/lib/paths";
+import { cityById, fit, me, pitchesForRequest, savedCreatorIds, videoById } from "@/lib/selectors";
+import { actions, useDemo } from "@/lib/store";
 import { creatorKindById, formatById } from "@/lib/taxonomy";
 import type { ContentRequest, Creator } from "@/lib/types";
 
+import { ContactNotice } from "./contact-notice";
 import { responseLabel } from "./pitch-card";
 import { BUDGET_FLOOR, daysForIsoDay, isoDay } from "./shared";
 import { ChoiceTile, GroupError } from "./wizard-parts";
@@ -33,9 +35,13 @@ export function InviteSheet({ request, onClose }: { request: ContentRequest; onC
   const [picked, setPicked] = useState<string[]>([]);
   const [savedOnly, setSavedOnly] = useState(false);
   const pitched = new Set(pitchesForRequest(s, request.id).map((p) => p.creatorId));
+  const saved = savedCreatorIds(s);
+  // Never offer the account's own creator profile (no ordering from yourself).
+  const self = me.ids(s).creatorId;
   const ranked = s.creators
+    .filter((creator) => creator.id !== self)
     .map((creator) => ({ creator, fit: fit(s, creator, request) }))
-    .filter(({ creator }) => !savedOnly || s.savedCreatorIds.includes(creator.id))
+    .filter(({ creator }) => !savedOnly || saved.includes(creator.id))
     .sort((a, b) => b.fit.score - a.fit.score);
 
   const send = () => {
@@ -75,7 +81,7 @@ export function InviteSheet({ request, onClose }: { request: ContentRequest; onC
           <FilterChip pressed={!savedOnly} onClick={() => setSavedOnly(false)}>
             Best fits
           </FilterChip>
-          <FilterChip pressed={savedOnly} onClick={() => setSavedOnly(true)} count={s.savedCreatorIds.length}>
+          <FilterChip pressed={savedOnly} onClick={() => setSavedOnly(true)} count={saved.filter((id) => id !== self).length}>
             Saved
           </FilterChip>
         </div>
@@ -345,7 +351,7 @@ export function MessageSheet({
   const toast = useToast();
   const existing = s.threads.find(
     (t) =>
-      t.businessId === ME.businessId &&
+      t.businessId === request.businessId &&
       t.creatorId === creator.id &&
       !t.commissionId &&
       t.requestId === request.id &&
@@ -384,7 +390,7 @@ export function MessageSheet({
             </p>
           </div>
           <div className="flex flex-col gap-2">
-            <PillButton href={`/business/messages?thread=${sentThread}`} variant="contrast" arrow>
+            <PillButton href={paths.messages(sentThread)} variant="contrast" arrow>
               Open conversation
             </PillButton>
             <PillButton variant="ghost" onClick={onClose}>
@@ -427,7 +433,7 @@ export function MessageSheet({
                 <span className="y-micro y-fg-3"> · {timeOf(m.at)}</span>
               </p>
             ))}
-            <PillButton href={`/business/messages?thread=${existing.id}`} size="sm" variant="ghost" className="w-fit">
+            <PillButton href={paths.messages(existing.id)} size="sm" variant="ghost" className="w-fit">
               Open the full conversation
             </PillButton>
           </div>
@@ -444,6 +450,7 @@ export function MessageSheet({
             if (error) setError(null);
           }}
         />
+        <ContactNotice text={text} className="-mt-2" />
         <div className="flex flex-col gap-2">
           <p className="y-micro y-fg-2">Quick questions</p>
           <div className="flex flex-wrap gap-1.5">

@@ -46,7 +46,7 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
     const previous = creator.featuredVideoId;
     actions.updateCreator(creator.id, { featuredVideoId: video.id });
     toast({
-      message: `Featured "${video.title}". It's the first thing businesses see.`,
+      message: `Featured "${video.title}". It's the first thing buyers see.`,
       action: previous ? { label: "Undo", onClick: () => actions.updateCreator(creator.id, { featuredVideoId: previous }) } : undefined,
     });
   };
@@ -148,7 +148,7 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
         <EmptyState
           headingLevel={3}
           title="Your portfolio is empty"
-          body="Businesses can't hire what they can't see. Add two or three finished videos to start getting invites."
+          body="Buyers can't order what they can't see. Add two or three finished videos to start getting invites."
           shape="bean"
           tint="mint"
           action={

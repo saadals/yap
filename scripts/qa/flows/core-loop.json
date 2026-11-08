@@ -1,7 +1,7 @@
 {
-  "role": "business",
+  "account": "nour",
   "steps": [
-    { "go": "/business/commissions/c-201", "after": 3500 },
+    { "go": "/work/c-201", "after": 3500 },
     { "text": "Review version 1 from Layla" },
     { "click": "Approve and release" },
     { "click": "Approve and release", "after": 1500 },
@@ -13,11 +13,12 @@
     { "click": "Add", "after": 600 },
     { "click": "Post review", "after": 1500 },
     { "text": "Commission Layla again" },
-    { "go": "/business/products/p-daftar-invoices", "after": 3000 },
+    { "go": "/products/p-daftar-invoices", "after": 3000 },
     { "text": "Keep the end card on screen for at least 2 seconds" },
-    { "go": "/creators/laylatalks/commission?repeat=c-201", "after": 3000 },
+    { "go": "/creators/laylatalks/commission?again=c-201", "after": 3000 },
     { "text": "5 learnings" },
-    { "go": "/creator/earnings", "after": 3000 },
+    { "account": "layla" },
+    { "go": "/wallet", "after": 3000 },
     { "text": "$1,040" },
     { "go": "/creators/laylatalks", "after": 3000 },
     { "text": "Layla nailed the shop-counter setting again" }

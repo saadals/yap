@@ -8,10 +8,12 @@ import { homeFor } from "@/components/shell/nav";
 import { Block } from "@/components/ui/block";
 import { Character } from "@/components/ui/character";
 import { PillButton } from "@/components/ui/pill-button";
+import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 
 export default function NotFound() {
-  const { role } = usePrefs();
+  const { account } = usePrefs();
+  const signedIn = Boolean(account);
   return (
     <PublicShell>
       <MarketingMain>
@@ -29,16 +31,21 @@ export default function NotFound() {
               The link might be old, or the page has moved. Everything else is where you left it.
             </p>
             <div className="flex flex-wrap gap-2">
-              <PillButton href="/creators" variant="neon" size="lg" arrow>
+              <PillButton
+                href={signedIn ? paths.explore("creators") : paths.creators}
+                variant="neon"
+                size="lg"
+                arrow
+              >
                 Find creators
               </PillButton>
               <PillButton
-                href={homeFor(role)}
+                href={homeFor(signedIn)}
                 variant="outline"
                 size="lg"
                 icon={<House size={18} aria-hidden />}
               >
-                {role ? "Back to your home" : "Back to home"}
+                {signedIn ? "Back to your home" : "Back to home"}
               </PillButton>
             </div>
           </Block>

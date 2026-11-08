@@ -15,37 +15,55 @@ import {
   StepNumber,
 } from "@/components/marketing/blocks";
 import { EarningsEstimator } from "@/components/marketing/calculators";
-import { MARKETING } from "@/components/marketing/platform";
+import { MARKETING, campaignFacts } from "@/components/marketing/platform";
 import { PublicShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { Cast, duoCast } from "@/components/ui/character";
 import { PillButton } from "@/components/ui/pill-button";
 import { money } from "@/lib/format";
-import { creatorById, featuredVideo } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { creatorById, featuredVideo, me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import { AUTO_APPROVE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
 
 /** Creator whose work fronts the hero (an everyday presenter, to make the point). */
 const HERO_CREATOR = "cr-hana";
 const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
+const CAMPAIGN = campaignFacts();
 
 const faq: FaqItem[] = [
   {
     q: "Do I need a lot of followers?",
-    a: "No. Businesses hire you to make videos for their own accounts and ads, so they look at your portfolio, your reviews and how reliably you deliver. Followers only matter if you choose to offer posting to your own audience as an add-on.",
+    a: `Not for custom orders. Buyers order videos for their own accounts and ads, so they look at your portfolio, your reviews and how reliably you deliver. UGC campaigns are different: they pay a fixed price per video by follower tier, starting at ${CAMPAIGN.floor} verified followers on the platform you'll post to.`,
+  },
+  {
+    q: "What's a UGC campaign?",
+    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at a fixed price per video (from ${money(CAMPAIGN.fromPrice)}). Slots go first come, first served. Take one, film it, upload a review copy, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
+  },
+  {
+    q: "How do you check my followers?",
+    a: "Connect TikTok, Instagram or Snapchat from your profile. It's read-only: we never post for you. Yapp checks your real followers, and later your campaign posts.",
+  },
+  {
+    q: "Do I need a separate account to make videos?",
+    a: "No. One account orders videos and makes them. Add a creator profile to the account you already have.",
   },
   {
     q: "What does Yapp charge creators?",
-    a: `Nothing. You keep 100% of your price and your add-ons. The business pays a ${FEE_PCT}% service fee on top, and only when the work is approved.`,
+    a: `Nothing. You keep 100% of your price and your add-ons. On custom orders the buyer pays a ${FEE_PCT}% service fee on top, only when the work is approved. Campaigns have no fee at all.`,
   },
   {
     q: "When do I get paid?",
     a: (
       <>
         <p>
-          The client&apos;s payment is secured when the commission starts, before you film anything.
-          It&apos;s released to your Yapp balance the moment they approve your delivery, or
+          On custom orders, the buyer&apos;s payment is secured when the work starts, before you film
+          anything. It&apos;s released to your wallet the moment they approve your video, or
           automatically {AUTO_APPROVE_DAYS} days after you deliver if they don&apos;t respond.
+        </p>
+        <p>
+          Campaign pay works differently: it sits in your wallet as pending until month end, as long
+          as your post stays up.
         </p>
         <p>
           Withdraw any time from {money(MARKETING.minimumPayout)} to a bank account or wallet.
@@ -56,19 +74,19 @@ const faq: FaqItem[] = [
   },
   {
     q: "What if a client keeps asking for changes?",
-    a: "Each package states how many revision rounds are included, and requests have to point at what was agreed in the brief. Extra rounds are a paid add-on you price yourself. If you can't agree, Yapp support reviews the brief and the delivery and decides.",
+    a: "Each package states how many revision rounds are included, and change requests have to point at what was agreed in the brief. Extra rounds are a paid add-on you price yourself. If you can't agree, Yapp support reviews the brief and the delivery and decides.",
   },
   {
-    q: "What if a client cancels after I've started?",
-    a: "Once you've delivered, a client can't cancel; they can approve or ask for the revisions in your package. Before delivery, a cancellation needs your agreement or a decision from Yapp support, and work you've already done can be paid in part.",
+    q: "What if a buyer cancels after I've started?",
+    a: "Once you've delivered, a buyer can't cancel; they can approve or ask for the revisions in your package. Before delivery, a cancellation needs your agreement or a decision from Yapp support, and work you've already done can be paid in part.",
   },
   {
     q: "Who owns the videos I make?",
-    a: "The client can use the final video on their own accounts forever. Running it as a paid ad is a separate add-on that you price, for 90 days or 12 months. You can show the work in your Yapp portfolio unless the client asks you to keep it private.",
+    a: "The buyer can use the final video on their own accounts forever. Running it as a paid ad is a separate add-on that you price, for 90 days or 12 months. You can show the work in your Yapp portfolio unless the buyer asks you to keep it private.",
   },
   {
     q: "Can I also post the video on my own account?",
-    a: "Only when the client buys the \"Post to creator's account\" add-on. It's optional, and you set the price based on your audience.",
+    a: "In a campaign, posting is part of the job. On a custom order, only when the buyer adds \"Post to creator's account\". It's optional, and you set the price.",
   },
   {
     q: "Which languages and formats can I offer?",
@@ -131,21 +149,21 @@ function Hero() {
           </h1>
           <p className="y-lead y-fg-2 max-w-[50ch]">
             App teams need people who explain their product naturally, in their customers&apos;
-            dialect. Followers are optional; your portfolio is what gets you hired.
+            dialect. Your portfolio gets you hired; followers unlock UGC campaigns too.
           </p>
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            <PillButton href="/signup?role=creator" variant="neon" size="lg" arrow>
-              Create your creator profile
+            <PillButton href={paths.signUp} variant="neon" size="lg" arrow>
+              Start making videos
             </PillButton>
             <PillButton href="#requests" variant="outline" size="lg">
-              See open requests
+              See open orders
             </PillButton>
           </div>
           <p className="y-small y-fg-2 flex items-start gap-2">
             <Gift size={16} aria-hidden className="mt-0.5 flex-none" />
-            Free to join. You keep 100% of your price.
+            Free to join. One account to order videos and to make them.
           </p>
         </div>
       </Block>
@@ -157,7 +175,7 @@ function Hero() {
       >
         {video && creator ? (
           <Link
-            href={`/creators/${creator.handle}`}
+            href={paths.creator(creator.handle)}
             aria-label={`See ${creator.firstName}'s profile and portfolio: “${video.title}”`}
             className="group block w-[min(62%,264px)] rotate-2 rounded-(--y-r-tile) transition-transform duration-(--y-dur-2) hover:rotate-0"
           >
@@ -181,7 +199,7 @@ function Hero() {
               </IconTile>
             }
             title={`${money(basic.price)} released to ${creator.firstName}`}
-            sub="Approved by the client · Paid to bank"
+            sub="Approved by the buyer · Paid to bank"
           />
         ) : null}
       </Block>
@@ -195,12 +213,12 @@ const creatorSteps = [
     body: "Your best videos, the dialects you speak, the formats you make, and your own prices.",
   },
   {
-    title: "Pitch or accept offers",
-    body: "Send an angle and a price on requests that fit, or accept offers sent from your profile.",
+    title: "Pitch, accept or take a slot",
+    body: `Pitch on custom orders, accept direct orders, or take a UGC campaign slot if you have ${CAMPAIGN.floor}+ followers.`,
   },
   {
     title: "Deliver and get paid",
-    body: "Answer the client's notes, and get paid the moment they approve.",
+    body: "Answer the buyer's notes, and get paid when they approve.",
   },
 ];
 
@@ -236,7 +254,7 @@ function HowItWorksForCreators() {
 }
 
 const payoutFlow = [
-  { title: "Secured", body: "The client pays before you film." },
+  { title: "Secured", body: "The buyer pays before you film." },
   { title: "Released", body: `When they approve, or ${AUTO_APPROVE_DAYS} days after you deliver.` },
   { title: "Withdrawn", body: `From ${money(MARKETING.minimumPayout)}, to a bank or a wallet.` },
   { title: "In your account", body: `Usually within ${MARKETING.payoutTime}.` },
@@ -252,7 +270,7 @@ function Payouts() {
             You keep <span className="y-strong">100% of your price</span>
           </>
         }
-        sub={`Clients pay Yapp's ${FEE_PCT}% fee on top. Nothing is taken from what you quote.`}
+        sub={`On custom orders, buyers pay Yapp's ${FEE_PCT}% fee on top. Campaign pay sits in your wallet as pending until month end, as long as the post stays up.`}
       />
       <div className="flex flex-col gap-2">
         <Block tone="paper" pad="lg">
@@ -279,8 +297,10 @@ function Payouts() {
 
 function OpenRequests() {
   const s = useDemo();
+  // Signed-out visitors see everything; a signed-in account doesn't see its own orders here.
+  const myBusinessId = me.ids(s).businessId;
   const open = s.requests
-    .filter((r) => r.status === "open" && r.visibility === "public")
+    .filter((r) => r.status === "open" && r.visibility === "public" && r.businessId !== myBusinessId)
     .sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt))
     .slice(0, 3);
   if (!open.length) return null;
@@ -290,13 +310,13 @@ function OpenRequests() {
         id="requests-title"
         title={
           <>
-            Open requests <span className="y-strong">right now</span>
+            Open orders <span className="y-strong">right now</span>
           </>
         }
-        sub="Real briefs from app teams, with the budget stated before you pitch."
+        sub="Real briefs and campaigns from app teams, with the price stated up front."
         action={
-          <PillButton href="/creator/opportunities" variant="contrast" arrow>
-            See all opportunities
+          <PillButton href={paths.explore("orders")} variant="contrast" arrow>
+            See all open orders
           </PillButton>
         }
       />
@@ -306,7 +326,7 @@ function OpenRequests() {
             <RequestCard
               request={request}
               perspective="creator"
-              href={`/creator/opportunities/${request.id}`}
+              href={paths.order(request.id)}
               className="w-full"
             />
           </li>
@@ -325,10 +345,10 @@ function FinalCta() {
             Your next client is <span className="y-strong">looking for your voice</span>
           </h2>
           <div className="flex flex-wrap gap-2">
-            <PillButton href="/signup?role=creator" variant="neon" size="lg" arrow>
-              Create your creator profile
+            <PillButton href={paths.signUp} variant="neon" size="lg" arrow>
+              Start making videos
             </PillButton>
-            <PillButton href="/how-it-works" variant="outline" size="lg">
+            <PillButton href={paths.howItWorks} variant="outline" size="lg">
               How Yapp works
             </PillButton>
           </div>

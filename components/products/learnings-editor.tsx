@@ -8,6 +8,7 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { shortDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { commissionById, creatorById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import type { Learning } from "@/lib/types";
@@ -69,7 +70,7 @@ export function LearningsEditor({
                     ) : null}
                     {commission ? (
                       <>
-                        <Link href={`/business/commissions/${commission.id}`} className="y-link max-w-[28ch] truncate">
+                        <Link href={paths.commission(commission.id)} className="y-link max-w-[28ch] truncate">
                           {commission.title}
                         </Link>
                         <span aria-hidden>·</span>

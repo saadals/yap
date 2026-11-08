@@ -94,7 +94,11 @@ export function ProductDetails({ product }: { product: Product }) {
   );
 }
 
-/** The one side block: fit score with top reasons, a line on competition, and the action. */
+/**
+ * The one side block: fit score with top reasons, a line on competition, and the action.
+ * Without a creator profile there is no fit to show, so it's a plain block with the competition
+ * line and the action.
+ */
 export function FitAside({
   fit,
   request,
@@ -102,7 +106,7 @@ export function FitAside({
   myPitch,
   action,
 }: {
-  fit: Fit;
+  fit?: Fit;
   request: ContentRequest;
   pitches: Pitch[];
   myPitch?: Pitch;
@@ -120,6 +124,18 @@ export function FitAside({
         ]
           .filter(Boolean)
           .join(" · ");
+  if (!fit) {
+    return (
+      <Block tone="paper" pad="md" className="flex flex-col gap-4">
+        <h2 className="y-head">Pitches</h2>
+        <p className="y-small flex items-center gap-2">
+          <Users size={16} aria-hidden className="flex-none" />
+          {competition}
+        </p>
+        {action}
+      </Block>
+    );
+  }
   return (
     <Block tone="lavender" pad="md" className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">

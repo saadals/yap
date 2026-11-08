@@ -46,6 +46,7 @@ export const products: Product[] = [
         size: "Login details",
       },
       { id: "as-di-4", name: "daftar-brand-guide-2026.pdf", kind: "brand-guide", size: "6.1 MB" },
+      { id: "as-di-5", name: "daftar-explainer-60s.mp4", kind: "footage", size: "42 MB" },
     ],
     learnings: [
       {

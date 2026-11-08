@@ -41,3 +41,18 @@ export function minutesAgo(minutes: number): string {
 export function addDays(iso: string, days: number): string {
   return new Date(Date.parse(iso) + days * DAY).toISOString();
 }
+
+/** "2026-11": the Riyadh calendar month of a timestamp. */
+export function monthKey(iso: string): string {
+  return new Date(Date.parse(iso) + TZ_OFFSET).toISOString().slice(0, 7);
+}
+
+/**
+ * First moment of the next Riyadh month: when pending campaign earnings from `iso`'s month become
+ * withdrawable (if the post is still up).
+ */
+export function endOfMonth(iso: string): string {
+  const local = new Date(Date.parse(iso) + TZ_OFFSET);
+  const next = Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 1);
+  return new Date(next - TZ_OFFSET).toISOString();
+}

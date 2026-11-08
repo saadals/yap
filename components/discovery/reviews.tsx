@@ -9,9 +9,9 @@ import { Block } from "@/components/ui/block";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
 import { daysFromNow, monthYearOf, num, plural, timeAgo } from "@/lib/format";
-import { businessById, reviewsForCreator } from "@/lib/selectors";
 import { usePrefs } from "@/lib/prefs";
-import { ME, actions, type DemoState } from "@/lib/store";
+import { businessById, me, reviewsForCreator } from "@/lib/selectors";
+import { actions, type DemoState } from "@/lib/store";
 import { formatById } from "@/lib/taxonomy";
 import type { Creator, Review } from "@/lib/types";
 
@@ -26,9 +26,9 @@ const when = (iso: string) => (daysFromNow(iso) > -30 ? timeAgo(iso) : monthYear
 export function ReviewsBlock({ s, creator }: { s: DemoState; creator: Creator }) {
   const reviews = reviewsForCreator(s, creator.id);
   const [expanded, setExpanded] = useState(false);
-  const { role } = usePrefs();
+  const { account } = usePrefs();
   // The creator viewing their own public profile can answer reviews publicly.
-  const canReply = role === "creator" && creator.id === ME.creatorId;
+  const canReply = Boolean(account) && me.creator(s)?.id === creator.id;
   const shown = expanded ? reviews : reviews.slice(0, INITIAL);
   const rehire = reviews.length
     ? Math.round((reviews.filter((r) => r.wouldRehire).length / reviews.length) * 100)

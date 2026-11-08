@@ -1,8 +1,10 @@
 import { Check } from "lucide-react";
 
-import type { CommissionStatus } from "@/lib/types";
+import type { CampaignPost, CommissionStatus } from "@/lib/types";
 
-const stages = ["Agreed", "In production", "Review", "Approved & paid"];
+const customStages = ["Agreed", "In production", "Review", "Approved & paid"];
+/** Campaign slots: the creator posts the approved video on their own account. */
+const campaignStages = ["Slot taken", "Filming", "Review", "Approved", "Posted"];
 
 export function stageIndex(status: CommissionStatus): number {
   switch (status) {
@@ -21,27 +23,48 @@ export function stageIndex(status: CommissionStatus): number {
   }
 }
 
+/** Campaign slot progress: Slot taken → Filming → Review → Approved → Posted (verified). */
+export function campaignStageIndex(status: CommissionStatus, post?: CampaignPost): number {
+  switch (status) {
+    case "in_progress":
+      return 1;
+    case "delivered":
+    case "revision":
+    case "disputed":
+      return 2;
+    case "completed":
+      return post?.status === "live" ? 5 : 4;
+    default:
+      return -1;
+  }
+}
+
 /**
  * Commission progress: Agreed → In production → Review → Approved & paid.
+ * With `campaign`, a campaign slot's track: Slot taken → Filming → Review → Approved → Posted.
  * `compact` renders a thin segmented bar with the current label only.
  */
 export function StageTrack({
   status,
+  campaign,
   compact = false,
   className = "",
 }: {
   status: CommissionStatus;
+  /** Campaign slot: pass the post (or `{}` before there is one). */
+  campaign?: { post?: CampaignPost };
   compact?: boolean;
   className?: string;
 }) {
-  const current = stageIndex(status);
+  const stages = campaign ? campaignStages : customStages;
+  const current = campaign ? campaignStageIndex(status, campaign.post) : stageIndex(status);
   const ended = current === -1;
   const label = ended
     ? status === "declined"
       ? "Offer declined"
       : "Cancelled"
     : current >= stages.length
-      ? "Approved & paid"
+      ? stages[stages.length - 1]
       : stages[current];
 
   if (compact) {
@@ -68,7 +91,7 @@ export function StageTrack({
   }
 
   return (
-    <ol className={`flex items-start gap-1 ${className}`} aria-label="Commission progress">
+    <ol className={`flex items-start gap-1 ${className}`} aria-label={campaign ? "Slot progress" : "Commission progress"}>
       {stages.map((stage, index) => {
         const done = !ended && (index < current || current >= stages.length);
         const active = !ended && index === current;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, FileVideo, MessageSquarePlus, Pencil, Trash2 } from "lucide-react";
+import { Check, FileVideo, Lock, MessageSquarePlus, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useId, useState } from "react";
 
 import { VideoPlayer } from "@/components/domain/video-player";
@@ -10,7 +10,7 @@ import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useToast } from "@/components/ui/toast";
 import { clock, plural, timeAgo } from "@/lib/format";
 import { actions } from "@/lib/store";
-import type { Delivery, DeliveryComment } from "@/lib/types";
+import type { Aspect, Delivery, DeliveryComment, Video } from "@/lib/types";
 
 import { ago, cash, versionStatus, type Workspace } from "./helpers";
 
@@ -19,9 +19,11 @@ type Seek = { at: number; key: number; id: string };
 /**
  * Deliveries: the player with note markers, timestamped notes and the creator's note. For the
  * version in review, the business decides here. Files are one quiet line (full list in Files).
+ * Campaign review copies are watermarked for the ordering side until approved, and the decision
+ * adds "Reject" (the slot goes to another creator).
  */
 export function ReviewArea({ ws }: { ws: Workspace }) {
-  const { commission, role } = ws;
+  const { commission, side, slot } = ws;
   const deliveries = commission.deliveries;
   const latest = deliveries[deliveries.length - 1];
   const [picked, setPicked] = useState<{ id: string; count: number } | null>(null);
@@ -46,8 +48,11 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
   };
 
   const inReview = isLatest && selected.status === "in_review" && commission.status === "delivered";
-  const canNote = role === "business" && inReview;
-  const canResolve = role === "creator" && isLatest && commission.status === "revision";
+  const canNote = side === "business" && inReview;
+  const canResolve = side === "creator" && isLatest && commission.status === "revision";
+  // Review copies stay watermarked for the ordering side until approved.
+  const watermarked = Boolean(selected.reviewCopy) && side === "business" && selected.status !== "approved";
+  const noun = slot ? "Review copy" : "Version";
 
   return (
     <section
@@ -58,8 +63,11 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <h2 id="review-title" className="y-head">
-          Version {selected.version}
-          <span className="y-fg-2 font-normal"> · delivered {ago(selected.deliveredAt)}</span>
+          {noun} {selected.version}
+          <span className="y-fg-2 font-normal">
+            {" "}
+            · {slot ? "uploaded" : "delivered"} {ago(selected.deliveredAt)}
+          </span>
         </h2>
         {deliveries.length > 1 ? (
           <div role="group" aria-label="Versions" className="y-scroll-x -mx-1 flex gap-1.5 px-1">
@@ -75,7 +83,9 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
                 className="flex-none"
               >
                 <span aria-hidden>v{delivery.version}</span>
-                <span className="sr-only">Version {delivery.version},</span>
+                <span className="sr-only">
+                  {noun} {delivery.version},
+                </span>
                 <span className="font-medium opacity-75"> {versionStatus[delivery.status].label}</span>
               </FilterChip>
             ))}
@@ -87,7 +97,7 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
         <p className="y-small y-fg-2 -mt-3">
           This is an earlier version.{" "}
           <button type="button" className="y-link font-semibold" onClick={() => setPicked(null)}>
-            Show version {latest.version}
+            Show {noun.toLowerCase()} {latest.version}
           </button>
         </p>
       ) : null}
@@ -99,7 +109,7 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
             : "grid gap-6 md:grid-cols-[minmax(0,320px)_minmax(0,1fr)]"
         }
       >
-        <div>
+        <div className="relative">
           <VideoPlayer
             key={selectedId}
             video={selected.video}
@@ -109,13 +119,23 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
             activeCommentId={activeId}
             onMarkerClick={(comment) => setActiveId(comment.id)}
           />
+          {watermarked ? <Watermark video={selected.video} /> : null}
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
+          {selected.reviewCopy && selected.status !== "approved" ? (
+            <p className="y-small y-fg-2 inline-flex items-start gap-2">
+              <Lock size={16} aria-hidden className="mt-0.5 flex-none" />
+              {side === "business"
+                ? "Watermarked, low-quality preview. The full-quality file unlocks when you approve."
+                : `${ws.businessName} sees a watermarked, low-quality preview until they approve it.`}
+            </p>
+          ) : null}
+
           {selected.note ? (
             <DeliveryNote
               key={selectedId}
-              label={role === "creator" ? "Your note" : `${ws.creatorName}'s note`}
+              label={side === "creator" ? "Your note" : `${ws.creatorName}'s note`}
               text={selected.note}
             />
           ) : null}
@@ -133,11 +153,12 @@ export function ReviewArea({ ws }: { ws: Workspace }) {
             <AddNote ws={ws} delivery={selected} time={now} onAdded={() => setAdded((n) => n + 1)} />
           ) : null}
 
-          <Files files={selected.files} />
+          {/* Ordering side of a slot: the header's "Download full quality" is the one way to the file. */}
+          {slot && side === "business" ? null : <Files files={selected.files} />}
         </div>
       </div>
 
-      {role === "business" && inReview ? <Decision ws={ws} delivery={selected} drafting={added > 0} /> : null}
+      {side === "business" && inReview ? <Decision ws={ws} delivery={selected} drafting={added > 0} /> : null}
     </section>
   );
 }
@@ -159,13 +180,13 @@ function Notes({
 }) {
   const toast = useToast();
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
-  const { commission, role } = ws;
+  const { commission, side } = ws;
   const comments = delivery.comments;
   const open = comments.filter((c) => !c.resolved).length;
 
   const authorName = (comment: DeliveryComment) =>
-    comment.author === role
-      ? role === "business"
+    comment.author === side
+      ? side === "business"
         ? "Your team"
         : "You"
       : comment.author === "business"
@@ -204,14 +225,14 @@ function Notes({
         <p className="y-small y-fg-2">
           {canEdit
             ? "No notes yet. Pause where you want a change and add one."
-            : role === "creator" && delivery.status === "in_review"
+            : side === "creator" && delivery.status === "in_review"
               ? `No notes yet. If ${ws.businessName} wants changes, they appear here.`
               : "No notes on this version."}
         </p>
       ) : (
         <ul className="flex flex-col gap-2" aria-label={`Notes on version ${delivery.version}`}>
           {comments.map((comment) => {
-            const mine = comment.author === role;
+            const mine = comment.author === side;
             const isEditing = editing?.id === comment.id;
             return (
               <li
@@ -348,7 +369,7 @@ function AddNote({
     actions.addComment(ws.commission.id, delivery.id, { atSec: time, text: body, author: "business" });
     setText("");
     onAdded();
-    toast({ message: `Note added at ${stamp}. ${ws.creatorName} sees it when you request changes.` });
+    toast({ message: `Note added at ${stamp}. ${ws.creatorName} sees it when you ask for changes.` });
   };
   return (
     <form
@@ -430,6 +451,21 @@ function Decision({ ws, delivery, drafting }: { ws: Workspace; delivery: Deliver
   const open = delivery.comments.filter((c) => !c.resolved).length;
   // Neon follows intent: approving by default, requesting changes once you're writing notes.
   const pending = drafting && open > 0;
+  if (ws.slot) {
+    return (
+      <div className="flex flex-col-reverse gap-2 border-t border-(--b-line) pt-5 sm:flex-row sm:items-center sm:justify-end">
+        <PillButton variant="ghost" className="sm:me-auto" onClick={() => ws.openSheet("reject")}>
+          Reject
+        </PillButton>
+        <PillButton variant={pending ? "neon" : "outline"} arrow={pending} onClick={() => ws.openSheet("requestChanges")}>
+          Ask for changes{open ? ` (${open})` : ""}
+        </PillButton>
+        <PillButton variant={pending ? "outline" : "neon"} arrow={!pending} onClick={() => ws.openSheet("approve")}>
+          Approve
+        </PillButton>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-2 border-t border-(--b-line) pt-5 sm:flex-row sm:justify-end">
       <PillButton variant={pending ? "neon" : "outline"} arrow={pending} onClick={() => ws.openSheet("requestChanges")}>
@@ -438,6 +474,38 @@ function Decision({ ws, delivery, drafting }: { ws: Workspace; delivery: Deliver
       <PillButton variant={pending ? "outline" : "neon"} arrow={!pending} onClick={() => ws.openSheet("approve")}>
         Approve and release {cash(totals.creatorEarns)}
       </PillButton>
+    </div>
+  );
+}
+
+const ratio: Record<Aspect, number> = { "9:16": 9 / 16, "1:1": 1, "4:5": 4 / 5, "16:9": 16 / 9 };
+
+/**
+ * Diagonal "Review copy" watermark laid over the player's frame (not its controls). Sized like
+ * the player's frame: full width for wide videos, at most 340px for vertical ones.
+ */
+function Watermark({ video }: { video: Video }) {
+  const wide = video.aspect === "16:9";
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute inset-x-0 top-0 z-[4] mx-auto w-full overflow-hidden rounded-(--y-r-tile) ${
+        wide ? "" : "max-w-[340px]"
+      }`}
+      style={{ aspectRatio: String(ratio[video.aspect]) }}
+    >
+      <div className="absolute -inset-1/2 flex -rotate-[28deg] flex-col items-center justify-center gap-[14%]">
+        {[0, 1, 2, 3, 4].map((row) => (
+          <span
+            key={row}
+            className={`y-display text-[clamp(18px,5vw,28px)] font-semibold whitespace-nowrap text-(--y-night-fg) opacity-45 [text-shadow:0_1px_3px_var(--y-scrim)] ${
+              row % 2 ? "ps-[30%]" : ""
+            }`}
+          >
+            Review copy · Review copy · Review copy
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

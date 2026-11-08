@@ -2,7 +2,6 @@ import {
   Bell,
   BriefcaseBusiness,
   CreditCard,
-  FileText,
   Heart,
   House,
   Inbox,
@@ -10,13 +9,12 @@ import {
   MessageCircle,
   Package,
   Search,
-  Send,
   Settings,
   UserRound,
   Wallet,
 } from "lucide-react";
 
-import type { SessionRole } from "@/lib/prefs";
+import { paths } from "@/lib/paths";
 
 export type NavItem = {
   href: string;
@@ -31,52 +29,48 @@ export type NavItem = {
 
 const i = (Icon: typeof House) => <Icon size={20} aria-hidden />;
 
-export const primaryNav: Record<"business" | "creator" | "public", NavItem[]> = {
-  business: [
-    { href: "/business", label: "Home", icon: i(House), exact: true },
-    { href: "/creators", label: "Find creators", icon: i(Search) },
-    { href: "/business/requests", label: "Requests", icon: i(FileText) },
-    { href: "/business/commissions", label: "Commissions", icon: i(BriefcaseBusiness) },
-    { href: "/business/messages", label: "Messages", icon: i(MessageCircle), badge: "messages" },
-  ],
-  creator: [
-    { href: "/creator", label: "Home", icon: i(House), exact: true },
-    { href: "/creator/opportunities", label: "Opportunities", icon: i(Search), also: ["/creator/pitches"] },
-    { href: "/creator/commissions", label: "Commissions", icon: i(BriefcaseBusiness) },
-    { href: "/creator/messages", label: "Messages", icon: i(MessageCircle), badge: "messages" },
-    { href: "/creator/profile", label: "Profile", icon: i(UserRound) },
+/**
+ * One navigation for every signed-in account (one account type: everyone can order and make).
+ * Mobile bottom bar per the PM's Figure 01: Home · Search · Work · Messages · Profile.
+ */
+export const primaryNav: Record<"app" | "public", NavItem[]> = {
+  app: [
+    { href: paths.home, label: "Home", icon: i(House), exact: true },
+    { href: paths.explore(), label: "Explore", icon: i(Search), also: ["/creators"] },
+    { href: paths.work(), label: "Work", icon: i(BriefcaseBusiness), also: ["/orders", "/pitches"] },
+    { href: paths.messages(), label: "Messages", icon: i(MessageCircle), badge: "messages" },
+    {
+      href: paths.profile,
+      label: "Profile",
+      icon: i(UserRound),
+      also: ["/wallet", "/billing", "/products", "/saved", "/settings"],
+    },
   ],
   public: [
-    { href: "/creators", label: "Find creators", icon: i(Search) },
-    { href: "/how-it-works", label: "How it works", icon: i(LayoutGrid) },
-    { href: "/for-creators", label: "For creators", icon: i(UserRound) },
+    { href: paths.creators, label: "Find creators", icon: i(Search) },
+    { href: paths.howItWorks, label: "How it works", icon: i(LayoutGrid) },
+    { href: paths.forCreators, label: "For creators", icon: i(UserRound) },
   ],
 };
 
-/** Secondary destinations shown in the account menu. */
-export const accountNav: Record<"business" | "creator", NavItem[]> = {
-  business: [
-    { href: "/business/products", label: "Products", icon: i(Package) },
-    { href: "/business/creators", label: "Saved creators", icon: i(Heart) },
-    { href: "/business/billing", label: "Billing & receipts", icon: i(CreditCard) },
-    { href: "/business/settings", label: "Settings", icon: i(Settings) },
-  ],
-  creator: [
-    { href: "/creator/pitches", label: "My pitches", icon: i(Send) },
-    { href: "/creator/earnings", label: "Earnings & payouts", icon: i(Wallet) },
-    { href: "/creator/settings", label: "Settings", icon: i(Settings) },
-  ],
-};
+/** Secondary destinations shown in the account menu and on the Profile hub. */
+export const accountNav: NavItem[] = [
+  { href: paths.wallet, label: "Wallet", icon: i(Wallet) },
+  { href: paths.billing, label: "Billing & receipts", icon: i(CreditCard) },
+  { href: paths.products, label: "Products", icon: i(Package) },
+  { href: paths.saved, label: "Saved creators", icon: i(Heart) },
+  { href: paths.settings(), label: "Settings", icon: i(Settings) },
+];
 
 export const notificationsIcon = i(Bell);
 export const inboxIcon = i(Inbox);
 
 export function isActive(item: NavItem, pathname: string) {
-  if (item.exact) return pathname === item.href;
-  return [item.href, ...(item.also ?? [])].some(
+  const path = item.href.split("?")[0];
+  if (item.exact) return pathname === path;
+  return [path, ...(item.also ?? [])].some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
   );
 }
 
-export const homeFor = (role: SessionRole) =>
-  role === "business" ? "/business" : role === "creator" ? "/creator" : "/";
+export const homeFor = (signedIn: boolean) => (signedIn ? paths.home : paths.landing);

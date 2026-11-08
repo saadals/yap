@@ -4,6 +4,7 @@ import { BellRing, Mail, MessageCircle } from "lucide-react";
 
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/components/ui/toast";
+import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import type { NotificationPrefs, Role } from "@/lib/types";
 
@@ -11,12 +12,12 @@ import { RowList, SwitchRow } from "./controls";
 
 const channelCopy: Record<Role, Record<"email" | "whatsapp" | "push", string>> = {
   business: {
-    email: "New pitches, deliveries to review and receipts.",
-    whatsapp: "Only time-sensitive things, like a delivery to review.",
+    email: "New pitches, videos to review, campaign slots taken and receipts.",
+    whatsapp: "Only time-sensitive things, like a video to review.",
     push: "While Yapp is open in a tab.",
   },
   creator: {
-    email: "New offers, client replies, approvals and payouts.",
+    email: "New offers, replies, approvals, campaign posts and payouts.",
     whatsapp: "Only time-sensitive things, like a new offer.",
     push: "While Yapp is open in a tab.",
   },
@@ -29,7 +30,10 @@ const icons = {
   push: <BellRing size={18} />,
 };
 
-/** Email / WhatsApp / push switches and the digest setting for one role. Saves immediately. */
+/**
+ * Email / WhatsApp / push switches and the digest setting for one side of the signed-in account
+ * ("business" = orders you place, "creator" = work you make). Saves immediately.
+ */
 export function NotificationPrefsControls({
   role,
   email,
@@ -42,7 +46,7 @@ export function NotificationPrefsControls({
 }) {
   const s = useDemo();
   const toast = useToast();
-  const prefs: NotificationPrefs = s.settings[role];
+  const prefs: NotificationPrefs = me.settings(s)[role];
 
   const toggle = (key: "email" | "whatsapp" | "push", on: boolean) => {
     actions.updateSettings(role, { [key]: on });

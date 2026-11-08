@@ -10,6 +10,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { NOW_ISO } from "@/lib/clock";
+import { campaignMoney, me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import type { PaymentMethod } from "@/lib/types";
 
@@ -20,14 +21,19 @@ const brandName: Record<PaymentMethod["brand"], string> = {
   applepay: "Apple Pay",
 };
 
+/** The signed-in account's cards (its buyer profile). */
 export function PaymentMethods({ titleId }: { titleId?: string }) {
   const s = useDemo();
   const toast = useToast();
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState<PaymentMethod | null>(null);
-  const methods = s.paymentMethods;
+  const methods = me.paymentMethods(s);
+  /** Held payments funded by a card: commissions, plus campaigns with money still on hold. */
   const heldWith = (id: string) =>
-    s.commissions.filter((c) => c.payment.methodId === id && c.payment.status === "held").length;
+    s.commissions.filter(
+      (c) => c.payment.methodId === id && c.payment.status === "held" && c.source !== "campaign",
+    ).length +
+    s.requests.filter((r) => r.campaign?.paymentMethodId === id && campaignMoney(s, r).held > 0).length;
 
   return (
     <div className="flex flex-col gap-3">
@@ -40,7 +46,7 @@ export function PaymentMethods({ titleId }: { titleId?: string }) {
         </PillButton>
       </div>
       {methods.length === 0 ? (
-        <p className="y-small y-fg-2">No cards saved. Add one to fund a commission in one tap.</p>
+        <p className="y-small y-fg-2">No cards saved. Add one to pay for an order in one tap.</p>
       ) : (
         <ul className="flex flex-col divide-y divide-(--b-line)">
           {methods.map((method) => {
@@ -105,13 +111,13 @@ export function PaymentMethods({ titleId }: { titleId?: string }) {
         title="Remove this card?"
         description={
           removing
-            ? `${paymentLabel(removing)} will no longer be available for new commissions.`
+            ? `${paymentLabel(removing)} will no longer be available for new orders.`
             : undefined
         }
         confirmLabel="Remove card"
         onConfirm={() => {
           if (!removing) return;
-          if (s.paymentMethods.length <= 1) {
+          if (methods.length <= 1) {
             setRemoving(null);
             return;
           }
@@ -203,7 +209,7 @@ export function AddCardSheet({ open, onClose }: { open: boolean; onClose: () => 
   const submit = () => {
     setTouched({ number: true, expiry: true, cvc: true, holder: true });
     if (errors.number || errors.expiry || errors.cvc || errors.holder || !brand) return;
-    const isFirst = s.paymentMethods.length === 0;
+    const isFirst = me.paymentMethods(s).length === 0;
     actions.addPaymentMethod(
       { brand, last4: digits.slice(-4), expiry: form.expiry, holder: form.holder.trim() },
       makeDefault,

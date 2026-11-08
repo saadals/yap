@@ -6,9 +6,8 @@
 
 import { at } from "@/lib/clock";
 import { daysFromNow, lengthLabel, priceBreakdown, weekdayDate } from "@/lib/format";
-import { me, productById } from "@/lib/selectors";
+import { isPersonal, me, productById } from "@/lib/selectors";
 import type { DemoState, OfferInput } from "@/lib/store";
-import { ME } from "@/lib/store";
 import { formatById, languageById } from "@/lib/taxonomy";
 import type {
   AddonId,
@@ -22,6 +21,7 @@ import type {
   PlatformId,
   Product,
   Reference,
+  Video,
 } from "@/lib/types";
 
 import { defaultPackage } from "../profile-utils";
@@ -82,9 +82,17 @@ function pickLanguage(creator: Creator): LanguageId {
 
 const PLATFORM_PREFERENCE: PlatformId[] = ["tiktok", "instagram", "snapchat", "youtube"];
 
+/** Saved products of the signed-in account's buyer profile. */
 export function businessProducts(s: DemoState): Product[] {
-  return s.products.filter((p) => p.businessId === ME.businessId);
+  const businessId = me.ids(s).businessId;
+  return s.products.filter((p) => p.businessId === businessId);
 }
+
+/** The reference a video from the feed (or a portfolio) adds to the brief. */
+export const videoReference = (video: Video): Reference => ({
+  id: `rf-video-${video.id}`,
+  label: `Like this one: ${video.title}`,
+});
 
 /** The brief fields a saved product fills in. */
 export function fromProduct(product: Product | undefined): Pick<
@@ -109,13 +117,26 @@ export function fromProduct(product: Product | undefined): Pick<
 export function initDraft(
   s: DemoState,
   creator: Creator,
-  opts: { packageId?: string | null; repeat?: Commission | null },
+  opts: {
+    packageId?: string | null;
+    repeat?: Commission | null;
+    /** Preselect this saved product (must belong to the signed-in account). */
+    productId?: string | null;
+    /** Add this video as a "like this one" reference (and use its format when offered). */
+    video?: Video | null;
+  },
 ): Draft {
   const products = businessProducts(s);
-  const paymentMethodId =
-    s.paymentMethods.find((m) => m.isDefault)?.id ?? s.paymentMethods[0]?.id ?? "";
+  const methods = me.paymentMethods(s);
+  const paymentMethodId = methods.find((m) => m.isDefault)?.id ?? methods[0]?.id ?? "";
   const explicit = creator.packages.find((p) => p.id === opts.packageId);
+  const chosenProduct = products.find((p) => p.id === opts.productId);
   const repeat = opts.repeat;
+  const video = opts.video ?? null;
+  const withVideo = (references: Reference[]) =>
+    video && !references.some((r) => r.id === `rf-video-${video.id}`)
+      ? [videoReference(video), ...references]
+      : references;
 
   if (repeat) {
     const brief = repeat.brief;
@@ -124,7 +145,7 @@ export function initDraft(
       creator.packages.find((p) => p.id === repeat.packageId) ??
       creator.packages.find((p) => p.price === repeat.price) ??
       defaultPackage(creator);
-    const product = productById(s, brief.productId) ?? products[0];
+    const product = chosenProduct ?? productById(s, brief.productId) ?? products[0];
     const languages = brief.languages.filter((l) => creator.languages.includes(l));
     return {
       packageId: pkg.id,
@@ -142,33 +163,34 @@ export function initDraft(
       keyMessage: brief.keyMessage,
       mustInclude: [...brief.mustInclude],
       avoid: [...brief.avoid],
-      references: [...brief.references],
+      references: withVideo([...brief.references]),
       onCamera: brief.onCamera,
       notes: brief.notes ?? "",
       addons: repeat.addons.map((a) => a.id).filter((id) => creator.addons.some((x) => x.id === id)),
       slack: 0,
       message: null,
-      paymentMethodId: s.paymentMethods.some((m) => m.id === repeat.payment.methodId)
+      paymentMethodId: methods.some((m) => m.id === repeat.payment.methodId)
         ? repeat.payment.methodId
         : paymentMethodId,
     };
   }
 
   const pkg = explicit ?? defaultPackage(creator);
-  const format = creator.formats[0];
+  const format = video && creator.formats.includes(video.format) ? video.format : creator.formats[0];
   const platforms = PLATFORM_PREFERENCE.filter((p) => creator.platforms.includes(p)).slice(0, 3);
+  const language = video && creator.languages.includes(video.lang) ? video.lang : pickLanguage(creator);
   return {
     packageId: pkg.id,
-    ...fromProduct(products[0]),
+    ...fromProduct(chosenProduct ?? products[0]),
     title: null,
     format,
-    languages: [pickLanguage(creator)],
+    languages: [language],
     platforms: platforms.length ? platforms : ["tiktok", "instagram"],
     aspect: "9:16",
     videoCount: pkg.videos,
     durationSec: snapLength(pkg, formatById[format].typical[1]),
     goal: "",
-    references: [],
+    references: withVideo([]),
     onCamera: format !== "screen-walkthrough",
     addons: [],
     slack: 0,
@@ -204,15 +226,24 @@ export function derive(s: DemoState, creator: Creator, d: Draft, repeat?: Commis
   const totals = priceBreakdown(pkg.price, addonPrices);
   const learnings = product?.learnings.filter((l) => d.learningIds.includes(l.id)) ?? [];
   const format = formatById[d.format];
+  const business = me.business(s);
+  // Personal buyer profiles order in their own name ("I"), companies as a team ("we").
+  const personal = isPersonal(s, business.id);
   const title =
-    d.title ?? `${format.name} for ${product?.name ?? me.business(s).name}`;
-  const sender = me.member(s).name.split(" ")[0];
+    d.title ??
+    (product ? `${format.name} for ${product.name}` : personal ? format.name : `${format.name} for ${business.name}`);
+  const sender = (me.member(s)?.name ?? me.account(s).name).split(" ")[0];
   const dialects = d.languages.map((l) => languageById[l].short).join(" and ");
+  const what = `a ${format.name.toLowerCase()}${product ? ` for ${product.name}` : personal ? "" : " for our app"}${dialects ? ` in ${dialects}` : ""}`;
   const message =
     d.message ??
     (repeat
-      ? `Hi ${creator.firstName}! Same team, new video. This builds on “${repeat.title}” and includes what we learned from it${learnings.length ? ` (${learnings.length} notes in the must-include list)` : ""}. Shout if anything's unclear.`
-      : `Hi ${creator.firstName}, I'm ${sender} from ${me.business(s).name}. We'd love a ${format.name.toLowerCase()} for ${product?.name ?? "our app"}${dialects ? ` in ${dialects}` : ""}. The brief and our product notes are below, and I'm happy to answer any questions before you start.`);
+      ? personal
+        ? `Hi ${creator.firstName}! Back for another video. This builds on “${repeat.title}” and includes what I learned from it${learnings.length ? ` (${learnings.length} notes in the must-include list)` : ""}. Shout if anything's unclear.`
+        : `Hi ${creator.firstName}! Same team, new video. This builds on “${repeat.title}” and includes what we learned from it${learnings.length ? ` (${learnings.length} notes in the must-include list)` : ""}. Shout if anything's unclear.`
+      : personal
+        ? `Hi ${creator.firstName}, I'm ${sender}. I'd love ${what}. The brief is below, and I'm happy to answer any questions before you start.`
+        : `Hi ${creator.firstName}, I'm ${sender} from ${business.name}. We'd love ${what}. The brief and our product notes are below, and I'm happy to answer any questions before you start.`);
   return {
     pkg,
     product,
@@ -283,7 +314,8 @@ export const fieldTodo: Record<FieldId, string> = {
 
 export function validate(s: DemoState, creator: Creator, d: Draft, x: Derived): Partial<Record<FieldId, string>> {
   const errors: Partial<Record<FieldId, string>> = {};
-  if (!x.product) errors.product = "Choose which product this video is for.";
+  // A product is only required once the account has saved one (personal buyers may have none).
+  if (!x.product && businessProducts(s).length) errors.product = "Choose which product this video is for.";
   if (x.title.trim().length < 4) errors.title = "Give it a short title so you can find it later.";
   if (!creator.formats.includes(d.format)) errors.format = `${creator.firstName} doesn't offer this format. Pick one of theirs.`;
   if (!d.languages.length) errors.languages = "Pick at least one dialect.";
@@ -291,7 +323,7 @@ export function validate(s: DemoState, creator: Creator, d: Draft, x: Derived): 
   if (d.audience.trim().length < 10) errors.audience = "Describe who should watch it, in a sentence or two.";
   if (d.goal.trim().length < 10) errors.goal = "Say what viewers should do or feel after watching.";
   if (d.keyMessage.trim().length < 6) errors.keyMessage = "Add the one thing viewers should remember.";
-  if (!s.paymentMethods.some((m) => m.id === d.paymentMethodId)) errors.payment = "Choose a card to authorise.";
+  if (!me.paymentMethods(s).some((m) => m.id === d.paymentMethodId)) errors.payment = "Choose a card to authorise.";
   return errors;
 }
 

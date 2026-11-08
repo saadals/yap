@@ -72,10 +72,15 @@ function Body({ className = "", style }: { className?: string; style?: React.CSS
 /**
  * Generated video thumbnail. No remote media: the scene is composed from the creator's face,
  * palette tints and a mock app UI. The hook caption is shown in the video's language.
+ *
+ * `fill` (the reels feed) fills the parent's width and height instead of sizing by aspect: the
+ * scene keeps its `frame` aspect and covers the box, cropping what doesn't fit (pass
+ * `frame="9:16"` to show a wide video as a vertical reel).
  */
 export function VideoThumb({
   video,
   frame,
+  fill = false,
   showHook = true,
   hookAt = "top",
   showMeta = true,
@@ -88,6 +93,8 @@ export function VideoThumb({
   video: Video;
   /** Container aspect (crop). Defaults to the video's own aspect. */
   frame?: Aspect;
+  /** Fill the parent (which must have a height) and cover it with the scene. */
+  fill?: boolean;
   showHook?: boolean;
   /** "bottom" keeps the caption clear of overlays placed on the top edge (badges, buttons). */
   hookAt?: "top" | "bottom";
@@ -113,14 +120,35 @@ export function VideoThumb({
       role={decorative ? undefined : "img"}
       aria-hidden={decorative || undefined}
       aria-label={decorative ? undefined : `${video.title}. ${format?.name ?? ""}, ${clock(video.durationSec)}`}
-      className={`y-thumb group w-full ${rounded ? "" : "!rounded-none"} ${className}`}
-      style={{
-        aspectRatio: String(ratio[aspect]),
-        containerType: "inline-size",
-        background: `radial-gradient(120% 90% at 28% 18%, ${tintVar[a]} 0%, ${tintVar[b]} 100%)`,
-      }}
+      className={`y-thumb group w-full${fill ? " h-full" : ""} ${rounded ? "" : "!rounded-none"} ${className}`}
+      style={
+        fill
+          ? {
+              // A size container: the scene box below covers it using cqw/cqh.
+              containerType: "size",
+              background: `radial-gradient(120% 90% at 28% 18%, ${tintVar[a]} 0%, ${tintVar[b]} 100%)`,
+            }
+          : {
+              aspectRatio: String(ratio[aspect]),
+              containerType: "inline-size",
+              background: `radial-gradient(120% 90% at 28% 18%, ${tintVar[a]} 0%, ${tintVar[b]} 100%)`,
+            }
+      }
     >
-      <Scene video={video} wide={wide} accent={accent} />
+      {fill ? (
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            width: `max(100cqw, calc(100cqh * ${ratio[aspect]}))`,
+            aspectRatio: String(ratio[aspect]),
+            containerType: "inline-size",
+          }}
+        >
+          <Scene video={video} wide={wide} accent={accent} />
+        </div>
+      ) : (
+        <Scene video={video} wide={wide} accent={accent} />
+      )}
 
       {showHook ? (
         <div

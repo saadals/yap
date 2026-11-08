@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { plural } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { useDemo } from "@/lib/store";
 import type { Product } from "@/lib/types";
 
@@ -12,14 +13,22 @@ import { ProductMark } from "./product-mark";
 /** A saved product as a quiet card: name, one-liner, one meta line. The whole card opens it. */
 export function ProductCard({ product }: { product: Product }) {
   const s = useDemo();
+  // Orders placed for it: commissions (not campaign slots) plus campaigns, one each.
   const commissions = s.commissions.filter(
     (c) =>
-      c.brief.productId === product.id && c.status !== "declined" && c.status !== "cancelled",
+      c.brief.productId === product.id &&
+      c.source !== "campaign" &&
+      c.status !== "declined" &&
+      c.status !== "cancelled",
   ).length;
+  const campaigns = s.requests.filter(
+    (r) => r.kind === "campaign" && r.brief.productId === product.id && r.status !== "draft",
+  ).length;
+  const orders = commissions + campaigns;
   const learnings = product.learnings.length;
   const meta = [
     learnings ? plural(learnings, "learning") : "No learnings yet",
-    commissions ? plural(commissions, "commission") : "Not used yet",
+    orders ? plural(orders, "order") : "Not used yet",
   ].join(" · ");
 
   return (
@@ -28,7 +37,7 @@ export function ProductCard({ product }: { product: Product }) {
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <h2 className="y-head">
           <Link
-            href={`/business/products/${product.id}`}
+            href={paths.product(product.id)}
             className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']"
           >
             {product.name}

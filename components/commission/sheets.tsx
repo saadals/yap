@@ -46,6 +46,8 @@ export function WorkspaceSheets({
       <ReportSheet key={`report-${sheetKey}`} {...props("report")} />
       <CancelSheet key={`cancel-${sheetKey}`} {...props("cancel")} />
       <ClientFeedbackSheet key={`clientFeedback-${sheetKey}`} {...props("clientFeedback")} />
+      <RejectSheet key={`reject-${sheetKey}`} {...props("reject")} />
+      <RemoveCreatorSheet key={`removeCreator-${sheetKey}`} {...props("removeCreator")} />
     </>
   );
 }
@@ -129,7 +131,8 @@ function Row({ label, value, strong }: { label: React.ReactNode; value: string; 
 
 function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
   const toast = useToast();
-  const { commission, creator, creatorName, latest } = ws;
+  const { commission, creator, creatorName, latest, slot } = ws;
+  const noun = slot ? "review copy" : "version";
   const notes = latest ? latest.comments.filter((c) => !c.resolved) : [];
   const left = revisionsLeft(commission);
   const extraPrice = creator?.addons.find((a) => a.id === "extra-revision")?.price;
@@ -141,7 +144,7 @@ function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
     setTried(true);
     if (!valid || !latest) return;
     const extraLine =
-      left === 0
+      left === 0 && !slot
         ? `This is an extra round beyond the ${plural(commission.revisionsIncluded, "revision")} included${
             extraPrice ? `. Happy to pay your ${cash(extraPrice)} extra-revision price` : ""
           }.`
@@ -149,7 +152,7 @@ function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
     const body = [message.trim(), extraLine].filter(Boolean).join("\n\n");
     actions.requestRevision(commission.id, body);
     toast({
-      message: `Changes sent to ${creatorName}. You'll get version ${latest.version + 1} to review.`,
+      message: `Changes sent to ${creatorName}. You'll get ${noun} ${latest.version + 1} to review.`,
     });
     onClose();
   };
@@ -158,8 +161,8 @@ function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
     <Sheet
       open={open}
       onClose={onClose}
-      title="Request changes"
-      description={`${creatorName} gets your notes with their timestamps and starts on version ${(latest?.version ?? 0) + 1}.`}
+      title={slot ? "Ask for changes" : "Request changes"}
+      description={`${creatorName} gets your notes with their timestamps and starts on ${noun} ${(latest?.version ?? 0) + 1}.`}
       width="md"
       footer={
         <Footer
@@ -179,7 +182,9 @@ function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
       <div className="flex flex-col gap-6">
         <div className="flex flex-col gap-2">
           <h3 className="y-label">
-            <span>Notes on version {latest?.version}</span>
+            <span>
+              Notes on {noun} {latest?.version}
+            </span>
             <span className="y-micro y-fg-3 font-medium">{notes.length}</span>
           </h3>
           {notes.length ? (
@@ -214,7 +219,16 @@ function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
           <p className="y-small inline-flex items-start gap-2">
             <Clock size={18} aria-hidden className="mt-px flex-none" />
             <span>
-              This uses 1 of your {plural(left, "revision round")} left. Revisions are usually back within 2 days.
+              This uses 1 of your {plural(left, slot ? "change round" : "revision round")} left.
+              {slot ? "" : " Revisions are usually back within 2 days."}
+            </span>
+          </p>
+        ) : slot ? (
+          <p className="y-small inline-flex items-start gap-2">
+            <AlertTriangle size={18} aria-hidden className="mt-px flex-none" />
+            <span>
+              You&apos;ve used the {plural(commission.revisionsIncluded, "included change round")}. You can still ask. If
+              this copy still isn&apos;t right after that, rejecting it gives the slot to another creator.
             </span>
           </p>
         ) : (
@@ -236,7 +250,11 @@ function RequestChangesSheet({ ws, open, onClose }: SheetProps) {
   );
 }
 
-function ApproveSheet({ ws, open, onClose }: SheetProps) {
+function ApproveSheet(props: SheetProps) {
+  return props.ws.slot ? <ApproveSlotSheet {...props} /> : <ApproveWorkSheet {...props} />;
+}
+
+function ApproveWorkSheet({ ws, open, onClose }: SheetProps) {
   const { commission, creatorName, latest, totals } = ws;
   const unsent = latest ? latest.comments.filter((c) => !c.resolved).length : 0;
   const adRights = commission.addons.filter((a) => a.id === "ad-rights-90" || a.id === "ad-rights-365");
@@ -354,6 +372,196 @@ function CelebrateSheet({ ws, open, onClose }: SheetProps) {
         </p>
         <p className="y-small max-w-[40ch]">
           Got a minute? A quick review helps {creatorName}, and the learnings you save carry into your next brief.
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Campaign slots: approve (quick rating), reject, remove creator              */
+/* -------------------------------------------------------------------------- */
+
+function ApproveSlotSheet({ ws, open, onClose }: SheetProps) {
+  const toast = useToast();
+  const { commission, creatorName, latest, slot } = ws;
+  const [rating, setRating] = useState(0);
+  const unsent = latest ? latest.comments.filter((c) => !c.resolved).length : 0;
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Approve this video?"
+      description={`The full-quality file unlocks for you, and ${cash(commission.price)} goes to ${creatorName}'s wallet. This can't be undone.`}
+      width="md"
+      footer={
+        <Footer
+          secondary={
+            <PillButton variant="ghost" onClick={onClose}>
+              Not yet
+            </PillButton>
+          }
+          primary={
+            <PillButton
+              variant="contrast"
+              size="lg"
+              onClick={() => {
+                actions.approve(commission.id, { rating: rating || undefined });
+                toast({ message: `Approved. The full-quality file is unlocked, and ${creatorName} will post it next.` });
+                onClose();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Approve video
+            </PillButton>
+          }
+        />
+      }
+    >
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <span className="y-label">
+            <span>Rate {creatorName}</span>
+            <span className="y-micro y-fg-3 font-medium">Optional</span>
+          </span>
+          <StarInput value={rating} onChange={setRating} label={`Rate ${creatorName}`} size={30} />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <h3 className="y-label">What happens next</h3>
+          <ul className="flex flex-col gap-2">
+            <li className="y-small flex items-start gap-2.5">
+              <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
+              The full-quality file, without the watermark, is yours to download.
+            </li>
+            <li className="y-small flex items-start gap-2.5">
+              <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
+              {includedRights}
+            </li>
+            <li className="y-small flex items-start gap-2.5">
+              <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
+              {creatorName} posts it on their {slot?.platformName ?? "own"} account, tagging {slot?.brandHandle ?? "you"}, with
+              the paid-partnership label.
+            </li>
+          </ul>
+        </div>
+
+        {unsent ? (
+          <div
+            role="note"
+            className="flex items-start gap-3 rounded-(--y-r-tile) bg-(--y-warning-soft) p-4 text-(--y-warning)"
+          >
+            <AlertTriangle size={20} aria-hidden className="mt-0.5 flex-none" />
+            <p className="y-small font-medium">
+              Your {plural(unsent, "note")} on this copy won&apos;t be sent. Approving accepts the video as it is.
+              Choose &ldquo;Ask for changes&rdquo; instead if you want them made.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </Sheet>
+  );
+}
+
+function RejectSheet({ ws, open, onClose }: SheetProps) {
+  const toast = useToast();
+  const { commission, creatorName } = ws;
+  const [reason, setReason] = useState("");
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Reject this video?"
+      description="The slot goes to another creator automatically, and its money stays held in your campaign."
+      width="md"
+      footer={
+        <Footer
+          secondary={
+            <PillButton variant="ghost" onClick={onClose}>
+              Keep reviewing
+            </PillButton>
+          }
+          primary={
+            <PillButton
+              variant="contrast"
+              size="lg"
+              onClick={() => {
+                actions.rejectCampaignVideo(commission.id, reason.trim());
+                toast({ message: `Video rejected. The slot is open for another creator.` });
+                onClose();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Reject video
+            </PillButton>
+          }
+        />
+      }
+    >
+      <div className="flex flex-col gap-5">
+        <TextArea
+          label={`Why isn't it right? (shared with ${creatorName})`}
+          rows={3}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          hint="Optional. A kind, specific line helps them on the next campaign."
+          placeholder="e.g. We needed the app on screen in the first five seconds."
+        />
+        <p className="y-small y-fg-2">
+          If a few changes would fix it, &ldquo;Ask for changes&rdquo; keeps {creatorName} on the slot. Once rejected,{" "}
+          {creatorName} can&apos;t take another slot on this campaign.
+        </p>
+      </div>
+    </Sheet>
+  );
+}
+
+function RemoveCreatorSheet({ ws, open, onClose }: SheetProps) {
+  const toast = useToast();
+  const { commission, creatorName } = ws;
+  const [reason, setReason] = useState("");
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={`Remove ${creatorName} from this slot?`}
+      description="The slot reopens for another creator automatically, and its money stays held in your campaign."
+      width="md"
+      footer={
+        <Footer
+          secondary={
+            <PillButton variant="ghost" onClick={onClose}>
+              Keep {creatorName}
+            </PillButton>
+          }
+          primary={
+            <PillButton
+              variant="contrast"
+              size="lg"
+              onClick={() => {
+                actions.removeCampaignCreator(commission.id, reason.trim());
+                toast({ message: `${creatorName} was removed. The slot is open again.` });
+                onClose();
+                window.scrollTo({ top: 0, behavior: "smooth" });
+              }}
+            >
+              Remove creator
+            </PillButton>
+          }
+        />
+      }
+    >
+      <div className="flex flex-col gap-5">
+        <TextArea
+          label="Reason (only you see this)"
+          rows={2}
+          value={reason}
+          onChange={(event) => setReason(event.target.value)}
+          hint="Optional. We tell them politely that you went with another creator."
+        />
+        <p className="y-small y-fg-2">
+          {creatorName} hasn&apos;t uploaded anything yet. They won&apos;t be able to take another slot on this campaign.
         </p>
       </div>
     </Sheet>
@@ -557,7 +765,7 @@ const reportReasons = {
 
 function ReportSheet({ ws, open, onClose }: SheetProps) {
   const toast = useToast();
-  const { commission, role, otherName } = ws;
+  const { commission, side, otherName } = ws;
   const [reason, setReason] = useState<string | null>(null);
   const [details, setDetails] = useState("");
   const [tried, setTried] = useState(false);
@@ -568,7 +776,7 @@ function ReportSheet({ ws, open, onClose }: SheetProps) {
   const submit = () => {
     setTried(true);
     if (!reason || details.trim().length < 20) return;
-    actions.openDispute(commission.id, reason, details.trim(), role);
+    actions.openDispute(commission.id, reason, details.trim(), side);
     toast({ message: "Yapp support has joined your conversation. Payment stays protected meanwhile." });
     onClose();
   };
@@ -606,7 +814,7 @@ function ReportSheet({ ws, open, onClose }: SheetProps) {
           <RadioTiles
             legend="What's going wrong?"
             name="report-reason"
-            options={reportReasons[role].map((r) => ({ value: r, label: r }))}
+            options={reportReasons[side].map((r) => ({ value: r, label: r }))}
             value={reason}
             onChange={setReason}
           />
@@ -628,7 +836,7 @@ function ReportSheet({ ws, open, onClose }: SheetProps) {
         />
         <p className="y-small inline-flex items-start gap-2">
           <ShieldCheck size={18} aria-hidden className="mt-px flex-none" />
-          {role === "business"
+          {side === "business"
             ? "Your payment stays held while we look into it. If the work wasn't delivered as agreed, you get a full refund."
             : "The payment stays held while we look into it. If you delivered what was agreed, you get paid."}
         </p>

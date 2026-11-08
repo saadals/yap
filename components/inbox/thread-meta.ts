@@ -6,9 +6,15 @@ export type Counterpart =
   | { kind: "creator"; name: string; creator?: Creator }
   | { kind: "business"; name: string; business?: Business };
 
-/** The person or company on the other side of a thread, from `role`'s point of view. */
-export function counterpart(s: DemoState, thread: Thread, role: Role): Counterpart {
-  if (role === "business") {
+/** A conversation and the side the signed-in account is on in it. */
+export type ThreadItem = { thread: Thread; side: Role };
+
+/** "You ordered" / "You're making": which side of the deal a conversation is on. */
+export const sideLabel = (side: Role) => (side === "business" ? "You ordered" : "You're making");
+
+/** The person or company on the other side of a thread, from `side`'s point of view. */
+export function counterpart(s: DemoState, thread: Thread, side: Role): Counterpart {
+  if (side === "business") {
     const creator = creatorById(s, thread.creatorId);
     return { kind: "creator", name: creator?.name ?? "Creator", creator };
   }
@@ -20,7 +26,7 @@ export const lastMessage = (thread: Thread): Message | undefined =>
   thread.messages[thread.messages.length - 1];
 
 /** One-line preview of a message for the thread list. */
-export function previewText(message: Message | undefined, role: Role): string {
+export function previewText(message: Message | undefined, side: Role): string {
   if (!message) return "No messages yet";
   const body =
     message.text.trim() ||
@@ -29,20 +35,20 @@ export function previewText(message: Message | undefined, role: Role): string {
         ? `Sent a video: ${message.attachment.name}`
         : `Sent ${message.attachment.name}`
       : "");
-  if (message.from === role) return `You: ${body}`;
+  if (message.from === side) return `You: ${body}`;
   return body;
 }
 
 export type ThreadFilter = "all" | "unread";
 
-export function matchesFilter(thread: Thread, filter: ThreadFilter, role: Role): boolean {
-  return filter === "unread" ? thread.unread.includes(role) : true;
+export function matchesFilter(thread: Thread, filter: ThreadFilter, side: Role): boolean {
+  return filter === "unread" ? thread.unread.includes(side) : true;
 }
 
-export function matchesQuery(s: DemoState, thread: Thread, role: Role, query: string): boolean {
+export function matchesQuery(s: DemoState, thread: Thread, side: Role, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  const other = counterpart(s, thread, role);
+  const other = counterpart(s, thread, side);
   if (other.name.toLowerCase().includes(q)) return true;
   if (other.kind === "creator" && other.creator?.handle.toLowerCase().includes(q.replace(/^@/, "")))
     return true;

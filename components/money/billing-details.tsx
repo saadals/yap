@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useSyncExternalStore } from "react";
 
 import { isEmail } from "@/components/settings/controls";
@@ -8,26 +9,29 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { cityById, me } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { cityById, isPersonal, me } from "@/lib/selectors";
 import { actions, useDemo, useHydrated } from "@/lib/store";
 import { countries } from "@/lib/taxonomy";
 import type { CountryId } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
 /* Persistence: the store has no fields for legal name / VAT / country, so they */
-/* live in their own localStorage key (the invoice email lives in settings).    */
+/* live in their own localStorage key, per buyer profile (the invoice email     */
+/* lives in the account's settings). Reset demo data clears every `yapp-` key.  */
 /* -------------------------------------------------------------------------- */
 
-const KEY = "yapp-billing-details-v1";
+const KEY = "yapp-billing-details-v2";
 type Stored = { companyName?: string; vat?: string; country?: CountryId };
+type StoredByBusiness = Record<string, Stored>;
 
-let cache: Stored | null | undefined;
+let cache: StoredByBusiness | null | undefined;
 const listeners = new Set<() => void>();
 
-function read(): Stored | null {
+function read(): StoredByBusiness | null {
   if (cache === undefined) {
     try {
-      cache = JSON.parse(window.localStorage.getItem(KEY) ?? "null") as Stored | null;
+      cache = JSON.parse(window.localStorage.getItem(KEY) ?? "null") as StoredByBusiness | null;
     } catch {
       cache = null;
     }
@@ -35,7 +39,8 @@ function read(): Stored | null {
   return cache;
 }
 
-function write(next: Stored) {
+function write(businessId: string, entry: Stored) {
+  const next = { ...(read() ?? {}), [businessId]: entry };
   cache = next;
   try {
     window.localStorage.setItem(KEY, JSON.stringify(next));
@@ -55,18 +60,26 @@ export type BillingDetails = {
   vat: string;
   country: CountryId;
   email: string;
+  /** A personal buyer profile: receipts carry the person's name, no company or VAT. */
+  personal: boolean;
 };
 
-/** Billing details for receipts, merged from the store and this browser's saved fields. */
+/**
+ * Billing details for the signed-in account's receipts, merged from the store and this browser's
+ * saved fields.
+ */
 export function useBillingDetails(): BillingDetails {
   const s = useDemo();
-  const stored = useSyncExternalStore(subscribe, read, () => null);
+  const all = useSyncExternalStore(subscribe, read, () => null);
   const business = me.business(s);
+  const personal = isPersonal(s, business.id);
+  const stored = all?.[business.id];
   return {
-    companyName: stored?.companyName ?? business.name,
-    vat: stored?.vat ?? "",
+    companyName: personal ? business.name : (stored?.companyName ?? business.name),
+    vat: personal ? "" : (stored?.vat ?? ""),
     country: stored?.country ?? cityById(business.cityId)?.countryId ?? "sa",
-    email: s.settings.business.invoiceEmail,
+    email: me.settings(s).business.invoiceEmail,
+    personal,
   };
 }
 
@@ -77,13 +90,26 @@ const countryOptions = (Object.keys(countries) as CountryId[]).map((id) => ({
 
 function validate(form: BillingDetails) {
   return {
-    companyName: form.companyName.trim().length < 2 ? "Enter the company name for your receipts." : null,
+    companyName:
+      !form.personal && form.companyName.trim().length < 2 ? "Enter the company name for your receipts." : null,
     vat:
-      form.vat.trim() && !/^[A-Za-z0-9 -]{8,20}$/.test(form.vat.trim())
+      !form.personal && form.vat.trim() && !/^[A-Za-z0-9 -]{8,20}$/.test(form.vat.trim())
         ? "Use 8 to 20 letters or numbers, like 300123456700003."
         : null,
-    email: !isEmail(form.email) ? "Enter an email like finance@daftar.app." : null,
+    email: !isEmail(form.email) ? "Enter an email like you@example.com." : null,
   };
+}
+
+/** Personal buyers: VAT invoices come with a business account. */
+function UpgradeForVat() {
+  return (
+    <p className="y-micro y-fg-2">
+      Need VAT invoices?{" "}
+      <Link href={paths.settings("business")} className="y-link font-semibold text-(--b-fg)">
+        Upgrade to a business account
+      </Link>
+    </p>
+  );
 }
 
 /** Billing details as a compact summary; editing happens in a sheet. */
@@ -127,8 +153,9 @@ export function BillingDetailsCard({ titleId }: { titleId?: string }) {
           <Skeleton className="h-4 w-40" />
         </div>
       )}
+      {hydrated && details.personal ? <UpgradeForVat /> : null}
       <Sheet open={editing} onClose={() => setEditing(false)} title="Billing details" width="sm">
-        <Form initial={details} onSaved={() => setEditing(false)} />
+        <Form key={`${details.companyName}|${details.personal}`} initial={details} onSaved={() => setEditing(false)} />
       </Sheet>
     </div>
   );
@@ -136,6 +163,8 @@ export function BillingDetailsCard({ titleId }: { titleId?: string }) {
 
 function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => void }) {
   const toast = useToast();
+  const s = useDemo();
+  const businessId = me.ids(s).businessId;
   const [form, setForm] = useState(initial);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const errors = validate(form);
@@ -155,33 +184,40 @@ function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => vo
         setTouched({ companyName: true, vat: true, email: true });
         if (errors.companyName || errors.vat || errors.email) return;
         const next = { ...form, companyName: form.companyName.trim(), vat: form.vat.trim(), email: form.email.trim() };
-        write({ companyName: next.companyName, vat: next.vat, country: next.country });
+        write(
+          businessId,
+          next.personal ? { country: next.country } : { companyName: next.companyName, vat: next.vat, country: next.country },
+        );
         actions.updateSettings("business", { invoiceEmail: next.email });
         toast({ message: "Billing details saved. New receipts will use them." });
         onSaved();
       }}
     >
-      <TextField
-        label="Company name"
-        required
-        hint="The legal name printed on every receipt."
-        value={form.companyName}
-        onChange={(event) => set("companyName", event.target.value)}
-        onBlur={blur("companyName")}
-        error={show("companyName")}
-        autoComplete="organization"
-        data-autofocus
-      />
-      <TextField
-        label="VAT or tax number"
-        hint="Add it if you reclaim VAT on the service fee."
-        value={form.vat}
-        onChange={(event) => set("vat", event.target.value)}
-        onBlur={blur("vat")}
-        error={show("vat")}
-        inputMode="text"
-        placeholder="300123456700003"
-      />
+      {form.personal ? null : (
+        <>
+          <TextField
+            label="Company name"
+            required
+            hint="The legal name printed on every receipt."
+            value={form.companyName}
+            onChange={(event) => set("companyName", event.target.value)}
+            onBlur={blur("companyName")}
+            error={show("companyName")}
+            autoComplete="organization"
+            data-autofocus
+          />
+          <TextField
+            label="VAT or tax number"
+            hint="Add it if you reclaim VAT on the service fee."
+            value={form.vat}
+            onChange={(event) => set("vat", event.target.value)}
+            onBlur={blur("vat")}
+            error={show("vat")}
+            inputMode="text"
+            placeholder="300123456700003"
+          />
+        </>
+      )}
       <TextField
         label="Billing email"
         required
@@ -200,6 +236,7 @@ function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => vo
         value={form.country}
         onChange={(event) => set("country", event.target.value as CountryId)}
       />
+      {form.personal ? <UpgradeForVat /> : null}
       <div className="pt-1">
         <PillButton type="submit" variant="contrast" disabled={!dirty}>
           Save billing details

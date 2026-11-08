@@ -15,8 +15,9 @@ import { useToast } from "@/components/ui/toast";
 import { NOW_ISO } from "@/lib/clock";
 import { plural, timeAgo } from "@/lib/format";
 import { omit } from "@/lib/omit";
-import { isActive, me, productById } from "@/lib/selectors";
-import { ME, actions, useDemo } from "@/lib/store";
+import { paths } from "@/lib/paths";
+import { commissionsForBusiness, isActive, isCampaign, me, productById, requestsForBusiness } from "@/lib/selectors";
+import { actions, useDemo } from "@/lib/store";
 import { niches } from "@/lib/taxonomy";
 import type { Learning, Product, ProductAsset } from "@/lib/types";
 
@@ -36,7 +37,7 @@ import {
   toSaveInput,
   validate,
 } from "./product-form";
-import { ProductHistory } from "./product-history";
+import { ProductHistory, productHistoryCount } from "./product-history";
 import { ProductPreview } from "./product-preview";
 import { TonePicker } from "./tone-picker";
 
@@ -246,7 +247,7 @@ export function ProductEditor({
     setBaseline(form);
     setLocalLearnings([]);
     if (!product && returnTo && (!after || after === returnTo)) {
-      toast({ message: `${form.name.trim()} saved. It's now selected in your request.` });
+      toast({ message: `${form.name.trim()} saved. It's now selected in your order.` });
       router.push(withProduct(returnTo, id));
     } else if (after) {
       toast({ message: `Saved ${form.name.trim()}` });
@@ -263,7 +264,7 @@ export function ProductEditor({
 
   /* --------------------------------------------------------- navigation */
 
-  const backHref = returnTo ?? "/business/products";
+  const backHref = returnTo ?? paths.products;
   const guard = (event: React.MouseEvent, href: string) => {
     if (!dirty) return;
     event.preventDefault();
@@ -345,16 +346,13 @@ export function ProductEditor({
   /* ------------------------------------------------------------- delete */
 
   const activeWork = product
-    ? s.commissions.filter(
-        (c) => c.businessId === ME.businessId && c.brief.productId === product.id && isActive(c),
-      )
+    ? commissionsForBusiness(s).filter((c) => c.brief.productId === product.id && isActive(c))
     : [];
   const liveRequests = product
-    ? s.requests.filter(
+    ? requestsForBusiness(s).filter(
         (r) =>
-          r.businessId === ME.businessId &&
           r.brief.productId === product.id &&
-          (r.status === "open" || r.status === "draft"),
+          (r.status === "open" || r.status === "draft" || (isCampaign(r) && r.status === "hired")),
       )
     : [];
   const blocked = activeWork.length > 0 || liveRequests.length > 0;
@@ -372,7 +370,7 @@ export function ProductEditor({
         onClick: () => actions.saveProduct(omit(snapshot, ["businessId", "updatedAt"])),
       },
     });
-    router.replace("/business/products");
+    router.replace(paths.products);
   };
 
   /* ------------------------------------------------------------ success */
@@ -387,19 +385,19 @@ export function ProductEditor({
               <span className="y-strong">{created.name}</span> is ready to brief
             </h1>
             <p className="y-lead y-fg-2">
-              Every request you post for it starts with this context, and what you learn from each
+              Every order you place for it starts with this context, and what you learn from each
               video is saved back here.
             </p>
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-            <PillButton href={`/business/requests/new?product=${created.id}`} variant="neon" size="lg" arrow>
-              Post a request for it
+            <PillButton href={paths.newOrder({ product: created.id })} variant="neon" size="lg" arrow>
+              Order videos for it
             </PillButton>
-            <PillButton href="/creators" variant="outline" size="lg">
+            <PillButton href={paths.explore("creators")} variant="outline" size="lg">
               Find creators
             </PillButton>
           </div>
-          <Link href={`/business/products/${created.id}`} className="y-small y-link font-medium">
+          <Link href={paths.product(created.id)} className="y-small y-link font-medium">
             Keep editing {created.name}
           </Link>
         </Block>
@@ -414,9 +412,7 @@ export function ProductEditor({
     : product && live
       ? `Saved ${lowerAgo(live.updatedAt)}`
       : "Not saved yet";
-  const historyCount = product
-    ? s.commissions.filter((c) => c.businessId === ME.businessId && c.brief.productId === product.id).length
-    : 0;
+  const historyCount = product ? productHistoryCount(s, product.id) : 0;
 
   const learningsSection = (
     <Section
@@ -442,7 +438,7 @@ export function ProductEditor({
           className="y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
         >
           <ArrowLeft size={16} aria-hidden className="y-flip" />
-          {returnTo ? "Back to your request" : "Products"}
+          {returnTo ? "Back to your order" : "Products"}
         </GuardedLink>
       </div>
       <PageHeader
@@ -452,19 +448,19 @@ export function ProductEditor({
           product
             ? "Every brief for it starts from this page."
             : returnTo
-              ? "After saving, you'll go straight back to your request with it selected."
+              ? "After saving, you'll go straight back to your order with it selected."
               : "Describe your app once. Every brief you send starts from it."
         }
         actions={
           product ? (
             <GuardedLink
-              href={`/business/requests/new?product=${product.id}`}
+              href={paths.newOrder({ product: product.id })}
               onNavigate={guard}
               className="y-pill"
               variant="soft"
             >
               <FilePlus2 size={16} aria-hidden />
-              <span>New request for this product</span>
+              <span>New order for this product</span>
             </GuardedLink>
           ) : null
         }
@@ -707,7 +703,7 @@ export function ProductEditor({
               <Disclosure
                 id="history"
                 title="History"
-                summary={historyCount ? plural(historyCount, "commission") : "No commissions yet"}
+                summary={historyCount ? plural(historyCount, "order") : "No orders yet"}
               >
                 <ProductHistory productId={product.id} />
               </Disclosure>
@@ -836,7 +832,7 @@ export function ProductEditor({
               <ul className="flex flex-col gap-2">
                 {activeWork.map((c) => (
                   <li key={c.id}>
-                    <Link href={`/business/commissions/${c.id}`} className="y-tile y-hoverable flex flex-col p-3">
+                    <Link href={paths.commission(c.id)} className="y-tile y-hoverable flex flex-col p-3">
                       <span className="y-small font-semibold">{c.title}</span>
                       <span className="y-micro y-fg-2">Commission in progress</span>
                     </Link>
@@ -845,12 +841,12 @@ export function ProductEditor({
                 {liveRequests.map((r) => (
                   <li key={r.id}>
                     <Link
-                      href={r.status === "draft" ? `/business/requests/new?draft=${r.id}` : `/business/requests/${r.id}`}
+                      href={r.status === "draft" ? paths.newOrder({ draft: r.id }) : paths.order(r.id)}
                       className="y-tile y-hoverable flex flex-col p-3"
                     >
                       <span className="y-small font-semibold">{r.title}</span>
                       <span className="y-micro y-fg-2">
-                        {r.status === "draft" ? "Draft request" : "Open request"}
+                        {r.status === "draft" ? "Draft order" : isCampaign(r) ? "Live campaign" : "Open request"}
                       </span>
                     </Link>
                   </li>

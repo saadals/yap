@@ -1,0 +1,25 @@
+{
+  "account": "layla",
+  "mobile": true,
+  "width": 390,
+  "height": 844,
+  "steps": [
+    { "go": "/home", "after": 3500 },
+    { "text": "Reel 1 of" },
+    { "shot": "feed-mobile-1" },
+    { "key": "ArrowDown", "after": 1200 },
+    { "text": "Reel 2 of" },
+    { "swipe": "up", "span": 0.9, "dt": 6, "after": 1500 },
+    { "text": "Reel 3 of" },
+    { "shot": "feed-mobile-3" },
+    { "swipe": "left", "after": 2500 },
+    { "eval": "location.pathname" },
+    { "eval": "(() => { if (location.pathname.startsWith('/home')) throw new Error('swipe left did not open details'); history.back(); return true })()" },
+    { "wait": 3000 },
+    { "text": "Reel 3 of" },
+    { "go": "/home?reel=r-150", "after": 3500 },
+    { "text": "Only 3 yapps left" },
+    { "text": "Accept" },
+    { "shot": "feed-mobile-campaign" }
+  ]
+}

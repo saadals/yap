@@ -111,7 +111,7 @@ export function AddVideoSheet({
   const errors: Partial<Record<keyof Form | "file", string | null>> = {
     file: !upload ? "Upload the video file first." : uploading ? "Wait for the upload to finish." : null,
     title: form.title.trim().length < 4 ? "Give it a short title (at least 4 characters)." : null,
-    hook: form.hook.trim().length < 4 ? "Add the on-screen hook so businesses see how it opens." : null,
+    hook: form.hook.trim().length < 4 ? "Add the on-screen hook so buyers see how it opens." : null,
     duration:
       Number.isInteger(duration) && duration >= 5 && duration <= 600
         ? null
@@ -196,7 +196,7 @@ export function AddVideoSheet({
       onClose={close}
       width="lg"
       title="Add a video"
-      description="Upload a finished piece. Businesses see the first frame and your hook before they press play."
+      description="Upload a finished piece. Buyers see the first frame and your hook before they press play."
       footer={
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           {attempted && errorCount ? (
@@ -305,7 +305,7 @@ export function AddVideoSheet({
               value={form.title}
               onChange={(e) => update({ title: e.target.value })}
               onBlur={() => touch("title")}
-              hint="Only you and businesses see this, in English."
+              hint="Only you and buyers see this, in English."
               error={show("title")}
             />
             <SelectField
@@ -335,7 +335,7 @@ export function AddVideoSheet({
                 placeholder="I sent the invoice on WhatsApp… in ten seconds"
                 value={form.hookTranslation}
                 onChange={(e) => update({ hookTranslation: e.target.value })}
-                hint="Helps businesses who don't speak the dialect."
+                hint="Helps buyers who don't speak the dialect."
               />
             ) : null}
           </div>

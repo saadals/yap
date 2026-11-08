@@ -1,0 +1,12 @@
+{
+  "account": "nour",
+  "steps": [
+    { "go": "/messages?thread=t-201", "after": 3500 },
+    { "type": { "sel": "main textarea", "text": "Easier to sort this on WhatsApp: 0501234567 or nour.h@gmail.com" } },
+    { "text": "hidden when you send" },
+    { "click": "Send message", "after": 1500 },
+    { "text": "[contact hidden]" },
+    { "notText": "0501234567" },
+    { "notText": "nour.h@gmail.com" }
+  ]
+}

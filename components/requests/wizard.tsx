@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, History, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, History, Play, UserPlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -15,7 +15,9 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { moneyRange, plural, timeOf, weekdayDate } from "@/lib/format";
-import { ME, actions, useDemo, useHydrated, type DemoState, type RequestDraft } from "@/lib/store";
+import { paths } from "@/lib/paths";
+import { me } from "@/lib/selectors";
+import { actions, useDemo, useHydrated, type DemoState, type RequestDraft } from "@/lib/store";
 import type { Product } from "@/lib/types";
 
 import {
@@ -66,11 +68,12 @@ type InitResult =
   | { kind: "live"; requestId: string };
 
 function initialState(s: DemoState, params: URLSearchParams): InitResult {
-  const products = s.products.filter((p) => p.businessId === ME.businessId);
+  const { businessId, creatorId: selfId } = me.ids(s);
+  const products = s.products.filter((p) => p.businessId === businessId);
   const draftId = params.get("draft");
   if (draftId) {
     const request = s.requests.find((r) => r.id === draftId);
-    if (!request || request.businessId !== ME.businessId) return { kind: "missing" };
+    if (!request || request.businessId !== businessId || request.kind === "campaign") return { kind: "missing" };
     if (request.status !== "draft") return { kind: "live", requestId: request.id };
     const form = formFromRequest(s, request);
     const product = products.find((p) => p.id === form.productId);
@@ -80,8 +83,12 @@ function initialState(s: DemoState, params: URLSearchParams): InitResult {
   }
 
   const paramProduct = products.find((p) => p.id === params.get("product"));
-  const paramCreator = s.creators.find((c) => c.id === params.get("creator"));
-  const draft = s.requestDraft;
+  // ?creator= takes an id or a handle; never your own creator profile.
+  const creatorParam = params.get("creator");
+  const paramCreator = creatorParam
+    ? s.creators.find((c) => (c.id === creatorParam || c.handle === creatorParam) && c.id !== selfId)
+    : undefined;
+  const draft = me.draft(s);
   let form: WizardForm;
   let step = 0;
   let banner: Banner = null;
@@ -111,7 +118,7 @@ function initialState(s: DemoState, params: URLSearchParams): InitResult {
 
 export function RequestWizardPage() {
   return (
-    <AppShell role="business" focus>
+    <AppShell focus>
       <Suspense fallback={<WizardSkeleton />}>
         <WizardGate />
       </Suspense>
@@ -136,12 +143,12 @@ function WizardLoader({ params }: { params: URLSearchParams }) {
         <Block tone="paper" pad="lg">
           <EmptyState
             title="We couldn't find that draft"
-            body="It may have been published or deleted. Your other requests are all in one place."
+            body="It may have been published or deleted. Your other orders are all in one place."
             shape="dome"
             tint="violet"
             action={
-              <PillButton href="/business/requests" variant="contrast">
-                Back to requests
+              <PillButton href={paths.orders()} variant="contrast">
+                Back to orders
               </PillButton>
             }
           />
@@ -160,7 +167,7 @@ function WizardLoader({ params }: { params: URLSearchParams }) {
             tint="mint"
             face="smile"
             action={
-              <PillButton href={`/business/requests/${init.requestId}`} variant="contrast" arrow>
+              <PillButton href={paths.order(init.requestId)} variant="contrast" arrow>
                 Open the request
               </PillButton>
             }
@@ -246,7 +253,7 @@ function Wizard({ init }: { init: WizardInit }) {
   const timers = useRef({ stream: 0, publish: 0 });
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  const products = s.products.filter((p) => p.businessId === ME.businessId);
+  const products = s.products.filter((p) => p.businessId === me.ids(s).businessId);
   const product = products.find((p) => p.id === form.productId);
   const market = marketFor(s, form.format, form.languages, form.videoCount, form.budget, form.durationSec);
   const strength = briefStrength(form, product);
@@ -380,11 +387,11 @@ function Wizard({ init }: { init: WizardInit }) {
     if (init.mode === "draft" && init.draftId) actions.updateRequest(init.draftId, data);
     else actions.createRequest({ ...data, title: data.title || "Untitled request", status: "draft" });
     toast({ message: "Saved to your drafts. Pick it up any time." });
-    router.push("/business/requests?tab=drafts");
+    router.push(paths.orders({ tab: "drafts" }));
   };
 
   const discard = () => {
-    const previous = s.requestDraft;
+    const previous = me.draft(s);
     const snapshot = { form, step, maxStep, banner };
     actions.saveRequestDraft(null);
     const paramProduct = products.find((p) => p.id === init.paramProductId);
@@ -413,7 +420,7 @@ function Wizard({ init }: { init: WizardInit }) {
   };
 
   const resume = () => {
-    const draft = s.requestDraft;
+    const draft = me.draft(s);
     if (!draft) return;
     setForm(formFromDraft(s, draft));
     setStep(Math.min(draft.step, last));
@@ -481,14 +488,15 @@ function Wizard({ init }: { init: WizardInit }) {
   };
   const current = STEPS[step];
   const missing = Object.values(stepErrors)[0];
+  const savedDraft = me.draft(s);
   const savedLabel =
     saveState === "saving"
       ? "Saving…"
       : saveState === "saved"
         ? init.mode === "draft"
           ? "Saved to drafts"
-          : s.requestDraft
-            ? `Draft saved ${timeOf(s.requestDraft.savedAt)}`
+          : savedDraft
+            ? `Draft saved ${timeOf(savedDraft.savedAt)}`
             : "Draft saved"
         : "Saves as you go";
   const continueLabel =
@@ -558,7 +566,7 @@ function Wizard({ init }: { init: WizardInit }) {
         <Block tone="paper" pad="md" className="flex flex-col gap-5 lg:col-span-12">
           <div className="flex items-center justify-between gap-3">
             <Link
-              href="/business/requests"
+              href={paths.orders()}
               className="y-round"
               data-tone-btn="soft"
               data-size="sm"
@@ -612,7 +620,7 @@ function Wizard({ init }: { init: WizardInit }) {
               {init.mode === "draft" ? "Editing a draft · " : ""}Step {step + 1} of {STEPS.length}
             </p>
             <h1 ref={headingRef} tabIndex={-1} className="y-display y-t-display outline-none">
-              {init.mode === "draft" ? "Your request" : "New request"} <span className="y-strong">· {current.label}</span>
+              {init.mode === "draft" ? "Your request" : "Custom request"} <span className="y-strong">· {current.label}</span>
             </h1>
           </div>
           <ol className="grid grid-cols-8 gap-1.5" aria-label="Steps">
@@ -746,15 +754,19 @@ function PublishedScreen({
           </p>
         </div>
         <div className="flex w-full max-w-md flex-col gap-2">
-          <PillButton href={`/business/requests/${requestId}`} variant="neon" size="lg" arrow className="justify-between ps-6">
+          <PillButton href={paths.order(requestId)} variant="neon" size="lg" arrow className="justify-between ps-6">
             View your request
           </PillButton>
           <div className="grid grid-cols-2 gap-2">
-            <PillButton href={`/business/requests/${requestId}?invite=1`} variant="outline">
-              Invite more creators
+            <PillButton href={paths.reel(requestId)} variant="outline" icon={<Play size={16} aria-hidden />}>
+              See it in the feed
             </PillButton>
-            <PillButton href="/business" variant="ghost">
-              Back to dashboard
+            <PillButton
+              href={paths.order(requestId, { tab: "invited" })}
+              variant="ghost"
+              icon={<UserPlus size={16} aria-hidden />}
+            >
+              Invite more
             </PillButton>
           </div>
         </div>

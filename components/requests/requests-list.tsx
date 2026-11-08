@@ -15,37 +15,48 @@ import { PillButton } from "@/components/ui/pill-button";
 import { JobCardSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { DAY, NOW } from "@/lib/clock";
 import { plural, timeOf } from "@/lib/format";
-import { pitchesForRequest, requestsForBusiness } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { campaignAttention, isCampaign, me, pitchesForRequest, requestsForBusiness } from "@/lib/selectors";
 import { useDemo, useHydrated, type DemoState } from "@/lib/store";
-import type { RequestStatus } from "@/lib/types";
+import type { ContentRequest } from "@/lib/types";
+
+import { STEPS } from "./shared";
 
 type Tab = "open" | "drafts" | "hired" | "closed" | "all";
-const TABS: { id: Tab; label: string; status?: RequestStatus }[] = [
-  { id: "open", label: "Open", status: "open" },
-  { id: "drafts", label: "Drafts", status: "draft" },
-  { id: "hired", label: "Hired", status: "hired" },
-  { id: "closed", label: "Closed", status: "closed" },
-  { id: "all", label: "All" },
+const TABS: { id: Tab; label: string; match: (r: ContentRequest) => boolean }[] = [
+  // A full campaign is still running (videos in review, posts due), so it stays under Open.
+  { id: "open", label: "Open", match: (r) => r.status === "open" || (isCampaign(r) && r.status === "hired") },
+  { id: "drafts", label: "Drafts", match: (r) => r.status === "draft" },
+  { id: "hired", label: "Hired", match: (r) => !isCampaign(r) && r.status === "hired" },
+  { id: "closed", label: "Closed", match: (r) => r.status === "closed" },
+  { id: "all", label: "All", match: () => true },
 ];
 const isTab = (value: string | null): value is Tab => TABS.some((t) => t.id === value);
 
-export function RequestsListPage() {
+/** /orders: everything the signed-in account ordered (custom requests and UGC campaigns). */
+export function OrdersListPage() {
   const s = useDemo();
   const hydrated = useHydrated();
   const fresh = hydrated ? newPitchCount(s) : 0;
+  const toReview = hydrated
+    ? campaignAttention(s).reduce((sum, item) => sum + item.progress.review, 0)
+    : 0;
+  const description =
+    [
+      fresh ? `${plural(fresh, "new pitch", "new pitches")} since yesterday` : null,
+      toReview ? `${plural(toReview, "campaign video")} to review` : null,
+    ]
+      .filter(Boolean)
+      .join(" · ") || "Custom requests and UGC campaigns you've placed.";
   return (
-    <AppShell role="business">
+    <AppShell>
       <Page>
         <PageHeader
-          title="Requests"
-          description={
-            fresh
-              ? `${plural(fresh, "new pitch", "new pitches")} since yesterday.`
-              : "Everything you've asked creators to pitch on."
-          }
+          title="Orders"
+          description={description}
           actions={
-            <PillButton href="/business/requests/new" variant="neon" arrow icon={<Plus size={18} aria-hidden />}>
-              New request
+            <PillButton href={paths.newOrder()} variant="neon" arrow icon={<Plus size={18} aria-hidden />}>
+              New order
             </PillButton>
           }
         />
@@ -59,7 +70,7 @@ export function RequestsListPage() {
 
 function ListSkeleton() {
   return (
-    <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading requests">
+    <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading orders">
       <div className="flex gap-2">
         {[0, 1, 2, 3].map((i) => (
           <Skeleton key={i} className="h-11 w-24" />
@@ -73,11 +84,11 @@ function ListSkeleton() {
   );
 }
 
-/** Pitches that arrived on published requests in the last day. */
+/** Pitches that arrived on published custom requests in the last day. */
 function newPitchCount(s: DemoState) {
   const since = NOW - DAY;
   return requestsForBusiness(s)
-    .filter((r) => r.status !== "draft")
+    .filter((r) => r.status !== "draft" && !isCampaign(r))
     .flatMap((r) => pitchesForRequest(s, r.id))
     .filter((p) => Date.parse(p.sentAt) >= since).length;
 }
@@ -94,17 +105,18 @@ function RequestsList() {
   const requests = requestsForBusiness(s);
   const tabParam = params.get("tab");
   const tab: Tab = isTab(tabParam) ? tabParam : "open";
+  const unfinished = me.draft(s);
+  // The wizard's autosaved request counts as a draft too.
   const count = (t: (typeof TABS)[number]) =>
-    t.status ? requests.filter((r) => r.status === t.status).length : requests.length;
+    requests.filter(t.match).length + (t.id === "drafts" && unfinished ? 1 : 0);
   const active = TABS.find((t) => t.id === tab)!;
+  // Quiet chips: tabs with nothing in them stay out of the way (unless selected).
+  const shownTabs = TABS.filter((t) => t.id === "open" || t.id === "all" || t.id === tab || count(t) > 0);
   const q = query.trim().toLowerCase();
-  const visible = requests
-    .filter((r) => !active.status || r.status === active.status)
-    .filter((r) => !q || r.title.toLowerCase().includes(q));
-  const unfinished = s.requestDraft;
+  const visible = requests.filter(active.match).filter((r) => !q || r.title.toLowerCase().includes(q));
 
   const setTab = (next: Tab) =>
-    router.replace(next === "open" ? "/business/requests" : `/business/requests?tab=${next}`, { scroll: false });
+    router.replace(paths.orders({ tab: next === "open" ? undefined : next }), { scroll: false });
 
   return (
     <div className="flex flex-col gap-2">
@@ -112,10 +124,10 @@ function RequestsList() {
       <div className="flex flex-col gap-2 pb-1 lg:flex-row lg:items-center lg:justify-between">
         <div
           role="group"
-          aria-label="Filter requests by status"
+          aria-label="Filter orders by status"
           className="y-scroll-x -mx-(--y-gutter) flex gap-2 px-(--y-gutter) lg:mx-0 lg:px-0"
         >
-          {TABS.map((t) => (
+          {shownTabs.map((t) => (
             <FilterChip key={t.id} pressed={tab === t.id} count={count(t)} onClick={() => setTab(t.id)}>
               {t.label}
             </FilterChip>
@@ -123,7 +135,7 @@ function RequestsList() {
         </div>
         <label className="flex min-h-12 items-center gap-2 rounded-full bg-(--y-paper) px-4 lg:w-80">
           <Search size={18} aria-hidden className="flex-none" />
-          <span className="sr-only">Search requests by title</span>
+          <span className="sr-only">Search orders by title</span>
           <input
             type="search"
             value={query}
@@ -153,12 +165,15 @@ function RequestsList() {
           </span>
           <div className="min-w-0 flex-1">
             <h2 className="y-head">
-              <Link href="/business/requests/new" className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']">
+              <Link
+                href={paths.newOrder({ type: "custom" })}
+                className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']"
+              >
                 {unfinished.title || "Unfinished request"}
               </Link>
             </h2>
             <p className="y-small y-fg-2">
-              Still in the wizard · step {unfinished.step + 1} of 8 · saved {timeOf(unfinished.savedAt)}
+              Custom request · step {unfinished.step + 1} of {STEPS.length} · saved {timeOf(unfinished.savedAt)}
             </p>
           </div>
           <span className="y-pill relative z-[3]" data-variant="contrast" data-size="sm" aria-hidden>
@@ -168,7 +183,7 @@ function RequestsList() {
       ) : null}
 
       <p className="sr-only" aria-live="polite">
-        {plural(visible.length, "request")} shown
+        {plural(visible.length, "order")} shown
       </p>
 
       {visible.length ? (
@@ -179,9 +194,9 @@ function RequestsList() {
               request={request}
               perspective="business"
               href={
-                request.status === "draft"
-                  ? `/business/requests/new?draft=${request.id}`
-                  : `/business/requests/${request.id}`
+                request.status === "draft" && !isCampaign(request)
+                  ? paths.newOrder({ draft: request.id })
+                  : paths.order(request.id)
               }
             />
           ))}
@@ -189,7 +204,7 @@ function RequestsList() {
       ) : q ? (
         <Block tone="paper" pad="md">
           <EmptyState
-            title={`No requests match "${query.trim()}"`}
+            title={`No orders match "${query.trim()}"`}
             body="Try a shorter word from the title, or clear the search to see everything in this tab."
             shape="ball"
             tint="sea"
@@ -211,15 +226,15 @@ function RequestsList() {
 
 function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny: boolean }) {
   const newButton = (
-    <PillButton href="/business/requests/new" variant="contrast" arrow>
-      Start a request
+    <PillButton href={paths.newOrder()} variant="contrast" arrow>
+      Place an order
     </PillButton>
   );
   if (tab === "open")
     return (
       <EmptyState
-        title="No open requests"
-        body="Describe the video you need and creators who speak your audience's language will pitch, usually within hours."
+        title="No open orders"
+        body="Run a UGC campaign for 10 or more videos, or describe one video and let creators pitch. Most orders hear back within hours."
         shape="pill"
         tint="mint"
         face="smile"
@@ -241,13 +256,13 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
     return (
       <EmptyState
         title="Nobody hired yet"
-        body="When you hire from a pitch, the request moves here and the work shows up in Commissions."
+        body="When you hire from a pitch, the request moves here and the work shows up in Work."
         shape="tower"
         tint="sun"
         face="focus"
         action={
-          <PillButton href="/business/requests" variant="contrast">
-            See open requests
+          <PillButton href={paths.orders()} variant="contrast">
+            See open orders
           </PillButton>
         }
       />
@@ -256,14 +271,14 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
     return (
       <EmptyState
         title="Nothing closed"
-        body="Close a request when you've found who you need. You can reopen it any time."
+        body="Close an order when you've found who you need. You can reopen a request any time."
         shape="ball"
         tint="sea"
         face="sleepy"
         action={
           hasAny ? (
             <PillButton variant="contrast" onClick={onAll}>
-              See all requests
+              See all orders
             </PillButton>
           ) : undefined
         }
@@ -271,8 +286,8 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
     );
   return (
     <EmptyState
-      title="Post your first request"
-      body="Tell creators what you need once. They pitch with an angle, a price and real samples, and you pick who fits."
+      title="Place your first order"
+      body="Tell creators what you need once. Pick a UGC campaign for many videos at a fixed price, or a custom request to compare pitches."
       shape="bean"
       tint="coral"
       face="smile"

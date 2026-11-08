@@ -7,11 +7,15 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { moneyRange, plural } from "@/lib/format";
-import { myPitchFor, pitchesForRequest, productById, requestsForBusiness } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { isCampaign, myPitchFor, pitchesForRequest, productById, requestsForBusiness } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import type { Creator } from "@/lib/types";
 
-/** Pick one of your open requests and invite this creator to pitch on it. */
+/**
+ * Pick one of the account's open custom requests and invite this creator to pitch on it.
+ * Campaigns are first come, first served, so nobody is invited to those.
+ */
 export function InviteToRequestSheet({
   creator,
   onClose,
@@ -21,7 +25,7 @@ export function InviteToRequestSheet({
 }) {
   const s = useDemo();
   const toast = useToast();
-  const open = requestsForBusiness(s).filter((r) => r.status === "open");
+  const open = requestsForBusiness(s).filter((r) => r.status === "open" && !isCampaign(r));
 
   return (
     <Sheet
@@ -36,7 +40,7 @@ export function InviteToRequestSheet({
       footer={
         <div className="flex justify-end">
           <PillButton
-            href={creator ? `/business/requests/new?creator=${creator.id}` : "/business/requests/new"}
+            href={paths.newOrder({ type: "custom", creator: creator?.id })}
             variant="outline"
             icon={<Plus size={16} aria-hidden />}
           >

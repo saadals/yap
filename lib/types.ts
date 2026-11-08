@@ -13,7 +13,37 @@
  * All money is whole US dollars.
  */
 
+/**
+ * A side of a deal: the one ordering ("business") or the one making ("creator"). Since every
+ * account can do both, this is never an account type: it is derived per order, commission or
+ * thread (`sideOf` in lib/selectors.ts).
+ */
 export type Role = "business" | "creator";
+
+/* -------------------------------------------------------------------------- */
+/* Accounts (one account type: everyone can order and make)                    */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A person's account. Every account can order (through its buyer profile, `businessId`) and can
+ * make videos once it has a creator profile (`creatorId`). A "business" account adds company
+ * details, VAT invoices and a team to the buyer profile; a "personal" one orders in its own name.
+ */
+export type Account = {
+  id: string;
+  name: string;
+  firstName: string;
+  email: string;
+  kind: "personal" | "business";
+  /** Buyer profile used when this account orders (company or personal). */
+  businessId: string;
+  /** Team member record (business accounts). */
+  memberId?: string;
+  /** Creator profile, once set up. */
+  creatorId?: string;
+  /** Id and handle a creator profile created in the browser gets (pre-rendered on Pages). */
+  reserved: { creatorId: string; handle: string };
+};
 
 /** Illustration tints (characters, avatars, thumbnails; never behind text). */
 export type Tint = "violet" | "sun" | "sea" | "coral" | "mint" | "blush";
@@ -135,6 +165,19 @@ export type Package = {
 
 export type CreatorAddon = { id: AddonId; price: number; extraDays?: number };
 
+/** Platforms a campaign can be posted on (read-only account connection + verification). */
+export type CampaignPlatformId = "tiktok" | "instagram" | "snapchat";
+
+/** A creator's own social account, connected read-only so real followers can be verified. */
+export type SocialAccount = {
+  platform: CampaignPlatformId;
+  handle: string;
+  /** Real followers after verification (bots and inactive accounts removed). */
+  followers: number;
+  verified: boolean;
+  connectedAt: string;
+};
+
 export type Creator = {
   id: string;
   handle: string;
@@ -162,8 +205,10 @@ export type Creator = {
   addons: CreatorAddon[];
   portfolioIds: string[];
   featuredVideoId: string;
-  /** Only set for creators who offer posting to their own audience. */
+  /** Only set for creators who offer posting to their own audience (display only). */
   followers?: number;
+  /** Connected social accounts; campaign eligibility reads these, never `followers`. */
+  socials?: SocialAccount[];
   available: boolean;
   /** When unavailable: the date they can start new work. */
   availableFrom?: string;
@@ -189,6 +234,10 @@ export type TeamMember = {
 
 export type Business = {
   id: string;
+  /** "personal": someone ordering in their own name (shows their face, not a logo). */
+  kind?: "company" | "personal";
+  /** Personal buyer profiles: whose face to show (an id for <FaceAvatar>). */
+  faceId?: string;
   name: string;
   monogram: string;
   /** Logo background; white text must stay readable (contrast ≥ 4.5). */
@@ -275,6 +324,45 @@ export type Brief = {
 
 export type RequestStatus = "draft" | "open" | "hired" | "closed";
 
+/** Follower tiers set the fixed price per video on a UGC campaign (lib/taxonomy.tsx). */
+export type FollowerTierId = "t10" | "t20" | "t50" | "t100" | "t250";
+
+export type LedgerEntry = {
+  id: string;
+  at: string;
+  kind: "charge" | "top_up" | "refund";
+  amount: number;
+  note: string;
+};
+
+/**
+ * UGC campaign terms. The business buys `slots` videos (min 10, steps of 5), each from a different
+ * creator, at a fixed price set by the follower tier. The whole budget is held up front; eligible
+ * creators take slots first come, first served. Each taken slot is a Commission with
+ * `source: "campaign"` and `campaignSlot`.
+ */
+export type CampaignTerms = {
+  tierId: FollowerTierId;
+  /** Price for slots taken from now on. Taken slots keep the price they were taken at. */
+  pricePerVideo: number;
+  platform: CampaignPlatformId;
+  /** The business account creators must tag (shown to creators; allowed through masking). */
+  brandHandle: string;
+  /* Talking points and restrictions live on the brief (`mustInclude` / `avoid`). */
+  /** Explainer video about the product (a seeded or simulated upload). */
+  explainer?: { name: string; videoId?: string; durationSec: number };
+  /** Set when the tier was changed after publishing (allowed once). */
+  tierChangedAt?: string;
+  previousTierId?: FollowerTierId;
+  /** Card the budget is held on. */
+  paymentMethodId: string;
+  /** Money movements on the campaign hold. Held = charges + top-ups - refunds - released. */
+  ledger: LedgerEntry[];
+  /** Creators removed or rejected on this campaign can't take a slot again. */
+  excludedCreatorIds: string[];
+  /** Runtime campaigns get simulated creators joining; seeded ones never fill up. */
+  simulate?: boolean;
+};
 export type ContentRequest = {
   id: string;
   businessId: string;
@@ -287,9 +375,12 @@ export type ContentRequest = {
   visibility: "public" | "invite";
   invitedCreatorIds: string[];
   preferredKinds: CreatorKind[];
-  /** How many creators the business plans to hire (usually 1). */
+  /** How many creators the business plans to hire (usually 1). Campaigns: number of videos. */
   slots: number;
   views: number;
+  /** Absent = a custom request (creators pitch, the business picks). */
+  kind?: "custom" | "campaign";
+  campaign?: CampaignTerms;
 };
 
 export type PitchStatus = "sent" | "viewed" | "shortlisted" | "declined" | "hired" | "withdrawn";
@@ -336,7 +427,13 @@ export type CommissionEventKind =
   | "reviewed"
   | "cancelled"
   | "disputed"
-  | "due_changed";
+  | "due_changed"
+  | "slot_accepted"
+  | "creator_replaced"
+  | "video_rejected"
+  | "posted"
+  | "post_verified"
+  | "payout_available";
 
 export type CommissionEvent = {
   id: string;
@@ -361,12 +458,33 @@ export type Delivery = {
   video: Video;
   note: string;
   deliveredAt: string;
-  status: "in_review" | "changes_requested" | "approved";
+  status: "in_review" | "changes_requested" | "approved" | "rejected";
   comments: DeliveryComment[];
   files: { name: string; size: string }[];
+  /** Campaign review copy: watermarked and low quality until approved. */
+  reviewCopy?: boolean;
 };
 
-export type PaymentStatus = "authorized" | "held" | "released" | "refunded";
+/**
+ * - authorized: card authorised for a direct offer, not charged yet
+ * - held: secured, released on approval
+ * - pending: approved campaign work, in the creator's wallet but locked until month end (and only
+ *   if the post stays up)
+ * - released: paid to the creator (available to withdraw)
+ * - refunded: back to the business
+ * - returned: a campaign slot that ended without approval; the money went back to the campaign hold
+ */
+export type PaymentStatus = "authorized" | "held" | "pending" | "released" | "refunded" | "returned";
+
+/** The creator's post of an approved campaign video on their own account. */
+export type CampaignPost = {
+  status: "due" | "checking" | "live" | "removed";
+  url?: string;
+  at?: string;
+  /** What verification found (tag and paid-partnership disclosure). */
+  tagFound?: boolean;
+  disclosureFound?: boolean;
+};
 
 export type Commission = {
   id: string;
@@ -374,7 +492,7 @@ export type Commission = {
   creatorId: string;
   title: string;
   brief: Brief;
-  source: "request" | "direct" | "repeat";
+  source: "request" | "direct" | "repeat" | "campaign";
   requestId?: string;
   pitchId?: string;
   packageId?: string;
@@ -403,6 +521,16 @@ export type Commission = {
   /** Message the business attached to a direct offer. */
   offerMessage?: string;
   cancelReason?: string;
+  /** Campaign slots: which slot (1-based) this commission fills. */
+  campaignSlot?: number;
+  /** Campaign slots: the creator's post on their own account. */
+  post?: CampaignPost;
+  /** Campaign slots: when pending money becomes withdrawable (month end), if the post is live. */
+  withdrawableFrom?: string;
+  /** Why a campaign slot ended without approval. */
+  cancelCode?: "replaced" | "video_rejected" | "campaign_closed";
+  /** Campaign slots: quick star rating from the business on approval. */
+  quickRating?: number;
 };
 
 export type Review = {
@@ -464,16 +592,21 @@ export type NotificationKind =
   | "review"
   | "request"
   | "revision"
+  | "campaign"
   | "system";
 
 export type Notification = {
   id: string;
-  role: Role;
+  /** The account this is for. */
+  accountId: string;
   kind: NotificationKind;
   text: string;
   href: string;
   at: string;
   unread: boolean;
+  /** Repeated events (e.g. creators joining a campaign) merge into one unread notification. */
+  groupKey?: string;
+  count?: number;
 };
 
 /* -------------------------------------------------------------------------- */
@@ -482,6 +615,8 @@ export type Notification = {
 
 export type PaymentMethod = {
   id: string;
+  /** Buyer profile the card belongs to. */
+  businessId: string;
   brand: "visa" | "mastercard" | "mada" | "applepay";
   last4: string;
   expiry: string;
@@ -491,6 +626,7 @@ export type PaymentMethod = {
 
 export type PayoutMethod = {
   id: string;
+  creatorId: string;
   kind: "bank" | "wallet";
   label: string;
   detail: string;
@@ -499,6 +635,7 @@ export type PayoutMethod = {
 
 export type Payout = {
   id: string;
+  creatorId: string;
   amount: number;
   status: "processing" | "paid";
   methodId: string;

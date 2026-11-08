@@ -9,6 +9,7 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { isEmail } from "@/components/settings/controls";
+import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import type { PayoutMethod } from "@/lib/types";
 
@@ -21,7 +22,7 @@ export function PayoutMethodIcon({ kind, size = 18 }: { kind: PayoutMethod["kind
 export function PayoutMethods({ onAdd, titleId }: { onAdd: () => void; titleId?: string }) {
   const s = useDemo();
   const toast = useToast();
-  const methods = s.payoutMethods;
+  const methods = me.payoutMethods(s);
 
   return (
     <div className="flex flex-col gap-3">
@@ -171,7 +172,7 @@ export function AddPayoutSheet({
   const submit = () => {
     setTouched({ holder: true, iban: true, account: true });
     if (errors.holder || errors.iban || errors.account) return;
-    let input: Omit<PayoutMethod, "id" | "isDefault">;
+    let input: Omit<PayoutMethod, "id" | "isDefault" | "creatorId">;
     if (kind === "bank") {
       const iban = form.iban.replace(/\s+/g, "").toUpperCase();
       input = { kind, label: form.bank, detail: `IBAN ending ${iban.slice(-4)}` };
@@ -180,7 +181,7 @@ export function AddPayoutSheet({
       input = { kind, label: form.wallet, detail: `${user.slice(0, 2)}•••@${domain}` };
     }
     const id = actions.addPayoutMethod(input);
-    const willBeDefault = form.makeDefault || s.payoutMethods.length === 0;
+    const willBeDefault = form.makeDefault || me.payoutMethods(s).length === 0;
     if (form.makeDefault) actions.setDefaultPayoutMethod(id);
     toast({ message: `${input.label} added${willBeDefault ? " as your default payout method" : ""}` });
     onAdded?.(id);

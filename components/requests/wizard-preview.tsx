@@ -6,7 +6,8 @@ import { BusinessLogo } from "@/components/domain/business-logo";
 import { languageList, platformList } from "@/components/domain/chips";
 import { Block } from "@/components/ui/block";
 import { lengthLabel, moneyRange, plural, weekdayDate } from "@/lib/format";
-import { ME, type DemoState } from "@/lib/store";
+import { me } from "@/lib/selectors";
+import type { DemoState } from "@/lib/store";
 import { formatById } from "@/lib/taxonomy";
 import type { Product } from "@/lib/types";
 
@@ -24,7 +25,7 @@ export function RequestPreview({
   product?: Product;
   market: Market;
 }) {
-  const business = s.businesses.find((b) => b.id === ME.businessId);
+  const business = me.business(s);
   const format = form.format ? formatById[form.format] : undefined;
   const title = effectiveTitle(form, product);
   const meta = [

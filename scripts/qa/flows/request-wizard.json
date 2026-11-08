@@ -1,7 +1,9 @@
 {
-  "role": "business",
+  "account": "nour",
   "steps": [
-    { "go": "/business/requests/new?product=p-daftar-invoices", "after": 3500 },
+    { "go": "/orders/new?product=p-daftar-invoices", "after": 3500 },
+    { "click": "Custom request", "after": 600 },
+    { "click": "Continue", "after": 1500 },
     { "text": "What kind of video?" },
     { "click": "Honest review", "after": 600 },
     { "click": "Continue", "after": 800 },
@@ -18,7 +20,8 @@
     { "text": "The brief" },
     { "click": "Publish", "after": 2000 },
     { "text": "Your request is live" },
-    { "go": "/creator/opportunities", "after": 3500 },
+    { "account": "layla" },
+    { "go": "/explore?tab=orders", "after": 3500 },
     { "text": "honest review for Daftar Invoices" }
   ]
 }

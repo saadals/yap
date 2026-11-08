@@ -6,13 +6,14 @@ import { useState } from "react";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { TextArea } from "@/components/ui/field";
-import { me } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { isPersonal, me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import type { Creator } from "@/lib/types";
 
 import { responseLabel } from "./profile-utils";
 
-/** Ask a creator a question before commissioning (business only). */
+/** Ask a creator a question before commissioning, from the signed-in account's buyer profile. */
 export function MessageSheet({
   creator,
   open,
@@ -23,8 +24,11 @@ export function MessageSheet({
   onClose: () => void;
 }) {
   const s = useDemo();
-  const sender = me.member(s).name.split(" ")[0];
-  const starter = `Hi ${creator.firstName}, I'm ${sender} from ${me.business(s).name}. We're thinking about commissioning you for a short video about our app. Before we do: `;
+  const business = me.business(s);
+  const sender = (me.member(s)?.name ?? me.account(s).name).split(" ")[0];
+  const starter = isPersonal(s, business.id)
+    ? `Hi ${creator.firstName}, I'm ${sender}. I'm thinking about commissioning you for a short video. Before I do: `
+    : `Hi ${creator.firstName}, I'm ${sender} from ${business.name}. We're thinking about commissioning you for a short video about our app. Before we do: `;
   const [text, setText] = useState(starter);
   const [touched, setTouched] = useState(false);
   const [sentThreadId, setSentThreadId] = useState<string | null>(null);
@@ -58,7 +62,7 @@ export function MessageSheet({
             <PillButton variant="ghost" onClick={close}>
               Keep browsing
             </PillButton>
-            <PillButton variant="contrast" href={`/business/messages?thread=${sentThreadId}`} arrow>
+            <PillButton variant="contrast" href={paths.messages(sentThreadId)} arrow>
               Open conversation
             </PillButton>
           </div>

@@ -9,10 +9,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PillButton } from "@/components/ui/pill-button";
 import { SectionLabel } from "@/components/ui/page";
 import { money } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
-import { creatorByHandle, pastCollaborators, similarCreators, startingPrice } from "@/lib/selectors";
+import { creatorByHandle, me, pastCollaborators, similarCreators, startingPrice } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { ME, useDemo, useHydrated } from "@/lib/store";
+import { useDemo, useHydrated } from "@/lib/store";
 import type { Creator } from "@/lib/types";
 
 import { PackagesBlock } from "./packages";
@@ -43,20 +44,40 @@ export function CreatorNotFound({ handle }: { handle: string }) {
         tint="sun"
         face="calm"
         action={
-          <PillButton href="/creators" variant="contrast" arrow>
+          <BrowseLink variant="contrast" arrow>
             Browse creators
-          </PillButton>
+          </BrowseLink>
         }
       />
     </Block>
   );
 }
 
-/** "Commission again" link for a business that has completed work with this creator. */
-function repeatHref(s: DemoState, creator: Creator, isBusiness: boolean): string | null {
-  if (!isBusiness) return null;
+/** Creator browse: Explore's Creators tab when signed in, the public list otherwise. */
+function BrowseLink({
+  children,
+  variant,
+  size,
+  arrow,
+}: {
+  children: React.ReactNode;
+  variant: "contrast" | "ghost";
+  size?: "sm" | "md";
+  arrow?: boolean;
+}) {
+  const { account } = usePrefs();
+  return (
+    <PillButton href={account ? paths.explore("creators") : paths.creators} variant={variant} size={size} arrow={arrow}>
+      {children}
+    </PillButton>
+  );
+}
+
+/** "Commission again" link when the signed-in account has finished work with this creator. */
+function repeatHref(s: DemoState, creator: Creator, signedIn: boolean): string | null {
+  if (!signedIn) return null;
   const entry = pastCollaborators(s).find((e) => e.creator.id === creator.id);
-  return entry ? `/creators/${creator.handle}/commission?repeat=${entry.last.id}` : null;
+  return entry ? paths.orderCreator(creator.handle, { again: entry.last.id }) : null;
 }
 
 function RepeatLink({ creator, href, className = "" }: { creator: Creator; href: string; className?: string }) {
@@ -74,17 +95,18 @@ function RepeatLink({ creator, href, className = "" }: { creator: Creator; href:
 export function CreatorProfile({ handle }: { handle: string }) {
   const s = useDemo();
   const hydrated = useHydrated();
-  const { role } = usePrefs();
+  const { account } = usePrefs();
   const creator = creatorByHandle(s, handle);
 
   if (!creator) return hydrated ? <CreatorNotFound handle={handle} /> : <ProfileSkeleton />;
 
-  const isOwn = role === "creator" && creator.id === ME.creatorId;
-  const isBusiness = role === "business";
+  const signedIn = Boolean(account);
+  // Anyone can order from any profile except their own (no self-dealing).
+  const isOwn = signedIn && me.creator(s)?.id === creator.id;
   const from = startingPrice(creator);
   const cheapest = cheapestPackage(creator);
-  const commissionHref = `/creators/${creator.handle}/commission`;
-  const repeat = repeatHref(s, creator, isBusiness);
+  const commissionHref = paths.orderCreator(creator.handle);
+  const repeat = isOwn ? null : repeatHref(s, creator, signedIn);
   const similar = similarCreators(s, creator, 4);
 
   return (
@@ -93,7 +115,7 @@ export function CreatorProfile({ handle }: { handle: string }) {
         <Block tone="sky" pad="sm" className="mb-2 flex items-start gap-3 !px-5">
           <Eye size={20} aria-hidden className="mt-0.5 flex-none" />
           <p className="y-small">
-            <span className="font-semibold">This is how businesses see your profile.</span>{" "}
+            <span className="font-semibold">This is how others see your profile.</span>{" "}
             <span className="y-fg-2">
               Changes you make to your portfolio, packages or availability show up here straight away.
             </span>
@@ -105,7 +127,7 @@ export function CreatorProfile({ handle }: { handle: string }) {
         <div className="flex flex-col gap-2 lg:col-span-8">
           <ProfileHero
             creator={creator}
-            canMessage={isBusiness}
+            canMessage={signedIn && !isOwn}
             footer={repeat ? <RepeatLink creator={creator} href={repeat} className="lg:hidden" /> : null}
           />
           <PortfolioBlock s={s} creator={creator} />
@@ -129,7 +151,7 @@ export function CreatorProfile({ handle }: { handle: string }) {
             </div>
             {isOwn ? (
               <PillButton
-                href="/creator/profile"
+                href={paths.editProfile()}
                 variant="neon"
                 size="lg"
                 arrow
@@ -156,7 +178,7 @@ export function CreatorProfile({ handle }: { handle: string }) {
 
       {similar.length ? (
         <section aria-labelledby="similar-heading">
-          <SectionLabel id="similar-heading" action={<PillButton href="/creators" variant="ghost" size="sm">See all</PillButton>}>
+          <SectionLabel id="similar-heading" action={<BrowseLink variant="ghost" size="sm">See all</BrowseLink>}>
             Similar creators
           </SectionLabel>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -173,7 +195,7 @@ export function CreatorProfile({ handle }: { handle: string }) {
           {isOwn ? (
             <>
               <span className="y-small min-w-0 flex-1 truncate font-medium opacity-80">Your public profile</span>
-              <PillButton href="/creator/profile" variant="neon" arrow>
+              <PillButton href={paths.editProfile()} variant="neon" arrow>
                 Edit profile
               </PillButton>
             </>

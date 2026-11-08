@@ -2,29 +2,33 @@
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
-import type { Role } from "./types";
+import { ACCOUNT_COOKIE, actions } from "./store";
 
 /**
- * UI preferences, stored in cookies (`yapp_theme`, `yapp_role`) and read in the browser so the
+ * UI preferences, stored in cookies (`yapp_theme`, `yapp_account`) and read in the browser so the
  * app also works as a fully static site (GitHub Pages):
  * - theme: an inline script in the root layout applies `html.dark` before first paint (no flash);
  *   this provider mirrors it.
- * - role (prototype session: business | creator | signed out): static HTML renders signed out,
- *   then the header switches after hydration. Signed-in pages pass their role to <AppShell>, so
- *   only public pages can briefly show the signed-out header.
+ * - account (prototype session: a demo account id, or signed out): static HTML renders signed
+ *   out, then the header switches after hydration. Which account this tab acts as lives in the
+ *   store (`activeAccountId`, tab-local); the cookie says "signed in" and gives new tabs a default.
+ *
+ * There is one account type: anyone can order and make. Which side of a deal you're on is derived
+ * per order or commission (`sideOf` in lib/selectors.ts), never stored here.
  */
 
 export type Theme = "light" | "dark";
-export type SessionRole = Role | null;
 
 type Prefs = {
   theme: Theme;
   isDark: boolean;
   setTheme: (theme: Theme) => void;
   toggleTheme: () => void;
-  role: SessionRole;
-  /** Sign in as a role (null = sign out). Purely a prototype session. */
-  setRole: (role: SessionRole) => void;
+  /** Signed-in account id, or null when signed out. */
+  account: string | null;
+  /** Sign in (or switch) to a demo account. Purely a prototype session. */
+  signIn: (accountId: string) => void;
+  signOut: () => void;
 };
 
 const PrefsContext = createContext<Prefs | null>(null);
@@ -49,14 +53,11 @@ function writeCookie(name: string, value: string | null) {
 const themeSnapshot = (): Theme =>
   document.documentElement.classList.contains("dark") ? "dark" : "light";
 
-const roleSnapshot = (): SessionRole => {
-  const value = readCookie("yapp_role");
-  return value === "business" || value === "creator" ? value : null;
-};
+const accountSnapshot = (): string | null => readCookie(ACCOUNT_COOKIE) || null;
 
 export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const theme = useSyncExternalStore(subscribe, themeSnapshot, () => "light" as Theme);
-  const role = useSyncExternalStore(subscribe, roleSnapshot, () => null);
+  const account = useSyncExternalStore(subscribe, accountSnapshot, () => null);
 
   const setTheme = useCallback((next: Theme) => {
     writeCookie("yapp_theme", next);
@@ -65,8 +66,19 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
     emit();
   }, []);
 
-  const setRole = useCallback((next: SessionRole) => {
-    writeCookie("yapp_role", next);
+  const signIn = useCallback((accountId: string) => {
+    writeCookie(ACCOUNT_COOKIE, accountId);
+    actions.switchAccount(accountId);
+    emit();
+  }, []);
+
+  const signOut = useCallback(() => {
+    writeCookie(ACCOUNT_COOKIE, null);
+    try {
+      window.sessionStorage.removeItem("yapp-account");
+    } catch {
+      /* ignore */
+    }
     emit();
   }, []);
 
@@ -76,10 +88,11 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
       isDark: theme === "dark",
       setTheme,
       toggleTheme: () => setTheme(theme === "dark" ? "light" : "dark"),
-      role,
-      setRole,
+      account,
+      signIn,
+      signOut,
     }),
-    [theme, role, setTheme, setRole],
+    [theme, account, setTheme, signIn, signOut],
   );
 
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;

@@ -12,7 +12,8 @@ import { AvatarStack, FaceAvatar } from "@/components/ui/face-avatar";
 import { TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { money, moneyRange, plural, shortDate, weekdayDate } from "@/lib/format";
-import { cityById, fit } from "@/lib/selectors";
+import { cityById, fit, savedCreatorIds } from "@/lib/selectors";
+import { activeIds } from "@/lib/store";
 import { addonById, creatorKindById, includedRights } from "@/lib/taxonomy";
 import type { AddonId, Creator } from "@/lib/types";
 
@@ -330,19 +331,22 @@ export function BudgetStep({ form, set, error, market }: StepProps) {
 
 export function WhoStep({ s, form, set, product, error, market }: StepProps) {
   const err = error("invites");
-  const temp = previewRequest(form, product);
-  const saved = s.savedCreatorIds
+  const temp = previewRequest(s, form, product);
+  // Never offer the account's own creator profile (no ordering from yourself).
+  const self = activeIds(s).creatorId;
+  const saved = savedCreatorIds(s)
+    .filter((id) => id !== self)
     .map((id) => s.creators.find((c) => c.id === id))
     .filter((c): c is Creator => Boolean(c));
   const savedIds = new Set(saved.map((c) => c.id));
   const ranked = s.creators
-    .filter((c) => !savedIds.has(c.id))
+    .filter((c) => c.id !== self && !savedIds.has(c.id))
     .map((creator) => ({ creator, fit: fit(s, creator, temp) }))
     .sort((a, b) => b.fit.score - a.fit.score)
     .slice(0, 6);
   // Anyone invited from elsewhere (e.g. ?creator=) who isn't in either list still shows.
   const extra = form.invitedCreatorIds
-    .filter((id) => !savedIds.has(id) && !ranked.some((r) => r.creator.id === id))
+    .filter((id) => id !== self && !savedIds.has(id) && !ranked.some((r) => r.creator.id === id))
     .map((id) => s.creators.find((c) => c.id === id))
     .filter((c): c is Creator => Boolean(c));
 

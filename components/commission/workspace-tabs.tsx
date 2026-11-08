@@ -14,6 +14,7 @@ import {
   KeyRound,
   LifeBuoy,
   Lightbulb,
+  Megaphone,
   Minus,
   Palette,
   Plus,
@@ -21,7 +22,10 @@ import {
   Send,
   ShieldCheck,
   Star,
+  Ticket,
   UserCheck,
+  UserMinus,
+  Wallet,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
@@ -34,6 +38,7 @@ import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/components/ui/toast";
 import { shortDate, timeAgo, timeOf, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { creatorById, threadById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import type { CommissionEvent, ProductAsset } from "@/lib/types";
@@ -102,7 +107,7 @@ function Messages({ ws }: { ws: Workspace }) {
   return (
     <ThreadView
       threadId={thread.id}
-      role={ws.role}
+      role={ws.side}
       maxHeight="min(56dvh, 560px)"
       placeholder={`Message ${ws.otherName} about this commission…`}
     />
@@ -122,19 +127,21 @@ const assetIcon: Record<ProductAsset["kind"], React.ReactNode> = {
 function BriefTab({ ws }: { ws: Workspace }) {
   const s = useDemo();
   const toast = useToast();
-  const { commission, product, role } = ws;
+  const { commission, product, side, slot } = ws;
   const learnings = product?.learnings ?? [];
 
   return (
     <div className="flex flex-col gap-8">
       <BriefSummary brief={commission.brief} product={product} />
 
+      {slot ? <Posting ws={ws} /> : null}
+
       {product ? (
         <div className="flex flex-col gap-6 border-t border-(--b-line) pt-6">
           <div className="flex flex-col gap-1">
             <h3 className="y-head">Product context</h3>
             <p className="y-small y-fg-2 max-w-[62ch]">
-              {role === "business"
+              {side === "business"
                 ? `Saved on ${product.name} and shared with every creator you work with.`
                 : `What ${ws.businessName} wants every video about ${product.name} to get right.`}
             </p>
@@ -226,10 +233,10 @@ function BriefTab({ ws }: { ws: Workspace }) {
               </h4>
               <p className="y-small y-fg-2 max-w-[62ch]">
                 {learnings.length
-                  ? role === "business"
+                  ? side === "business"
                     ? "Learnings from earlier commissions for this product. Every creator sees them with the brief."
                     : "What worked (and didn't) in earlier videos for this product. Worth reading before you film."
-                  : role === "business"
+                  : side === "business"
                     ? "Nothing saved yet. When you review a commission, tick what you learned and it shows up here next time."
                     : "No learnings saved for this product yet."}
               </p>
@@ -245,7 +252,7 @@ function BriefTab({ ws }: { ws: Workspace }) {
                     s.commissions.some(
                       (c) =>
                         c.id === learning.sourceCommissionId &&
-                        (role === "business" ? c.businessId === commission.businessId : c.creatorId === commission.creatorId),
+                        (side === "business" ? c.businessId === commission.businessId : c.creatorId === commission.creatorId),
                     );
                   return (
                     <li key={learning.id} className="y-tile flex flex-col gap-1 p-4">
@@ -256,7 +263,7 @@ function BriefTab({ ws }: { ws: Workspace }) {
                         {sourceVisible ? (
                           <>
                             {" · "}
-                            <Link href={`/${role}/commissions/${learning.sourceCommissionId}`} className="y-link">
+                            <Link href={paths.commission(learning.sourceCommissionId!)} className="y-link">
                               View commission
                             </Link>
                           </>
@@ -270,6 +277,39 @@ function BriefTab({ ws }: { ws: Workspace }) {
           </div>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/** Campaign slots: where and how the approved video gets posted. */
+function Posting({ ws }: { ws: Workspace }) {
+  const slot = ws.slot!;
+  const rows = [
+    { label: "Post on", value: slot.platformName },
+    { label: "Tag", value: slot.brandHandle },
+    { label: "Turn on", value: slot.disclosure },
+    { label: "Keep it up", value: "Until month end, so the payment unlocks" },
+  ];
+  return (
+    <div className="flex flex-col gap-3 border-t border-(--b-line) pt-6">
+      <div className="flex flex-col gap-1">
+        <h3 className="y-head inline-flex items-center gap-2">
+          <Megaphone size={18} aria-hidden /> Posting
+        </h3>
+        <p className="y-small y-fg-2 max-w-[62ch]">
+          {ws.side === "business"
+            ? `After you approve, ${ws.creatorName} posts it on their own account.`
+            : "After approval, you post it on your own account."}
+        </p>
+      </div>
+      <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+        {rows.map((row) => (
+          <div key={row.label} className="flex flex-col gap-0.5 border-t border-(--b-line) py-3">
+            <dt className="y-micro y-fg-2">{row.label}</dt>
+            <dd className="y-small font-semibold">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
     </div>
   );
 }
@@ -291,13 +331,19 @@ const eventIcon: Record<CommissionEvent["kind"], React.ReactNode> = {
   cancelled: <Ban size={16} aria-hidden />,
   disputed: <LifeBuoy size={16} aria-hidden />,
   due_changed: <CalendarClock size={16} aria-hidden />,
+  slot_accepted: <Ticket size={16} aria-hidden />,
+  creator_replaced: <UserMinus size={16} aria-hidden />,
+  video_rejected: <XCircle size={16} aria-hidden />,
+  posted: <Megaphone size={16} aria-hidden />,
+  post_verified: <BadgeCheck size={16} aria-hidden />,
+  payout_available: <Wallet size={16} aria-hidden />,
 };
 
 function Activity({ ws }: { ws: Workspace }) {
-  const { commission, role } = ws;
+  const { commission, side } = ws;
   const events = [...commission.events].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const who = (actor: CommissionEvent["actor"]) =>
-    actor === "system" ? "Yapp" : actor === role ? "You" : actor === "business" ? ws.businessName : ws.creatorName;
+    actor === "system" ? "Yapp" : actor === side ? "You" : actor === "business" ? ws.businessName : ws.creatorName;
 
   if (!events.length) {
     return (
@@ -357,19 +403,31 @@ function Activity({ ws }: { ws: Workspace }) {
 
 /** Key dates at a glance, above the full log. */
 function KeyDates({ ws }: { ws: Workspace }) {
-  const { commission, latest } = ws;
+  const { commission, latest, slot } = ws;
   const auto = commission.status === "delivered" ? autoApproveDate(commission, latest) : undefined;
   const ended = ["completed", "cancelled", "declined"].includes(commission.status);
-  const rows: { label: string; value: string }[] = [
-    { label: commission.source === "request" ? "Hired" : "Offer sent", value: commission.createdAt },
-    ...(commission.acceptedAt && commission.source !== "request"
-      ? [{ label: "Accepted", value: commission.acceptedAt }]
-      : []),
-    ...(ended ? [] : [{ label: "Due", value: commission.dueDate }]),
-    ...(latest ? [{ label: `Version ${latest.version} delivered`, value: latest.deliveredAt }] : []),
-    ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
-    ...(commission.completedAt ? [{ label: "Completed", value: commission.completedAt }] : []),
-  ];
+  const rows: { label: string; value: string }[] = slot
+    ? [
+        // Campaign slots have no deadline yet (deferred by the PM).
+        { label: "Slot taken", value: commission.createdAt },
+        ...(latest ? [{ label: `Review copy ${latest.version} uploaded`, value: latest.deliveredAt }] : []),
+        ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
+        ...(commission.completedAt ? [{ label: "Approved", value: commission.completedAt }] : []),
+        ...(commission.post?.at ? [{ label: "Posted", value: commission.post.at }] : []),
+        ...(commission.withdrawableFrom && commission.payment.status === "pending"
+          ? [{ label: "Withdrawable from", value: commission.withdrawableFrom }]
+          : []),
+      ]
+    : [
+        { label: commission.source === "request" ? "Hired" : "Offer sent", value: commission.createdAt },
+        ...(commission.acceptedAt && commission.source !== "request"
+          ? [{ label: "Accepted", value: commission.acceptedAt }]
+          : []),
+        ...(ended ? [] : [{ label: "Due", value: commission.dueDate }]),
+        ...(latest ? [{ label: `Version ${latest.version} delivered`, value: latest.deliveredAt }] : []),
+        ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
+        ...(commission.completedAt ? [{ label: "Completed", value: commission.completedAt }] : []),
+      ];
   return (
     <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-(--b-line) pb-6 sm:grid-cols-3">
       {rows.map((row) => (
@@ -414,7 +472,7 @@ function FileRow({
 function FilesTab({ ws }: { ws: Workspace }) {
   const s = useDemo();
   const toast = useToast();
-  const { commission, role, product } = ws;
+  const { commission, side, product, slot } = ws;
   const thread = threadById(s, commission.threadId);
   const shared = (thread?.messages ?? []).filter(
     (m) => m.attachment && m.attachment.kind !== "video",
@@ -431,7 +489,7 @@ function FilesTab({ ws }: { ws: Workspace }) {
         tint="sea"
         title="No files yet"
         body={
-          role === "business"
+          side === "business"
             ? `Videos and files ${ws.creatorName} delivers show up here, with anything shared in messages.`
             : "Your deliveries and anything shared in messages show up here."
         }
@@ -441,21 +499,35 @@ function FilesTab({ ws }: { ws: Workspace }) {
 
   return (
     <div className="flex flex-col gap-6">
-      {versions.map((delivery) =>
-        delivery.files.length ? (
+      {versions.map((delivery) => {
+        if (!delivery.files.length) return null;
+        // The ordering side only gets the watermarked preview of a review copy until it's approved.
+        const preview = Boolean(delivery.reviewCopy) && side === "business" && delivery.status !== "approved";
+        return (
           <div key={delivery.id} className="flex flex-col gap-2">
             <h3 className="y-small font-semibold">
-              Version {delivery.version}
+              {slot ? "Review copy" : "Version"} {delivery.version}
               <span className="y-fg-2 font-normal"> · {shortDate(delivery.deliveredAt)}</span>
             </h3>
             <ul className="flex flex-col gap-2">
               {delivery.files.map((file) => (
-                <FileRow key={file.name} name={file.name} meta={file.size} icon={<Film size={18} aria-hidden />} onDownload={download} />
+                <FileRow
+                  key={file.name}
+                  name={file.name}
+                  meta={preview ? `${file.size} · Watermarked preview` : file.size}
+                  icon={<Film size={18} aria-hidden />}
+                  onDownload={(name) =>
+                    toast({
+                      message: preview ? `Downloading the watermarked preview of ${name}` : `Downloading ${name}`,
+                      tone: "info",
+                    })
+                  }
+                />
               ))}
             </ul>
           </div>
-        ) : null,
-      )}
+        );
+      })}
       {shared.length ? (
         <div className="flex flex-col gap-2">
           <h3 className="y-small font-semibold">Shared in messages</h3>
@@ -465,7 +537,7 @@ function FilesTab({ ws }: { ws: Workspace }) {
                 key={message.id}
                 onDownload={download}
                 name={message.attachment!.name}
-                meta={`${message.from === role ? "You" : message.from === "business" ? ws.businessName : ws.creatorName} · ${shortDate(message.at)}${message.attachment!.size ? ` · ${message.attachment!.size}` : ""}`}
+                meta={`${message.from === side ? "You" : message.from === "business" ? ws.businessName : ws.creatorName} · ${shortDate(message.at)}${message.attachment!.size ? ` · ${message.attachment!.size}` : ""}`}
                 icon={<FileText size={18} aria-hidden />}
               />
             ))}

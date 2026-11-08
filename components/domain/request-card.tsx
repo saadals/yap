@@ -1,14 +1,22 @@
 "use client";
 
-import { MailOpen, Sparkles } from "lucide-react";
+import { Megaphone, MailOpen, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { AvatarStack } from "@/components/ui/face-avatar";
-import { daysFromNow, dueLabel, lengthLabel, moneyRange, plural, timeAgo } from "@/lib/format";
+import { compact, daysFromNow, dueLabel, lengthLabel, money, moneyRange, plural, timeAgo } from "@/lib/format";
 import type { Fit } from "@/lib/selectors";
-import { businessById, creatorById, pitchesForRequest, productById } from "@/lib/selectors";
+import {
+  businessById,
+  campaignProgress,
+  creatorById,
+  isCampaign,
+  openSlotCount,
+  pitchesForRequest,
+  productById,
+} from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { formatById } from "@/lib/taxonomy";
+import { campaignPlatformById, formatById, tierById } from "@/lib/taxonomy";
 import type { ContentRequest, Pitch } from "@/lib/types";
 
 import { BusinessLogo } from "./business-logo";
@@ -16,9 +24,10 @@ import { languageList } from "./chips";
 import { PitchBadge, RequestBadge } from "./status-badge";
 
 /**
- * A content request as a card.
+ * An order as a card (custom request or UGC campaign).
  * - perspective "creator": who's asking, what, budget, fit, invite and my pitch status.
- * - perspective "business": status, pitches with faces, views, due date.
+ *   Campaigns: price per yapp, tier, slots left.
+ * - perspective "business": status, pitches with faces, views, due date. Campaigns: slots filled.
  */
 export function RequestCard({
   request,
@@ -38,6 +47,42 @@ export function RequestCard({
   className?: string;
 }) {
   const s = useDemo();
+  if (isCampaign(request)) {
+    return <CampaignCard request={request} perspective={perspective} href={href} className={className} />;
+  }
+  return (
+    <CustomRequestCard
+      request={request}
+      perspective={perspective}
+      href={href}
+      fit={fit}
+      pitch={pitch}
+      invited={invited}
+      className={className}
+      s={s}
+    />
+  );
+}
+
+function CustomRequestCard({
+  request,
+  perspective,
+  href,
+  fit,
+  pitch,
+  invited,
+  className,
+  s,
+}: {
+  request: ContentRequest;
+  perspective: "creator" | "business";
+  href: string;
+  fit?: Fit;
+  pitch?: Pitch;
+  invited: boolean;
+  className: string;
+  s: ReturnType<typeof useDemo>;
+}) {
   const business = businessById(s, request.businessId);
   const product = productById(s, request.brief.productId);
   const format = formatById[request.brief.format];
@@ -128,6 +173,84 @@ export function RequestCard({
           ) : perspective === "creator" ? (
             <span>{plural(pitches.length, "pitch", "pitches")}</span>
           ) : null}
+        </span>
+      </div>
+    </article>
+  );
+}
+
+/** A UGC campaign as a card: price per yapp, tier, and how many slots are left (or filled). */
+function CampaignCard({
+  request,
+  perspective,
+  href,
+  className,
+}: {
+  request: ContentRequest;
+  perspective: "creator" | "business";
+  href: string;
+  className: string;
+}) {
+  const s = useDemo();
+  const business = businessById(s, request.businessId);
+  const product = productById(s, request.brief.productId);
+  const terms = request.campaign!;
+  const tier = tierById[terms.tierId];
+  const open = openSlotCount(s, request);
+  const progress = campaignProgress(s, request);
+  const meta = [
+    `UGC campaign on ${campaignPlatformById[terms.platform].name}`,
+    `${tier.label} followers`,
+    languageList(request.brief.languages),
+  ].join(" · ");
+
+  return (
+    <article data-tone="paper" className={`y-block y-hoverable relative flex flex-col gap-4 p-5 md:p-6 ${className}`}>
+      <div className="flex items-start gap-3">
+        {perspective === "creator" && business ? (
+          <BusinessLogo business={business} size={40} />
+        ) : (
+          <span className="y-round flex-none" data-tone-btn="soft" data-size="sm" aria-hidden>
+            <Megaphone size={18} />
+          </span>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="y-micro y-fg-2 truncate">
+            {perspective === "creator" && business ? `${business.name} · ` : ""}
+            {product?.name}
+            {" · "}
+            {request.status === "draft" ? "Not posted yet" : timeAgo(request.postedAt)}
+          </p>
+          <h3 className="y-head mt-0.5">
+            <Link href={href} className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']">
+              {request.title}
+            </Link>
+          </h3>
+          <p className="y-small y-fg-2 mt-1">{meta}</p>
+        </div>
+      </div>
+
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--b-line) pt-4">
+        <span className="flex items-baseline gap-1.5">
+          <span className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">{money(terms.pricePerVideo)}</span>
+          <span className="y-micro y-fg-2">per yapp</span>
+        </span>
+        <span className="y-micro y-fg-2 flex items-center gap-3">
+          {perspective === "business" ? (
+            <span className="font-semibold text-(--b-fg)">
+              {progress.taken} of {progress.total} taken
+              {progress.review ? ` · ${progress.review} to review` : ""}
+            </span>
+          ) : request.status === "closed" ? (
+            <span>Closed</span>
+          ) : open === 0 ? (
+            <span>All slots taken</span>
+          ) : (
+            <span className="font-semibold text-(--b-fg)">
+              {open <= 3 ? `Only ${plural(open, "yapp")} left` : `${open} of ${request.slots} slots open`}
+            </span>
+          )}
+          {perspective === "creator" ? <span>{compact(request.views)} views</span> : null}
         </span>
       </div>
     </article>

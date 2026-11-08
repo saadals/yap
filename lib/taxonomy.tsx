@@ -21,9 +21,11 @@ import {
 import type {
   AddonId,
   Aspect,
+  CampaignPlatformId,
   CommissionStatus,
   CountryId,
   CreatorKind,
+  FollowerTierId,
   FormatId,
   LanguageId,
   NicheId,
@@ -346,6 +348,68 @@ export const countries: Record<CountryId, { name: string; flag: string }> = {
 /** Platform economics. */
 export const SERVICE_FEE_RATE = 0.1;
 export const AUTO_APPROVE_DAYS = 3;
+
+/* -------------------------------------------------------------------------- */
+/* UGC campaigns (PM spec "UGC Campaign Flow")                                 */
+/* -------------------------------------------------------------------------- */
+
+/** No service fee on campaigns for now (owner decision); the business pays videos × price. */
+export const CAMPAIGN_FEE_RATE = 0;
+/** Minimum videos per campaign, each from a different creator. */
+export const CAMPAIGN_MIN_VIDEOS = 10;
+/** Video counts go up in steps of 5: 10, 15, 20, … */
+export const CAMPAIGN_STEP = 5;
+export const CAMPAIGN_MAX_VIDEOS = 50;
+
+/*
+ * Deferred by the PM ("leave as placeholders"). null = not set; the UI says "Not set yet" or
+ * stays quiet, and nothing is enforced.
+ */
+/** Days a creator has to upload a review copy after taking a slot (and what happens if late). */
+export const CAMPAIGN_DEADLINE_DAYS: number | null = null;
+/** Penalty for repeated rejections, and who it applies to. */
+export const CAMPAIGN_REJECTION_PENALTY: string | null = null;
+/** Most times one slot can be reassigned within a campaign. */
+export const CAMPAIGN_MAX_REASSIGNMENTS: number | null = null;
+
+export type FollowerTier = {
+  id: FollowerTierId;
+  /** Real followers, half-open band: min ≤ followers < max. */
+  min: number;
+  max: number;
+  label: string;
+  pricePerVideo: number;
+  /** Tiers the PM hasn't confirmed yet (same pattern, prices to be defined). */
+  placeholder?: boolean;
+};
+
+/** The business picks a tier; the tier sets the price per video. */
+export const followerTiers: FollowerTier[] = [
+  { id: "t10", min: 10_000, max: 20_000, label: "10K–20K", pricePerVideo: 30 },
+  { id: "t20", min: 20_000, max: 50_000, label: "20K–50K", pricePerVideo: 40 },
+  { id: "t50", min: 50_000, max: 100_000, label: "50K–100K", pricePerVideo: 50, placeholder: true },
+  { id: "t100", min: 100_000, max: 250_000, label: "100K–250K", pricePerVideo: 60, placeholder: true },
+  { id: "t250", min: 250_000, max: Number.POSITIVE_INFINITY, label: "250K+", pricePerVideo: 75, placeholder: true },
+];
+
+export const tierById = Object.fromEntries(followerTiers.map((t) => [t.id, t])) as Record<
+  FollowerTierId,
+  FollowerTier
+>;
+
+export const tierFor = (followers: number) =>
+  followerTiers.find((t) => followers >= t.min && followers < t.max);
+
+/** Where a campaign video gets posted (the brand account to tag lives there too). */
+export const campaignPlatforms: { id: CampaignPlatformId; name: string; disclosure: string }[] = [
+  { id: "tiktok", name: "TikTok", disclosure: "Paid partnership label (Content disclosure → Paid partnership)" },
+  { id: "instagram", name: "Instagram", disclosure: "Paid partnership label" },
+  { id: "snapchat", name: "Snapchat", disclosure: "Paid partnership tag" },
+];
+
+export const campaignPlatformById = Object.fromEntries(
+  campaignPlatforms.map((p) => [p.id, p]),
+) as Record<CampaignPlatformId, (typeof campaignPlatforms)[number]>;
 
 /* -------------------------------------------------------------------------- */
 /* Status labels (always paired with an icon in <StatusBadge>)                 */

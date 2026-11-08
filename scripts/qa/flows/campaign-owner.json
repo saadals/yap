@@ -1,0 +1,139 @@
+{
+  "account": "nour",
+  "steps": [
+    {
+      "go": "/orders/r-150",
+      "after": 3500
+    },
+    {
+      "text": "7 of 10"
+    },
+    {
+      "text": "Review 1 copy"
+    },
+    {
+      "click": "Review 1 copy",
+      "after": 3500
+    },
+    {
+      "text": "Slot 3 of"
+    },
+    {
+      "click": "Reject",
+      "after": 1000
+    },
+    {
+      "text": "Reject this video?"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] textarea",
+        "text": "The app isn't shown on screen at all."
+      }
+    },
+    {
+      "click": "Reject video",
+      "after": 1800
+    },
+    {
+      "text": "You didn't approve this video"
+    },
+    {
+      "click": "Back to campaign",
+      "after": 3000
+    },
+    {
+      "text": "6 of 10"
+    },
+    {
+      "text": "4 open"
+    },
+    {
+      "click": "More",
+      "after": 800
+    },
+    {
+      "click": "Change tier",
+      "after": 1000
+    },
+    {
+      "click": "20K–50K",
+      "after": 500
+    },
+    {
+      "click": "Hold $40 more and change",
+      "after": 1800
+    },
+    {
+      "text": "$40 per yapp"
+    },
+    {
+      "click": "More",
+      "after": 800
+    },
+    {
+      "text": "Tier already changed"
+    },
+    {
+      "key": "Escape"
+    },
+    {
+      "go": "/orders/new?type=campaign&product=p-daftar-invoices",
+      "after": 3500
+    },
+    {
+      "type": {
+        "sel": "input[placeholder^='e.g. Show us']",
+        "text": "Film the reminder that got you paid"
+      }
+    },
+    {
+      "click": "Continue",
+      "after": 900
+    },
+    {
+      "text": "Each video comes from a different creator"
+    },
+    {
+      "click": "Continue",
+      "after": 900
+    },
+    {
+      "click": "Continue",
+      "after": 900
+    },
+    {
+      "text": "No service fee on campaigns"
+    },
+    {
+      "click": "Hold $300 and publish",
+      "after": 3000
+    },
+    {
+      "text": "10 slots open"
+    },
+    {
+      "click": "View campaign",
+      "after": 3500
+    },
+    {
+      "text": "Film the reminder that got you paid"
+    },
+    {
+      "wait": 32000
+    },
+    {
+      "text": "Filming"
+    },
+    {
+      "wait": 12000
+    },
+    {
+      "eval": "[...document.querySelectorAll('main a, main button')].some((e) => /^Review \\d+ cop/.test(e.innerText.trim()))"
+    },
+    {
+      "shot": "campaign-owner-live",
+      "full": true
+    }
+  ]
+}

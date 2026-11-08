@@ -14,6 +14,7 @@ import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { at } from "@/lib/clock";
 import { daysFromNow, money, num, timeAgo, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { cityById, videoById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { creatorKindById } from "@/lib/taxonomy";
@@ -46,10 +47,16 @@ export function deliveryInfo(days: number, request: ContentRequest, creator?: Cr
   };
 }
 
+/** Stars, or "New on Yapp" for a creator profile with no reviews yet. */
+function RatingOrNew({ creator, count = false, className }: { creator: Creator; count?: boolean; className?: string }) {
+  if (!creator.reviewCount) return <span className={className}>New on Yapp</span>;
+  return <Rating value={creator.rating} count={count ? creator.reviewCount : undefined} className={className} />;
+}
+
 export function TrustLine({ creator }: { creator: Creator }) {
   return (
     <span className="y-micro y-fg-2 flex flex-wrap items-center gap-x-2 gap-y-0.5">
-      <Rating value={creator.rating} count={creator.reviewCount} className="!text-xs text-(--b-fg)" />
+      <RatingOrNew creator={creator} count className="!text-xs text-(--b-fg)" />
       <span aria-hidden>·</span>
       <span>{num(creator.completed)} done</span>
       <span aria-hidden>·</span>
@@ -118,7 +125,7 @@ export function PitchRow({
           </button>
           {creator.verified ? <BadgeCheck size={14} aria-label="ID verified" className="flex-none" /> : null}
           <span className="hidden flex-none md:inline-flex">
-            <Rating value={creator.rating} className="!text-xs font-medium" />
+            <RatingOrNew creator={creator} className="!text-xs font-medium" />
           </span>
           {hired ? (
             <PitchBadge status="hired" className="ms-1 flex-none" />
@@ -129,7 +136,7 @@ export function PitchRow({
           ) : null}
         </h3>
         <p className="y-micro y-fg-2 flex flex-wrap items-center gap-x-1.5 md:hidden">
-          <Rating value={creator.rating} className="!text-xs font-medium text-(--b-fg)" />
+          <RatingOrNew creator={creator} className="!text-xs font-medium text-(--b-fg)" />
           <span aria-hidden>·</span>
           <span>{fit.score}% fit</span>
           <span aria-hidden>·</span>
@@ -221,7 +228,7 @@ export function PitchSheet({
 
   const primary = hired ? (
     commissionId ? (
-      <PillButton href={`/business/commissions/${commissionId}`} variant="neon" size="lg" arrow className="flex-1 justify-between ps-6">
+      <PillButton href={paths.commission(commissionId)} variant="neon" size="lg" arrow className="flex-1 justify-between ps-6">
         Open commission
       </PillButton>
     ) : null
@@ -358,7 +365,7 @@ export function PitchSheet({
         ) : null}
 
         <div className="flex flex-wrap items-center gap-2">
-          <PillButton href={`/creators/${creator.handle}`} variant="ghost" size="sm" className="-ms-3">
+          <PillButton href={paths.creator(creator.handle)} variant="ghost" size="sm" className="-ms-3">
             View profile
           </PillButton>
           {!hired && !declined ? (

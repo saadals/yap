@@ -5,13 +5,16 @@ import {
   BellRing,
   KeyRound,
   Laptop,
+  LoaderCircle,
+  LogOut,
   Palmtree,
   Smartphone,
   Tablet,
   Trash2,
   Zap,
 } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { FilterChip } from "@/components/ui/chip";
@@ -21,13 +24,15 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { addDays, at } from "@/lib/clock";
 import { longDate, money } from "@/lib/format";
-import { me, opportunities } from "@/lib/selectors";
-import { ME, actions, useDemo } from "@/lib/store";
+import { paths } from "@/lib/paths";
+import { usePrefs } from "@/lib/prefs";
+import { cityLabel, me, opportunities } from "@/lib/selectors";
+import { actions, useDemo } from "@/lib/store";
 import { formats, languages } from "@/lib/taxonomy";
 import type { Creator, FormatId, LanguageId } from "@/lib/types";
 
 import { ConfirmSheet } from "./confirm-sheet";
-import { RowList, SwitchRow, isEmail } from "./controls";
+import { RowList, SwitchRow } from "./controls";
 
 /** "2026-11-20" in Riyadh time. */
 const dayOf = (iso: string) => new Date(Date.parse(iso) + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
@@ -37,11 +42,11 @@ const tomorrow = dayOf(at(1));
 /* Availability                                                                */
 /* -------------------------------------------------------------------------- */
 
-export function AvailabilityControls() {
+/** Available for new work and vacation mode, for the signed-in account's creator profile. */
+export function AvailabilityControls({ creator }: { creator: Creator }) {
   const s = useDemo();
   const toast = useToast();
-  const creator = me.creator(s);
-  const vacation = s.settings.creator.vacationMode;
+  const vacation = me.settings(s).creator.vacationMode;
   const returnDay = creator.availableFrom ? dayOf(creator.availableFrom) : "";
   const [dateError, setDateError] = useState<string | null>(null);
   const [reply, setReply] = useState(
@@ -60,15 +65,15 @@ export function AvailabilityControls() {
               ? "Turn off vacation mode to change this."
               : creator.available
                 ? "You show as available in search and match alerts."
-                : "You show as booked. Businesses can still message you."
+                : "You show as booked. People can still message you."
           }
           checked={creator.available}
           disabled={vacation}
           onChange={(available) => {
-            actions.updateCreator(ME.creatorId, { available });
+            actions.updateCreator(creator.id, { available });
             toast({
               message: available ? "You're shown as available for new work" : "You're shown as booked",
-              action: { label: "Undo", onClick: () => actions.updateCreator(ME.creatorId, { available: !available }) },
+              action: { label: "Undo", onClick: () => actions.updateCreator(creator.id, { available: !available }) },
             });
           }}
         />
@@ -81,12 +86,12 @@ export function AvailabilityControls() {
             const before = { available: creator.available, availableFrom: creator.availableFrom };
             actions.updateSettings("creator", { vacationMode: on });
             if (on) {
-              actions.updateCreator(ME.creatorId, {
+              actions.updateCreator(creator.id, {
                 available: false,
                 availableFrom: creator.availableFrom ?? addDays(at(0, "09:00"), 14),
               });
             } else {
-              actions.updateCreator(ME.creatorId, { available: true, availableFrom: undefined });
+              actions.updateCreator(creator.id, { available: true, availableFrom: undefined });
             }
             setDateError(null);
             toast({
@@ -95,7 +100,7 @@ export function AvailabilityControls() {
                 label: "Undo",
                 onClick: () => {
                   actions.updateSettings("creator", { vacationMode: !on });
-                  actions.updateCreator(ME.creatorId, before);
+                  actions.updateCreator(creator.id, before);
                 },
               },
             });
@@ -108,7 +113,7 @@ export function AvailabilityControls() {
           <FieldShell
             label="Back on"
             required
-            hint={returnDay ? `Your profile says “Back ${longDate(`${returnDay}T09:00:00+03:00`)}”.` : "Clients see this on your profile."}
+            hint={returnDay ? `Your profile says “Back ${longDate(`${returnDay}T09:00:00+03:00`)}”.` : "Buyers see this on your profile."}
             error={dateError}
           >
             {({ id, describedBy }) => (
@@ -127,7 +132,7 @@ export function AvailabilityControls() {
                     return;
                   }
                   setDateError(null);
-                  actions.updateCreator(ME.creatorId, { availableFrom: `${value}T06:00:00.000Z` });
+                  actions.updateCreator(creator.id, { availableFrom: `${value}T06:00:00.000Z` });
                 }}
               />
             )}
@@ -170,15 +175,15 @@ export function AvailabilityControls() {
 /* Opportunity alerts                                                          */
 /* -------------------------------------------------------------------------- */
 
-export function AlertControls() {
+/** Match alerts for new custom orders, with a minimum budget, formats and dialects. */
+export function AlertControls({ creator }: { creator: Creator }) {
   const s = useDemo();
   const toast = useToast();
-  const creator = me.creator(s);
-  const prefs = s.settings.creator;
+  const prefs = me.settings(s).creator;
   const [alertFormats, setAlertFormats] = useState<FormatId[]>(creator.formats);
   const [alertLangs, setAlertLangs] = useState<LanguageId[]>(creator.languages);
 
-  const matching = opportunities(s).filter(
+  const matching = opportunities(s, creator.id).filter(
     ({ request, hidden }) =>
       !hidden &&
       request.budget.max >= prefs.minBudget &&
@@ -202,12 +207,12 @@ export function AlertControls() {
         <SwitchRow
           label="Match alerts"
           icon={<BellRing size={18} />}
-          description="New requests that fit your formats, dialects and budget."
+          description="New custom orders that fit your formats, dialects and budget. Campaigns you qualify for always notify you."
           checked={prefs.matchAlerts}
           onChange={(on) => {
             actions.updateSettings("creator", { matchAlerts: on });
             toast({
-              message: on ? "Match alerts on" : "Match alerts off. You can still browse opportunities.",
+              message: on ? "Match alerts on" : "Match alerts off. You can still browse orders in Explore.",
               action: { label: "Undo", onClick: () => actions.updateSettings("creator", { matchAlerts: !on }) },
             });
           }}
@@ -238,7 +243,7 @@ export function AlertControls() {
           />
           <p id="min-budget-hint" className="y-micro y-fg-2" aria-live="polite">
             <span className="font-semibold text-(--b-fg)">
-              {matching} open request{matching === 1 ? "" : "s"}
+              {matching} open order{matching === 1 ? "" : "s"}
             </span>{" "}
             match right now.
           </p>
@@ -292,140 +297,108 @@ export function AlertControls() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Account                                                                     */
+/* ID verification (making)                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** ID check for the creator profile: a simulated check that marks the profile verified. */
+export function IdVerificationRow({ creator }: { creator: Creator }) {
+  const toast = useToast();
+  const [pending, setPending] = useState(false);
+  const timer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const verify = () => {
+    setPending(true);
+    timer.current = window.setTimeout(() => {
+      actions.updateCreator(creator.id, { verified: true });
+      setPending(false);
+      toast({ message: "Your ID is verified. Your profile shows the badge now." });
+    }, 3000);
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="min-w-0 flex-1">
+        <h3 className="y-head">ID verification</h3>
+        <p className="y-micro y-fg-2">
+          {creator.verified
+            ? "Verified with your government ID."
+            : pending
+              ? "Checking your ID. This takes a moment."
+              : "A badge buyers trust, and needed before payouts. About 2 minutes."}
+        </p>
+      </div>
+      {creator.verified ? (
+        <Badge tone="success" icon={<BadgeCheck size={14} aria-hidden />}>
+          Verified
+        </Badge>
+      ) : pending ? (
+        <Badge tone="info" icon={<LoaderCircle size={14} aria-hidden className="animate-spin" />}>
+          In review
+        </Badge>
+      ) : (
+        <PillButton variant="contrast" size="sm" onClick={verify}>
+          Verify ID
+        </PillButton>
+      )}
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Account: password, devices, sign out, delete                                */
 /* -------------------------------------------------------------------------- */
 
 type Device = { id: string; name: string; detail: string; icon: React.ReactNode; current?: boolean };
 
-const seedDevices: Device[] = [
-  { id: "d-1", name: "iPhone 15", detail: "Safari · Dubai, UAE · Active now", icon: <Smartphone size={18} />, current: true },
-  { id: "d-2", name: "MacBook Air", detail: "Chrome · Dubai, UAE · Yesterday", icon: <Laptop size={18} /> },
-  { id: "d-3", name: "iPad", detail: "Safari · Abu Dhabi, UAE · 12 Oct", icon: <Tablet size={18} /> },
+const deviceList = (city: string): Device[] => [
+  { id: "d-1", name: "iPhone 15", detail: `Safari · ${city} · Active now`, icon: <Smartphone size={18} />, current: true },
+  { id: "d-2", name: "MacBook Air", detail: `Chrome · ${city} · Yesterday`, icon: <Laptop size={18} /> },
+  { id: "d-3", name: "iPad", detail: `Safari · ${city} · 12 Oct`, icon: <Tablet size={18} /> },
 ];
 
 export function AccountControls() {
   const s = useDemo();
-  const creator = me.creator(s);
-  return <AccountInner creator={creator} />;
-}
-
-function AccountInner({ creator }: { creator: Creator }) {
+  const router = useRouter();
   const toast = useToast();
-  const [name, setName] = useState(creator.name);
-  const [email, setEmail] = useState("layla@laylatalks.com");
-  const [savedEmail, setSavedEmail] = useState(email);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+  const { signOut } = usePrefs();
+  const account = me.account(s);
+  const creator = me.creator(s);
+  const business = me.business(s);
+  const seedDevices = deviceList(cityLabel(creator?.cityId ?? business.cityId));
   const [devices, setDevices] = useState(seedDevices);
   const [password, setPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  const errors = {
-    name: name.trim().split(/\s+/).length < 2 ? "Enter your first and last name." : null,
-    email: !isEmail(email) ? "Enter an email like layla@example.com." : null,
-  };
-  const dirty = name.trim() !== creator.name || email.trim() !== savedEmail;
-
-  const signOut = (device: Device) => {
+  const signOutDevice = (device: Device) => {
     setDevices((list) => list.filter((d) => d.id !== device.id));
     toast({
       message: `Signed out of ${device.name}`,
       action: {
         label: "Undo",
-        onClick: () => setDevices((list) => seedDevices.filter((d) => d.id === device.id || list.some((x) => x.id === d.id))),
+        onClick: () =>
+          setDevices((list) => seedDevices.filter((d) => d.id === device.id || list.some((x) => x.id === d.id))),
       },
     });
   };
 
   return (
     <div className="flex flex-col gap-6">
-      <form
-        noValidate
-        className="flex flex-col gap-4"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setTouched({ name: true, email: true });
-          if (errors.name || errors.email) return;
-          const clean = name.trim().replace(/\s+/g, " ");
-          if (clean !== creator.name) {
-            actions.updateCreator(ME.creatorId, { name: clean, firstName: clean.split(" ")[0] });
-          }
-          setName(clean);
-          setEmail(email.trim());
-          setSavedEmail(email.trim());
-          toast({ message: "Saved" });
-        }}
-      >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <TextField
-            label="Full name"
-            required
-            autoComplete="name"
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            onBlur={() => setTouched((t) => ({ ...t, name: true }))}
-            error={touched.name ? errors.name : null}
-          />
-          <FieldShell
-            label="Handle"
-            optionalLabel={false}
-            hint="Part of your profile link, so it can't change."
-          >
-            {({ id, describedBy }) => (
-              <input
-                id={id}
-                aria-describedby={describedBy}
-                className="y-input y-fg-2 cursor-not-allowed"
-                value={`@${creator.handle}`}
-                readOnly
-              />
-            )}
-          </FieldShell>
-        </div>
-        <TextField
-          label="Email"
-          required
-          type="email"
-          autoComplete="email"
-          hint="Clients never see it."
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          onBlur={() => setTouched((t) => ({ ...t, email: true }))}
-          error={touched.email ? errors.email : null}
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <PillButton type="submit" variant="contrast" disabled={!dirty}>
-            Save account details
-          </PillButton>
-          <PillButton variant="soft" icon={<KeyRound size={18} aria-hidden />} onClick={() => setPassword(true)}>
-            Change password
-          </PillButton>
-        </div>
-      </form>
-
-      <div className="flex flex-wrap items-center gap-3 border-t border-(--b-line) pt-5">
-        <div className="min-w-0 flex-1">
-          <h3 className="y-head">ID verification</h3>
-          <p className="y-micro y-fg-2">
-            {creator.verified
-              ? "Verified with your Emirates ID."
-              : "Get a badge clients trust. It takes about 2 minutes."}
-          </p>
-        </div>
-        {creator.verified ? (
-          <Badge tone="success" icon={<BadgeCheck size={14} aria-hidden />}>
-            Verified
-          </Badge>
-        ) : (
-          <PillButton
-            variant="contrast"
-            size="sm"
-            onClick={() =>
-              toast({ message: "ID checks aren't part of this prototype. In the live product this opens a secure check.", tone: "info" })
-            }
-          >
-            Verify ID
-          </PillButton>
-        )}
+      <div className="flex flex-wrap items-center gap-2">
+        <PillButton variant="soft" icon={<KeyRound size={18} aria-hidden />} onClick={() => setPassword(true)}>
+          Change password
+        </PillButton>
+        <PillButton
+          variant="soft"
+          icon={<LogOut size={18} aria-hidden className="y-flip" />}
+          onClick={() => {
+            signOut();
+            toast({ message: "Signed out", tone: "info" });
+            router.push(paths.landing);
+          }}
+        >
+          Sign out
+        </PillButton>
       </div>
 
       <div className="flex flex-col gap-3 border-t border-(--b-line) pt-5">
@@ -466,7 +439,7 @@ function AccountInner({ creator }: { creator: Creator }) {
                 <p className="y-micro y-fg-2 truncate">{device.detail}</p>
               </div>
               {!device.current ? (
-                <PillButton variant="ghost" size="sm" onClick={() => signOut(device)} aria-label={`Sign out of ${device.name}`}>
+                <PillButton variant="ghost" size="sm" onClick={() => signOutDevice(device)} aria-label={`Sign out of ${device.name}`}>
                   Sign out
                 </PillButton>
               ) : null}
@@ -478,25 +451,30 @@ function AccountInner({ creator }: { creator: Creator }) {
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--b-line) pt-5">
         <div className="min-w-0">
           <h3 className="y-head">Delete account</h3>
-          <p className="y-micro y-fg-2">Finish active commissions first. Anything in protection is paid out.</p>
+          <p className="y-micro y-fg-2">Finish active orders and work first. Anything held is refunded or paid out.</p>
         </div>
         <PillButton variant="ghost" size="sm" icon={<Trash2 size={16} aria-hidden />} onClick={() => setDeleting(true)}>
           Delete account
         </PillButton>
       </div>
 
+      <p className="y-micro y-fg-3 border-t border-(--b-line) pt-5">
+        This is a prototype with two demo accounts sharing one browser store. Switch between them from
+        the account menu; Reset demo data there restores the original data. Nothing here moves real money.
+      </p>
+
       <PasswordSheet open={password} onClose={() => setPassword(false)} />
       <ConfirmSheet
         open={deleting}
         onClose={() => setDeleting(false)}
         title="Delete your account?"
-        description="Your profile, portfolio, reviews and pitches will be removed for good. This can't be undone."
+        description="Your orders, creator profile, portfolio and reviews will be removed for good. This can't be undone."
         confirmLabel="Delete account"
-        typed={creator.handle}
+        typed={creator?.handle ?? account.firstName.toUpperCase()}
         onConfirm={() => {
           setDeleting(false);
           toast({
-            message: "This is a demo, so your account stays. In the live product it would close after any payouts land.",
+            message: "This is a demo, so your account stays. In the live product it would close once open work is settled.",
             tone: "info",
           });
         }}

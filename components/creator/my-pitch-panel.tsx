@@ -7,6 +7,7 @@ import { VideoThumb } from "@/components/domain/video-thumb";
 import { PillButton } from "@/components/ui/pill-button";
 import { at } from "@/lib/clock";
 import { money, plural, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { useDemo } from "@/lib/store";
 import { videoById } from "@/lib/selectors";
 import type { Business, ContentRequest, Pitch, Video } from "@/lib/types";
@@ -35,6 +36,10 @@ export function MyPitchPanel({
     .map((id) => videoById(s, id))
     .filter((v): v is Video => Boolean(v));
   const closedForOthers = request.status !== "open" && pitch.status !== "hired";
+  // The conversation about this request, if the business started one.
+  const thread = s.threads.find(
+    (t) => t.requestId === request.id && t.creatorId === pitch.creatorId && t.messages.length > 0,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -87,12 +92,12 @@ export function MyPitchPanel({
       <div className="flex flex-wrap gap-2">
         {pitch.status === "hired" ? (
           commission ? (
-            <PillButton href={`/creator/commissions/${commission.id}`} variant="contrast" arrow>
+            <PillButton href={paths.commission(commission.id)} variant="contrast" arrow>
               Open the commission
             </PillButton>
           ) : (
-            <PillButton href="/creator/commissions" variant="contrast" arrow>
-              Go to commissions
+            <PillButton href={paths.work("making")} variant="contrast" arrow>
+              Go to your work
             </PillButton>
           )
         ) : null}
@@ -102,7 +107,7 @@ export function MyPitchPanel({
           </PillButton>
         ) : null}
         {pitch.status === "shortlisted" ? (
-          <PillButton href="/creator/messages" variant="outline" icon={<MessageCircle size={16} aria-hidden />}>
+          <PillButton href={paths.messages(thread?.id)} variant="outline" icon={<MessageCircle size={16} aria-hidden />}>
             Check messages
           </PillButton>
         ) : null}
@@ -116,8 +121,8 @@ export function MyPitchPanel({
           />
         ) : null}
         {pitch.status === "declined" || closedForOthers ? (
-          <PillButton href="/creator/opportunities" variant="outline" icon={<Search size={16} aria-hidden />}>
-            Find similar requests
+          <PillButton href={paths.explore("orders")} variant="outline" icon={<Search size={16} aria-hidden />}>
+            Find similar orders
           </PillButton>
         ) : null}
       </div>

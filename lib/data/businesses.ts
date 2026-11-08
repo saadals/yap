@@ -3,7 +3,27 @@ import { at } from "@/lib/clock";
 
 export const businesses: Business[] = [
   {
+    // Layla's own buyer profile: she can order videos in her own name too (one account type).
+    id: "b-layla",
+    kind: "personal",
+    faceId: "cr-layla",
+    name: "Layla Mansour",
+    monogram: "LM",
+    brandColor: "#7A3E8F",
+    tagline: "Orders in her own name",
+    cityId: "dubai",
+    industry: "consumer",
+    teamSize: "Just me",
+    verified: true,
+    paymentVerified: true,
+    memberSince: at(-610),
+    hires: 0,
+    clientRating: 5,
+    website: "",
+  },
+  {
     id: "b-daftar",
+    kind: "company",
     name: "Daftar",
     monogram: "D",
     brandColor: "#0F7A5C",

@@ -9,7 +9,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
 import { cities } from "@/lib/data/cities";
 import { cityLabel, me } from "@/lib/selectors";
-import { ME, actions, useDemo } from "@/lib/store";
+import { actions, useDemo } from "@/lib/store";
 import { countries, niches } from "@/lib/taxonomy";
 import type { Business, NicheId } from "@/lib/types";
 
@@ -91,10 +91,10 @@ function Inner({ business }: { business: Business }) {
       tagline: form.tagline.trim(),
       website: form.website.trim().replace(/^https?:\/\//i, "").replace(/\/$/, ""),
     };
-    actions.updateBusiness(ME.businessId, next);
+    actions.updateBusiness(business.id, next);
     toast({
-      message: "Saved. Creators will see the update on your requests.",
-      action: { label: "Undo", onClick: () => actions.updateBusiness(ME.businessId, previous) },
+      message: "Saved. Creators will see the update on your orders.",
+      action: { label: "Undo", onClick: () => actions.updateBusiness(business.id, previous) },
     });
   };
 
@@ -132,7 +132,7 @@ function Inner({ business }: { business: Business }) {
         <TextField
           label="Tagline"
           required
-          hint="Shown on every request."
+          hint="Shown on every order."
           value={form.tagline}
           onChange={(event) => set("tagline", event.target.value)}
           onBlur={blur("tagline")}

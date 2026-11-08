@@ -14,7 +14,7 @@ import type { Creator, Package, PackageTier } from "@/lib/types";
 import { ProfileSection, useDraft } from "./section";
 
 const tiers: { id: PackageTier; label: string; hint: string }[] = [
-  { id: "basic", label: "Basic", hint: "Your entry point. Most first-time clients start here." },
+  { id: "basic", label: "Basic", hint: "Your entry point. Most first-time buyers start here." },
   { id: "standard", label: "Standard", hint: "The one you'd recommend. Usually the most booked." },
   { id: "premium", label: "Premium", hint: "More videos or more polish, for bigger launches." },
 ];

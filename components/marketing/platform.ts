@@ -5,7 +5,16 @@
 
 import { startingPrice } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { addons as addonList, isArabic } from "@/lib/taxonomy";
+import { compact } from "@/lib/format";
+import {
+  CAMPAIGN_FEE_RATE,
+  CAMPAIGN_MIN_VIDEOS,
+  CAMPAIGN_STEP,
+  SERVICE_FEE_RATE,
+  addons as addonList,
+  followerTiers,
+  isArabic,
+} from "@/lib/taxonomy";
 import type { AddonId, Creator } from "@/lib/types";
 
 /** Platform-wide claims that the seed data can't derive. Keep every hard-coded figure here. */
@@ -19,6 +28,24 @@ export const MARKETING = {
   /** How long a creator has to accept a direct offer before it expires. */
   offerExpiryDays: 3,
 };
+
+/**
+ * UGC campaign facts for marketing copy, from the taxonomy constants. Only confirmed tiers are
+ * quoted (the higher ones are placeholders until the PM confirms them).
+ */
+export function campaignFacts() {
+  const confirmed = followerTiers.filter((tier) => !tier.placeholder);
+  return {
+    minVideos: CAMPAIGN_MIN_VIDEOS,
+    step: CAMPAIGN_STEP,
+    feePct: Math.round(CAMPAIGN_FEE_RATE * 100),
+    customFeePct: Math.round(SERVICE_FEE_RATE * 100),
+    fromPrice: confirmed[0]?.pricePerVideo ?? followerTiers[0].pricePerVideo,
+    /** Lowest verified follower count a campaign accepts ("10K"). */
+    floor: compact(followerTiers[0].min),
+    tiers: confirmed,
+  };
+}
 
 /** Fallback add-on prices when no creator in the store offers an add-on. */
 const addonFallback: Record<AddonId, number> = {

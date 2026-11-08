@@ -5,8 +5,8 @@
 
 import { NOW, TZ_OFFSET, at } from "@/lib/clock";
 import { daysFromNow, lengthLabel, plural } from "@/lib/format";
-import { cityById, fit, type Fit } from "@/lib/selectors";
-import { ME, type DemoState, type RequestDraft } from "@/lib/store";
+import { cityById, fit, me, type Fit } from "@/lib/selectors";
+import { activeIds, type DemoState, type RequestDraft } from "@/lib/store";
 import { formatById, languageById } from "@/lib/taxonomy";
 import type {
   AddonId,
@@ -89,7 +89,7 @@ const countryDialect: Record<string, LanguageId> = {
 
 /** The dialect most businesses in this city ask for (a starting point, always editable). */
 export function homeDialect(s: DemoState): LanguageId {
-  const business = s.businesses.find((b) => b.id === ME.businessId);
+  const business = me.business(s);
   const city = business ? cityById(business.cityId) : undefined;
   return (city && countryDialect[city.countryId]) || "ar-saudi";
 }
@@ -314,10 +314,10 @@ export function formFromRequest(s: DemoState, request: ContentRequest): WizardFo
 }
 
 /** A throwaway request so fit() and the preview can reason about an unpublished brief. */
-export function previewRequest(form: WizardForm, product?: Product): ContentRequest {
+export function previewRequest(s: DemoState, form: WizardForm, product?: Product): ContentRequest {
   return {
     id: "preview",
-    businessId: ME.businessId,
+    businessId: activeIds(s).businessId,
     title: effectiveTitle(form, product) || "Your request",
     brief: formToBrief(form),
     budget: form.budget,
@@ -329,6 +329,7 @@ export function previewRequest(form: WizardForm, product?: Product): ContentRequ
     preferredKinds: form.preferredKinds,
     slots: 1,
     views: 0,
+    kind: "custom",
   };
 }
 
@@ -537,9 +538,11 @@ export function marketFor(
 ): Market {
   // A hook pack holds up to five short hooks, so price it per pack rather than per hook.
   const units = format === "hook-pack" ? Math.ceil(videoCount / 5) : videoCount;
+  const self = activeIds(s).creatorId;
   const pool = s.creators
     .filter(
       (c) =>
+        c.id !== self &&
         (!format || c.formats.includes(format)) &&
         (languages.length === 0 || languages.some((l) => c.languages.includes(l))),
     )

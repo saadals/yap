@@ -1,10 +1,21 @@
-import { CheckCircle2, Eye, Repeat2 } from "lucide-react";
+import { CheckCircle2, Eye, Repeat2, XCircle } from "lucide-react";
 
 import type { BadgeTone } from "@/components/ui/badge";
 import { addDays } from "@/lib/clock";
 import { money, timeAgo } from "@/lib/format";
 import type { commissionTotals } from "@/lib/selectors";
-import type { Business, Commission, Creator, Delivery, Product, Role } from "@/lib/types";
+import type {
+  Business,
+  CampaignTerms,
+  Commission,
+  ContentRequest,
+  Creator,
+  Delivery,
+  PaymentStatus,
+  Product,
+  Role,
+  SocialAccount,
+} from "@/lib/types";
 
 /** Whole dollars when the amount is whole, cents otherwise ("$286", "$313.50"). */
 export const cash = (amount: number) => (Number.isInteger(amount) ? money(amount) : money(amount, true));
@@ -20,14 +31,31 @@ export type SheetName =
   | "extend"
   | "report"
   | "cancel"
-  | "clientFeedback";
+  | "clientFeedback"
+  | "reject"
+  | "removeCreator";
 
 export type TabId = "messages" | "brief" | "activity" | "files";
+
+/** A campaign slot's terms, resolved once (the campaign may be missing in odd demo states). */
+export type SlotContext = {
+  request?: ContentRequest;
+  terms?: CampaignTerms;
+  /** "TikTok" */
+  platformName: string;
+  /** The paid-partnership setting to turn on, in the platform's words. */
+  disclosure: string;
+  /** "@daftar.app" */
+  brandHandle: string;
+  /** The creator's own connected account on the campaign's platform. */
+  social?: SocialAccount;
+};
 
 /** Everything the workspace pieces need, derived once per render. */
 export type Workspace = {
   commission: Commission;
-  role: Role;
+  /** The viewer's side of this deal: "business" ordered it, "creator" is making it. */
+  side: Role;
   creator?: Creator;
   business?: Business;
   product?: Product;
@@ -36,9 +64,11 @@ export type Workspace = {
   creatorName: string;
   /** "Daftar" / "the client" */
   businessName: string;
-  /** The other side's short name from this role's point of view. */
+  /** The other side's short name from the viewer's point of view. */
   otherName: string;
   latest?: Delivery;
+  /** Set for UGC campaign slots (`commission.source === "campaign"`). */
+  slot?: SlotContext;
   openSheet: (name: SheetName) => void;
   goToMessages: () => void;
   showTab: (tab: TabId) => void;
@@ -55,7 +85,26 @@ export const versionStatus: Record<
     icon: <Repeat2 size={14} aria-hidden />,
   },
   approved: { label: "Approved", tone: "success", icon: <CheckCircle2 size={14} aria-hidden /> },
+  rejected: { label: "Not approved", tone: "neutral", icon: <XCircle size={14} aria-hidden /> },
 };
+
+/** Payment state in a few words, from the viewer's side. */
+export function paymentWords(status: PaymentStatus, side: Role): string {
+  switch (status) {
+    case "authorized":
+      return "Authorised";
+    case "held":
+      return "Held safely";
+    case "pending":
+      return side === "business" ? "Paid to their wallet" : "Pending";
+    case "released":
+      return side === "business" ? "Paid" : "Released";
+    case "refunded":
+      return "Refunded";
+    case "returned":
+      return side === "business" ? "Back in your campaign" : "Back with the campaign";
+  }
+}
 
 /** When the latest delivery auto-approves (seed may omit it; fall back to delivery + 3 days). */
 export function autoApproveDate(commission: Commission, latest?: Delivery): string | undefined {

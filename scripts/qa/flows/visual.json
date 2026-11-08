@@ -1,10 +1,14 @@
 {
-  "role": "business",
+  "account": "nour",
   "theme": "dark",
   "steps": [
-    { "go": "/business", "after": 3500 },
-    { "shot": "dark-business-home", "full": true },
+    { "go": "/work", "after": 3500 },
+    { "shot": "dark-work", "full": true },
     { "go": "/creators", "after": 3500 },
-    { "shot": "dark-creators", "full": true }
+    { "shot": "dark-creators", "full": true },
+    { "go": "/orders/r-150", "after": 3500 },
+    { "shot": "dark-campaign-owner", "full": true },
+    { "go": "/home", "after": 3500 },
+    { "shot": "dark-home" }
   ]
 }

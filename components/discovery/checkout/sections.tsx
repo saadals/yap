@@ -11,6 +11,7 @@ import { SelectField, TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { lengthLabel, money, plural, shortDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import type { DemoState } from "@/lib/store";
 import { addonById, aspects, formatById, languageById, platforms } from "@/lib/taxonomy";
 import type { Aspect, Creator, FormatId } from "@/lib/types";
@@ -207,9 +208,26 @@ export function PackageEditor({ creator, d, replace }: EditorProps) {
 /* 2 Product + learnings                                                       */
 /* -------------------------------------------------------------------------- */
 
-export function ProductEditor({ s, d, x, set, errorFor }: EditorProps) {
+export function ProductEditor({ s, creator, d, x, set, errorFor }: EditorProps) {
   const products = businessProducts(s);
   const error = errorFor("product");
+  // Adding a product comes straight back here with it selected (`?product=`).
+  const addHref = `${paths.newProduct}?return=${encodeURIComponent(
+    paths.orderCreator(creator.handle, { package: d.packageId }),
+  )}`;
+  if (!products.length) {
+    return (
+      <div className="y-tile flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-center">
+        <p className="y-small y-fg-2 min-w-0 flex-1">
+          No saved products yet. Describe what it&apos;s for in the brief, or save a product so its
+          audience, tone and learnings fill in every order.
+        </p>
+        <PillButton href={addHref} variant="soft" size="sm" icon={<Plus size={16} aria-hidden />} className="flex-none">
+          Add a product
+        </PillButton>
+      </div>
+    );
+  }
   return (
     <>
       <div role="radiogroup" aria-label="Product" className="grid gap-2 md:grid-cols-2" data-field="product" tabIndex={-1}>
@@ -247,7 +265,7 @@ export function ProductEditor({ s, d, x, set, errorFor }: EditorProps) {
           );
         })}
         <Link
-          href="/business/products/new"
+          href={addHref}
           className="y-tile y-hoverable flex min-h-20 items-center gap-3 p-4 font-semibold"
         >
           <Plus size={20} aria-hidden /> Add another product

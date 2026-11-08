@@ -10,16 +10,19 @@ import { FilterChip } from "@/components/ui/chip";
 import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { stamp } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import type { DemoState } from "@/lib/store";
 import type { Role, Thread } from "@/lib/types";
 
 import {
   type ThreadFilter,
+  type ThreadItem,
   counterpart,
   lastMessage,
   matchesFilter,
   matchesQuery,
   previewText,
+  sideLabel,
 } from "./thread-meta";
 
 const filterLabels: { id: ThreadFilter; label: string }[] = [
@@ -29,8 +32,8 @@ const filterLabels: { id: ThreadFilter; label: string }[] = [
 
 export function ThreadList({
   s,
-  role,
-  threads,
+  items,
+  showSide,
   selectedId,
   query,
   onQuery,
@@ -40,8 +43,9 @@ export function ThreadList({
   onPick,
 }: {
   s: DemoState;
-  role: Role;
-  threads: Thread[];
+  items: ThreadItem[];
+  /** Label each row with the side you're on (accounts that can be on both). */
+  showSide: boolean;
   selectedId?: string;
   query: string;
   onQuery: (value: string) => void;
@@ -50,9 +54,9 @@ export function ThreadList({
   hrefFor: (threadId: string) => string;
   onPick: () => void;
 }) {
-  const unread = threads.filter((t) => t.unread.includes(role)).length;
-  const shown = threads.filter(
-    (thread) => matchesFilter(thread, filter, role) && matchesQuery(s, thread, role, query),
+  const unread = items.filter(({ thread, side }) => thread.unread.includes(side)).length;
+  const shown = items.filter(
+    ({ thread, side }) => matchesFilter(thread, filter, side) && matchesQuery(s, thread, side, query),
   );
   const filtering = filter !== "all" || query.trim() !== "";
 
@@ -103,28 +107,18 @@ export function ThreadList({
         {filtering ? `${shown.length} conversation${shown.length === 1 ? "" : "s"} shown` : ""}
       </p>
 
-      {threads.length === 0 ? (
+      {items.length === 0 ? (
         <EmptyState
           title="No conversations yet"
-          body={
-            role === "business"
-              ? "Message a creator from their profile or a pitch. Every commission also gets its own thread here."
-              : "When a business messages you or hires you, the conversation shows up here."
-          }
+          body="Message a creator from their profile or a pitch, or take on an order. Every commission also gets its own thread here."
           shape="bean"
           tint="violet"
           face="smile"
           headingLevel={3}
           action={
-            role === "business" ? (
-              <PillButton href="/creators" variant="contrast" size="sm">
-                Find creators
-              </PillButton>
-            ) : (
-              <PillButton href="/creator/opportunities" variant="contrast" size="sm">
-                Browse opportunities
-              </PillButton>
-            )
+            <PillButton href={paths.explore()} variant="contrast" size="sm">
+              Explore
+            </PillButton>
           }
         />
       ) : shown.length === 0 ? (
@@ -157,11 +151,12 @@ export function ThreadList({
           className="y-scroll-y flex min-h-0 flex-1 flex-col gap-1 px-2 pb-2 md:px-3 md:pb-3"
           aria-label="Conversations"
         >
-          {shown.map((thread) => (
+          {shown.map(({ thread, side }) => (
             <ThreadRow
               key={thread.id}
               s={s}
-              role={role}
+              side={side}
+              showSide={showSide}
               thread={thread}
               selected={thread.id === selectedId}
               href={hrefFor(thread.id)}
@@ -176,22 +171,24 @@ export function ThreadList({
 
 function ThreadRow({
   s,
-  role,
+  side,
+  showSide,
   thread,
   selected,
   href,
   onPick,
 }: {
   s: DemoState;
-  role: Role;
+  side: Role;
+  showSide: boolean;
   thread: Thread;
   selected: boolean;
   href: string;
   onPick: () => void;
 }) {
-  const other = counterpart(s, thread, role);
+  const other = counterpart(s, thread, side);
   const last = lastMessage(thread);
-  const isUnread = thread.unread.includes(role);
+  const isUnread = thread.unread.includes(side);
   const system = last?.from === "system";
 
   return (
@@ -219,9 +216,14 @@ function ThreadRow({
         </span>
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-baseline justify-between gap-2">
-            <span className={`y-small truncate ${isUnread ? "font-bold" : "font-semibold"}`}>
-              {other.name}
-              <span className="sr-only">, {thread.subject}</span>
+            <span className="flex min-w-0 items-baseline gap-1.5">
+              <span className={`y-small truncate ${isUnread ? "font-bold" : "font-semibold"}`}>
+                {other.name}
+                <span className="sr-only">, {thread.subject}</span>
+              </span>
+              {showSide ? (
+                <span className={`y-micro flex-none ${selected ? "opacity-70" : "y-fg-3"}`}>· {sideLabel(side)}</span>
+              ) : null}
             </span>
             <span className={`y-micro y-num flex-none ${isUnread ? "font-bold" : "y-fg-3"}`}>
               {last ? stamp(last.at) : ""}
@@ -233,7 +235,7 @@ function ThreadRow({
                 system ? "italic" : ""
               }`}
             >
-              {previewText(last, role)}
+              {previewText(last, side)}
             </span>
             {isUnread ? (
               <span className="flex flex-none items-center">

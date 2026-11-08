@@ -67,7 +67,7 @@ export function AddonsSection({ creator }: { creator: Creator }) {
     <ProfileSection
       id="addons"
       title="Add-ons"
-      description="Extras clients can add to any package. Organic use is always included."
+      description="Extras buyers can add to any package. Organic use is always included."
       summary={
         creator.addons.length
           ? `${creator.addons.length} offered · ${creator.addons.map((a) => addonById[a.id].name).join(", ")}`

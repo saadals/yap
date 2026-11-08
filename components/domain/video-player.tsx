@@ -17,44 +17,45 @@ const beatLabel: Record<Beat, string> = {
   cta: "Call to action",
 };
 
+/** The caption line playing at `t` seconds. */
+export const lineAt = (video: Video, t: number) =>
+  [...video.script].reverse().find((l) => l.at <= t) ?? video.script[0];
+
 /**
- * Simulated player (no media files): plays the video's script against a clock, with captions in
- * the video's language, an English translation, a seekable timeline and markers for notes.
+ * The simulated playback clock behind <VideoPlayer> (and the reels feed): plays the video's script
+ * against `requestAnimationFrame`, with play/pause, seeking and the caption line at the playhead.
+ *
+ * - `seek` seeks from outside (e.g. clicking a note); change `key` to re-trigger the same time.
+ * - `onTime` is called when the playhead enters a new whole second (including seeks).
+ * - `autoplay` is driven from outside (the feed): when it becomes `active` (or `since` changes),
+ *   play from the start, counting from `since` (a `performance.now()` stamp taken when the reel
+ *   became active); when it stops being active, pause. `play: false` (reduced motion) rewinds
+ *   without playing, so the viewer taps to play.
+ * - `loop` starts again from 0 at the end instead of stopping.
  */
-export function VideoPlayer({
-  video,
-  comments = [],
-  onTime,
-  seek,
-  activeCommentId,
-  onMarkerClick,
-  className = "",
-  size = "md",
-}: {
-  video: Video;
-  comments?: DeliveryComment[];
-  /** Called when the playhead enters a new whole second (including seeks). */
-  onTime?: (seconds: number) => void;
-  /** Seek from outside (e.g. clicking a note); change `key` to re-trigger the same time. */
-  seek?: { at: number; key: number };
-  activeCommentId?: string;
-  onMarkerClick?: (comment: DeliveryComment) => void;
-  className?: string;
-  /** Vertical videos: sm 260px, md 340px, lg 400px wide. */
-  size?: "sm" | "md" | "lg";
-}) {
+export function useSimulatedPlayback(
+  video: Video,
+  {
+    seek,
+    onTime,
+    autoplay,
+    loop = false,
+  }: {
+    seek?: { at: number; key: number };
+    onTime?: (seconds: number) => void;
+    autoplay?: { active: boolean; since: number; play?: boolean };
+    loop?: boolean;
+  } = {},
+) {
   const duration = video.durationSec;
   // Playback clock: `base` seconds at the last pause/seek, plus elapsed time while playing.
   const [base, setBase] = useState(0);
   const [playStart, setPlayStart] = useState<number | null>(null);
   const [now, setNow] = useState(0);
   const [started, setStarted] = useState(false);
-  const [translate, setTranslate] = useState(true);
-  const [captions, setCaptions] = useState(true);
   const [seenSeek, setSeenSeek] = useState<number | undefined>(undefined);
+  const [seenAutoplay, setSeenAutoplay] = useState<number | undefined>(undefined);
   const onTimeRef = useRef(onTime);
-  const arabic = isArabic(video.lang);
-  const wide = video.aspect === "16:9";
   const playing = playStart !== null;
   const t = playing ? Math.min(duration, base + Math.max(0, now - playStart) / 1000) : base;
 
@@ -64,6 +65,21 @@ export function VideoPlayer({
     setBase(Math.max(0, Math.min(duration, seek.at)));
     setPlayStart(null);
     setStarted(true);
+  }
+
+  // External autoplay (the feed): same pattern. -1 = inactive.
+  const autoplayKey = autoplay ? (autoplay.active ? autoplay.since : -1) : undefined;
+  if (autoplay && autoplayKey !== seenAutoplay) {
+    setSeenAutoplay(autoplayKey);
+    if (autoplay.active && autoplay.play !== false) {
+      setBase(0);
+      setNow(autoplay.since);
+      setPlayStart(autoplay.since);
+      setStarted(true);
+    } else {
+      setBase(autoplay.active ? 0 : t);
+      setPlayStart(null);
+    }
   }
 
   useEffect(() => {
@@ -80,6 +96,12 @@ export function VideoPlayer({
     let frame = 0;
     const tick = (stamp: number) => {
       if (base + (stamp - playStart) / 1000 >= duration) {
+        if (loop) {
+          setBase(0);
+          setNow(stamp);
+          setPlayStart(stamp);
+          return;
+        }
         setBase(duration);
         setPlayStart(null);
         return;
@@ -89,7 +111,7 @@ export function VideoPlayer({
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playStart, base, duration]);
+  }, [playStart, base, duration, loop]);
 
   const toggle = () => {
     setStarted(true);
@@ -116,7 +138,44 @@ export function VideoPlayer({
     }
   };
 
-  const line = [...video.script].reverse().find((l) => l.at <= t) ?? video.script[0];
+  return { t, duration, playing, started, line: lineAt(video, t), toggle, seekTo };
+}
+
+/**
+ * Simulated player (no media files): plays the video's script against a clock, with captions in
+ * the video's language, an English translation, a seekable timeline and markers for notes.
+ */
+export function VideoPlayer({
+  video,
+  comments = [],
+  onTime,
+  seek,
+  activeCommentId,
+  onMarkerClick,
+  className = "",
+  size = "md",
+}: {
+  video: Video;
+  comments?: DeliveryComment[];
+  /** Called when the playhead enters a new whole second (including seeks). */
+  onTime?: (seconds: number) => void;
+  /** Seek from outside (e.g. clicking a note); change `key` to re-trigger the same time. */
+  seek?: { at: number; key: number };
+  activeCommentId?: string;
+  onMarkerClick?: (comment: DeliveryComment) => void;
+  className?: string;
+  /** Vertical videos: sm 260px, md 340px, lg 400px wide. */
+  size?: "sm" | "md" | "lg";
+}) {
+  const { t, duration, playing, started, line, toggle, seekTo } = useSimulatedPlayback(video, {
+    seek,
+    onTime,
+  });
+  const [translate, setTranslate] = useState(true);
+  const [captions, setCaptions] = useState(true);
+  const arabic = isArabic(video.lang);
+  const wide = video.aspect === "16:9";
+
   const widthClass = wide ? "w-full" : { sm: "max-w-[260px]", md: "max-w-[340px]", lg: "max-w-[400px]" }[size];
 
   return (

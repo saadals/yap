@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, CalendarClock, CircleCheck, MapPin, MessageCircle, Share2, Star } from "lucide-react";
+import { BadgeCheck, CalendarClock, CircleCheck, MapPin, MessageCircle, Share2, ShieldCheck, Star } from "lucide-react";
 import { useState } from "react";
 
 import { LanguageChips, platformList } from "@/components/domain/chips";
@@ -14,7 +14,7 @@ import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useToast } from "@/components/ui/toast";
 import { compact, num, plural } from "@/lib/format";
 import { cityLabel } from "@/lib/selectors";
-import { creatorKindById, formatById, nicheById } from "@/lib/taxonomy";
+import { campaignPlatformById, creatorKindById, formatById, nicheById } from "@/lib/taxonomy";
 import type { Creator } from "@/lib/types";
 
 import { MessageSheet } from "./message-sheet";
@@ -41,6 +41,9 @@ export function ProfileHero({
   const [messageOpen, setMessageOpen] = useState(false);
   const kind = creatorKindById[creator.kind];
   const KindIcon = kind.icon;
+  // Connected accounts show the platform and verified real followers only: never a handle or a
+  // link out (everything stays in the platform).
+  const verifiedSocials = (creator.socials ?? []).filter((social) => social.verified);
 
   const share = async () => {
     const url = window.location.href.split("#")[0];
@@ -94,7 +97,15 @@ export function ProfileHero({
               <span className="inline-flex items-center gap-1.5">
                 <MapPin size={15} aria-hidden /> {cityLabel(creator.cityId)}
               </span>
-              {creator.kind === "influencer" && creator.followers ? (
+              {verifiedSocials.length ? (
+                <span className="inline-flex items-center gap-1.5" title="Real followers, verified by Yapp">
+                  <ShieldCheck size={15} aria-hidden />
+                  <span className="sr-only">Verified followers: </span>
+                  {verifiedSocials
+                    .map((social) => `${compact(social.followers)} on ${campaignPlatformById[social.platform].name}`)
+                    .join(" · ")}
+                </span>
+              ) : creator.kind === "influencer" && creator.followers ? (
                 <span>{compact(creator.followers)} followers</span>
               ) : null}
               {creator.nameAr ? <Ar className="y-body">{creator.nameAr}</Ar> : null}

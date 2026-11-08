@@ -5,15 +5,19 @@ import Link from "next/link";
 
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { dueLabel, money, shortDate, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { businessById, commissionTotals, creatorById, needsAction } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import { commissionStatus, formatById } from "@/lib/taxonomy";
 import type { Commission, Role } from "@/lib/types";
 
 import { BusinessLogo } from "./business-logo";
-import { CommissionBadge } from "./status-badge";
+import { CommissionBadge, SlotBadge, slotStatus } from "./status-badge";
 
-/** A commission as a card, from either side. Whole card links to the workspace. */
+/**
+ * A commission as a card, from the viewer's side of the deal (`role`: "business" = they ordered
+ * it, "creator" = they're making it). Whole card links to the workspace.
+ */
 export function CommissionCard({
   commission,
   role,
@@ -23,6 +27,7 @@ export function CommissionCard({
   role: Role;
   className?: string;
 }) {
+  const campaign = commission.source === "campaign";
   const s = useDemo();
   const creator = creatorById(s, commission.creatorId);
   const business = businessById(s, commission.businessId);
@@ -31,10 +36,17 @@ export function CommissionCard({
   const due = dueLabel(commission.dueDate);
   const actionable = needsAction(commission, role);
   const ended = ["completed", "cancelled", "declined"].includes(commission.status);
-  const href = `/${role}/commissions/${commission.id}`;
+  const href = paths.commission(commission.id);
 
-  const when =
-    commission.status === "completed" && commission.completedAt
+  const when = campaign
+    ? commission.status === "completed"
+      ? commission.post?.status === "live"
+        ? "Post verified"
+        : "Post it to unlock your pay"
+      : commission.status === "cancelled"
+        ? "Slot ended"
+        : `Slot ${commission.campaignSlot ?? ""} · Campaign`
+    : commission.status === "completed" && commission.completedAt
       ? `Completed ${shortDate(commission.completedAt)}`
       : ended
         ? commission.status === "declined"
@@ -58,7 +70,7 @@ export function CommissionCard({
         ) : null}
         <div className="min-w-0 flex-1">
           <p className="y-micro y-fg-2 truncate">
-            {role === "business" ? creator?.name : business?.name} · {format.name}
+            {role === "business" ? creator?.name : business?.name} · {campaign ? "UGC campaign" : format.name}
             {commission.source === "repeat" ? (
               <span className="ms-1 inline-flex items-center gap-0.5">
                 · <Repeat2 size={12} aria-hidden /> Repeat
@@ -72,12 +84,12 @@ export function CommissionCard({
           </h3>
         </div>
         <span className="y-display y-num flex-none text-[20px] font-semibold tracking-[-0.02em]">
-          {money(role === "business" ? totals.total : totals.creatorEarns)}
+          {money(campaign ? commission.price : role === "business" ? totals.total : totals.creatorEarns)}
         </span>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <CommissionBadge status={commission.status} />
+        {campaign ? <SlotBadge commission={commission} /> : <CommissionBadge status={commission.status} side={role} />}
         <span
           className={`y-micro ${!ended && due.urgency === "late" && commission.status !== "offered" ? "text-(--y-danger)" : "y-fg-2"}`}
         >
@@ -88,9 +100,17 @@ export function CommissionCard({
       {actionable ? (
         <p className="y-small flex items-center justify-between gap-2 border-t border-(--b-line) pt-3 font-semibold">
           <span>
-            {role === "business"
-              ? commissionStatus[commission.status].business
-              : commissionStatus[commission.status].creator}
+            {campaign
+              ? role === "business"
+                ? "Review the copy"
+                : commission.status === "completed"
+                  ? "Post it with the brand tag"
+                  : slotStatus(commission).label === "Filming"
+                    ? "Film and upload your review copy"
+                    : "Make the requested changes"
+              : role === "business"
+                ? commissionStatus[commission.status].business
+                : commissionStatus[commission.status].creator}
           </span>
           <ArrowRight size={18} aria-hidden className="y-flip flex-none" />
         </p>

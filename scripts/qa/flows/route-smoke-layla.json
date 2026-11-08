@@ -1,0 +1,214 @@
+{
+  "account": "layla",
+  "steps": [
+    {
+      "go": "/home",
+      "after": 1600
+    },
+    {
+      "go": "/home?reel=r-150",
+      "after": 1600
+    },
+    {
+      "go": "/explore",
+      "after": 1600
+    },
+    {
+      "go": "/explore?tab=orders",
+      "after": 1600
+    },
+    {
+      "go": "/work",
+      "after": 1600
+    },
+    {
+      "go": "/work?tab=making",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-201",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-204",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-205",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-203",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-150-3",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-150-2",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-150-1",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-150-5",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-302",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-305",
+      "after": 1600
+    },
+    {
+      "go": "/work/c-301",
+      "after": 1600
+    },
+    {
+      "go": "/orders",
+      "after": 1600
+    },
+    {
+      "go": "/orders/new",
+      "after": 1600
+    },
+    {
+      "go": "/orders/new?type=campaign",
+      "after": 1600
+    },
+    {
+      "go": "/orders/new?type=custom",
+      "after": 1600
+    },
+    {
+      "go": "/orders/new?draft=r-104",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-101",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-102",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-150",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-201",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-250",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-251",
+      "after": 1600
+    },
+    {
+      "go": "/orders/r-252",
+      "after": 1600
+    },
+    {
+      "go": "/pitches",
+      "after": 1600
+    },
+    {
+      "go": "/messages",
+      "after": 1600
+    },
+    {
+      "go": "/messages?thread=t-201",
+      "after": 1600
+    },
+    {
+      "go": "/profile",
+      "after": 1600
+    },
+    {
+      "go": "/profile/edit",
+      "after": 1600
+    },
+    {
+      "go": "/wallet",
+      "after": 1600
+    },
+    {
+      "go": "/billing",
+      "after": 1600
+    },
+    {
+      "go": "/products",
+      "after": 1600
+    },
+    {
+      "go": "/products/new",
+      "after": 1600
+    },
+    {
+      "go": "/products/p-daftar-invoices",
+      "after": 1600
+    },
+    {
+      "go": "/saved",
+      "after": 1600
+    },
+    {
+      "go": "/settings",
+      "after": 1600
+    },
+    {
+      "go": "/creators",
+      "after": 1600
+    },
+    {
+      "go": "/creators/laylatalks",
+      "after": 1600
+    },
+    {
+      "go": "/creators/omarfahad.studio",
+      "after": 1600
+    },
+    {
+      "go": "/creators/laylatalks/commission",
+      "after": 1600
+    },
+    {
+      "go": "/creators/omarfahad.studio/commission?again=c-198",
+      "after": 1600
+    },
+    {
+      "go": "/",
+      "after": 1600
+    },
+    {
+      "go": "/how-it-works",
+      "after": 1600
+    },
+    {
+      "go": "/for-creators",
+      "after": 1600
+    },
+    {
+      "go": "/signin",
+      "after": 1600
+    },
+    {
+      "go": "/signup",
+      "after": 1600
+    },
+    {
+      "go": "/onboarding",
+      "after": 1600
+    }
+  ],
+  "theme": "dark"
+}

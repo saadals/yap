@@ -10,6 +10,8 @@ import { TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { money, priceBreakdown, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
+import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { addonById } from "@/lib/taxonomy";
 import type { ContentRequest } from "@/lib/types";
@@ -36,9 +38,10 @@ export function HireSheet({
     creator.addons.filter((a) => request.brief.addons.includes(a.id)).map((a) => a.id),
   );
   const [note, setNote] = useState("");
-  const [methodId, setMethodId] = useState(
-    () => s.paymentMethods.find((m) => m.isDefault)?.id ?? s.paymentMethods[0]?.id ?? "",
-  );
+  const [methodId, setMethodId] = useState(() => {
+    const methods = me.paymentMethods(s);
+    return methods.find((m) => m.isDefault)?.id ?? methods[0]?.id ?? "";
+  });
   const [phase, setPhase] = useState<"form" | "paying" | "done">("form");
   const [commissionId, setCommissionId] = useState<string | null>(null);
   const timer = useRef(0);
@@ -81,11 +84,11 @@ export function HireSheet({
             </p>
           </div>
           <div className="flex w-full max-w-sm flex-col gap-2">
-            <PillButton href={`/business/commissions/${commissionId}`} variant="neon" size="lg" arrow className="justify-between ps-6">
+            <PillButton href={paths.commission(commissionId)} variant="neon" size="lg" arrow className="justify-between ps-6">
               Open commission
             </PillButton>
             <PillButton
-              href={`/business/messages?thread=${commission?.threadId ?? ""}`}
+              href={paths.messages(commission?.threadId)}
               variant="outline"
               icon={<MessageCircle size={18} aria-hidden />}
             >

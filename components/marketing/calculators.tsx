@@ -139,7 +139,7 @@ export function EarningsEstimator() {
           <div className="flex items-baseline justify-between gap-4 border-t border-(--b-line) pt-2.5">
             <dt className="y-small y-fg-2">
               Yapp&apos;s {Math.round(SERVICE_FEE_RATE * 100)}% fee
-              <span className="y-micro y-fg-3 block">Paid by your clients, on top of your price</span>
+              <span className="y-micro y-fg-3 block">Paid by the buyer on custom orders, on top of your price</span>
             </dt>
             <dd className="y-small y-num y-fg-2">{money(clientFee)}</dd>
           </div>
@@ -165,7 +165,7 @@ const calculatorAddons: AddonId[] = [
 
 const presets = [150, 260, 480, 900];
 
-/** For businesses: creator price + add-ons → service fee and total (priceBreakdown). */
+/** For buyers: creator price + add-ons → service fee and total (priceBreakdown). Custom and direct orders. */
 export function FeeCalculator() {
   const s = useDemo();
   const typical = typicalAddonPrices(s);
@@ -279,8 +279,8 @@ export function FeeCalculator() {
         </div>
         <p className="y-micro y-fg-2 mt-auto flex items-start gap-1.5">
           <ShieldCheck size={14} aria-hidden className="mt-px flex-none" />
-          Held when work starts, released when you approve. A cancelled or refunded commission
-          costs you nothing.
+          Held when work starts, released when you approve. A cancelled or refunded order costs
+          you nothing.
         </p>
       </Block>
     </div>

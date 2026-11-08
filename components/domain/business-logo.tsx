@@ -1,15 +1,26 @@
+import { FaceAvatar } from "@/components/ui/face-avatar";
 import type { Business } from "@/lib/types";
 
-/** Monogram squircle on the business's brand colour (no remote images). */
+/**
+ * Monogram squircle on the business's brand colour (no remote images). Someone ordering in their
+ * own name (a personal buyer profile) shows their face instead.
+ */
 export function BusinessLogo({
   business,
   size = 44,
   className = "",
 }: {
-  business: Pick<Business, "monogram" | "brandColor" | "name">;
+  business: Pick<Business, "monogram" | "brandColor" | "name"> & Partial<Pick<Business, "kind" | "faceId" | "id">>;
   size?: number;
   className?: string;
 }) {
+  if (business.kind === "personal") {
+    return (
+      <span aria-hidden className={`inline-flex flex-none ${className}`}>
+        <FaceAvatar id={business.faceId ?? business.id ?? business.name} name="" size={size} />
+      </span>
+    );
+  }
   return (
     <span
       aria-hidden

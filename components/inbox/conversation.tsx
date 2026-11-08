@@ -4,33 +4,39 @@ import { ArrowLeft, BadgeCheck, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
+import { slotStatus } from "@/components/domain/status-badge";
 import { ThreadView } from "@/components/domain/thread-view";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { commissionById, requestById } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { commissionById, isCampaign, requestById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { commissionStatus, pitchStatus, requestStatus } from "@/lib/taxonomy";
 import type { Role, Thread } from "@/lib/types";
 
-import { counterpart } from "./thread-meta";
+import { counterpart, sideLabel } from "./thread-meta";
 
+/** One open conversation, from the side the account is on in it (`side` is ThreadView's role). */
 export function Conversation({
   s,
-  role,
+  side,
+  showSide,
   thread,
   backHref,
   maxHeight,
 }: {
   s: DemoState;
-  role: Role;
+  side: Role;
+  /** Say which side you're on (accounts that can be on both). */
+  showSide: boolean;
   thread: Thread;
   backHref: string;
   maxHeight: string;
 }) {
-  const other = counterpart(s, thread, role);
+  const other = counterpart(s, thread, side);
   const verified = other.kind === "creator" ? other.creator?.verified : other.business?.verified;
-  const profileHref = other.kind === "creator" && other.creator ? `/creators/${other.creator.handle}` : undefined;
+  const profileHref = other.kind === "creator" && other.creator ? paths.creator(other.creator.handle) : undefined;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
@@ -54,14 +60,14 @@ export function Conversation({
             )}
             {verified ? <BadgeCheck size={18} role="img" aria-label="Verified" className="flex-none" /> : null}
           </h2>
-          <ContextLine s={s} role={role} thread={thread} />
+          <ContextLine s={s} side={side} showSide={showSide} thread={thread} />
         </div>
       </div>
 
       <ThreadView
         key={thread.id}
         threadId={thread.id}
-        role={role}
+        role={side}
         maxHeight={maxHeight}
         className="min-h-0 flex-1"
       />
@@ -70,9 +76,9 @@ export function Conversation({
 }
 
 /** One quiet line under the name: what this conversation is about, linking to it. */
-function ContextLine({ s, role, thread }: { s: DemoState; role: Role; thread: Thread }) {
-  const context = threadContext(s, role, thread);
-  if (!context) return null;
+function ContextLine({ s, side, showSide, thread }: { s: DemoState; side: Role; showSide: boolean; thread: Thread }) {
+  const context = threadContext(s, side, thread);
+  if (!context) return showSide ? <p className="y-micro y-fg-2">{sideLabel(side)}</p> : null;
   const { href, title, status, label } = context;
 
   return (
@@ -80,6 +86,12 @@ function ContextLine({ s, role, thread }: { s: DemoState; role: Role; thread: Th
       href={href}
       className="y-micro y-fg-2 flex min-w-0 items-center gap-1 hover:text-(--b-fg) hover:underline"
     >
+      {showSide ? (
+        <span className="flex-none">
+          {sideLabel(side)}
+          <span aria-hidden> ·</span>
+        </span>
+      ) : null}
       <span className="sr-only">{label}: </span>
       <span className="truncate">{title}</span>
       <span aria-hidden className="max-sm:hidden">·</span>
@@ -89,14 +101,18 @@ function ContextLine({ s, role, thread }: { s: DemoState; role: Role; thread: Th
   );
 }
 
-function threadContext(s: DemoState, role: Role, thread: Thread) {
+function threadContext(s: DemoState, side: Role, thread: Thread) {
   const commission = thread.commissionId ? commissionById(s, thread.commissionId) : undefined;
   if (commission) {
     return {
-      href: `/${role}/commissions/${commission.id}`,
+      href: paths.commission(commission.id),
       title: commission.title,
       status:
-        commission.status === "offered" && role === "creator" ? "New offer" : commissionStatus[commission.status].label,
+        commission.source === "campaign"
+          ? slotStatus(commission).label
+          : commission.status === "offered" && side === "creator"
+            ? "New offer"
+            : commissionStatus[commission.status].label,
       label: "Open commission",
     };
   }
@@ -105,11 +121,18 @@ function threadContext(s: DemoState, role: Role, thread: Thread) {
   const pitch = s.pitches.find(
     (p) => p.requestId === request.id && p.creatorId === thread.creatorId && p.status !== "withdrawn",
   );
+  const requestLabel = isCampaign(request)
+    ? request.status === "open"
+      ? "Taking creators"
+      : request.status === "hired"
+        ? "Full"
+        : requestStatus[request.status].label
+    : requestStatus[request.status].label;
   return {
-    href: role === "business" ? `/business/requests/${request.id}` : `/creator/opportunities/${request.id}`,
+    href: paths.order(request.id),
     title: request.title,
-    status: pitch ? `Pitch ${pitchStatus[pitch.status].label.toLowerCase()}` : requestStatus[request.status].label,
-    label: role === "business" ? "Open request" : "Open opportunity",
+    status: pitch ? `Pitch ${pitchStatus[pitch.status].label.toLowerCase()}` : requestLabel,
+    label: "Open order",
   };
 }
 

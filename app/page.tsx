@@ -22,16 +22,17 @@ import {
   SectionHeader,
   StepNumber,
 } from "@/components/marketing/blocks";
-import { featuredCreators, platformStats } from "@/components/marketing/platform";
+import { campaignFacts, featuredCreators, platformStats } from "@/components/marketing/platform";
 import { PublicShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { Cast, heroCast } from "@/components/ui/character";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { moneyRange, num } from "@/lib/format";
-import { businessById, creatorById, featuredVideo } from "@/lib/selectors";
-import { ME, useDemo } from "@/lib/store";
+import { money, moneyRange, num } from "@/lib/format";
+import { paths } from "@/lib/paths";
+import { businessById, creatorById, featuredVideo, isCampaign, me } from "@/lib/selectors";
+import { useDemo } from "@/lib/store";
 import { formatById, formats } from "@/lib/taxonomy";
 import type { Creator, Video } from "@/lib/types";
 
@@ -79,17 +80,17 @@ function Hero({ creator, video }: { creator?: Creator; video?: Video }) {
             Get your app <span className="y-strong whitespace-nowrap">talked about</span>
           </h1>
           <p className="y-lead y-fg-2 max-w-[50ch]">
-            Hire creators to film demos and honest reviews of your app, at a fixed price. You
-            only pay once you&apos;ve approved the video.
+            Order demos and honest reviews of your app from creators, at a fixed price. Payment is
+            held until you&apos;ve approved the video.
           </p>
         </div>
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap gap-2">
-            <PillButton href="/creators" variant="neon" size="lg" arrow>
+            <PillButton href={paths.creators} variant="neon" size="lg" arrow>
               Find a creator
             </PillButton>
-            <PillButton href="/business/requests/new" variant="outline" size="lg">
-              Post a request
+            <PillButton href={paths.newOrder()} variant="outline" size="lg">
+              Place an order
             </PillButton>
           </div>
           <p className="y-small y-fg-2 flex items-start gap-2">
@@ -114,7 +115,7 @@ function HeroVisual({ creator, video }: { creator?: Creator; video?: Video }) {
       {creator && video ? (
         <>
           <Link
-            href={`/creators/${creator.handle}`}
+            href={paths.creator(creator.handle)}
             aria-label={`Watch “${video.title}” on ${creator.firstName}'s profile`}
             className="group relative block w-[min(64%,272px)] -rotate-2 rounded-(--y-r-tile) transition-transform duration-(--y-dur-2) hover:rotate-0"
           >
@@ -219,7 +220,7 @@ function Formats() {
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <h3 className="y-head">
                     <Link
-                      href={`/creators?format=${format.id}`}
+                      href={`${paths.creators}?format=${format.id}`}
                       className="after:absolute after:inset-0 after:z-[2] after:rounded-(--y-r-block) after:content-['']"
                     >
                       {format.name}
@@ -247,7 +248,7 @@ const steps = [
   },
   {
     title: "Pick a creator",
-    body: "Compare pitches with an angle, a fixed price and samples, or hire straight from a profile.",
+    body: "Compare pitches with an angle, a fixed price and samples, or order straight from a profile.",
   },
   {
     title: "Approve, then we pay them",
@@ -256,6 +257,7 @@ const steps = [
 ];
 
 function HowItWorks() {
+  const campaign = campaignFacts();
   return (
     <section aria-labelledby="how-title">
       <SectionHeader
@@ -266,12 +268,12 @@ function HowItWorks() {
           </>
         }
         action={
-          <PillButton href="/how-it-works" variant="outline" arrow>
+          <PillButton href={paths.howItWorks} variant="outline" arrow>
             The full process
           </PillButton>
         }
       />
-      <Block tone="paper" pad="lg">
+      <Block tone="paper" pad="lg" className="flex flex-col gap-10">
         <ol className="grid gap-10 md:grid-cols-3 md:gap-8">
           {steps.map((step, index) => (
             <li key={step.title} className="flex flex-col gap-4">
@@ -286,6 +288,24 @@ function HowItWorks() {
             </li>
           ))}
         </ol>
+        <div className="flex flex-col gap-4 border-t border-(--b-line) pt-6 md:flex-row md:items-center md:justify-between">
+          <p className="y-body max-w-[72ch]">
+            <span className="font-semibold">
+              Need {campaign.minVideos} or more videos? Run a UGC campaign.
+            </span>{" "}
+            <span className="y-fg-2">
+              A fixed price per video set by follower tier, from {money(campaign.fromPrice)}. Creators take
+              slots first come, first served, and every video comes from a different creator. No
+              service fee.
+            </span>
+          </p>
+          <Link
+            href={`${paths.howItWorks}#campaigns`}
+            className="y-link y-small flex-none font-semibold"
+          >
+            How campaigns work
+          </Link>
+        </div>
       </Block>
     </section>
   );
@@ -317,7 +337,7 @@ function FeaturedCreators() {
             Creators your customers <span className="y-strong">already trust</span>
           </>
         }
-        sub="Hire on their portfolio, reviews and on-time record, not their follower count."
+        sub="For custom orders, choose on portfolio, reviews and on-time record, not follower count."
         action={
           <>
             <RoundIconButton
@@ -336,7 +356,7 @@ function FeaturedCreators() {
             >
               <ChevronRight size={20} aria-hidden className="y-flip" />
             </RoundIconButton>
-            <PillButton href="/creators" variant="contrast" arrow>
+            <PillButton href={paths.creators} variant="contrast" arrow>
               Browse all creators
             </PillButton>
           </>
@@ -364,7 +384,7 @@ const reasons = [
   {
     icon: <ShieldCheck size={22} />,
     title: "Paid only when you approve",
-    body: "Your payment is held while they work. Full refund if the video isn't delivered.",
+    body: "Payment is held while they work, with a full refund if the video isn't delivered. Our fee is charged only when work completes.",
   },
   {
     icon: <Languages size={22} />,
@@ -389,7 +409,7 @@ function WhyYapp() {
           </>
         }
         action={
-          <PillButton href="/how-it-works#protection" variant="outline" arrow>
+          <PillButton href={`${paths.howItWorks}#protection`} variant="outline" arrow>
             How protection works
           </PillButton>
         }
@@ -417,10 +437,10 @@ function WhyYapp() {
 
 function CreatorLane() {
   const s = useDemo();
+  const myBusinessId = me.ids(s).businessId;
+  const facts = campaignFacts();
   const open = s.requests
-    .filter(
-      (r) => r.status === "open" && r.visibility === "public" && r.businessId !== ME.businessId,
-    )
+    .filter((r) => r.status === "open" && r.visibility === "public" && r.businessId !== myBusinessId)
     .sort((a, b) => Date.parse(b.postedAt) - Date.parse(a.postedAt))
     .slice(0, 3);
 
@@ -430,23 +450,24 @@ function CreatorLane() {
         <div className="flex flex-col gap-6 lg:col-span-6">
           <span className="y-chip w-fit">
             <Mic size={14} aria-hidden />
-            For creators
+            One account to order videos and to make them
           </span>
           <h2 id="creators-lane-title" className="y-display y-t-display">
             Make videos for apps, <span className="y-strong">get paid reliably</span>
           </h2>
           <p className="y-lead y-fg-2 max-w-[46ch]">
-            Followers are optional. Keep 100% of your price, with payment secured before you film.
+            Keep 100% of your price on custom orders, with payment secured before you film. Have{" "}
+            {facts.floor}+ followers? Take UGC campaign slots at a fixed price per video.
           </p>
           <div className="flex flex-wrap gap-2 pt-2">
-            <PillButton href="/for-creators" variant="neon" size="lg" arrow>
-              Start as a creator
+            <PillButton href={paths.forCreators} variant="neon" size="lg" arrow>
+              Start making videos
             </PillButton>
           </div>
         </div>
         {open.length ? (
           <div className="flex min-w-0 flex-col gap-2 lg:col-span-6 lg:justify-center">
-            <p className="y-micro y-fg-2 px-1">Open requests right now</p>
+            <p className="y-micro y-fg-2 px-1">Open orders right now</p>
             <ul className="flex flex-col gap-2">
               {open.map((request) => {
                 const business = businessById(s, request.businessId);
@@ -463,7 +484,9 @@ function CreatorLane() {
                       </p>
                     </div>
                     <span className="y-num y-small flex-none font-semibold">
-                      {moneyRange(request.budget.min, request.budget.max)}
+                      {isCampaign(request) && request.campaign
+                        ? `${money(request.campaign.pricePerVideo)} per yapp`
+                        : moneyRange(request.budget.min, request.budget.max)}
                     </span>
                   </li>
                 );
@@ -484,14 +507,17 @@ function FinalCta() {
   return (
     <Block tone="butter" pad="none" className="grid overflow-hidden lg:grid-cols-12">
       <div className="flex flex-col gap-8 p-6 md:p-10 lg:col-span-7">
-        <h2 className="y-display y-t-display max-w-[15ch]">
-          Your next video is <span className="y-strong">one brief away</span>
-        </h2>
+        <div className="flex flex-col gap-3">
+          <h2 className="y-display y-t-display max-w-[15ch]">
+            Your next video is <span className="y-strong">one brief away</span>
+          </h2>
+          <p className="y-body y-fg-2 max-w-[44ch]">One account to order videos and to make them.</p>
+        </div>
         <div className="flex flex-wrap gap-2">
-          <PillButton href="/signup" variant="contrast" size="lg" arrow>
+          <PillButton href={paths.signUp} variant="contrast" size="lg" arrow>
             Get started
           </PillButton>
-          <PillButton href="/how-it-works" variant="outline" size="lg">
+          <PillButton href={paths.howItWorks} variant="outline" size="lg">
             See how it works
           </PillButton>
         </div>

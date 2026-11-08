@@ -87,6 +87,28 @@ html.dark body {
     var(--y-font-display), var(--y-font-ar-display), var(--y-font-text), ui-sans-serif,
     system-ui, sans-serif;
 
+  /* reels feed: order reel gradients (Feed / reels section). A documented exception to "tints
+     never behind text": each page is one bold gradient and all its text uses -ink, which passes
+     WCAG AA (4.5:1) on both ends and every point between. */
+  --y-reel-1-from: #ff7a59; /* coral → sun */
+  --y-reel-1-to: #ffc23d;
+  --y-reel-1-ink: #0e0e10;
+  --y-reel-2-from: #5b3df5; /* violet → purple */
+  --y-reel-2-to: #a13fd6;
+  --y-reel-2-ink: #ffffff;
+  --y-reel-3-from: #1554c7; /* ocean → teal */
+  --y-reel-3-to: #0a7d8c;
+  --y-reel-3-ink: #ffffff;
+  --y-reel-4-from: #c8235f; /* berry → grape */
+  --y-reel-4-to: #7a2bd9;
+  --y-reel-4-ink: #ffffff;
+  --y-reel-5-from: #7cc8f2; /* sky → lilac */
+  --y-reel-5-to: #b7a6ff;
+  --y-reel-5-ink: #0e0e10;
+  --y-reel-6-from: #ffd84d; /* butter → pink */
+  --y-reel-6-to: #ff9fcf;
+  --y-reel-6-ink: #0e0e10;
+
   /* page */
   --y-gutter: 12px;
   --y-bar-h: 68px;
@@ -127,6 +149,26 @@ html.dark .yapp {
   --y-info: #8db1ff;
   --y-info-soft: rgb(141 177 255 / 0.14);
   --y-whatsapp: #1fae5e;
+
+  /* reels feed: deeper gradients for the dark UI (still AA with their -ink on both ends) */
+  --y-reel-1-from: #e8603f;
+  --y-reel-1-to: #e0a326;
+  --y-reel-1-ink: #0e0e10;
+  --y-reel-2-from: #4a2fd0;
+  --y-reel-2-to: #8530b5;
+  --y-reel-2-ink: #ffffff;
+  --y-reel-3-from: #1146a8;
+  --y-reel-3-to: #086674;
+  --y-reel-3-ink: #ffffff;
+  --y-reel-4-from: #a81d50;
+  --y-reel-4-to: #6522b8;
+  --y-reel-4-ink: #ffffff;
+  --y-reel-5-from: #4fa9dc;
+  --y-reel-5-to: #9784f0;
+  --y-reel-5-ink: #0e0e10;
+  --y-reel-6-from: #e9bf2f;
+  --y-reel-6-to: #e77fb6;
+  --y-reel-6-ink: #0e0e10;
 
   --y-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 16px 40px -8px rgb(0 0 0 / 0.7);
   --y-shadow-sheet: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.8);
@@ -1311,5 +1353,264 @@ html.dark .yapp {
   .yapp .y-typing span,
   .yapp .y-rec {
     animation: none !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feed / reels (Home: components/feed)                                        */
+/* -------------------------------------------------------------------------- */
+
+/* The reel area. Mobile: it fills the space between the sticky header and the fixed bottom bar,
+   100dvh − header (8px top padding + 64px pill) − 8px gap − bottom bar (68px bar + safe area +
+   10px) − 8px gap. Desktop (no bottom bar): 100dvh − header − 24px (12px above and below).
+   Use with `h-(--y-fill-h)`. Phones use the full width; from 768px the reel is a 9:16 column,
+   min(100%, --y-fill-h × 9/16) wide. */
+.yapp {
+  --y-header-h: 72px;
+  --y-fill-h: max(
+    380px,
+    calc(
+      100dvh - var(--y-header-h) - 16px - var(--y-bar-h) - env(safe-area-inset-bottom, 0px) -
+        10px
+    )
+  );
+}
+@media (min-width: 1024px) {
+  .yapp {
+    --y-fill-h: max(520px, calc(100dvh - var(--y-header-h) - 24px));
+  }
+}
+
+@layer components {
+  /* Phones: the full width. Tablets and desktop: a phone-width 9:16 column. */
+  .yapp .y-feed-col {
+    position: relative;
+    width: 100%;
+    height: var(--y-fill-h);
+    margin-inline: auto;
+  }
+  @media (min-width: 768px) {
+    .yapp .y-feed-col {
+      width: min(100%, calc(var(--y-fill-h) * 9 / 16));
+    }
+  }
+
+  /* The vertical scroller: one reel per snap. */
+  .yapp .y-feed {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+    border-radius: var(--y-r-block);
+  }
+  .yapp .y-feed::-webkit-scrollbar {
+    display: none;
+  }
+  .yapp .y-feed:focus-visible {
+    outline-offset: -2.5px;
+  }
+  .yapp .y-feed-slot {
+    position: relative;
+    flex: none;
+    height: var(--y-fill-h);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .yapp .y-feed-placeholder {
+    height: 100%;
+    border-radius: var(--y-r-block);
+    background: var(--y-mist);
+  }
+
+  /* One reel: a full-height card that follows the finger on a horizontal swipe. */
+  .yapp .y-reel {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--y-r-block);
+    container-type: size;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .yapp .y-reel .y-pill[data-variant="neon"] {
+    box-shadow: 0 0 0 2px var(--y-on-color);
+  }
+
+  /* Revealed behind a reel while it's swiped. */
+  .yapp .y-reel-reveal {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-inline-end: 22px;
+    border-radius: var(--y-r-block);
+    background: var(--y-paper);
+    color: var(--y-ink);
+    font-weight: 600;
+    opacity: 0;
+  }
+  .yapp [data-swiping] > .y-reel-reveal {
+    opacity: 1;
+  }
+
+  /* Video reels: dark, white text over a bottom scrim (≥ 55% black under any text). */
+  .yapp .y-reel[data-kind="video"] {
+    background: #0e0e10;
+    color: #fff;
+    --b-bg: #0e0e10;
+    --b-fg: #fff;
+    --b-chip: rgb(255 255 255 / 0.16);
+    --b-chip-fg: #fff;
+  }
+  .yapp .y-reel-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background: linear-gradient(
+      to top,
+      rgb(14 14 16 / 0.82) 0%,
+      rgb(14 14 16 / 0.62) 30%,
+      rgb(14 14 16 / 0) 58%
+    );
+  }
+  .yapp .y-reel-shadow {
+    text-shadow: 0 1px 2px rgb(14 14 16 / 0.6);
+  }
+
+  /* Order and campaign reels: one template, a bold gradient page picked by id (6 presets). */
+  .yapp .y-reel-paint {
+    background: linear-gradient(160deg, var(--r-from) 0%, var(--r-to) 100%);
+    color: var(--r-ink);
+    --b-bg: var(--r-from);
+    --b-fg: var(--r-ink);
+    --b-fg-2: var(--r-ink);
+    --b-fg-3: var(--r-ink);
+    --b-line: color-mix(in srgb, var(--r-ink) 24%, transparent);
+    --b-chip: color-mix(in srgb, var(--r-ink) 12%, transparent);
+    --b-chip-fg: var(--r-ink);
+  }
+  .yapp .y-reel-paint[data-reel="1"] {
+    --r-from: var(--y-reel-1-from);
+    --r-to: var(--y-reel-1-to);
+    --r-ink: var(--y-reel-1-ink);
+  }
+  .yapp .y-reel-paint[data-reel="2"] {
+    --r-from: var(--y-reel-2-from);
+    --r-to: var(--y-reel-2-to);
+    --r-ink: var(--y-reel-2-ink);
+  }
+  .yapp .y-reel-paint[data-reel="3"] {
+    --r-from: var(--y-reel-3-from);
+    --r-to: var(--y-reel-3-to);
+    --r-ink: var(--y-reel-3-ink);
+  }
+  .yapp .y-reel-paint[data-reel="4"] {
+    --r-from: var(--y-reel-4-from);
+    --r-to: var(--y-reel-4-to);
+    --r-ink: var(--y-reel-4-ink);
+  }
+  .yapp .y-reel-paint[data-reel="5"] {
+    --r-from: var(--y-reel-5-from);
+    --r-to: var(--y-reel-5-to);
+    --r-ink: var(--y-reel-5-ink);
+  }
+  .yapp .y-reel-paint[data-reel="6"] {
+    --r-from: var(--y-reel-6-from);
+    --r-to: var(--y-reel-6-to);
+    --r-ink: var(--y-reel-6-ink);
+  }
+  /* Graphics are drawn only in the two gradient end colours, so text contrast holds over them. */
+  .yapp .y-reel-shape-to {
+    background: var(--r-to);
+  }
+  .yapp .y-reel-shape-from {
+    background: var(--r-from);
+  }
+  .yapp .y-reel-ring-to {
+    box-shadow: inset 0 0 0 14cqw var(--r-to);
+  }
+  /* Type on order reels scales with the reel (a size container), so short screens still fit. */
+  .yapp .y-reel-title {
+    font-size: clamp(28px, min(10.5cqw, 6.2cqh), 50px);
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+  }
+  .yapp .y-reel-line {
+    font-size: clamp(15px, min(4.4cqw, 2.6cqh), 19px);
+    line-height: 1.4;
+  }
+  .yapp .y-reel-big {
+    font-size: clamp(30px, min(10cqw, 5.8cqh), 48px);
+    line-height: 1;
+    letter-spacing: -0.04em;
+  }
+  .yapp .y-reel-seats {
+    font-size: clamp(22px, min(7.4cqw, 4.2cqh), 32px);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+  }
+  .yapp .y-reel-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.5px var(--r-ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+  }
+  .yapp .y-reel-pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 2px var(--r-ink);
+  }
+  .yapp .y-reel-pip[data-taken="true"] {
+    background: var(--r-ink);
+  }
+
+  /* Quiet overlays on top of reels (the For you · Orders · Videos switch). */
+  .yapp .y-reel-overlay {
+    --b-bg: #0e0e10;
+    --b-fg: #fff;
+    --b-chip: rgb(255 255 255 / 0.16);
+    padding: 2px;
+    border-radius: 999px;
+    background: rgb(14 14 16 / 0.55);
+    color: #fff;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+  }
+  .yapp .y-reel-overlay .y-seg {
+    padding: 0;
+    box-shadow: none;
+  }
+  .yapp .y-reel-overlay .y-seg button {
+    min-height: 44px;
+    padding-inline: 14px;
+  }
+}
+
+/* Short reels drop the secondary lines and keep titles to three (unlayered, so it beats the
+   display and line-clamp utilities). */
+@container (max-height: 540px) {
+  .yapp .y-reel-hide-short {
+    display: none;
+  }
+  .yapp .y-reel-title {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
   }
 }

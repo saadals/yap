@@ -33,11 +33,15 @@ const slug = (text: string) =>
 /**
  * Creator uploads the next version: files (drag and drop or picker, simulated upload), a note to
  * the client, the brief checklist and, for revisions, the client's open notes to tick off.
+ * Campaign slots upload a review copy, which the business sees watermarked until they approve.
  */
 export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boolean; onClose: () => void }) {
   const toast = useToast();
-  const { commission, businessName, latest, product, totals } = ws;
+  const { commission, businessName, latest, product, totals, slot } = ws;
   const version = commission.deliveries.length + 1;
+  const earns = slot ? commission.price : totals.creatorEarns;
+  const what = slot ? (version === 1 ? "your review copy" : `review copy ${version}`) : `version ${version}`;
+  const What = what.charAt(0).toUpperCase() + what.slice(1);
   const mustInclude = commission.brief.mustInclude;
   const openNotes =
     commission.status === "revision" && latest
@@ -105,7 +109,7 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
       note: note.trim(),
       files: uploads.map((u) => ({ name: u.name, size: u.size })),
     });
-    toast({ message: `Version ${version} sent to ${businessName} for review` });
+    toast({ message: `${What} sent to ${businessName} for review` });
     setDone(version);
   };
 
@@ -115,7 +119,7 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
       <Sheet
         open={open}
         onClose={onClose}
-        title={`Version ${done} delivered`}
+        title={slot ? "Review copy uploaded" : `Version ${done} delivered`}
         hideTitle
         side="center"
         width="sm"
@@ -128,13 +132,15 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
         <div className="flex flex-col items-center gap-4 pb-2 text-center" role="status">
           <Celebrate className="h-32 w-52" />
           <p className="y-display y-title" aria-hidden>
-            Version {done} is with {businessName}
+            {slot ? "Your review copy" : `Version ${done}`} is with {businessName}
           </p>
           <p className="y-body y-fg-2 max-w-[40ch]">
             We&apos;ve let them know.{" "}
-            {auto
-              ? `They have until ${weekdayDate(auto)} to review. If they don't respond, it's approved automatically and ${cash(totals.creatorEarns)} is released to you.`
-              : `You're paid ${cash(totals.creatorEarns)} as soon as they approve.`}
+            {slot
+              ? `They see it watermarked. ${auto ? `If they don't respond by ${weekdayDate(auto)}, it's approved automatically` : "Once they approve"} and ${cash(earns)} goes to your wallet as pending.`
+              : auto
+                ? `They have until ${weekdayDate(auto)} to review. If they don't respond, it's approved automatically and ${cash(earns)} is released to you.`
+                : `You're paid ${cash(earns)} as soon as they approve.`}
           </p>
         </div>
       </Sheet>
@@ -145,8 +151,12 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
     <Sheet
       open={open}
       onClose={onClose}
-      title={`Upload version ${version}`}
-      description={`${businessName} gets a notification and has 3 days to review.`}
+      title={`Upload ${what}`}
+      description={
+        slot
+          ? `${businessName} sees a watermarked, low-quality copy until they approve it. They have 3 days to review.`
+          : `${businessName} gets a notification and has 3 days to review.`
+      }
       width="lg"
       footer={
         <div className="flex flex-col gap-2">
@@ -160,7 +170,7 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
               Cancel
             </PillButton>
             <PillButton variant="contrast" size="lg" disabled={!ready} onClick={submit}>
-              {warned && missing > 0 ? "Deliver anyway" : `Send version ${version} for review`}
+              {warned && missing > 0 ? (slot ? "Upload anyway" : "Deliver anyway") : slot ? `Send ${what} for review` : `Send version ${version} for review`}
             </PillButton>
           </div>
         </div>
@@ -297,7 +307,7 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
 
         {mustInclude.length ? (
           <fieldset className="flex flex-col gap-2" aria-describedby={`${checklistId}-hint`}>
-            <legend className="y-label mb-1">Brief checklist</legend>
+            <legend className="y-label mb-1">{slot ? "Talking points" : "Brief checklist"}</legend>
             <p id={`${checklistId}-hint`} className="y-micro y-fg-3 mb-1 px-1">
               Tick what&apos;s in this version. {businessName} checks these first.
             </p>

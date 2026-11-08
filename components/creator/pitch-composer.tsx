@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle, ArrowLeft, BadgeCheck, CalendarDays, Clock, Package as PackageIcon, Sparkles, Wand2 } from "lucide-react";
+import Link from "next/link";
 import { useRef, useState } from "react";
 
 import { VideoThumb } from "@/components/domain/video-thumb";
@@ -12,8 +13,10 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
+import { ContactNotice } from "@/components/requests/contact-notice";
 import { at } from "@/lib/clock";
 import { daysFromNow, money, moneyRange, plural, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { actions } from "@/lib/store";
 import { addonById, formatById } from "@/lib/taxonomy";
 import type { Business, ContentRequest, Creator, Pitch, Product, Video } from "@/lib/types";
@@ -97,7 +100,9 @@ export function PitchComposer({
         : null,
     price: priceValid ? null : "Enter a whole-dollar price between $20 and $10,000.",
     days: days >= 1 && days <= 60 ? null : "Pick between 1 and 60 days.",
-    samples: samples.length >= 1 ? null : "Pick at least one sample so they can see your work.",
+    // A brand-new creator profile has no portfolio yet: samples are optional until it does.
+    samples:
+      videos.length === 0 || samples.length >= 1 ? null : "Pick at least one sample so they can see your work.",
   };
   const show = (field: Field) => (attempted || touched[field] ? errors[field] : null);
   const errorCount = Object.values(errors).filter(Boolean).length;
@@ -207,9 +212,17 @@ export function PitchComposer({
                 {creator.verified ? <BadgeCheck size={16} aria-label="ID verified" /> : null}
               </p>
               <p className="y-micro y-fg-2 flex flex-wrap items-center gap-x-2">
-                <Rating value={creator.rating} count={creator.reviewCount} />
-                <span>{creator.onTimeRate}% on time</span>
-                <span>{creator.completed} completed</span>
+                {creator.reviewCount ? (
+                  <Rating value={creator.rating} count={creator.reviewCount} />
+                ) : (
+                  <span>New on Yapp</span>
+                )}
+                {creator.completed ? (
+                  <>
+                    <span>{creator.onTimeRate}% on time</span>
+                    <span>{creator.completed} completed</span>
+                  </>
+                ) : null}
               </p>
             </div>
             <div className="text-end">
@@ -226,17 +239,19 @@ export function PitchComposer({
             <p className="y-display text-[20px] leading-snug">&ldquo;{angle.trim()}&rdquo;</p>
           </div>
           <p className="y-body max-w-[62ch] whitespace-pre-line">{message.trim()}</p>
-          <div className="flex flex-col gap-2">
-            <p className="y-micro y-fg-2">{plural(pickedVideos.length, "sample")}</p>
-            <div className="grid grid-cols-3 gap-2 sm:max-w-md">
-              {pickedVideos.map((video) => (
-                <div key={video.id} className="flex flex-col gap-1.5">
-                  <VideoThumb video={video} frame="4:5" showHook={false} decorative />
-                  <span className="y-micro y-clamp-2">{video.title}</span>
-                </div>
-              ))}
+          {pickedVideos.length ? (
+            <div className="flex flex-col gap-2">
+              <p className="y-micro y-fg-2">{plural(pickedVideos.length, "sample")}</p>
+              <div className="grid grid-cols-3 gap-2 sm:max-w-md">
+                {pickedVideos.map((video) => (
+                  <div key={video.id} className="flex flex-col gap-1.5">
+                    <VideoThumb video={video} frame="4:5" showHook={false} decorative />
+                    <span className="y-micro y-clamp-2">{video.title}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : null}
         </article>
 
         <PriceSummary price={priceNum} perspective="creator" priceLabel="Your price" showRights={false} />
@@ -327,6 +342,7 @@ export function PitchComposer({
           hint={`${message.trim().length}/${MESSAGE_MAX} · at least ${MESSAGE_MIN} characters`}
           error={show("message")}
         />
+        <ContactNotice text={`${angle} ${message}`} />
       </div>
 
       {/* Price */}
@@ -490,11 +506,17 @@ export function PitchComposer({
           </span>
         </legend>
         <p id="samples-hint" className="y-micro y-fg-2 px-1">
-          Pick 1 to 3. Closest matches to this {format.name.toLowerCase()} are first.
+          {videos.length
+            ? `Pick 1 to 3. Closest matches to this ${format.name.toLowerCase()} are first.`
+            : "Optional for now: your portfolio is empty."}
         </p>
         {videos.length === 0 ? (
           <p className="y-small y-fg-2 px-1">
-            Your portfolio is empty. Add a video on your profile first so businesses can see your work.
+            You can pitch without samples, but businesses pick creators whose work they can see.{" "}
+            <Link href={paths.editProfile("portfolio")} className="font-semibold underline underline-offset-2">
+              Add videos to your profile
+            </Link>
+            .
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">

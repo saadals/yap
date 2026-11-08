@@ -10,7 +10,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { me } from "@/lib/selectors";
-import { ME, actions, useDemo } from "@/lib/store";
+import { actions, useDemo } from "@/lib/store";
 import type { TeamMember } from "@/lib/types";
 
 import { ConfirmSheet } from "./confirm-sheet";
@@ -23,9 +23,11 @@ import { isEmail } from "./controls";
 type MemberForm = { name: string; title: string; email: string };
 const pickMember = (m: TeamMember): MemberForm => ({ name: m.name, title: m.title, email: m.email });
 
+/** Name, role and email for a business account's own team member record. */
 export function MemberProfileForm() {
   const s = useDemo();
   const member = me.member(s);
+  if (!member) return null;
   return <MemberInner key={JSON.stringify(pickMember(member))} member={member} />;
 }
 
@@ -50,11 +52,10 @@ function MemberInner({ member }: { member: TeamMember }) {
         event.preventDefault();
         setTouched({ name: true, title: true, email: true });
         if (errors.name || errors.title || errors.email) return;
-        actions.updateMember(ME.memberId, {
-          name: form.name.trim().replace(/\s+/g, " "),
-          title: form.title.trim(),
-          email: form.email.trim().toLowerCase(),
-        });
+        const name = form.name.trim().replace(/\s+/g, " ");
+        actions.updateMember(member.id, { title: form.title.trim() });
+        // One person: name and email update the account, member record and creator profile together.
+        actions.updateAccount({ name, email: form.email });
         toast({ message: "Saved" });
       }}
     >
@@ -105,7 +106,9 @@ export function TeamSection() {
   const s = useDemo();
   const toast = useToast();
   const business = me.business(s);
-  const members = s.team.filter((m) => m.businessId === ME.businessId);
+  const account = me.account(s);
+  const myMemberId = me.ids(s).memberId;
+  const members = me.team(s);
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState<TeamMember | null>(null);
   const [invited, setInvited] = useState<string[]>([]);
@@ -113,8 +116,21 @@ export function TeamSection() {
   return (
     <div className="flex flex-col gap-4">
       <ul className="flex flex-col divide-y divide-(--b-line)" aria-label={`${business.name} team`}>
+        {myMemberId ? null : (
+          // Upgraded personal accounts have no member record yet: show the owner.
+          <li className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+            <FaceAvatar id={account.creatorId ?? account.id} name="" size={40} />
+            <div className="min-w-0 flex-1">
+              <p className="y-small flex flex-wrap items-center gap-2 font-semibold">
+                {account.name}
+                <Badge tone="ink" className="!min-h-6 !px-2 text-xs">You</Badge>
+              </p>
+              <p className="y-micro y-fg-2 truncate">Owner · {account.email}</p>
+            </div>
+          </li>
+        )}
         {members.map((member) => {
-          const isMe = member.id === ME.memberId;
+          const isMe = member.id === myMemberId;
           return (
             <li key={member.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
               <FaceAvatar id={member.id} name="" size={40} />
@@ -166,12 +182,12 @@ export function TeamSection() {
         title={removing ? `Remove ${removing.name}?` : "Remove teammate?"}
         description={
           removing
-            ? `${removing.name.split(" ")[0]} will lose access to ${business.name}'s requests, commissions and messages. Their past messages stay in each thread.`
+            ? `${removing.name.split(" ")[0]} will lose access to ${business.name}'s orders and messages. Their past messages stay in each thread.`
             : undefined
         }
         confirmLabel="Remove from team"
         onConfirm={() => {
-          if (!removing || removing.id === ME.memberId) return;
+          if (!removing || removing.id === myMemberId) return;
           actions.removeMember(removing.id);
           toast({ message: `${removing.name} removed from ${business.name}` });
           setRemoving(null);
@@ -219,7 +235,7 @@ function InviteSheet({
       open={open}
       onClose={close}
       title="Invite a teammate"
-      description="They'll get an email to join. Everyone on the team can post requests, hire and approve work."
+      description="They'll get an email to join. Everyone on the team can place orders, hire and approve work."
       width="sm"
       footer={
         <div className="flex flex-wrap gap-2">

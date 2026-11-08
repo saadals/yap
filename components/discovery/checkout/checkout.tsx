@@ -12,12 +12,13 @@ import { Celebrate } from "@/components/ui/celebrate";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { lengthLabel, money, plural, shortDate, weekdayDate } from "@/lib/format";
+import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
-import { commissionById, creatorByHandle, me } from "@/lib/selectors";
+import { commissionById, creatorByHandle, me, videoById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { ME, actions, useDemo, useHydrated } from "@/lib/store";
+import { accountOwning, actions, useDemo, useHydrated } from "@/lib/store";
 import { addonById, formatById, languageById, platformById } from "@/lib/taxonomy";
-import type { Commission, Creator } from "@/lib/types";
+import type { Commission, Creator, Video } from "@/lib/types";
 
 import { CreatorNotFound } from "../profile";
 import { availabilityLabel, responseLabel, tierName } from "../profile-utils";
@@ -27,6 +28,7 @@ import {
   type Draft,
   type FieldId,
   type SectionId,
+  businessProducts,
   derive,
   deliverablesLabel,
   fieldSection,
@@ -48,69 +50,98 @@ import {
 } from "./sections";
 
 /* -------------------------------------------------------------------------- */
-/* Route: hydration, not-found, role gate                                      */
+/* Route: hydration, not-found, sign-in and own-profile gates                  */
 /* -------------------------------------------------------------------------- */
 
 export function CommissionRoute({ handle }: { handle: string }) {
   const s = useDemo();
   const hydrated = useHydrated();
-  const { role } = usePrefs();
+  const { account } = usePrefs();
   const params = useSearchParams();
   const creator = creatorByHandle(s, handle);
   const search = params.toString();
-  const here = `/creators/${handle}/commission${search ? `?${search}` : ""}`;
+  const here = `${paths.orderCreator(handle)}${search ? `?${search}` : ""}`;
 
   if (!hydrated) return <CheckoutSkeleton />;
   if (!creator) return <CreatorNotFound handle={handle} />;
-  if (role !== "business") return <SignInGate s={s} creator={creator} next={here} />;
+  // Any signed-in account can order (company or personal buyer profile).
+  if (!account) return <SignInGate creator={creator} next={here} />;
+  // No self-dealing: nobody orders from their own creator profile.
+  if (me.creator(s)?.id === creator.id) return <OwnProfileGate creator={creator} />;
 
-  const repeatId = params.get("repeat");
+  // `again` (paths.orderCreator); `repeat` kept for older links.
+  const repeatId = params.get("again") ?? params.get("repeat");
   const packageId = params.get("package");
+  const productId = params.get("product");
+  const videoId = params.get("video");
   const candidate = repeatId ? commissionById(s, repeatId) : undefined;
   const repeat =
-    candidate && candidate.businessId === ME.businessId && candidate.creatorId === creator.id ? candidate : null;
+    candidate && candidate.businessId === me.ids(s).businessId && candidate.creatorId === creator.id
+      ? candidate
+      : null;
+  const video = videoId ? videoById(s, videoId) : undefined;
 
   return (
     <Checkout
-      key={`${creator.id}|${repeat?.id ?? ""}|${packageId ?? ""}`}
+      key={`${s.activeAccountId}|${creator.id}|${repeat?.id ?? ""}|${packageId ?? ""}|${productId ?? ""}|${video?.id ?? ""}`}
       creator={creator}
       repeat={repeat}
       repeatMissing={Boolean(repeatId) && !repeat}
       packageId={packageId}
+      productId={productId}
+      video={video ?? null}
     />
   );
 }
 
-function SignInGate({ s, creator, next }: { s: DemoState; creator: Creator; next: string }) {
-  const { role, setRole } = usePrefs();
-  const business = me.business(s);
+function GateCard({ creator, children }: { creator: Creator; children: React.ReactNode }) {
   return (
     <Block tone="paper" pad="lg" className="mx-auto flex w-full max-w-2xl flex-col items-center gap-5 text-center">
       <FaceAvatar id={creator.id} name="" size={80} />
-      <div className="flex flex-col gap-2">
-        <h1 className="y-display y-title">Sign in as a business to commission {creator.firstName}</h1>
-        <p className="y-body y-fg-2 mx-auto max-w-[52ch]">
-          Direct offers come from business accounts. Your payment is held safely and only released
-          when you approve the video.
-        </p>
-        {role === "creator" ? (
-          <p className="y-small y-fg-2">
-            You&apos;re in the creator view right now. Switch to the business demo to try commissioning.
-          </p>
-        ) : null}
-      </div>
-      <div className="flex flex-col items-center gap-2 sm:flex-row">
-        <PillButton variant="neon" size="lg" arrow onClick={() => setRole("business")}>
-          Continue as {business.name} (demo)
-        </PillButton>
-        <PillButton variant="outline" size="lg" href={`/signin?next=${encodeURIComponent(next)}`}>
-          Sign in
-        </PillButton>
-      </div>
-      <Link href={`/creators/${creator.handle}`} className="y-small y-link font-semibold">
+      {children}
+      <Link href={paths.creator(creator.handle)} className="y-small y-link font-semibold">
         Back to {creator.firstName}&apos;s profile
       </Link>
     </Block>
+  );
+}
+
+function SignInGate({ creator, next }: { creator: Creator; next: string }) {
+  return (
+    <GateCard creator={creator}>
+      <div className="flex flex-col gap-2">
+        <h1 className="y-display y-title">Sign in to commission {creator.firstName}</h1>
+        <p className="y-body y-fg-2 mx-auto max-w-[52ch]">
+          Any Yapp account can order, for a company or just for you. Your payment is held safely and
+          only released when you approve the video.
+        </p>
+      </div>
+      <div className="flex flex-col items-center gap-2 sm:flex-row">
+        <PillButton variant="neon" size="lg" arrow href={paths.signIn({ next })}>
+          Sign in
+        </PillButton>
+        <PillButton variant="outline" size="lg" href={paths.signUp}>
+          Create an account
+        </PillButton>
+      </div>
+    </GateCard>
+  );
+}
+
+function OwnProfileGate({ creator }: { creator: Creator }) {
+  return (
+    <GateCard creator={creator}>
+      <div className="flex flex-col gap-2">
+        <h1 className="y-display y-title">This is your own profile</h1>
+        <p className="y-body y-fg-2 mx-auto max-w-[52ch]">
+          You can&apos;t order from yourself. Share your profile so others can commission you, or keep
+          it fresh with new work and packages.
+        </p>
+      </div>
+      <PillButton variant="neon" size="lg" arrow href={paths.editProfile()}>
+        Edit profile
+      </PillButton>
+    </GateCard>
   );
 }
 
@@ -125,14 +156,20 @@ export function Checkout({
   repeat,
   repeatMissing,
   packageId,
+  productId = null,
+  video = null,
 }: {
   creator: Creator;
   repeat: Commission | null;
   repeatMissing: boolean;
   packageId: string | null;
+  /** Preselect a saved product (e.g. coming back from adding one). */
+  productId?: string | null;
+  /** A video that inspired the order (the feed's Order pill): added as a reference. */
+  video?: Video | null;
 }) {
   const s = useDemo();
-  const [d, setD] = useState<Draft>(() => initDraft(s, creator, { packageId, repeat }));
+  const [d, setD] = useState<Draft>(() => initDraft(s, creator, { packageId, repeat, productId, video }));
   const x = derive(s, creator, d, repeat);
   const errors = validate(s, creator, d, x);
   const missing = (Object.keys(errors) as FieldId[]).filter((f) => errors[f]);
@@ -189,7 +226,9 @@ export function Checkout({
     package: `${tierName[x.pkg.tier]} · ${x.pkg.name} · ${money(x.pkg.price)}`,
     product: x.product
       ? `${x.product.name}${x.learnings.length ? ` · ${plural(x.learnings.length, "learning")} carried forward` : ""}`
-      : "No product chosen",
+      : businessProducts(s).length
+        ? "No product chosen"
+        : "No product, described in the brief",
     brief: (
       <span className="flex flex-col gap-1">
         <span className="font-semibold text-(--b-fg)">{x.title}</span>
@@ -205,7 +244,7 @@ export function Checkout({
     timing: `Due ${weekdayDate(x.dueDate)} · ${plural(x.dueDays, "day")} from today`,
     message: <span className="y-clamp-2">{x.message}</span>,
     payment: (() => {
-      const method = s.paymentMethods.find((m) => m.id === d.paymentMethodId);
+      const method = me.paymentMethods(s).find((m) => m.id === d.paymentMethodId);
       return method ? paymentLabel(method) : "Choose a card";
     })(),
   };
@@ -256,7 +295,7 @@ export function Checkout({
     <div className="flex flex-col pb-32 lg:pb-0">
       <div className="flex flex-col gap-4 px-1 pt-2 pb-5 md:pb-6">
         <Link
-          href={`/creators/${creator.handle}`}
+          href={paths.creator(creator.handle)}
           className="y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
         >
           <ArrowLeft size={16} aria-hidden className="y-flip" />
@@ -274,7 +313,7 @@ export function Checkout({
           {repeat ? (
             <>
               Ready from{" "}
-              <Link href={`/business/commissions/${repeat.id}`} className="y-link font-semibold text-(--y-ink)">
+              <Link href={paths.commission(repeat.id)} className="y-link font-semibold text-(--y-ink)">
                 {repeat.title}
               </Link>
               . Change anything, then send.
@@ -447,7 +486,8 @@ function Success({
   commissionId: string;
   repeat: Commission | null;
 }) {
-  const persona = creator.id === ME.creatorId;
+  // A demo person's creator profile doesn't auto-accept: point the reviewer at their account.
+  const owner = accountOwning(s, { creatorId: creator.id });
   const threadId = commissionById(s, commissionId)?.threadId;
   return (
     <Block
@@ -486,24 +526,20 @@ function Success({
         Payment is held only once {creator.firstName} accepts, and the service fee is charged when you
         approve the work.
       </p>
-      {persona ? (
+      {owner ? (
         <p className="y-micro y-fg-3 max-w-[52ch]">
-          Demo tip: open the account menu and switch to Layla&apos;s view to accept this offer from the
-          creator side.
+          Demo tip: open the account menu and switch to {owner.firstName}&apos;s account to accept this
+          offer as {owner.firstName}.
         </p>
       ) : null}
       <div className="flex flex-col items-center gap-2 sm:flex-row sm:flex-wrap sm:justify-center">
-        <PillButton href={`/business/commissions/${commissionId}`} variant="neon" size="lg" arrow>
+        <PillButton href={paths.commission(commissionId)} variant="neon" size="lg" arrow>
           View commission
         </PillButton>
-        <PillButton
-          href={threadId ? `/business/messages?thread=${threadId}` : "/business/messages"}
-          variant="soft"
-          size="lg"
-        >
+        <PillButton href={paths.messages(threadId)} variant="soft" size="lg">
           Message {creator.firstName}
         </PillButton>
-        <PillButton href="/creators" variant="ghost" size="lg">
+        <PillButton href={paths.explore("creators")} variant="ghost" size="lg">
           Back to creators
         </PillButton>
       </div>

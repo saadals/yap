@@ -20,11 +20,20 @@ action per screen, and a cast of blob characters. Layouts are our own.
 | Product            | Saved product context (audience, tone, dos/don'ts, assets, learnings) reused in every brief. |
 | Learnings          | Feedback saved to a product after a commission so it carries into the next one.              |
 | Payment protection | Payment is held when work starts and released only on approval. Full refund if not delivered. |
+| Account            | One account type: every account can **order** (its buyer profile: a company or the person) and **make** videos (once it has a creator profile). A "Business account" adds company details, VAT invoices and a team. |
+| Side               | Which side of a deal the viewer is on: ordering ("business") or making ("creator"). Derived per order or commission (`sideOf`), never an account type. UI copy: "You ordered" / "You're making". |
+| Order              | What a buyer places: a **custom request** (creators pitch), a **UGC campaign**, or a direct order from a creator's profile. |
+| UGC campaign       | 10+ videos (steps of 5), each from a different creator, at a fixed price per video set by the **follower tier**. Budget held up front; creators **take a slot** first come, first served. |
+| Slot / yapp        | One creator's place on a campaign; in campaign and feed copy one video is "a yapp" ("Only 3 yapps left"). |
+| Review copy        | A campaign video before approval: watermarked, low quality. Approval unlocks the full-quality file. |
+| Wallet             | Where a creator's money sits: **pending** (approved campaign videos, unlocks at month end if the post stays up), **available** (withdraw), paid out. |
 
 Economics: creators keep 100% of their price and add-ons. The business pays a 10% service fee,
-charged only when work completes. Deliveries auto-approve 3 days after delivery if the business
-doesn't respond. Organic use on the business's own accounts is always included; paid-ads usage is
-an add-on.
+charged only when work completes (custom and direct orders; **no fee on UGC campaigns** for now).
+Deliveries auto-approve 3 days after delivery if the business doesn't respond. Organic use on the
+business's own accounts is always included; paid-ads usage is an add-on. Campaign pay lands in the
+creator's wallet as pending and unlocks at month end if the post (with the brand tag and the paid
+partnership label) is still up.
 
 ## Calm first (owner feedback: "cluttered, too much going on at once")
 
@@ -68,6 +77,26 @@ Tokens are CSS custom properties on `.yapp` (see `app/globals.css`), redefined f
   colour alone; badges always pair an icon and a label.
 - Illustration tints (`--y-c-violet | sun | sea | coral | mint | blush`) are for characters,
   avatars and thumbnails only, never behind text.
+- **Exception: order reels on Home.** The PM asked for orders in the feed as bold, full-colour
+  pages. They use six gradient presets (`--y-reel-{1..6}-from | -to | -ink`, light and dark sets in
+  `app/globals.css`), picked deterministically per order (`reelGradient(id)`). Every `-ink` passes
+  WCAG AA against both ends of its gradient. Use them only for full-bleed order reels, never for
+  blocks or cards. Neon pills on reels get a 2px ink ring so their edge stays visible on light
+  gradients.
+
+## The reels feed (Home)
+
+Home (`/home`) is the one full-bleed screen. Rules:
+- The site header and the bottom bar stay exactly as everywhere else. The reel fills the space
+  between them (`--y-fill-h`); on desktop it's a centred phone-width 9:16 column with ↑/↓ buttons.
+- One template per reel type, never free-form: creator video (generated scene + captions), custom
+  request and campaign (gradient text pages). One neon pill per reel at the bottom: **Order**
+  (video), **Pitch** (custom request), **Accept** (campaign), **Manage** (your own order). An order
+  the viewer can't act on gets a non-neon "See details".
+- Swipe up for the next reel, swipe left (or tap the pill) for details. Respect reduced motion (no
+  autoplay, no follow-finger animation). The ⋯ menu holds secondary actions (Not interested, Share,
+  Report; Edit and Close on your own order).
+- Every other page stays card-based and calm.
 
 ## The block system
 
@@ -129,12 +158,23 @@ Domain (`components/domain/`):
 - `CreatorCard`, `CreatorRow`, `SaveCreatorButton`, `RequestCard` (`perspective`), `BusinessLogo`.
 - `CommissionBadge`, `RequestBadge`, `PitchBadge`, `DueBadge`, `Rating`, `StarRow`, `StarInput`.
 - `FormatChip`, `LanguageChips`, `PlatformChips`, `languageList`, `platformList`.
-- `BriefSummary`, `FitPanel`, `PriceSummary`, `ProtectedNote`, `PaymentMethodPicker`, `paymentLabel`.
+- `BriefSummary`, `FitPanel`, `PriceSummary` (hides the fee row when the fee rate is 0),
+  `ProtectedNote`, `PaymentMethodPicker` (the signed-in account's cards), `paymentLabel`.
+- `CommissionBadge` (`side` changes "Offer sent" / "New offer"), `SlotBadge` / `slotStatus` (campaign
+  slot: Filming → Review copy ready → Approved, post due → Posted), `RequestBadge` (`campaign`
+  wording: Taking creators / Full), `StageTrack` (`campaign` track: Slot taken → … → Posted).
+  `RequestCard` renders campaigns ("$30 per yapp", slots left); `BusinessLogo` shows a face for
+  someone ordering in their own name.
+
+Feature entry points: `components/feed` (`ReelFeed`), `components/campaigns` (`CampaignWizard`,
+`CampaignOrderView`), `components/account` (`CreatorSetupSheet`: open it whenever an account
+without a creator profile tries to pitch or take a slot), `components/work`, `components/explore`.
 
 Shell (`components/shell/`):
-- `AppShell role="business" | "creator"` for signed-in pages (header + mobile bottom bar; `focus`
-  hides the bottom bar for wizards/checkout that own the bottom edge).
-- `PublicShell` for marketing, browsing, profiles and auth (header adapts to the signed-in role;
+- `AppShell` for signed-in pages (header + mobile bottom bar with one nav for everyone: Home,
+  Explore, Work, Messages, Profile; `focus` hides the bottom bar for wizards/checkout that own the
+  bottom edge; `fullscreen` for the feed).
+- `PublicShell` for marketing, browsing, profiles and auth (header adapts to the session;
   `footer={false}` for auth/focused pages).
 
 ## Data and state
@@ -147,9 +187,10 @@ Shell (`components/shell/`):
 - Store: `lib/store.ts`. `const s = useDemo()` returns the whole state; derive with
   `lib/selectors.ts` (pure). Mutate only via `actions.*` (in event handlers). State persists in
   localStorage; Account menu → "Reset demo data" restores the seed.
-- Personas: business = Nour Haddad at Daftar (`ME.businessId = "b-daftar"`, `ME.memberId`);
-  creator = Layla Mansour (`ME.creatorId = "cr-layla"`). Both sides share one store, so actions
-  done as one role appear for the other.
+- Accounts: Nour Haddad (business account, Daftar; no creator profile until she sets one up) and
+  Layla Mansour (personal account, creator @laylatalks). Read the signed-in account with
+  `me.ids(s)` / `me.account(s)`; `me.creator(s)` and `me.member(s)` can be undefined. Derive the
+  viewer's side of an order or commission with `sideOf(s, item)`. Link through `lib/paths.ts`.
 - Dynamic routes are client pages using `useParams()`. Ids created at runtime only exist after
   hydration: if an entity is missing and `useHydrated()` is false, show a skeleton; if it's still
   missing after hydration, show an `EmptyState` "not found" with a way back.
@@ -157,7 +198,9 @@ Shell (`components/shell/`):
 ## Writing
 
 Plain, warm, specific. Say what happens next ("Payment is held until you approve"). Buttons are
-verbs ("Send pitch", "Approve and release $286"). Empty states explain and offer the next action.
+verbs ("Send pitch", "Approve and release $286", "Take a slot", "Hold $300 and publish"). Rejection
+and removal copy is respectful and never blames ("Daftar went with another creator for this
+slot"). Empty states explain and offer the next action.
 Errors say how to fix. No lorem ipsum, no emoji.
 
 ## Accessibility

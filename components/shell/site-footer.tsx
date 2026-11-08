@@ -6,22 +6,23 @@ import Link from "next/link";
 import { Block } from "@/components/ui/block";
 import { BrandMark } from "@/components/ui/brand";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { paths } from "@/lib/paths";
 
 const columns = [
   {
     title: "For businesses",
     links: [
-      { label: "Find creators", href: "/creators" },
-      { label: "Post a request", href: "/business/requests/new" },
-      { label: "How it works", href: "/how-it-works" },
+      { label: "Find creators", href: paths.creators },
+      { label: "Place an order", href: paths.newOrder() },
+      { label: "How it works", href: paths.howItWorks },
       { label: "Pricing", href: "/how-it-works#pricing" },
     ],
   },
   {
     title: "For creators",
     links: [
-      { label: "Become a creator", href: "/for-creators" },
-      { label: "Open requests", href: "/creator/opportunities" },
+      { label: "Make videos on Yapp", href: paths.forCreators },
+      { label: "Open orders", href: paths.explore("orders") },
       { label: "Creator payouts", href: "/for-creators#payouts" },
     ],
   },

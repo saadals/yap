@@ -8,12 +8,14 @@ import { TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
+import { paths } from "@/lib/paths";
 import { me, threadsFor } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import type { Creator } from "@/lib/types";
 
 /**
- * "Message" for a creator: `href` opens the latest existing conversation; otherwise `start()`
+ * "Message" for a creator, from the signed-in account's buyer profile (the ordering side): `href`
+ * opens the latest existing conversation; otherwise `start()`
  * opens a short compose `sheet` (render it) that starts one and then opens it in Messages.
  */
 export function useMessageCreator(creator: Creator) {
@@ -40,7 +42,7 @@ export function useMessageCreator(creator: Creator) {
     });
     setOpen(false);
     toast({ message: `Message sent to ${creator.firstName}` });
-    router.push(`/business/messages?thread=${id}`);
+    router.push(paths.messages(id));
   };
 
   const start = () => {
@@ -82,7 +84,7 @@ export function useMessageCreator(creator: Creator) {
 
   return {
     label,
-    href: existing ? `/business/messages?thread=${existing.id}` : undefined,
+    href: existing ? paths.messages(existing.id) : undefined,
     start,
     sheet,
   };

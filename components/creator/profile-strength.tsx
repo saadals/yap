@@ -3,6 +3,8 @@
 import { Check, Plus } from "lucide-react";
 import Link from "next/link";
 
+import { platformName } from "@/components/account/social";
+import { paths } from "@/lib/paths";
 import type { DemoState } from "@/lib/store";
 import { portfolio } from "@/lib/selectors";
 import type { Creator } from "@/lib/types";
@@ -12,67 +14,75 @@ export type StrengthItem = {
   label: string;
   detail: string;
   done: boolean;
-  /** Section on /creator/profile (or another page) that fixes it. */
+  /** Section of Edit profile (or another page) that fixes it. */
   href: string;
 };
 
 export const BIO_MIN = 80;
 
-/** What makes a creator profile convincing to a business, as a checklist. */
+/** What makes a creator profile convincing to a buyer, as a checklist. */
 export function profileChecklist(s: DemoState, creator: Creator): StrengthItem[] {
   const videos = portfolio(s, creator);
   const dialects = new Set(videos.map((v) => v.lang));
   const priced = creator.packages.filter((p) => p.price > 0).length;
   const bioLength = creator.bio.trim().length;
+  const connected = (creator.socials ?? []).filter((x) => x.verified);
   return [
     {
       id: "portfolio",
       label: "Portfolio of 5+ videos",
       detail: videos.length >= 5 ? `${videos.length} videos` : `${videos.length} of 5`,
       done: videos.length >= 5,
-      href: "/creator/profile#portfolio",
+      href: paths.editProfile("portfolio"),
     },
     {
       id: "packages",
       label: "All 3 packages priced",
       detail: `${Math.min(priced, 3)} of 3`,
       done: priced >= 3,
-      href: "/creator/profile#packages",
+      href: paths.editProfile("packages"),
     },
     {
       id: "bio",
       label: "Intro bio",
       detail: bioLength >= BIO_MIN ? "Written" : `${bioLength} of ${BIO_MIN} characters`,
       done: bioLength >= BIO_MIN,
-      href: "/creator/profile#about",
+      href: paths.editProfile("about"),
     },
     {
       id: "verified",
       label: "ID verified",
       detail: creator.verified ? "Verified" : "Takes 2 minutes",
       done: creator.verified,
-      href: "/creator/settings",
+      href: paths.settings("making"),
+    },
+    {
+      id: "accounts",
+      label: "A social account connected",
+      detail: connected.length ? connected.map((x) => platformName(x.platform)).join(", ") : "Unlocks campaigns",
+      done: connected.length > 0,
+      href: paths.editProfile("accounts"),
     },
     {
       id: "dialects",
       label: "Samples in 3+ dialects",
       detail: `${Math.min(dialects.size, 3)} of 3`,
       done: dialects.size >= 3,
-      href: "/creator/profile#portfolio",
+      href: paths.editProfile("portfolio"),
     },
     {
       id: "featured",
       label: "Featured video picked",
       detail: creator.portfolioIds.includes(creator.featuredVideoId) ? "Picked" : "Star your best piece",
       done: creator.portfolioIds.includes(creator.featuredVideoId),
-      href: "/creator/profile#portfolio",
+      href: paths.editProfile("portfolio"),
     },
     {
       id: "addons",
       label: "2+ add-ons offered",
       detail: `${creator.addons.length} offered`,
       done: creator.addons.length >= 2,
-      href: "/creator/profile#addons",
+      href: paths.editProfile("addons"),
     },
   ];
 }

@@ -6,38 +6,32 @@ import { useState } from "react";
 import { FieldShell } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import type { Role } from "@/lib/types";
+import { paths } from "@/lib/paths";
 
 /* -------------------------------------------------------------------------- */
-/* Session helpers (prototype: two demo accounts)                              */
+/* Session helpers (prototype: two demo accounts, one account type)            */
 /* -------------------------------------------------------------------------- */
 
 export const isEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(value.trim());
 
-export const roleHome = (role: Role) => (role === "business" ? "/business" : "/creator");
-
-export const parseRole = (value: string | null): Role | null =>
-  value === "business" || value === "creator" ? value : null;
+/** The two demo accounts (lib/data `accounts`). */
+export type DemoAccountId = "nour" | "layla";
 
 /**
- * Which demo workspace an email opens. Emails mentioning "layla" or "creator" open the creator
- * side, "nour"/"daftar"/"business" the business side, anything else the fallback.
+ * Which demo account an email opens. Emails mentioning "layla" or "creator" open Layla's
+ * personal account; "nour", "daftar", "business" and anything else open Nour's business account.
  */
-export function roleForEmail(email: string, fallback: Role = "business"): Role {
+export function accountForEmail(email: string): DemoAccountId {
   const value = email.toLowerCase();
-  if (value.includes("layla") || value.includes("creator")) return "creator";
-  if (value.includes("nour") || value.includes("daftar") || value.includes("business"))
-    return "business";
-  return fallback;
+  if (value.includes("nour") || value.includes("daftar") || value.includes("business")) return "nour";
+  if (value.includes("layla") || value.includes("creator")) return "layla";
+  return "nour";
 }
 
-/** Same-origin path to continue to after signing in; never the other role's area or auth pages. */
-export function safeNext(next: string | null, role: Role): string {
-  const home = roleHome(role);
-  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return home;
-  const other = role === "business" ? "/creator" : "/business";
-  if (next === other || next.startsWith(`${other}/`) || next.startsWith(`${other}?`)) return home;
-  if (/^\/(signin|signup|onboarding)(\/|\?|$)/.test(next)) return home;
+/** In-app path to continue to after signing in (never another site or an auth page). */
+export function safeNext(next: string | null): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return paths.home;
+  if (/^\/(signin|signup|onboarding)(\/|\?|#|$)/.test(next)) return paths.home;
   return next;
 }
 

@@ -31,7 +31,7 @@ export function AboutSection({ creator }: { creator: Creator }) {
   const errors = {
     headline:
       draft.headline.trim().length < 10
-        ? "Write a headline of at least 10 characters. It's the first line businesses read."
+        ? "Write a headline of at least 10 characters. It's the first line buyers read."
         : null,
     bio:
       draft.bio.trim().length < BIO_MIN

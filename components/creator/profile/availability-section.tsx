@@ -13,7 +13,7 @@ const backIn = [7, 14, 21, 30];
 
 /**
  * Availability saves instantly (it's a switch) and mirrors vacation mode in settings, so both
- * places always agree. When away, businesses see the return date and can't send offers.
+ * places always agree. When away, buyers see the return date and can't send offers.
  */
 export function AvailabilitySection({ creator }: { creator: Creator }) {
   const toast = useToast();
@@ -30,7 +30,7 @@ export function AvailabilitySection({ creator }: { creator: Creator }) {
     apply(available, from);
     toast({
       message: available
-        ? "You're available. Businesses can send you offers again."
+        ? "You're available. Buyers can send you direct orders again."
         : `You're away until ${weekdayDate(from ?? at(14))}. Active work isn't affected.`,
       action: { label: "Undo", onClick: () => apply(previous.available, previous.availableFrom) },
     });
@@ -47,7 +47,7 @@ export function AvailabilitySection({ creator }: { creator: Creator }) {
           </h2>
           <p className="y-small y-fg-2" id="availability-desc">
             {creator.available
-              ? "You show up in search and businesses can send direct offers."
+              ? "You show up in search and buyers can send direct orders."
               : `Away until ${creator.availableFrom ? weekdayDate(creator.availableFrom) : "you switch back"}. You still get paid for active work.`}
           </p>
         </div>

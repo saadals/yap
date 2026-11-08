@@ -7,6 +7,7 @@ import {
   FilePlus2,
   Film,
   Gift,
+  Megaphone,
   MessageCircle,
   Repeat2,
   Send,
@@ -19,7 +20,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { timeAgo } from "@/lib/format";
 import { notificationsFor } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import type { NotificationKind, Role } from "@/lib/types";
+import type { NotificationKind } from "@/lib/types";
 
 const icons: Record<NotificationKind, React.ReactNode> = {
   pitch: <Send size={18} aria-hidden className="y-flip" />,
@@ -30,21 +31,14 @@ const icons: Record<NotificationKind, React.ReactNode> = {
   review: <Star size={18} aria-hidden />,
   request: <FilePlus2 size={18} aria-hidden />,
   revision: <Repeat2 size={18} aria-hidden />,
+  campaign: <Megaphone size={18} aria-hidden />,
   system: <Bell size={18} aria-hidden />,
 };
 
-export function NotificationsSheet({
-  role,
-  open,
-  onClose,
-}: {
-  role: Role;
-  open: boolean;
-  onClose: () => void;
-}) {
+export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const s = useDemo();
   const router = useRouter();
-  const items = notificationsFor(s, role);
+  const items = notificationsFor(s);
   const unread = items.filter((n) => n.unread).length;
 
   return (
@@ -58,7 +52,7 @@ export function NotificationsSheet({
       {unread ? (
         <button
           type="button"
-          onClick={() => actions.markAllNotificationsRead(role)}
+          onClick={() => actions.markAllNotificationsRead()}
           className="y-pill mb-3"
           data-variant="soft"
           data-size="sm"
@@ -70,7 +64,7 @@ export function NotificationsSheet({
       {items.length === 0 ? (
         <EmptyState
           title="Nothing yet"
-          body="Pitches, deliveries and payments will show up here."
+          body="Orders, deliveries and payments will show up here."
           shape="ball"
           tint="sea"
           headingLevel={3}

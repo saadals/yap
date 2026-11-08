@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Block } from "@/components/ui/block";
@@ -8,49 +8,48 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { useMediaQuery } from "@/lib/hooks";
-import { threadById, threadsFor } from "@/lib/selectors";
-import { ME, useDemo, useHydrated } from "@/lib/store";
-import type { Role } from "@/lib/types";
+import { paths } from "@/lib/paths";
+import { me, myThreads, sideOf, threadById } from "@/lib/selectors";
+import { useDemo, useHydrated } from "@/lib/store";
 
 import { Conversation, ConversationSkeleton } from "./conversation";
 import type { ThreadFilter } from "./thread-meta";
 import { ThreadList, ThreadListSkeleton } from "./thread-list";
 
 /**
- * Two-pane inbox shared by both roles. The open conversation lives in the URL (`?thread=<id>`):
- * on mobile the list and the conversation are separate views; on desktop they sit side by side
- * and the first unread (or most recent) conversation opens by default.
+ * One two-pane inbox for both sides of the account: work it ordered and work it's making. Each
+ * conversation opens from the side the account is on in it. The open conversation lives in the
+ * URL (`?thread=<id>`): on mobile the list and the conversation are separate views; on desktop
+ * they sit side by side and the first unread (or most recent) conversation opens by default.
  *
  * Uses `useSearchParams`, so render it inside <Suspense>.
  */
-export function Inbox({ role }: { role: Role }) {
+export function Inbox() {
   const s = useDemo();
   const hydrated = useHydrated();
   const router = useRouter();
-  const pathname = usePathname();
   const params = useSearchParams();
   const desktop = useMediaQuery("(min-width: 1024px)");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<ThreadFilter>("all");
 
-  const threads = threadsFor(s, role);
+  const items = myThreads(s);
   const paramId = params.get("thread") ?? undefined;
-  const fallbackId = (threads.find((t) => t.unread.includes(role)) ?? threads[0])?.id;
+  const fallbackId = (items.find((item) => item.thread.unread.includes(item.side)) ?? items[0])?.thread.id;
 
   // Desktop with nothing selected: pin the default conversation in the URL first, so opening it
   // (which marks it read) can't shift the default to a different thread mid-render.
   useEffect(() => {
     if (!hydrated || !desktop || paramId || !fallbackId) return;
-    router.replace(`${pathname}?thread=${fallbackId}`, { scroll: false });
-  }, [hydrated, desktop, paramId, fallbackId, pathname, router]);
+    router.replace(paths.messages(fallbackId), { scroll: false });
+  }, [hydrated, desktop, paramId, fallbackId, router]);
 
   const found = paramId ? threadById(s, paramId) : undefined;
-  const mine =
-    found &&
-    (role === "business" ? found.businessId === ME.businessId : found.creatorId === ME.creatorId);
-  const thread = mine ? found : undefined;
+  const side = found ? sideOf(s, found) : undefined;
+  const thread = side ? found : undefined;
   const showConversation = Boolean(paramId);
-  const hrefFor = (id: string) => `${pathname}?thread=${id}`;
+  // Labels say which side you're on, for accounts that can be on both.
+  const showSide = Boolean(me.creator(s));
 
   const onPick = () => {
     if (!window.matchMedia("(min-width: 1024px)").matches) window.scrollTo({ top: 0 });
@@ -69,14 +68,14 @@ export function Inbox({ role }: { role: Role }) {
           {hydrated ? (
             <ThreadList
               s={s}
-              role={role}
-              threads={threads}
+              items={items}
+              showSide={showSide}
               selectedId={paramId}
               query={query}
               onQuery={setQuery}
               filter={filter}
               onFilter={setFilter}
-              hrefFor={hrefFor}
+              hrefFor={paths.messages}
               onPick={onPick}
             />
           ) : (
@@ -91,36 +90,33 @@ export function Inbox({ role }: { role: Role }) {
         >
           {!hydrated ? (
             <ConversationSkeleton />
-          ) : thread ? (
+          ) : thread && side ? (
             <Conversation
               s={s}
-              role={role}
+              side={side}
+              showSide={showSide}
               thread={thread}
-              backHref={pathname}
+              backHref={paths.messages()}
               maxHeight={desktop ? "none" : "max(300px, calc(100dvh - 360px))"}
             />
           ) : paramId ? (
             <EmptyState
               title="Conversation not found"
-              body="It may have been removed, or the link is from another browser's demo data."
+              body="It may belong to another account, or the link is from another browser's demo data."
               shape="gem"
               tint="coral"
               face="wow"
               className="my-auto"
               action={
-                <PillButton href={pathname} variant="contrast" size="sm">
+                <PillButton href={paths.messages()} variant="contrast" size="sm">
                   Back to messages
                 </PillButton>
               }
             />
-          ) : threads.length === 0 ? (
+          ) : items.length === 0 ? (
             <EmptyState
               title="Your conversations will appear here"
-              body={
-                role === "business"
-                  ? "Start one from a creator's profile, or wait for pitches on your requests."
-                  : "Pitch on an opportunity and the client can reply here."
-              }
+              body="Message a creator from their profile, or take on an order. Every commission gets its own thread."
               shape="pill"
               tint="sun"
               face="calm"

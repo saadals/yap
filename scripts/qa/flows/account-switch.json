@@ -1,0 +1,62 @@
+{
+  "account": "nour",
+  "steps": [
+    {
+      "go": "/work",
+      "after": 3500
+    },
+    {
+      "text": "Ordered"
+    },
+    {
+      "after": 800,
+      "clickSel": "button[aria-label^=\"Account menu\"]"
+    },
+    {
+      "click": "Switch account (demo)",
+      "after": 1500
+    },
+    {
+      "text": "You're now Layla"
+    },
+    {
+      "go": "/profile",
+      "after": 3000
+    },
+    {
+      "text": "@laylatalks"
+    },
+    {
+      "go": "/profile",
+      "after": 3000
+    },
+    {
+      "text": "@laylatalks"
+    },
+    {
+      "go": "/wallet",
+      "after": 3000
+    },
+    {
+      "text": "Available"
+    },
+    {
+      "after": 800,
+      "clickSel": "button[aria-label^=\"Account menu\"]"
+    },
+    {
+      "click": "Switch account (demo)",
+      "after": 1500
+    },
+    {
+      "go": "/profile",
+      "after": 3000
+    },
+    {
+      "text": "Daftar"
+    },
+    {
+      "notText": "@laylatalks"
+    }
+  ]
+}

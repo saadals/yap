@@ -14,13 +14,13 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
+import { CampaignOrderView } from "@/components/campaigns";
 import { BriefSummary } from "@/components/domain/brief-summary";
 import { CreatorRow } from "@/components/domain/creator-card";
 import { PitchBadge } from "@/components/domain/status-badge";
-import { AppShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -32,9 +32,10 @@ import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
 import { money, moneyRange, plural, shortDate, timeAgo, weekdayDate } from "@/lib/format";
-import { pitchesForRequest, productById, requestById } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { isCampaign, pitchesForRequest, productById } from "@/lib/selectors";
 import { absoluteUrl } from "@/lib/site";
-import { ME, actions, useDemo, useHydrated } from "@/lib/store";
+import { actions, useDemo } from "@/lib/store";
 import { addonById } from "@/lib/taxonomy";
 import type { ContentRequest } from "@/lib/types";
 
@@ -44,75 +45,63 @@ import { PitchCompare } from "./pitch-compare";
 import { CloseRequestSheet, EditRequestSheet, InviteSheet, MessageSheet, SampleSheet } from "./request-sheets";
 import { briefComplete, isUndecided, rankPitches, sortPitches, type PitchSort, type RankedPitch } from "./shared";
 
-export function RequestDetailPage() {
+/** Skeleton for the order page while the saved demo state loads. */
+export function OrderSkeleton() {
   return (
-    <AppShell role="business">
-      <Suspense fallback={<DetailSkeleton />}>
-        <RequestDetail />
-      </Suspense>
-    </AppShell>
-  );
-}
-
-function DetailSkeleton() {
-  return (
-    <Page>
-      <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading request">
-        <div className="flex flex-col gap-3 px-1 pt-2 pb-5">
-          <Skeleton className="h-5 w-28" />
-          <Skeleton className="h-12 w-4/5 max-w-2xl" />
-          <Skeleton className="h-5 w-72" />
-        </div>
-        <Skeleton className="h-11 w-72" />
-        <div className="y-block flex flex-col gap-2 p-3" data-tone="paper">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="flex items-center gap-3 p-3">
-              <Skeleton className="size-11 flex-none !rounded-full" />
-              <div className="flex flex-1 flex-col gap-2">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="flex flex-col gap-2" aria-busy="true" aria-label="Loading order">
+      <div className="flex flex-col gap-3 px-1 pt-2 pb-5">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-12 w-4/5 max-w-2xl" />
+        <Skeleton className="h-5 w-72" />
       </div>
-    </Page>
+      <Skeleton className="h-11 w-72" />
+      <div className="y-block flex flex-col gap-2 p-3" data-tone="paper">
+        {[0, 1, 2, 3].map((i) => (
+          <div key={i} className="flex items-center gap-3 p-3">
+            <Skeleton className="size-11 flex-none !rounded-full" />
+            <div className="flex flex-1 flex-col gap-2">
+              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-3/4" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
-function RequestDetail() {
-  const params = useParams<{ id: string }>();
-  const search = useSearchParams();
-  const hydrated = useHydrated();
-  const s = useDemo();
-  if (!hydrated) return <DetailSkeleton />;
-  const request = requestById(s, params.id);
-  if (!request || request.businessId !== ME.businessId) {
+export type RequestTab = "pitches" | "brief" | "invited";
+type Tab = RequestTab;
+type Filter = "all" | "new" | "shortlisted" | "declined";
+
+/**
+ * The owner's view of a custom request: pitches (list or compare), the brief, invited creators,
+ * and hiring. Rendered by the order page when the signed-in account placed the request.
+ * - `initialTab`: the section to open on (`?tab=`); "invited" also opens the invite sheet.
+ * - `openPitchId`: a pitch to open straight away (`?pitch=`, e.g. from a notification).
+ */
+export function RequestView(props: { request: ContentRequest; initialTab?: RequestTab; openPitchId?: string }) {
+  // Campaigns take slots, not pitches: they have their own page body.
+  if (isCampaign(props.request)) {
     return (
-      <Page width="narrow">
-        <Block tone="paper" pad="lg">
-          <EmptyState
-            title="We couldn't find that request"
-            body="It may have been deleted, or the link is from another account. All of your requests are in one place."
-            shape="dome"
-            tint="violet"
-            action={
-              <PillButton href="/business/requests" variant="contrast">
-                Back to requests
-              </PillButton>
-            }
-          />
-        </Block>
+      <Page>
+        <CampaignOrderView request={props.request} />
       </Page>
     );
   }
-  return <RequestView key={request.id} request={request} openInvite={search.get("invite") === "1"} />;
+  return <OwnerRequestView {...props} />;
 }
 
-type Tab = "pitches" | "brief" | "invited";
-type Filter = "all" | "new" | "shortlisted" | "declined";
-
-function RequestView({ request, openInvite }: { request: ContentRequest; openInvite: boolean }) {
+function OwnerRequestView({
+  request,
+  initialTab,
+  openPitchId,
+}: {
+  request: ContentRequest;
+  initialTab?: RequestTab;
+  openPitchId?: string;
+}) {
+  const openInvite = initialTab === "invited";
   const s = useDemo();
   const toast = useToast();
   const router = useRouter();
@@ -123,11 +112,13 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
 
   // Pitches that were unseen when the business opened the page keep their "New" badge.
   const [newIds] = useState(() => new Set(pitches.filter((p) => p.status === "sent").map((p) => p.id)));
-  const [tab, setTab] = useState<Tab>(isDraft ? "brief" : "pitches");
+  const [tab, setTab] = useState<Tab>(isDraft ? "brief" : (initialTab ?? "pitches"));
   const [filter, setFilter] = useState<Filter>("all");
   const [sort, setSort] = useState<PitchSort>("fit");
   const [view, setView] = useState<"list" | "compare">("list");
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(() =>
+    openPitchId && pitches.some((p) => p.id === openPitchId) ? openPitchId : null,
+  );
   const [hireId, setHireId] = useState<string | null>(null);
   const [messageCreatorId, setMessageCreatorId] = useState<string | null>(null);
   const [sample, setSample] = useState<{ pitchId: string; videoId: string } | null>(null);
@@ -240,7 +231,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
     toast({ message: "Your request is live. Most requests get their first pitch within 3 hours." });
   };
   const copyLink = async () => {
-    const url = absoluteUrl(`/creator/opportunities/${request.id}`);
+    const url = absoluteUrl(paths.order(request.id));
     try {
       await navigator.clipboard.writeText(url);
       toast({ message: "Link copied. Creators who open it can pitch right away." });
@@ -249,7 +240,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
     }
   };
   const closeSheet = () => {
-    if (sheet === "invite" && openInvite) router.replace(`/business/requests/${request.id}`, { scroll: false });
+    if (sheet === "invite" && openInvite) router.replace(paths.order(request.id), { scroll: false });
     setSheet(null);
   };
 
@@ -292,7 +283,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
     <Page>
       <div className="flex flex-col gap-2">
         <PageHeader
-          back={{ href: "/business/requests", label: "All requests" }}
+          back={{ href: paths.orders(), label: "All orders" }}
           title={<span className="block max-w-[24ch]">{request.title}</span>}
           description={meta}
           className="!pb-3"
@@ -333,7 +324,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                 Publish request
               </PillButton>
             ) : (
-              <PillButton href={`/business/requests/new?draft=${request.id}`} variant="neon" arrow size="lg" className="justify-between ps-6">
+              <PillButton href={paths.newOrder({ draft: request.id })} variant="neon" arrow size="lg" className="justify-between ps-6">
                 Finish and publish
               </PillButton>
             )}
@@ -354,7 +345,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                     </p>
                   </div>
                   {commission ? (
-                    <PillButton href={`/business/commissions/${commission.id}`} variant="contrast" arrow>
+                    <PillButton href={paths.commission(commission.id)} variant="contrast" arrow>
                       Open commission
                     </PillButton>
                   ) : null}
@@ -588,7 +579,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                   The brief
                 </h2>
                 {isDraft ? (
-                  <PillButton href={`/business/requests/new?draft=${request.id}`} size="sm" variant="outline" icon={<Pencil size={14} aria-hidden />}>
+                  <PillButton href={paths.newOrder({ draft: request.id })} size="sm" variant="outline" icon={<Pencil size={14} aria-hidden />}>
                     Edit brief
                   </PillButton>
                 ) : null}
@@ -607,7 +598,7 @@ function RequestView({ request, openInvite }: { request: ContentRequest; openInv
                     <h2 id="product-h" className="y-head">
                       Product context
                     </h2>
-                    <PillButton href={`/business/products/${product.id}`} size="sm" variant="ghost">
+                    <PillButton href={paths.product(product.id)} size="sm" variant="ghost">
                       Open
                     </PillButton>
                   </div>

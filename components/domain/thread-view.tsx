@@ -1,11 +1,12 @@
 "use client";
 
-import { FileText, Info, Paperclip, SendHorizontal, X } from "lucide-react";
+import { EyeOff, FileText, Info, Paperclip, SendHorizontal, X } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 
 import { useToast } from "@/components/ui/toast";
+import { hasContactDetails } from "@/lib/contact";
 import { daysFromNow, timeOf, weekdayDate } from "@/lib/format";
-import { businessById, creatorById, threadById, videoById } from "@/lib/selectors";
+import { businessById, creatorById, requestById, threadById, videoById } from "@/lib/selectors";
 import { actions, useDemo, useTyping } from "@/lib/store";
 import type { Attachment, Message, Role } from "@/lib/types";
 
@@ -89,7 +90,9 @@ function Bubble({ message, role, otherName }: { message: Message; role: Role; ot
 /**
  * A conversation between a business and a creator. Shows messages with day separators,
  * attachments, system events, a typing indicator (simulated replies) and a composer.
- * Marks the thread read for `role` while visible. Put it inside a paper Block.
+ * `role` is the viewer's side of this conversation. Marks the thread read for that side while
+ * visible. Contact details typed into the composer get a quiet notice (the store hides them on
+ * send; a campaign's own brand handle is allowed). Put it inside a paper Block.
  */
 export function ThreadView({
   threadId,
@@ -128,6 +131,8 @@ export function ThreadView({
     role === "business"
       ? creatorById(s, thread.creatorId)?.firstName ?? "Creator"
       : businessById(s, thread.businessId)?.name ?? "Client";
+  const brandHandle = thread.requestId ? requestById(s, thread.requestId)?.campaign?.brandHandle : undefined;
+  const contactNotice = hasContactDetails(text, brandHandle ? [brandHandle] : []);
 
   const send = () => {
     const body = text.trim();
@@ -190,6 +195,12 @@ export function ThreadView({
               </button>
             ))}
           </div>
+        ) : null}
+        {contactNotice ? (
+          <p className="y-micro y-fg-2 inline-flex items-start gap-1.5 px-1" role="status">
+            <EyeOff size={14} aria-hidden className="mt-px flex-none" />
+            Phone numbers, emails, links and handles are hidden when you send. Keep chats on Yapp.
+          </p>
         ) : null}
         {file ? (
           <span className="y-chip w-fit">
