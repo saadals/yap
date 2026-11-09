@@ -4,7 +4,7 @@
  *
  * - r-150 Daftar (Nour's): 10 videos at the 10K–20K tier on TikTok. Slots in every state, one
  *   creator removed earlier, 3 slots open — Layla is eligible and can take one.
- * - r-250 Kanz: nearly full ("Only 2 yapps left"), Layla eligible.
+ * - r-250 Kanz: nearly full ("Only 2 Yapps left"), Layla eligible.
  * - r-251 Souqly: just published, Layla eligible.
  * - r-252 Rihla: Instagram 20K–50K, Layla isn't eligible (shows why).
  *

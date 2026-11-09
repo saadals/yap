@@ -25,7 +25,7 @@ export function CampaignOrderView({ request }: { request: ContentRequest }) {
       <Block tone="paper" pad="lg" className="mt-2">
         <EmptyState
           title="We couldn't load this campaign"
-          body="Its details are missing. Other campaigns are waiting in Explore."
+          body="Its details are missing. Other campaigns are waiting in Discover."
           shape="dome"
           tint="violet"
           action={

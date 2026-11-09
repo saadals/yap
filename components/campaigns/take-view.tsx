@@ -158,7 +158,7 @@ export function TakeView({ request }: { request: CampaignRequest }) {
         className="y-small y-fg-2 inline-flex w-fit items-center gap-1.5 rounded-full px-1 py-1 font-medium hover:text-(--y-ink)"
       >
         <ArrowLeft size={16} aria-hidden className="y-flip" />
-        Explore orders
+        Discover orders
       </Link>
       {/* Header + the decision */}
       <Block as="section" aria-labelledby="campaign-h" tone="paper" pad="md" className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between lg:gap-10">
@@ -190,7 +190,7 @@ export function TakeView({ request }: { request: CampaignRequest }) {
               <span className="y-display y-num text-[56px] leading-none font-semibold tracking-[-0.04em]">
                 {money(terms.pricePerVideo)}
               </span>
-              <span className="y-head">per yapp</span>
+              <span className="y-head">per Yapp</span>
             </p>
             {request.status === "closed" ? null : (
               <p className={`y-small ${open > 0 && open <= 3 ? "font-semibold" : "y-fg-2"}`}>
@@ -327,7 +327,7 @@ function Notice({
 /* Confirm: take a slot                                                        */
 /* -------------------------------------------------------------------------- */
 
-function TakeSlotSheet({
+export function TakeSlotSheet({
   request,
   onClose,
   onFull,

@@ -26,7 +26,7 @@ import { PitchBadge, RequestBadge } from "./status-badge";
 /**
  * An order as a card (custom request or UGC campaign).
  * - perspective "creator": who's asking, what, budget, fit, invite and my pitch status.
- *   Campaigns: price per yapp, tier, slots left.
+ *   Campaigns: price per Yapp, tier, slots left.
  * - perspective "business": status, pitches with faces, views, due date. Campaigns: slots filled.
  */
 export function RequestCard({
@@ -179,7 +179,7 @@ function CustomRequestCard({
   );
 }
 
-/** A UGC campaign as a card: price per yapp, tier, and how many slots are left (or filled). */
+/** A UGC campaign as a card: price per Yapp, tier, and how many slots are left (or filled). */
 function CampaignCard({
   request,
   perspective,
@@ -233,7 +233,7 @@ function CampaignCard({
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--b-line) pt-4">
         <span className="flex items-baseline gap-1.5">
           <span className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">{money(terms.pricePerVideo)}</span>
-          <span className="y-micro y-fg-2">per yapp</span>
+          <span className="y-micro y-fg-2">per Yapp</span>
         </span>
         <span className="y-micro y-fg-2 flex items-center gap-3">
           {perspective === "business" ? (

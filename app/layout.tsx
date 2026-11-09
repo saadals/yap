@@ -58,6 +58,8 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Without this, env(safe-area-inset-*) reads 0 and the full-bleed feed can't clear the notch.
+  viewportFit: "cover",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#eeeeea" },
     { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },

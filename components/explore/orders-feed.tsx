@@ -153,7 +153,7 @@ function Feed() {
   const hide = (id: string, title: string) => {
     actions.hideRequest(id);
     toast({
-      message: `Hid "${title}" from your feed and Explore.`,
+      message: `Hid "${title}" from your feed and Discover.`,
       action: { label: "Undo", onClick: () => actions.unhideRequest(id) },
     });
   };
@@ -171,8 +171,8 @@ function Feed() {
     toast({
       message:
         amount > 0
-          ? `Saved. Explore and match alerts now start at ${money(amount)}.`
-          : "Saved. Explore shows every budget.",
+          ? `Saved. Discover and match alerts now start at ${money(amount)}.`
+          : "Saved. Discover shows every budget.",
     });
   };
 

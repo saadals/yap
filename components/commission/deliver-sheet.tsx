@@ -202,6 +202,11 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
             <div className="flex flex-col gap-1">
               <p className="y-small font-semibold">{over ? "Drop to upload" : "Drag your video and files here"}</p>
               <p className="y-micro y-fg-2">MP4 or MOV up to 2 GB. Add subtitles, raw footage or hooks too.</p>
+              {commission.brief.aspect === "9:16" ? (
+                <p className="y-micro y-fg-2">
+                  Filming 1080 × 1920? Keep faces and captions inside the middle 880 × 1600. Phones crop the sides.
+                </p>
+              ) : null}
             </div>
             <div className="flex flex-wrap justify-center gap-2">
               <PillButton size="sm" variant="contrast" onClick={() => inputRef.current?.click()}>

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
+import { CreateSheet } from "@/components/feed/create-sheet";
 import { Brand } from "@/components/ui/brand";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
@@ -19,13 +20,18 @@ import { AccountSheet } from "./account-sheet";
 import { homeFor, isActive, primaryNav } from "./nav";
 import { NotificationsSheet } from "./notifications-sheet";
 
-/** Floating white pill header. Adapts to the session (signed in: one nav for every account). */
-export function SiteHeader({ signedIn }: { signedIn: boolean }) {
+/**
+ * Floating white pill header. Adapts to the session (signed in: one nav for every account). Below
+ * 1024px, signed in, it's the logo and "+" only: the bell and avatar live in the tab bar.
+ * `desktopOnly` hides it on phones (the reels feed draws its own floating controls).
+ */
+export function SiteHeader({ signedIn, desktopOnly = false }: { signedIn: boolean; desktopOnly?: boolean }) {
   const pathname = usePathname();
   const s = useDemo();
   const [menuOpen, setMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const links = primaryNav[signedIn ? "app" : "public"];
   const unreadNotes = signedIn ? unreadNotificationCount(s) : 0;
   const unreadMessages = signedIn ? unreadThreadCount(s) : 0;
@@ -34,7 +40,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
   const showLogo = signedIn && business.kind !== "personal";
 
   return (
-    <header className="sticky top-0 z-40 px-(--y-gutter) pt-2">
+    <header className={`sticky top-0 z-40 px-(--y-gutter) pt-2 ${desktopOnly ? "max-lg:hidden" : ""}`}>
       <div
         data-tone="paper"
         className="y-block mx-auto flex h-16 max-w-[1360px] items-center gap-2 !rounded-full ps-4 pe-2 shadow-[0_1px_0_var(--y-line)] md:ps-5"
@@ -68,13 +74,24 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
                 variant="contrast"
                 size="sm"
                 icon={<Plus size={16} aria-hidden />}
-                className="hidden md:inline-flex"
+                className="hidden lg:inline-flex"
               >
                 New order
               </PillButton>
               <button
                 type="button"
-                className="y-round relative"
+                className="y-round lg:hidden"
+                data-tone-btn="soft"
+                data-size="sm"
+                aria-label="Create: new order or make a Yapp"
+                aria-haspopup="dialog"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus size={19} aria-hidden />
+              </button>
+              <button
+                type="button"
+                className="y-round relative max-lg:hidden"
                 data-tone-btn="soft"
                 data-size="sm"
                 aria-label={`Notifications${unreadNotes ? `, ${unreadNotes} unread` : ""}`}
@@ -92,7 +109,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
                 type="button"
                 onClick={() => setAccountOpen(true)}
                 aria-label={`Account menu: ${account.name}`}
-                className="relative flex items-center rounded-full"
+                className="relative flex items-center rounded-full max-lg:hidden"
               >
                 <FaceAvatar id={account.creatorId ?? account.memberId ?? account.id} name="" size={44} />
                 {showLogo ? (
@@ -130,6 +147,7 @@ export function SiteHeader({ signedIn }: { signedIn: boolean }) {
         <>
           <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} />
           <NotificationsSheet open={notesOpen} onClose={() => setNotesOpen(false)} />
+          <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
         </>
       ) : (
         <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} title="Menu" width="sm">

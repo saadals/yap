@@ -9,6 +9,7 @@ import {
   Repeat2,
   RotateCcw,
   Sun,
+  UserX,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -68,6 +69,12 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
     const next = s.accounts.find((a) => a.id === accountId);
     toast({ message: `You're now ${next?.firstName ?? "signed in"} (demo)`, tone: "info" });
     if (!visibleTo(s, accountId, pathname)) router.push(paths.home);
+  };
+
+  const logOut = (forget: boolean) => {
+    signOut({ forget });
+    onClose();
+    router.push(paths.landing);
   };
 
   const jumpToMonthEnd = () => {
@@ -202,15 +209,25 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
         )}
         <button
           type="button"
-          onClick={() => {
-            signOut();
-            onClose();
-            router.push(paths.landing);
-          }}
+          onClick={() => logOut(false)}
           className="flex min-h-12 items-center gap-3 rounded-full px-3 font-medium hover:bg-(--b-chip)"
         >
           <LogOut size={20} aria-hidden className="y-flip" />
-          Sign out
+          <span className="flex flex-col text-start">
+            <span>Log out</span>
+            <span className="y-micro y-fg-2 font-normal">Keep this account saved for one-tap sign in</span>
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => logOut(true)}
+          className="flex min-h-12 items-center gap-3 rounded-full px-3 font-medium hover:bg-(--b-chip)"
+        >
+          <UserX size={20} aria-hidden className="text-(--y-danger)" />
+          <span className="flex flex-col text-start">
+            <span>Log out and forget this account</span>
+            <span className="y-micro y-fg-2 font-normal">Remove it from this device</span>
+          </span>
         </button>
       </div>
     </Sheet>

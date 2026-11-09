@@ -35,20 +35,15 @@ const icons: Record<NotificationKind, React.ReactNode> = {
   system: <Bell size={18} aria-hidden />,
 };
 
-export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+/** The list itself: the bell's sheet on desktop, the Inbox's Alerts tab on phones. */
+export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
   const s = useDemo();
   const router = useRouter();
   const items = notificationsFor(s);
   const unread = items.filter((n) => n.unread).length;
 
   return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="Notifications"
-      description={unread ? `${unread} unread` : "You're all caught up"}
-      width="sm"
-    >
+    <>
       {unread ? (
         <button
           type="button"
@@ -77,7 +72,7 @@ export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: 
                 type="button"
                 onClick={() => {
                   actions.markNotificationRead(note.id);
-                  onClose();
+                  onNavigate?.();
                   router.push(note.href);
                 }}
                 className="y-tile y-hoverable flex w-full items-start gap-3 p-3 text-start"
@@ -105,6 +100,23 @@ export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: 
           ))}
         </ul>
       )}
+    </>
+  );
+}
+
+export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const s = useDemo();
+  const unread = notificationsFor(s).filter((n) => n.unread).length;
+
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Notifications"
+      description={unread ? `${unread} unread` : "You're all caught up"}
+      width="sm"
+    >
+      <NotificationList onNavigate={onClose} />
     </Sheet>
   );
 }

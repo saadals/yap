@@ -267,8 +267,8 @@ export function needsYou(s: DemoState): NeedsYou {
       title: "Find your next job",
       line: joinable
         ? `${plural(joinable, "campaign")} you can join right now, plus custom requests to pitch on.`
-        : "Campaigns and custom requests are waiting in Explore.",
-      action: "Explore orders",
+        : "Campaigns and custom requests are waiting in Discover.",
+      action: "Discover orders",
       href: paths.explore("orders"),
       urgent: false,
     };

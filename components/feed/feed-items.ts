@@ -8,7 +8,7 @@
  *   profile), not the account's own, not dismissed ("Not interested").
  * - campaign: open UGC campaigns with slots left, not the account's own, not dismissed.
  *
- * "For you" alternates the two kinds, weighted by what the account does: with a creator profile
+ * "Mix" alternates the two kinds, weighted by what the account does: with a creator profile
  * about two orders per video, without one about two videos per order. `reel` (from `?reel=`)
  * starts the feed with that order, even the account's own (just published): "Your order".
  */
@@ -35,9 +35,9 @@ import type { Commission, ContentRequest, Creator, Pitch, Video } from "@/lib/ty
 export type FeedFilter = "for-you" | "orders" | "videos";
 
 export const feedFilters: { value: FeedFilter; label: string }[] = [
-  { value: "for-you", label: "For you" },
+  { value: "for-you", label: "Mix" },
+  { value: "videos", label: "Yapps" },
   { value: "orders", label: "Orders" },
-  { value: "videos", label: "Videos" },
 ];
 
 export const isFeedFilter = (value: unknown): value is FeedFilter =>
@@ -69,7 +69,7 @@ export type CampaignItem = {
 
 export type FeedItem = VideoItem | OrderItem | CampaignItem;
 
-/** Where a reel leads: its pill, a swipe left, → or Enter. */
+/** Where a reel's work happens: the details layer's button leads here. */
 export function reelHref(item: FeedItem): string {
   if (item.kind === "video") return paths.orderCreator(item.creator.handle, { video: item.video.id });
   return paths.order(item.request.id);
@@ -78,8 +78,14 @@ export function reelHref(item: FeedItem): string {
 /** Home, starting the feed on one order (use it after publishing). */
 export const homeReelHref = (id: string) => paths.reel(id);
 
-/** Gradient preset 1–6 for an order reel, stable per order. */
-export const reelGradient = (id: string) => (mix(hashString(`color:${id}`)) % 6) + 1;
+/** Light canvas palette 1–6 for an order reel, stable per order. */
+export const reelPalette = (id: string) => (mix(hashString(`color:${id}`)) % 6) + 1;
+
+/** "page" means no reel is in view (details, the end card): the chrome follows the theme. */
+export type ReelTone = "dark" | "light" | "page";
+
+/** Videos are dark, order and campaign canvases are light (in both themes: they're media). */
+export const reelTone = (item: FeedItem): ReelTone => (item.kind === "video" ? "dark" : "light");
 
 /** murmur3's finaliser: FNV alone keeps similar ids ("r-201", "r-202") in order. */
 function mix(hash: number): number {
@@ -200,8 +206,8 @@ function interleave<A, B>(a: A[], b: B[], pattern: ("a" | "b")[]): (A | B)[] {
   return out;
 }
 
-/** The reel for `?reel=`: an order (any owner, even closed) or a portfolio video. */
-function startItem(s: DemoState, reelId: string): FeedItem | undefined {
+/** One reel by id, for `?reel=` and `?details=`: an order (any owner, even closed) or a portfolio video. */
+export function feedItemById(s: DemoState, reelId: string): FeedItem | undefined {
   const request = requestById(s, reelId);
   if (request) {
     if (request.status === "draft") return undefined;
@@ -236,7 +242,7 @@ export function feedItems(
             makes ? ["a", "a", "b"] : ["b", "b", "a"],
           );
 
-  const first = reel ? startItem(s, reel) : undefined;
+  const first = reel ? feedItemById(s, reel) : undefined;
   const fits =
     first &&
     (filter === "for-you" ||

@@ -1,6 +1,6 @@
 import {
   Bell,
-  BriefcaseBusiness,
+  Compass,
   CreditCard,
   Heart,
   House,
@@ -10,6 +10,7 @@ import {
   Package,
   Search,
   Settings,
+  SquareKanban,
   UserRound,
   Wallet,
 } from "lucide-react";
@@ -24,20 +25,20 @@ export type NavItem = {
   exact?: boolean;
   /** Extra path prefixes that also mark this item active. */
   also?: string[];
-  badge?: "messages" | "notifications";
+  badge?: "messages" | "notifications" | "inbox";
 };
 
 const i = (Icon: typeof House) => <Icon size={20} aria-hidden />;
 
 /**
  * One navigation for every signed-in account (one account type: everyone can order and make).
- * Mobile bottom bar per the PM's Figure 01: Home · Search · Work · Messages · Profile.
+ * This is the desktop header; phones use `mobileNav`.
  */
 export const primaryNav: Record<"app" | "public", NavItem[]> = {
   app: [
     { href: paths.home, label: "Home", icon: i(House), exact: true },
-    { href: paths.explore(), label: "Explore", icon: i(Search), also: ["/creators"] },
-    { href: paths.work(), label: "Work", icon: i(BriefcaseBusiness), also: ["/orders", "/pitches"] },
+    { href: paths.explore(), label: "Discover", icon: i(Compass), also: ["/creators"] },
+    { href: paths.work(), label: "Work", icon: i(SquareKanban), also: ["/orders", "/pitches"] },
     { href: paths.messages(), label: "Messages", icon: i(MessageCircle), badge: "messages" },
     {
       href: paths.profile,
@@ -53,6 +54,23 @@ export const primaryNav: Record<"app" | "public", NavItem[]> = {
   ],
 };
 
+/**
+ * The phone's glass tab bar: Home · Work · Discover · Inbox · Profile. Inbox holds messages and
+ * alerts in one tab, so the bar stays at five items. BottomBar draws Profile as the viewer's avatar.
+ */
+export const mobileNav: NavItem[] = [
+  { href: paths.home, label: "Home", icon: i(House), exact: true },
+  { href: paths.work(), label: "Work", icon: i(SquareKanban), also: ["/orders", "/pitches"] },
+  { href: paths.explore(), label: "Discover", icon: i(Compass), also: ["/creators"] },
+  { href: paths.messages(), label: "Inbox", icon: i(Inbox), badge: "inbox" },
+  {
+    href: paths.profile,
+    label: "Profile",
+    icon: i(UserRound),
+    also: ["/wallet", "/billing", "/products", "/saved", "/settings"],
+  },
+];
+
 /** Secondary destinations shown in the account menu and on the Profile hub. */
 export const accountNav: NavItem[] = [
   { href: paths.wallet, label: "Wallet", icon: i(Wallet) },
@@ -66,10 +84,12 @@ export const notificationsIcon = i(Bell);
 export const inboxIcon = i(Inbox);
 
 export function isActive(item: NavItem, pathname: string) {
+  // The static export serves pages with a trailing slash ("/home/").
+  const current = pathname.length > 1 ? pathname.replace(/\/$/, "") : pathname;
   const path = item.href.split("?")[0];
-  if (item.exact) return pathname === path;
+  if (item.exact) return current === path;
   return [path, ...(item.also ?? [])].some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    (prefix) => current === prefix || current.startsWith(`${prefix}/`),
   );
 }
 

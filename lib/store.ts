@@ -2289,7 +2289,7 @@ function notifyDemoCreatorsOfRequest(s: DemoState, request: ContentRequest): Dem
         next,
         { creatorId },
         "campaign",
-        `New campaign for you: "${request.title}". ${money(request.campaign!.pricePerVideo)} per yapp, ${request.slots} slots open.`,
+        `New campaign for you: "${request.title}". ${money(request.campaign!.pricePerVideo)} per Yapp, ${request.slots} slots open.`,
         paths.order(request.id),
       );
       continue;

@@ -11,5 +11,9 @@ export function absoluteUrl(path: string): string {
   return `${origin}${basePath}${path}`;
 }
 
-/** Runs in <head> before paint: applies the saved theme so dark mode never flashes light. */
-export const themeBootScript = `(function(){try{var m=document.cookie.match(/(?:^|; )yapp_theme=(dark|light)/);if(m&&m[1]==="dark"){var d=document.documentElement;d.classList.add("dark");d.style.colorScheme="dark";}}catch(e){}})();`;
+/**
+ * Runs in <head> before paint: applies the saved theme so dark mode never flashes light, and marks
+ * <html> with `y-session` when signed in, so the signed-out welcome screen can hide itself before
+ * the client redirect to the feed (static hosting has no middleware to do this on the server).
+ */
+export const themeBootScript = `(function(){try{var d=document.documentElement,c=document.cookie,m=c.match(/(?:^|; )yapp_theme=(dark|light)/);if(m&&m[1]==="dark"){d.classList.add("dark");d.style.colorScheme="dark";}if(/(?:^|; )yapp_account=[^;]+/.test(c)){d.classList.add("y-session");}}catch(e){}})();`;

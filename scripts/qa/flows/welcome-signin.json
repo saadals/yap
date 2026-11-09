@@ -1,0 +1,135 @@
+{
+  "width": 390,
+  "height": 844,
+  "mobile": true,
+  "steps": [
+    {
+      "go": "/",
+      "after": 3500
+    },
+    {
+      "text": "Ask for Yapps"
+    },
+    {
+      "text": "Make Yapps"
+    },
+    {
+      "shot": "welcome-signin-welcome"
+    },
+    {
+      "click": "Ask for Yapps",
+      "after": 3000
+    },
+    {
+      "text": "Continuing as: Ask for Yapps"
+    },
+    {
+      "text": "Saved accounts"
+    },
+    {
+      "click": "Use another account"
+    },
+    {
+      "type": {
+        "sel": "input[type=tel]",
+        "text": "501234567"
+      }
+    },
+    {
+      "click": "Continue",
+      "after": 2000
+    },
+    {
+      "text": "+966 50 123 4567"
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='1 / 6']",
+        "text": "1"
+      },
+      "after": 120
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='2 / 6']",
+        "text": "2"
+      },
+      "after": 120
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='3 / 6']",
+        "text": "3"
+      },
+      "after": 120
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='4 / 6']",
+        "text": "4"
+      },
+      "after": 120
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='5 / 6']",
+        "text": "5"
+      },
+      "after": 120
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='6 / 6']",
+        "text": "6"
+      },
+      "after": 120
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "eval": "(() => { if (!/\\/home\\/?$/.test(location.pathname)) throw new Error('expected the feed, at ' + location.pathname); return true; })()"
+    },
+    {
+      "go": "/settings#account",
+      "after": 3000
+    },
+    {
+      "click": "Log out",
+      "after": 2500
+    },
+    {
+      "text": "Ask for Yapps"
+    },
+    {
+      "click": "Ask for Yapps",
+      "after": 3000
+    },
+    {
+      "text": "Saved accounts"
+    },
+    {
+      "text": "Nour Haddad"
+    },
+    {
+      "text": "+966 ••• ••• 4567"
+    },
+    {
+      "shot": "welcome-signin-saved"
+    },
+    {
+      "click": "Nour Haddad",
+      "after": 2500
+    },
+    {
+      "eval": "(() => { if (!/\\/home\\/?$/.test(location.pathname)) throw new Error('expected the feed, at ' + location.pathname); return true; })()"
+    },
+    {
+      "go": "/",
+      "after": 3000
+    },
+    {
+      "eval": "(() => { if (!/\\/home\\/?$/.test(location.pathname)) throw new Error('expected the feed, at ' + location.pathname); return true; })()"
+    }
+  ]
+}

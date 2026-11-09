@@ -1,0 +1,533 @@
+/* The signed-out welcome: creator bubbles, reel preview, glass nav and buttons.
+   Layers, back to front: bubbles 0, edge fades 5, preview veil 6, buttons and line 10,
+   reel preview 20, nav 30. The fades must never cover the logo or the buttons. */
+
+/* Signed in on arrival: the welcome hides before paint while the client redirects to the feed.
+   `data-settled` marks a visitor who was signed out on arrival, so signing in from the panel
+   doesn't blank the scene before the page changes. */
+html.y-session .yapp .y-welcome:not([data-settled]) {
+  visibility: hidden;
+}
+
+@layer components {
+  .yapp .y-welcome {
+    /* Clears the logo and the two-line about text; the buttons are 16 + 56 + 10 + 56 + 16. */
+    --w-top: calc(env(safe-area-inset-top, 0px) + 112px);
+    --w-bottom: calc(env(safe-area-inset-bottom, 0px) + 154px);
+    --w-rim: rgb(255 255 255 / 0.95);
+    --w-shadow: rgb(0 0 0 / 0.16);
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--y-soft);
+    color: var(--y-ink);
+  }
+  html.dark .yapp .y-welcome {
+    --w-rim: rgb(255 255 255 / 0.32);
+    --w-shadow: rgb(0 0 0 / 0.5);
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-welcome {
+      --w-top: 92px;
+      --w-bottom: 104px;
+    }
+  }
+
+  /* -------------------------------------------------------------- bubbles */
+  .yapp .y-bubbles {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+    isolation: isolate;
+    touch-action: none;
+    opacity: 0;
+    transition: opacity 120ms linear;
+  }
+  .yapp .y-bubbles[data-ready] {
+    opacity: 1;
+  }
+  .yapp .y-bubble {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: var(--bubble);
+    height: var(--bubble);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+    contain: layout style;
+    box-shadow: 0 6px 14px var(--w-shadow);
+  }
+  .yapp .y-bubble-glass {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 50% 50%, rgb(0 25 45 / 0) 60%, rgb(0 25 45 / 0.3) 100%),
+      radial-gradient(
+        circle at 44% 43%,
+        rgb(255 255 255 / 0) 55%,
+        rgb(255 255 255 / 0.18) 85%,
+        rgb(255 255 255 / 0.62) 100%
+      );
+    box-shadow: inset 0 0 0 1.5px var(--w-rim);
+  }
+  /* The highlight, near the rim and off the face. */
+  .yapp .y-bubble-glass::before {
+    content: "";
+    position: absolute;
+    top: 15%;
+    left: 8%;
+    width: 36%;
+    height: 12%;
+    border-radius: 50%;
+    transform: rotate(-45deg);
+    background: radial-gradient(closest-side, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0));
+  }
+  /* The iridescent rim. */
+  .yapp .y-bubble-glass::after {
+    content: "";
+    position: absolute;
+    inset: 1%;
+    padding: 2.2%;
+    border-radius: 50%;
+    background: conic-gradient(
+      from var(--b-hue, 0deg),
+      rgb(255 120 210 / 0.55),
+      rgb(120 200 255 / 0.55),
+      rgb(150 255 210 / 0.5),
+      rgb(255 225 120 / 0.55),
+      rgb(255 120 210 / 0.55)
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box exclude,
+      linear-gradient(#000 0 0);
+  }
+  .yapp .y-bubble[data-decor="gloss"] {
+    background: radial-gradient(
+      circle at 37% 34%,
+      color-mix(in srgb, var(--d-tint) 58%, #fff),
+      var(--d-tint) 55%,
+      color-mix(in srgb, var(--d-tint) 62%, #000)
+    );
+  }
+  .yapp .y-bubble[data-decor="soap"] {
+    box-shadow: none;
+    background: radial-gradient(
+      closest-side,
+      rgb(255 255 255 / 0.05),
+      color-mix(in srgb, var(--d-tint) 35%, transparent)
+    );
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-bubble[data-face] {
+      cursor: pointer;
+    }
+    .yapp .y-bubble[data-face]:hover {
+      box-shadow:
+        0 6px 14px var(--w-shadow),
+        0 0 0 6px color-mix(in srgb, var(--y-neon) 45%, transparent);
+    }
+  }
+
+  /* ------------------------------------------------------- fades and veil */
+  .yapp .y-welcome-fade {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+  .yapp .y-welcome-fade[data-edge="top"] {
+    top: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 120px);
+    background: linear-gradient(
+      to bottom,
+      var(--y-soft) 0%,
+      rgb(var(--y-soft-rgb) / 0.85) 35%,
+      rgb(var(--y-soft-rgb) / 0) 100%
+    );
+  }
+  .yapp .y-welcome-fade[data-edge="bottom"] {
+    bottom: 0;
+    height: calc(env(safe-area-inset-bottom, 0px) + 240px);
+    background: linear-gradient(
+      to top,
+      var(--y-soft) 0%,
+      rgb(var(--y-soft-rgb) / 0.85) 40%,
+      rgb(var(--y-soft-rgb) / 0) 100%
+    );
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-welcome-fade[data-edge="top"] {
+      height: 150px;
+      background: linear-gradient(
+        to bottom,
+        var(--y-soft) 0%,
+        rgb(var(--y-soft-rgb) / 0.7) 35%,
+        rgb(var(--y-soft-rgb) / 0) 100%
+      );
+    }
+    .yapp .y-welcome-fade[data-edge="bottom"] {
+      height: 200px;
+      background: linear-gradient(
+        to top,
+        var(--y-soft) 0%,
+        rgb(var(--y-soft-rgb) / 0.7) 40%,
+        rgb(var(--y-soft-rgb) / 0) 100%
+      );
+    }
+  }
+  .yapp .y-welcome-veil {
+    position: absolute;
+    inset: 0;
+    z-index: 6;
+    pointer-events: none;
+    visibility: hidden;
+    opacity: 0;
+    background: rgb(var(--y-soft-rgb) / 0.4);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+    transition:
+      opacity 180ms linear,
+      visibility 180ms linear;
+  }
+  .yapp .y-welcome-veil[data-on="true"] {
+    visibility: visible;
+    opacity: 1;
+  }
+
+  /* ---------------------------------------------------- logo, line, links */
+  .yapp .y-welcome-logo {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 10px);
+    inset-inline: 0;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+  }
+  .yapp .y-welcome-line {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 56px);
+    inset-inline: 20px;
+    z-index: 10;
+    margin: 0;
+    color: var(--y-ink-2);
+    font-size: 0.875rem;
+    line-height: 1.35;
+    text-align: center;
+    transition: opacity var(--y-dur-2) linear;
+  }
+  .yapp .y-welcome-about {
+    display: inline-block;
+    padding-block: 4px;
+    color: var(--y-ink);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-color: var(--y-neon);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+  /* The smallest phones: keeps the line itself on one row. */
+  @media (max-width: 345px) {
+    .yapp .y-welcome-line {
+      inset-inline: 12px;
+      font-size: 0.8125rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-welcome-line {
+      top: 88px;
+      inset-inline: 0;
+      width: fit-content;
+      margin-inline: auto;
+      padding: 4px 16px;
+      border-radius: 999px;
+      background: var(--y-glass);
+      -webkit-backdrop-filter: var(--y-glass-blur);
+      backdrop-filter: var(--y-glass-blur);
+      box-shadow: inset 0 0 0 1px var(--y-glass-border);
+    }
+    /* Desktop: the preview can reach up here on short windows. */
+    .yapp .y-welcome-line[data-quiet="true"] {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+
+  /* ---------------------------------------------------------- desktop nav */
+  .yapp .y-welcome-nav {
+    position: absolute;
+    top: 16px;
+    inset-inline: 72px;
+    z-index: 30;
+    height: 60px;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 20px 9px;
+    border-radius: 22px;
+  }
+  .yapp .y-welcome-nav::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.4), rgb(255 255 255 / 0) 60%);
+  }
+  html.dark .yapp .y-welcome-nav::before {
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 60%);
+  }
+  .yapp .y-welcome-nav > * {
+    position: relative;
+  }
+  .yapp .y-welcome-link {
+    padding: 6px 12px;
+    border-radius: 999px;
+    color: var(--y-ink-2);
+    font-weight: 500;
+    transition:
+      background-color 160ms linear,
+      color 160ms linear;
+  }
+  .yapp .y-welcome-link:hover {
+    background: var(--y-glass-strong);
+    color: var(--y-ink);
+  }
+  .yapp .y-welcome-order {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 42px;
+    padding-inline: 18px;
+    border-radius: 999px;
+    background: var(--y-glossy-black);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.18),
+      0 6px 18px rgb(0 0 0 / 0.18);
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      background var(--y-dur-2) var(--y-ease),
+      color var(--y-dur-2) var(--y-ease);
+  }
+  html.dark .yapp .y-welcome-order {
+    background: #f4f4f0;
+    color: #0e0e10;
+  }
+  .yapp .y-welcome-order:hover,
+  html.dark .yapp .y-welcome-order:hover {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+    transform: translateY(-1px);
+  }
+  .yapp .y-welcome-order:active {
+    transform: scale(0.98);
+  }
+  .yapp .y-welcome-circle {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-welcome-circle:hover {
+    transform: scale(1.04);
+  }
+
+  /* -------------------------------------------------------------- buttons */
+  .yapp .y-welcome-cta {
+    position: absolute;
+    inset-inline: 16px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .yapp .y-welcome-btn {
+    height: 56px;
+    border-radius: 18px;
+    color: var(--y-ink);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition:
+      background-color var(--y-dur-2) var(--y-ease),
+      border-color var(--y-dur-2) var(--y-ease),
+      color var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease),
+      transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-welcome-btn:active,
+  .yapp .y-welcome-btn[data-launching] {
+    background: var(--y-neon);
+    border-color: transparent;
+    color: var(--y-on-color);
+    transform: scale(0.98);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-welcome-btn:hover {
+      background: var(--y-neon);
+      border-color: transparent;
+      color: var(--y-on-color);
+      transform: translateY(-1px);
+      box-shadow:
+        0 12px 36px color-mix(in srgb, var(--y-neon) 35%, transparent),
+        inset 0 1px 0 rgb(255 255 255 / 0.4);
+    }
+    .yapp .y-welcome-btn:active {
+      transform: scale(0.98);
+    }
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-welcome-cta {
+      inset-inline: 24px;
+      bottom: 24px;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .yapp .y-welcome-btn {
+      height: 64px;
+      border-radius: 20px;
+      font-size: 17px;
+    }
+  }
+  .yapp .y-welcome :is(a, button):focus-visible {
+    outline: 2px solid var(--y-neon);
+    outline-offset: 3px;
+  }
+
+  /* --------------------------------------------------------- reel preview */
+  .yapp .y-reelprev {
+    position: absolute;
+    left: 50%;
+    top: calc(var(--w-top) + (100dvh - var(--w-top) - var(--w-bottom)) / 2);
+    z-index: 20;
+    height: min(640px, calc(100dvh - var(--w-top) - var(--w-bottom)));
+    aspect-ratio: 9 / 16;
+    max-width: calc(100vw - 32px);
+    overflow: hidden;
+    border-radius: 24px;
+    background: #0e0e10;
+    color: #fff;
+    pointer-events: none;
+    box-shadow: 0 30px 80px rgb(0 0 0 / 0.18);
+    transform: translate(-50%, -50%);
+    animation: y-reelprev-in 180ms var(--y-ease) backwards;
+    transition:
+      opacity 180ms linear,
+      transform 180ms var(--y-ease);
+    --b-bg: #0e0e10;
+    --b-fg: #fff;
+  }
+  .yapp .y-reelprev[data-tap="true"] {
+    pointer-events: auto;
+  }
+  .yapp .y-reelprev[data-open="false"] {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+  }
+  @keyframes y-reelprev-in {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.96);
+    }
+  }
+  .yapp .y-reelprev-bars {
+    position: absolute;
+    top: 12px;
+    inset-inline: 12px;
+    z-index: 2;
+    display: flex;
+    gap: 4px;
+  }
+  .yapp .y-reelprev-bars span {
+    flex: 1;
+    height: 3px;
+    overflow: hidden;
+    border-radius: 2px;
+    background: rgb(255 255 255 / 0.35);
+  }
+  .yapp .y-reelprev-bars i {
+    display: block;
+    width: 0;
+    height: 100%;
+    background: #fff;
+  }
+  .yapp .y-reelprev-bars i[data-state="done"] {
+    width: 100%;
+  }
+  .yapp .y-reelprev-bars i[data-state="active"] {
+    animation-name: y-reelprev-seg;
+    animation-timing-function: linear;
+    animation-fill-mode: forwards;
+  }
+  @keyframes y-reelprev-seg {
+    to {
+      width: 100%;
+    }
+  }
+  .yapp .y-reelprev-hint {
+    position: absolute;
+    top: 26px;
+    left: 50%;
+    z-index: 2;
+    padding: 5px 12px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.2);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transform: translateX(-50%);
+  }
+  .yapp .y-reelprev-meta {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1;
+    padding: 72px 16px 16px;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.7), rgb(0 0 0 / 0));
+  }
+  .yapp .y-reelprev-tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.2);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .yapp .y-reelprev {
+      animation: none;
+      transition: none;
+    }
+    .yapp .y-reelprev-bars i[data-state="active"] {
+      width: 100%;
+      animation: none;
+    }
+    .yapp .y-welcome-btn,
+    .yapp .y-welcome-order,
+    .yapp .y-welcome-circle {
+      transition: none;
+    }
+  }
+}

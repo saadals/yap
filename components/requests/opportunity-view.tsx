@@ -40,7 +40,7 @@ function BackLink() {
         size="sm"
         icon={<ArrowLeft size={18} aria-hidden className="y-flip" />}
       >
-        Explore orders
+        Discover orders
       </PillButton>
     </div>
   );
@@ -97,7 +97,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
     return (
       <Unavailable
         title="This order is a UGC campaign"
-        body="Campaigns don't take pitches: creators who fit take a slot. Open it from Explore to see the details."
+        body="Campaigns don't take pitches: creators who fit take a slot. Open it from Discover to see the details."
       />
     );
   }
@@ -105,7 +105,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
     return (
       <Unavailable
         title="This order isn't published yet"
-        body="The business is still writing it. It shows up in Explore once it's open for pitches."
+        body="The business is still writing it. It shows up in Discover once it's open for pitches."
       />
     );
   }
@@ -132,7 +132,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
   const hide = () => {
     actions.hideRequest(request.id);
     toast({
-      message: "Hidden from your feed and Explore.",
+      message: "Hidden from your feed and Discover.",
       action: { label: "Undo", onClick: () => actions.unhideRequest(request.id) },
     });
   };
@@ -301,7 +301,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
                 }
                 body={
                   request.status === "hired"
-                    ? "This one's taken, but similar orders come up every week. Explore is sorted by fit."
+                    ? "This one's taken, but similar orders come up every week. Discover is sorted by fit."
                     : `${businessName} stopped taking pitches on this order.`
                 }
                 action={

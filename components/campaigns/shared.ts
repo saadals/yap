@@ -165,15 +165,15 @@ export const postingRule = (terms: Pick<CampaignTerms, "platform" | "brandHandle
 export const requirementLine = (terms: Pick<CampaignTerms, "tierId" | "platform">) =>
   `${tierById[terms.tierId].label} verified real followers on ${campaignPlatformById[terms.platform].name}`;
 
-export const perYapp = (price: number) => `${money(price)} per yapp`;
+export const perYapp = (price: number) => `${money(price)} per Yapp`;
 
 /**
- * "Only 3 yapps left · take one now" or "7 of 10 slots open". Pass `urge: false` when the viewer
+ * "Only 3 Yapps left · take one now" or "7 of 10 slots open". Pass `urge: false` when the viewer
  * can't take one (no "take one now" nudge).
  */
 export function seatsLine(open: number, total: number, urge = true): string {
   if (open <= 0) return `All ${total} slots taken`;
-  if (open <= 3) return `Only ${open} ${open === 1 ? "yapp" : "yapps"} left${urge ? " · take one now" : ""}`;
+  if (open <= 3) return `Only ${open} ${open === 1 ? "Yapp" : "Yapps"} left${urge ? " · take one now" : ""}`;
   return `${open} of ${total} slots open`;
 }
 

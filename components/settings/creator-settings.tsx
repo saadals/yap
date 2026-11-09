@@ -26,6 +26,7 @@ import { addDays, at } from "@/lib/clock";
 import { longDate, money } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
+import { savedAccounts, useSavedAccounts } from "@/lib/saved-accounts";
 import { cityLabel, me, opportunities } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { formats, languages } from "@/lib/taxonomy";
@@ -212,7 +213,7 @@ export function AlertControls({ creator }: { creator: Creator }) {
           onChange={(on) => {
             actions.updateSettings("creator", { matchAlerts: on });
             toast({
-              message: on ? "Match alerts on" : "Match alerts off. You can still browse orders in Explore.",
+              message: on ? "Match alerts on" : "Match alerts off. You can still browse orders in Discover.",
               action: { label: "Undo", onClick: () => actions.updateSettings("creator", { matchAlerts: !on }) },
             });
           }}
@@ -362,6 +363,7 @@ export function AccountControls() {
   const router = useRouter();
   const toast = useToast();
   const { signOut } = usePrefs();
+  const saved = useSavedAccounts();
   const account = me.account(s);
   const creator = me.creator(s);
   const business = me.business(s);
@@ -393,11 +395,11 @@ export function AccountControls() {
           icon={<LogOut size={18} aria-hidden className="y-flip" />}
           onClick={() => {
             signOut();
-            toast({ message: "Signed out", tone: "info" });
+            toast({ message: "Logged out", tone: "info" });
             router.push(paths.landing);
           }}
         >
-          Sign out
+          Log out
         </PillButton>
       </div>
 
@@ -446,6 +448,35 @@ export function AccountControls() {
             </li>
           ))}
         </ul>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--b-line) pt-5">
+        <div className="min-w-0">
+          <h3 className="y-head">Saved accounts</h3>
+          <p className="y-micro y-fg-2">
+            {saved.length
+              ? "One-tap sign in on this device, after you log out."
+              : "No accounts are saved on this device."}
+          </p>
+        </div>
+        <PillButton
+          variant="ghost"
+          size="sm"
+          disabled={saved.length === 0}
+          onClick={() => {
+            const before = saved;
+            savedAccounts.clear();
+            toast({
+              message: "Saved accounts removed from this device",
+              action: {
+                label: "Undo",
+                onClick: () => [...before].reverse().forEach((row) => savedAccounts.remember(row)),
+              },
+            });
+          }}
+        >
+          Remove saved accounts from this device
+        </PillButton>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--b-line) pt-5">

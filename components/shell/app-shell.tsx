@@ -1,47 +1,55 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
+import { FaceAvatar } from "@/components/ui/face-avatar";
+import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
-import { unreadThreadCount } from "@/lib/selectors";
+import { me, unreadNotificationCount, unreadThreadCount } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
 
-import { isActive, primaryNav } from "./nav";
+import { isActive, mobileNav } from "./nav";
 import { SiteFooter } from "./site-footer";
 import { SiteHeader } from "./site-header";
 
-/** Mobile: floating black pill bar; the active item becomes a white pill with its label. */
+/**
+ * The phone's glass tab bar: icons only, the active item shows its name in a black pill. On the
+ * feed its icons follow the reel in view (see `data-reel-tone` in app/globals.css).
+ */
 export function BottomBar() {
   const pathname = usePathname();
   const s = useDemo();
-  const unread = unreadThreadCount(s);
+  const hasNews = unreadThreadCount(s) + unreadNotificationCount(s) > 0;
+  const account = me.account(s);
   return (
     <nav
       aria-label="Main"
-      className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] lg:hidden"
+      className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+10px)] z-50 lg:hidden"
     >
-      <ul className="y-bar mx-auto flex h-(--y-bar-h) max-w-md items-center justify-between rounded-full px-2">
-        {primaryNav.app.map((item) => {
+      <ul className="y-tabbar mx-auto max-w-md">
+        {mobileNav.map((item) => {
           const active = isActive(item, pathname);
+          const isProfile = item.href === paths.profile;
+          const news = item.badge === "inbox" && hasNews;
           return (
             <li key={item.href}>
               <Link
                 href={item.href}
-                className="y-bar-item relative"
+                className="y-tab"
                 aria-current={active ? "page" : undefined}
+                aria-label={isProfile ? "Profile and account" : news ? `${item.label}, new` : item.label}
               >
-                {item.icon}
-                <span className={active ? "" : "sr-only"}>{item.label}</span>
-                {item.badge === "messages" && unread > 0 ? (
-                  <span
-                    className={`absolute top-2.5 grid size-4 place-items-center rounded-full bg-(--y-neon) text-[10px] font-bold text-(--y-on-color) ${active ? "end-1" : "end-2"}`}
-                  >
-                    {unread}
-                    <span className="sr-only"> unread</span>
+                {isProfile ? (
+                  <span className="y-tab-me">
+                    <FaceAvatar id={account.creatorId ?? account.memberId ?? account.id} name="" size={30} />
                   </span>
-                ) : null}
+                ) : (
+                  item.icon
+                )}
+                {active ? <span className="y-tab-label">{item.label}</span> : null}
+                {news ? <span aria-hidden className="y-tab-dot" /> : null}
               </Link>
             </li>
           );
@@ -55,8 +63,8 @@ export function BottomBar() {
  * Signed-in chrome: header + mobile bottom bar. Visiting a signed-in page while signed out signs
  * this tab in as its current demo account (prototype session).
  * - `focus` hides the bottom bar for focused tasks (wizards, checkout) that own the bottom edge.
- * - `fullscreen` (the reels feed on Home) drops the page padding so the content can fill the
- *   space between the header and the bottom bar: use `h-(--y-fill-h)` for that height.
+ * - `fullscreen` (the reels feed on Home) drops the page padding and, on phones, the header: the
+ *   content fills the screen with the bottom bar floating over it (`--y-fill-h` is that height).
  */
 export function AppShell({
   children,
@@ -67,19 +75,25 @@ export function AppShell({
   focus?: boolean;
   fullscreen?: boolean;
 }) {
-  const { account, signIn } = usePrefs();
+  const { account, loggedOut, signIn } = usePrefs();
   const s = useDemo();
   const hydrated = useHydrated();
+  const router = useRouter();
   const current = s.activeAccountId;
   // Only after hydration: during the hydration commit both values are still the server snapshot
   // (signed out, default account) and would sign every tab back in as the default account.
+  // A shared demo link signs the visitor in; someone who logged out goes to the welcome screen.
   useEffect(() => {
-    if (hydrated && !account) signIn(current);
-  }, [hydrated, account, current, signIn]);
+    if (!hydrated || account) return;
+    if (loggedOut) router.replace(paths.landing);
+    else signIn(current);
+  }, [hydrated, account, loggedOut, current, signIn, router]);
+
+  if (hydrated && !account && loggedOut) return null;
 
   return (
     <div className={`flex min-h-dvh flex-col ${fullscreen ? "h-dvh overflow-hidden lg:h-auto lg:overflow-visible" : ""}`}>
-      <SiteHeader signedIn />
+      <SiteHeader signedIn desktopOnly={fullscreen} />
       <main
         id="main"
         className={`flex-1 ${

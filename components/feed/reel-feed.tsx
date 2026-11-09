@@ -1,20 +1,23 @@
 "use client";
 
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
+import { BrandMark, Wordmark } from "@/components/ui/brand";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useReducedMotion } from "@/lib/hooks";
 import { paths } from "@/lib/paths";
 import { useDemo, useHydrated } from "@/lib/store";
 
-import type { FeedFilter, FeedItem } from "./feed-items";
-import { feedFilters, feedItems, isFeedFilter, reelHref } from "./feed-items";
+import { CreateSheet } from "./create-sheet";
+import type { FeedFilter, FeedItem, ReelTone } from "./feed-items";
+import { feedFilters, feedItemById, feedItems, isFeedFilter, reelTone } from "./feed-items";
 import { CampaignReel, OrderReel } from "./order-reel";
+import { ReelDetails } from "./reel-details";
 import type { ReelProps } from "./reel-frame";
 import { VideoReel } from "./video-reel";
 
@@ -24,6 +27,8 @@ const END = "end";
 const WINDOW = 2;
 /** Where Back returns to: this tab's active reel and filter. */
 const STORAGE_KEY = "yapp-feed-v1";
+/** The one-time "Swipe left for details" hint (cleared by Reset, like the other `yapp-` keys). */
+const HINT_KEY = "yapp-feed-hint-v1";
 
 type Saved = { account: string; filter: FeedFilter; reel: string | null; id: string | null };
 
@@ -51,24 +56,41 @@ function writeSaved(value: Saved) {
   }
 }
 
+function hintSeen(): boolean {
+  try {
+    return window.localStorage.getItem(HINT_KEY) === "1";
+  } catch {
+    return true;
+  }
+}
+
+function markHintSeen() {
+  try {
+    window.localStorage.setItem(HINT_KEY, "1");
+  } catch {
+    /* storage blocked: the hint just shows again next time */
+  }
+}
+
 /**
- * Home: a full-height reels feed. Swipe (or scroll) up for the next reel; swipe left, tap the pill,
- * press → or Enter to act on it. Creator videos get Order; orders get Pitch or Accept.
- * `?reel=<id>` starts on one order (use `homeReelHref` after publishing). Must sit inside
- * <Suspense> (it reads the search params).
+ * Home: the reels feed. Swipe (or scroll) up for the next reel; swipe left, tap the pill, press →
+ * or Enter for its details layer. Creator videos get Order; custom orders get Pitch; campaigns get
+ * Make a Yapp. `?reel=<id>` starts on one order (use `homeReelHref` after publishing); `?details=<id>`
+ * has that reel's details open. Must sit inside <Suspense> (it reads the search params).
  */
 export function ReelFeed() {
   const hydrated = useHydrated();
   const s = useDemo();
-  const reel = useSearchParams().get("reel");
+  const params = useSearchParams();
+  const reel = params.get("reel");
+  const details = params.get("details");
   if (!hydrated) return <FeedSkeleton />;
-  // A different account (or a new ?reel) gets a fresh feed.
-  return <Feed key={`${s.activeAccountId}:${reel ?? ""}`} reel={reel} />;
+  // A different account (or a new ?reel) gets a fresh feed. Opening details must not remount it.
+  return <Feed key={`${s.activeAccountId}:${reel ?? ""}`} reel={reel} detailsId={details} />;
 }
 
-function Feed({ reel }: { reel: string | null }) {
+function Feed({ reel, detailsId }: { reel: string | null; detailsId: string | null }) {
   const s = useDemo();
-  const router = useRouter();
   const reducedMotion = useReducedMotion();
   const account = s.activeAccountId;
 
@@ -90,13 +112,35 @@ function Feed({ reel }: { reel: string | null }) {
   const found = active.id ? items.findIndex((item) => item.id === active.id) : -1;
   const activeIndex =
     active.id === END ? total : found >= 0 ? found : Math.min(active.index, total);
-  const hrefs = items.map(reelHref);
+  const ids = items.map((item) => item.id);
+  const details = detailsId ? feedItemById(s, detailsId) : undefined;
+  const detailsOpen = Boolean(details);
+  const current = items[activeIndex];
+  const tone: ReelTone = detailsOpen || !current ? "page" : reelTone(current);
 
   // Latest values for the observer and key handlers (set before the browser can call them).
-  const latest = useRef({ account, filter, reel, activeIndex, total, hrefs, reducedMotion });
+  const latest = useRef({ account, filter, reel, activeIndex, total, ids, reducedMotion, detailsOpen });
   useLayoutEffect(() => {
-    latest.current = { account, filter, reel, activeIndex, total, hrefs, reducedMotion };
+    latest.current = { account, filter, reel, activeIndex, total, ids, reducedMotion, detailsOpen };
   });
+
+  // What floats over the reels (logo, tabs, "+", the tab bar outside the feed) follows the reel.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (tone === "page") delete root.dataset.reelTone;
+    else root.dataset.reelTone = tone;
+    return () => {
+      delete root.dataset.reelTone;
+    };
+  }, [tone]);
+
+  const [hint, setHint] = useState(() => !hintSeen());
+  useEffect(() => {
+    if (!hint) return;
+    markHintSeen();
+    const timer = window.setTimeout(() => setHint(false), 2800);
+    return () => window.clearTimeout(timer);
+  }, [hint]);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -146,20 +190,47 @@ function Feed({ reel }: { reel: string | null }) {
     scroller.scrollTo({ top: target.offsetTop, behavior: latest.current.reducedMotion ? "instant" : "smooth" });
   }, []);
 
-  const open = useCallback((href: string) => router.push(href), [router]);
+  // Details live in the URL (`?details=<id>`) so the phone's Back gesture closes them. Next keeps
+  // useSearchParams in step with pushState without navigating, so the feed stays mounted.
+  const openedHere = useRef(false);
+  const open = useCallback((id: string) => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("details", id);
+    window.history.pushState(null, "", url.search);
+    openedHere.current = true;
+  }, []);
+  const close = useCallback(() => {
+    if (openedHere.current) {
+      openedHere.current = false;
+      window.history.back();
+      return;
+    }
+    // Arrived with details already open (a reload or a shared link): nothing to go back to.
+    const url = new URL(window.location.href);
+    url.searchParams.delete("details");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}`);
+  }, []);
+  const restoreFocus = useCallback(() => {
+    scrollerRef.current?.focus({ preventScroll: true });
+  }, []);
 
-  // Keyboard: ↑/↓ move a reel, → (← in RTL) or Enter opens it. Not while typing or in a dialog.
+  // Keyboard: ↑/↓ move a reel, → (← in RTL) or Enter opens it, Esc closes details. Not while
+  // typing or in a dialog.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.defaultPrevented || event.altKey || event.ctrlKey || event.metaKey) return;
+      if (latest.current.detailsOpen) {
+        if (event.key === "Escape") close();
+        return;
+      }
       const target = event.target instanceof HTMLElement ? event.target : null;
       if (
         target?.closest(
-          "input, textarea, select, [contenteditable='true'], [role='dialog'], [role='radiogroup'], [role='slider'], [role='menu']",
+          "input, textarea, select, [contenteditable='true'], [role='dialog'], [role='radiogroup'], [role='slider'], [role='menu'], [role='tablist']",
         )
       )
         return;
-      const { activeIndex: at, total: count, hrefs: links } = latest.current;
+      const { activeIndex: at, total: count, ids: reels } = latest.current;
       const rtl = scrollerRef.current ? getComputedStyle(scrollerRef.current).direction === "rtl" : false;
       if (event.key === "ArrowDown" || event.key === "PageDown") {
         event.preventDefault();
@@ -171,15 +242,15 @@ function Feed({ reel }: { reel: string | null }) {
         event.key === (rtl ? "ArrowLeft" : "ArrowRight") ||
         (event.key === "Enter" && (target === document.body || target === scrollerRef.current))
       ) {
-        const href = links[at];
-        if (!href) return;
+        const id = reels[at];
+        if (!id) return;
         event.preventDefault();
-        router.push(href);
+        open(id);
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [go, router]);
+  }, [go, open, close]);
 
   const changeFilter = (next: FeedFilter) => {
     setFilter(next);
@@ -194,9 +265,6 @@ function Feed({ reel }: { reel: string | null }) {
   return (
     <FeedFrame>
       <h1 className="sr-only">Home</h1>
-      <div className="y-reel-overlay absolute start-3 top-3 z-20">
-        <SegmentedToggle options={feedFilters} value={filter} onChange={changeFilter} label="Show in your feed" />
-      </div>
 
       <div
         ref={attachScroller}
@@ -204,6 +272,7 @@ function Feed({ reel }: { reel: string | null }) {
         aria-label="Reels"
         aria-busy={false}
         tabIndex={0}
+        inert={detailsOpen}
         className="y-feed"
       >
         {total === 0 ? (
@@ -248,6 +317,17 @@ function Feed({ reel }: { reel: string | null }) {
         )}
       </div>
 
+      <span aria-hidden className="y-reel-fade" data-edge="top" />
+      <span aria-hidden className="y-reel-fade" data-edge="bottom" />
+      {detailsOpen ? null : <FeedTabs value={filter} onChange={changeFilter} />}
+      {hint && total > 0 && !detailsOpen ? (
+        <p aria-hidden className="y-reel-hint">
+          Swipe left for details
+        </p>
+      ) : null}
+      {details ? <ReelDetails item={details} onClose={close} restoreFocus={restoreFocus} /> : null}
+      <FloatingTop />
+
       {total > 0 ? (
         <div className="absolute start-[calc(100%+16px)] top-1/2 hidden -translate-y-1/2 flex-col gap-2 lg:flex">
           <RoundIconButton label="Previous reel" disabled={activeIndex === 0} onClick={() => go(activeIndex - 1)}>
@@ -273,11 +353,70 @@ function Reel(props: ReelProps<FeedItem>) {
   return <OrderReel {...props} item={item} />;
 }
 
-/** The reel area: below the header, above the bottom bar (mobile); a 9:16 column (desktop). */
+/** The reel area: the whole screen on phones, a 9:16 column under the header from 1024px. */
 function FeedFrame({ children }: { children: React.ReactNode }) {
   return (
-    <div className="px-(--y-gutter) pt-2 lg:py-3">
+    <div className="lg:px-(--y-gutter) lg:py-3">
       <div className="y-feed-col">{children}</div>
+    </div>
+  );
+}
+
+/** No top bar on phones: the logo and "+" float over the reel. Hidden from 1024px. */
+function FloatingTop() {
+  const [createOpen, setCreateOpen] = useState(false);
+  return (
+    <div className="y-reel-top">
+      <Link href={paths.home} className="y-reel-logo" aria-label="Yapp home">
+        <BrandMark size={26} />
+        <Wordmark size={22} />
+      </Link>
+      <button
+        type="button"
+        className="y-reel-plus"
+        aria-label="Create: new order or make a Yapp"
+        aria-haspopup="dialog"
+        onClick={() => setCreateOpen(true)}
+      >
+        <Plus size={18} strokeWidth={2.6} aria-hidden />
+      </button>
+      <CreateSheet open={createOpen} onClose={() => setCreateOpen(false)} />
+    </div>
+  );
+}
+
+/** Mix · Yapps · Orders: plain text stacked at the top end. */
+function FeedTabs({ value, onChange }: { value: FeedFilter; onChange: (next: FeedFilter) => void }) {
+  const refs = useRef<(HTMLButtonElement | null)[]>([]);
+  const onKeyDown = (event: React.KeyboardEvent, index: number) => {
+    const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const next = (index + step + feedFilters.length) % feedFilters.length;
+    onChange(feedFilters[next].value);
+    refs.current[next]?.focus();
+  };
+  return (
+    <div role="tablist" aria-label="Show in your feed" aria-orientation="vertical" className="y-reel-tabs">
+      {feedFilters.map((filter, index) => {
+        const selected = filter.value === value;
+        return (
+          <button
+            key={filter.value}
+            ref={(node) => {
+              refs.current[index] = node;
+            }}
+            type="button"
+            role="tab"
+            aria-selected={selected}
+            tabIndex={selected ? 0 : -1}
+            onClick={() => onChange(filter.value)}
+            onKeyDown={(event) => onKeyDown(event, index)}
+          >
+            {filter.label}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -285,7 +424,7 @@ function FeedFrame({ children }: { children: React.ReactNode }) {
 export function FeedSkeleton() {
   return (
     <FeedFrame>
-      <div aria-hidden className="y-skel h-full w-full !rounded-(--y-r-block)" />
+      <div aria-hidden className="y-skel y-feed-fill h-full w-full !rounded-none lg:!rounded-(--y-r-block)" />
       <p className="sr-only" role="status">
         Loading your feed
       </p>
@@ -295,10 +434,10 @@ export function FeedSkeleton() {
 
 function FeedEnd({ onTop }: { onTop: () => void }) {
   return (
-    <div data-tone="paper" className="y-block flex h-full flex-col items-center justify-center overflow-y-auto">
+    <div data-tone="paper" className="y-block y-feed-fill flex h-full flex-col items-center justify-center overflow-y-auto">
       <EmptyState
         title="You're all caught up"
-        body="That's every reel for now. Explore has the full lists of orders and creators."
+        body="That's every reel for now. Discover has the full lists of orders and creators."
         shape="ball"
         tint="mint"
         face="smile"
@@ -306,7 +445,7 @@ function FeedEnd({ onTop }: { onTop: () => void }) {
           <div className="flex flex-col items-center gap-2">
             <div className="flex flex-wrap justify-center gap-2">
               <PillButton href={paths.explore("orders")} variant="contrast">
-                Explore orders
+                Discover orders
               </PillButton>
               <PillButton href={paths.explore("creators")} variant="outline">
                 Find creators
@@ -327,7 +466,7 @@ const emptyCopy: Record<FeedFilter, { title: string; body: string; href: string;
     title: "Nothing here yet",
     body: "New orders and creators' videos show up here as soon as they're posted.",
     href: paths.explore(),
-    cta: "Explore",
+    cta: "Discover",
   },
   orders: {
     title: "No orders right now",
@@ -339,14 +478,14 @@ const emptyCopy: Record<FeedFilter, { title: string; body: string; href: string;
     title: "No videos yet",
     body: "Creators' videos show up here. Browse open orders in the meantime.",
     href: paths.explore("orders"),
-    cta: "Explore orders",
+    cta: "Discover orders",
   },
 };
 
 function FeedEmpty({ filter }: { filter: FeedFilter }) {
   const copy = emptyCopy[filter];
   return (
-    <div data-tone="paper" className="y-block flex h-full flex-col items-center justify-center overflow-y-auto">
+    <div data-tone="paper" className="y-block y-feed-fill flex h-full flex-col items-center justify-center overflow-y-auto">
       <EmptyState
         title={copy.title}
         body={copy.body}

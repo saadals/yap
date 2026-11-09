@@ -1,6 +1,13 @@
 import { DAY, HOUR, MINUTE, NOW, TIME_ZONE } from "./clock";
 import { SERVICE_FEE_RATE } from "./taxonomy";
 
+/** Arabic-Indic (٠-٩) and Eastern Arabic (۰-۹) digits become Latin ones. */
+export function toLatinDigits(value: string): string {
+  return value
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0));
+}
+
 /* -------------------------------------------------------------------------- */
 /* Money                                                                       */
 /* -------------------------------------------------------------------------- */

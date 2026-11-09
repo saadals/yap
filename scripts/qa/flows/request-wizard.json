@@ -1,27 +1,84 @@
 {
   "account": "nour",
   "steps": [
-    { "go": "/orders/new?product=p-daftar-invoices", "after": 3500 },
-    { "click": "Custom request", "after": 600 },
-    { "click": "Continue", "after": 1500 },
-    { "text": "What kind of video?" },
-    { "click": "Honest review", "after": 600 },
-    { "click": "Continue", "after": 800 },
-    { "text": "How many videos?" },
-    { "click": "Continue", "after": 800 },
-    { "text": "Which language or dialect?" },
-    { "click": "Continue", "after": 800 },
-    { "click": "Help me write this", "after": 2500 },
-    { "click": "Continue", "after": 800 },
-    { "text": "What's your budget?" },
-    { "click": "Continue", "after": 800 },
-    { "text": "Who can pitch?" },
-    { "click": "Continue", "after": 800 },
-    { "text": "The brief" },
-    { "click": "Publish", "after": 2000 },
-    { "text": "Your request is live" },
-    { "account": "layla" },
-    { "go": "/explore?tab=orders", "after": 3500 },
-    { "text": "honest review for Daftar Invoices" }
+    {
+      "go": "/orders/new?product=p-daftar-invoices",
+      "after": 5500
+    },
+    {
+      "click": "Custom request",
+      "after": 600
+    },
+    {
+      "click": "Continue",
+      "after": 1500
+    },
+    {
+      "text": "What kind of video?"
+    },
+    {
+      "click": "Honest review",
+      "after": 600
+    },
+    {
+      "click": "Continue",
+      "after": 800
+    },
+    {
+      "text": "How many videos?"
+    },
+    {
+      "click": "Continue",
+      "after": 800
+    },
+    {
+      "text": "Which language or dialect?"
+    },
+    {
+      "click": "Continue",
+      "after": 800
+    },
+    {
+      "click": "Help me write this",
+      "after": 2500
+    },
+    {
+      "click": "Continue",
+      "after": 800
+    },
+    {
+      "text": "What's your budget?"
+    },
+    {
+      "click": "Continue",
+      "after": 800
+    },
+    {
+      "text": "Who can pitch?"
+    },
+    {
+      "click": "Continue",
+      "after": 800
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "click": "Publish",
+      "after": 2000
+    },
+    {
+      "text": "Your request is live"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/explore?tab=orders",
+      "after": 3500
+    },
+    {
+      "text": "honest review for Daftar Invoices"
+    }
   ]
 }

@@ -722,20 +722,20 @@ function CreatorSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
                 <figcaption className="y-micro y-fg-2">{businessName}</figcaption>
               </figure>
             ) : null}
-            <Line>The slot went back to the campaign. Thanks for giving it a go. Other campaigns are open in Explore.</Line>
+            <Line>The slot went back to the campaign. Thanks for giving it a go. Other campaigns are open in Discover.</Line>
           </Step>
         );
       }
       if (commission.cancelCode === "campaign_closed") {
         return (
           <Step title="This campaign closed" actions={findMore}>
-            <Line>The slot ended when {businessName} closed the campaign. Other campaigns are open in Explore.</Line>
+            <Line>The slot ended when {businessName} closed the campaign. Other campaigns are open in Discover.</Line>
           </Step>
         );
       }
       return (
         <Step title={`${businessName} went with another creator for this slot`} actions={findMore}>
-          <Line>Thanks for taking it. Other campaigns are open in Explore.</Line>
+          <Line>Thanks for taking it. Other campaigns are open in Discover.</Line>
         </Step>
       );
     }

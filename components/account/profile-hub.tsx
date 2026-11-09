@@ -1,10 +1,11 @@
 "use client";
 
-import { Building2, ChevronRight, ExternalLink, Link2, Pencil, Video } from "lucide-react";
+import { Building2, ChevronRight, ExternalLink, Link2, Pencil, UserCog, Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
+import { AccountSheet } from "@/components/shell/account-sheet";
 import { accountNav, type NavItem } from "@/components/shell/nav";
 import { Block } from "@/components/ui/block";
 import { Chip } from "@/components/ui/chip";
@@ -24,7 +25,8 @@ import { socialsSummary } from "./social";
  * - Identity: face, name, @handle or email, Business or Personal account.
  * - With a creator profile: View public profile, Edit profile, and connected accounts in one line.
  * - Without one: one slim "Make videos on Yapp too" block that opens the setup sheet.
- * - A calm list of account destinations (Wallet, Billing, Products, Saved, Business account, Settings).
+ * - A calm list of account destinations (Wallet, Billing, Products, Saved, Business account, Settings),
+ *   ending with the account sheet (log out, switch account and the demo controls).
  */
 export function ProfileHub() {
   const hydrated = useHydrated();
@@ -60,6 +62,7 @@ function Hub() {
   const creator = me.creator(s);
   const isBusiness = account.kind === "business";
   const [setupOpen, setSetupOpen] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
   const connected = socialsSummary(creator?.socials);
 
   const destinations: (NavItem & { detail?: string })[] = [
@@ -159,11 +162,24 @@ function Hub() {
                 </Link>
               </li>
             ))}
+            <li>
+              <button
+                type="button"
+                onClick={() => setAccountOpen(true)}
+                className="flex min-h-14 w-full items-center gap-3 rounded-full px-3 text-start font-medium hover:bg-(--b-chip)"
+              >
+                <UserCog size={20} aria-hidden />
+                <span className="flex-1">Account</span>
+                <span className="y-small y-fg-2">Log out, demo tools</span>
+                <ChevronRight size={18} aria-hidden className="y-fg-3 y-flip" />
+              </button>
+            </li>
           </ul>
         </Block>
       </div>
 
       <CreatorSetupSheet open={setupOpen} onClose={() => setSetupOpen(false)} />
+      <AccountSheet open={accountOpen} onClose={() => setAccountOpen(false)} />
     </Page>
   );
 }

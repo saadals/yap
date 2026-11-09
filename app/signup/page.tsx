@@ -1,17 +1,12 @@
-"use client";
-
 import { Suspense } from "react";
 
-import { AuthSkeleton } from "@/components/auth/auth-skeleton";
-import { SignUpScreen } from "@/components/auth/sign-up";
-import { PublicShell } from "@/components/shell/app-shell";
+import { WelcomeFromUrl } from "@/components/landing/welcome-from-url";
 
+/** Sign-up and sign-in are one flow: the same scene and panel as /signin. */
 export default function SignUpPage() {
   return (
-    <PublicShell footer={false} bottomBar={false}>
-      <Suspense fallback={<AuthSkeleton />}>
-        <SignUpScreen />
-      </Suspense>
-    </PublicShell>
+    <Suspense fallback={<div className="y-welcome" />}>
+      <WelcomeFromUrl />
+    </Suspense>
   );
 }

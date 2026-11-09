@@ -2,6 +2,8 @@
 
 import { useRef } from "react";
 
+import { toLatinDigits } from "@/lib/format";
+
 /** Six single-digit boxes: auto-advance, backspace to previous, paste fills all. Always LTR. */
 export function OtpInput({
   value,
@@ -43,7 +45,7 @@ export function OtpInput({
           autoFocus={index === 0}
           className="y-input y-display y-num h-16 w-full min-w-0 !rounded-[18px] !px-0 text-center text-[28px] font-semibold"
           onChange={(event) => {
-            const char = event.target.value.replace(/\D/g, "").slice(-1);
+            const char = toLatinDigits(event.target.value).replace(/\D/g, "").slice(-1);
             setDigit(index, char);
             if (char && index < 5) refs.current[index + 1]?.focus();
           }}
@@ -53,7 +55,7 @@ export function OtpInput({
             if (event.key === "ArrowRight" && index < 5) refs.current[index + 1]?.focus();
           }}
           onPaste={(event) => {
-            const pasted = event.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+            const pasted = toLatinDigits(event.clipboardData.getData("text")).replace(/\D/g, "").slice(0, 6);
             if (pasted) {
               event.preventDefault();
               onChange(pasted);

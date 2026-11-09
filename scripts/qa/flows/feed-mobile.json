@@ -4,22 +4,86 @@
   "width": 390,
   "height": 844,
   "steps": [
-    { "go": "/home", "after": 3500 },
-    { "text": "Reel 1 of" },
-    { "shot": "feed-mobile-1" },
-    { "key": "ArrowDown", "after": 1200 },
-    { "text": "Reel 2 of" },
-    { "swipe": "up", "span": 0.9, "dt": 6, "after": 1500 },
-    { "text": "Reel 3 of" },
-    { "shot": "feed-mobile-3" },
-    { "swipe": "left", "after": 2500 },
-    { "eval": "location.pathname" },
-    { "eval": "(() => { if (location.pathname.startsWith('/home')) throw new Error('swipe left did not open details'); history.back(); return true })()" },
-    { "wait": 3000 },
-    { "text": "Reel 3 of" },
-    { "go": "/home?reel=r-150", "after": 3500 },
-    { "text": "Only 3 yapps left" },
-    { "text": "Accept" },
-    { "shot": "feed-mobile-campaign" }
+    {
+      "go": "/home",
+      "after": 5500
+    },
+    {
+      "text": "Reel 1 of"
+    },
+    {
+      "shot": "feed-mobile-1"
+    },
+    {
+      "key": "ArrowDown",
+      "after": 1200
+    },
+    {
+      "text": "Reel 2 of"
+    },
+    {
+      "swipe": "up",
+      "span": 0.9,
+      "dt": 6,
+      "after": 1500
+    },
+    {
+      "text": "Reel 3 of"
+    },
+    {
+      "shot": "feed-mobile-3"
+    },
+    {
+      "swipe": "left",
+      "after": 1500
+    },
+    {
+      "text": "Back to feed"
+    },
+    {
+      "shot": "feed-mobile-details"
+    },
+    {
+      "eval": "(() => { if (!location.search.includes('details=')) throw new Error('swipe left did not open details'); history.back(); return true })()"
+    },
+    {
+      "wait": 1500
+    },
+    {
+      "notText": "Back to feed"
+    },
+    {
+      "text": "Reel 3 of"
+    },
+    {
+      "go": "/home?reel=r-150",
+      "after": 3500
+    },
+    {
+      "text": "3 of 10 remaining"
+    },
+    {
+      "text": "Make a Yapp"
+    },
+    {
+      "shot": "feed-mobile-campaign"
+    },
+    {
+      "clickSel": ".y-reel-cta[data-count]",
+      "after": 1000
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "clickSel": ".y-details-cta .y-reel-cta",
+      "after": 1000
+    },
+    {
+      "text": "I'll post with the tag"
+    },
+    {
+      "shot": "feed-mobile-take-slot"
+    }
   ]
 }

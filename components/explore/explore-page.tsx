@@ -61,7 +61,7 @@ function Explore() {
     <div className="flex flex-col gap-2">
       <PageHeader
         className="!pb-3 md:!pb-4"
-        title="Explore"
+        title="Discover"
         description={
           tab === "creators"
             ? "Creators who make videos for apps like yours."
@@ -69,7 +69,7 @@ function Explore() {
         }
         actions={
           <SegmentedToggle
-            label="Explore"
+            label="Discover"
             size="md"
             className="bg-(--y-paper)"
             value={tab}

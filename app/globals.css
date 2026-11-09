@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@import "./styles/landing.css";
+@import "./styles/auth.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -87,31 +89,51 @@ html.dark body {
     var(--y-font-display), var(--y-font-ar-display), var(--y-font-text), ui-sans-serif,
     system-ui, sans-serif;
 
-  /* reels feed: order reel gradients (Feed / reels section). A documented exception to "tints
-     never behind text": each page is one bold gradient and all its text uses -ink, which passes
-     WCAG AA (4.5:1) on both ends and every point between. */
-  --y-reel-1-from: #ff7a59; /* coral → sun */
-  --y-reel-1-to: #ffc23d;
-  --y-reel-1-ink: #0e0e10;
-  --y-reel-2-from: #5b3df5; /* violet → purple */
-  --y-reel-2-to: #a13fd6;
-  --y-reel-2-ink: #ffffff;
-  --y-reel-3-from: #1554c7; /* ocean → teal */
-  --y-reel-3-to: #0a7d8c;
-  --y-reel-3-ink: #ffffff;
-  --y-reel-4-from: #c8235f; /* berry → grape */
-  --y-reel-4-to: #7a2bd9;
-  --y-reel-4-ink: #ffffff;
-  --y-reel-5-from: #7cc8f2; /* sky → lilac */
-  --y-reel-5-to: #b7a6ff;
-  --y-reel-5-ink: #0e0e10;
-  --y-reel-6-from: #ffd84d; /* butter → pink */
-  --y-reel-6-to: #ff9fcf;
-  --y-reel-6-ink: #0e0e10;
+  /* reels feed: the light canvas behind order and campaign reels, picked by id. These pages are
+     media, so they stay light in dark mode and always use the fixed ink set on .y-reel. */
+  --y-reel-1-from: #eaf2ff;
+  --y-reel-1-to: #f3ecff;
+  --y-reel-1-glow-a: #bcd9ff;
+  --y-reel-1-glow-b: #d9c8ff;
+  --y-reel-2-from: #effff4;
+  --y-reel-2-to: #fff8e6;
+  --y-reel-2-glow-a: #b8f5cc;
+  --y-reel-2-glow-b: #ffe7a8;
+  --y-reel-3-from: #fff4ea;
+  --y-reel-3-to: #eef6ff;
+  --y-reel-3-glow-a: #ffd2b0;
+  --y-reel-3-glow-b: #c8e2ff;
+  --y-reel-4-from: #f1eeff;
+  --y-reel-4-to: #eafbf6;
+  --y-reel-4-glow-a: #d6ccff;
+  --y-reel-4-glow-b: #b8f0dd;
+  --y-reel-5-from: #fdeef5;
+  --y-reel-5-to: #f0f4ff;
+  --y-reel-5-glow-a: #ffc9de;
+  --y-reel-5-glow-b: #c9d6ff;
+  --y-reel-6-from: #fff9e3;
+  --y-reel-6-to: #eafaff;
+  --y-reel-6-glow-a: #ffe59a;
+  --y-reel-6-glow-b: #b8e8f7;
+
+  /* glass: the signed-out welcome, sign-in, the reels chrome and details. Everything else keeps
+     --y-canvas and solid blocks. --y-soft-rgb is for fades that must melt into --y-soft. */
+  --y-soft: #f7f7f9;
+  --y-soft-rgb: 247 247 249;
+  --y-glass: rgb(255 255 255 / 0.55);
+  --y-glass-clear: rgb(255 255 255 / 0.3);
+  --y-glass-strong: rgb(255 255 255 / 0.75);
+  --y-glass-border: rgb(255 255 255 / 0.7);
+  --y-glass-border-clear: rgb(255 255 255 / 0.45);
+  --y-glass-blur: blur(20px) saturate(180%);
+  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.85);
+  --y-glossy-black: linear-gradient(180deg, #2a2a2c, #0b0b0c);
+  --y-detail-card: rgb(255 255 255 / 0.82);
+  --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.8);
 
   /* page */
   --y-gutter: 12px;
-  --y-bar-h: 68px;
+  --y-bar-h: 56px;
 
   color-scheme: light;
   background: var(--y-canvas);
@@ -150,29 +172,20 @@ html.dark .yapp {
   --y-info-soft: rgb(141 177 255 / 0.14);
   --y-whatsapp: #1fae5e;
 
-  /* reels feed: deeper gradients for the dark UI (still AA with their -ink on both ends) */
-  --y-reel-1-from: #e8603f;
-  --y-reel-1-to: #e0a326;
-  --y-reel-1-ink: #0e0e10;
-  --y-reel-2-from: #4a2fd0;
-  --y-reel-2-to: #8530b5;
-  --y-reel-2-ink: #ffffff;
-  --y-reel-3-from: #1146a8;
-  --y-reel-3-to: #086674;
-  --y-reel-3-ink: #ffffff;
-  --y-reel-4-from: #a81d50;
-  --y-reel-4-to: #6522b8;
-  --y-reel-4-ink: #ffffff;
-  --y-reel-5-from: #4fa9dc;
-  --y-reel-5-to: #9784f0;
-  --y-reel-5-ink: #0e0e10;
-  --y-reel-6-from: #e9bf2f;
-  --y-reel-6-to: #e77fb6;
-  --y-reel-6-ink: #0e0e10;
-
   --y-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 16px 40px -8px rgb(0 0 0 / 0.7);
   --y-shadow-sheet: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.8);
   --y-scrim: rgb(0 0 0 / 0.62);
+
+  --y-soft: #0a0a0b;
+  --y-soft-rgb: 10 10 11;
+  --y-glass: rgb(38 38 42 / 0.55);
+  --y-glass-clear: rgb(38 38 42 / 0.38);
+  --y-glass-strong: rgb(24 24 27 / 0.78);
+  --y-glass-border: rgb(255 255 255 / 0.14);
+  --y-glass-border-clear: rgb(255 255 255 / 0.14);
+  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.1);
+  --y-detail-card: rgb(24 24 27 / 0.82);
+  --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
 
   color-scheme: dark;
 }
@@ -892,6 +905,22 @@ html.dark .yapp {
     background: var(--y-neon);
   }
 
+  /* --------------------------------------------------------------- glass */
+  .yapp .y-glass {
+    background: var(--y-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    border: 1px solid var(--y-glass-border);
+    box-shadow: var(--y-glass-shadow);
+  }
+  .yapp .y-glass[data-glass="clear"] {
+    background: var(--y-glass-clear);
+    border-color: var(--y-glass-border-clear);
+  }
+  .yapp .y-glass[data-glass="strong"] {
+    background: var(--y-glass-strong);
+  }
+
   /* ---------------------------------------------------------- navigation */
   .yapp .y-bar {
     background: #0e0e10;
@@ -907,31 +936,6 @@ html.dark .yapp {
   html.dark .yapp .y-bar {
     background: #232327;
     --b-bg: #232327;
-  }
-  .yapp .y-bar-item {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    height: 52px;
-    min-width: 52px;
-    border-radius: 999px;
-    color: rgb(244 244 240 / 0.72);
-    font-weight: 600;
-    font-size: 0.875rem;
-    transition:
-      background-color var(--y-dur-2) var(--y-ease),
-      color var(--y-dur-2) var(--y-ease),
-      padding var(--y-dur-2) var(--y-ease);
-  }
-  .yapp .y-bar-item:hover {
-    color: #f4f4f0;
-    background: rgb(255 255 255 / 0.08);
-  }
-  .yapp .y-bar-item[aria-current="page"] {
-    background: #f4f4f0;
-    color: #0e0e10;
-    padding-inline: 18px;
   }
   .yapp .y-rail-item {
     display: flex;
@@ -1360,38 +1364,100 @@ html.dark .yapp {
 /* Feed / reels (Home: components/feed)                                        */
 /* -------------------------------------------------------------------------- */
 
-/* The reel area. Mobile: it fills the space between the sticky header and the fixed bottom bar,
-   100dvh − header (8px top padding + 64px pill) − 8px gap − bottom bar (68px bar + safe area +
-   10px) − 8px gap. Desktop (no bottom bar): 100dvh − header − 24px (12px above and below).
-   Use with `h-(--y-fill-h)`. Phones use the full width; from 768px the reel is a 9:16 column,
-   min(100%, --y-fill-h × 9/16) wide. */
+/* Below 1024px a reel is the whole screen and every control floats over it: logo and "+" on top,
+   the glass tab bar at the bottom. From 1024px it's a 9:16 column under the header.
+   --reel-top and --reel-bottom are where a reel's own content starts and ends. */
 .yapp {
   --y-header-h: 72px;
-  --y-fill-h: max(
-    380px,
-    calc(
-      100dvh - var(--y-header-h) - 16px - var(--y-bar-h) - env(safe-area-inset-bottom, 0px) -
-        10px
-    )
-  );
+  --y-fill-h: 100dvh;
+  --reel-top: calc(env(safe-area-inset-top, 0px) + 54px);
+  --reel-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--y-bar-h) + 14px);
+
+  /* What floats over a reel follows the reel in view (the feed sets data-reel-tone on <html>).
+     With no reel in view (details, the end card, every other page) it follows the theme. */
+  --reel-ink: var(--y-ink);
+  --reel-shadow: none;
+  --reel-mark-dot: var(--y-paper);
+  --reel-glass: var(--y-glass);
+  --reel-glass-line: var(--y-glass-border);
+  --reel-fade: var(--y-soft-rgb);
+  --reel-fade-top: 0.7;
+  --reel-fade-bottom: 0.75;
+}
+/* The tab bar's white glass is thinner on video than the spec's 30%: over a bright frame, 30% left
+   white icons below 3:1. */
+html[data-reel-tone="dark"] .yapp {
+  --reel-ink: #ffffff;
+  --reel-shadow: 0 1px 3px rgb(0 0 0 / 0.38), 0 0 1px rgb(0 0 0 / 0.2);
+  --reel-mark-dot: #0e0e10;
+  --reel-glass: rgb(255 255 255 / 0.18);
+  --reel-glass-line: rgb(255 255 255 / 0.28);
+  --reel-fade: 0 0 0;
+  --reel-fade-top: 0.22;
+  --reel-fade-bottom: 0.28;
+}
+html[data-reel-tone="light"] .yapp {
+  --reel-ink: #1d1d1f;
+  --reel-shadow: 0 1px 1px rgb(255 255 255 / 0.6);
+  --reel-mark-dot: #ffffff;
+  --reel-glass: rgb(255 255 255 / 0.3);
+  --reel-glass-line: rgb(255 255 255 / 0.45);
+  --reel-fade: 247 247 249;
 }
 @media (min-width: 1024px) {
   .yapp {
     --y-fill-h: max(520px, calc(100dvh - var(--y-header-h) - 24px));
+    --reel-top: 14px;
+    --reel-bottom: 16px;
+  }
+}
+
+@keyframes y-char-float {
+  50% {
+    translate: 0 -6px;
+  }
+}
+@keyframes y-details-in {
+  from {
+    transform: translateX(var(--y-details-x));
+  }
+}
+@keyframes y-details-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes y-reel-hint {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes y-tab-label {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
   }
 }
 
 @layer components {
-  /* Phones: the full width. Tablets and desktop: a phone-width 9:16 column. */
   .yapp .y-feed-col {
     position: relative;
     width: 100%;
     height: var(--y-fill-h);
     margin-inline: auto;
+    overflow: hidden;
   }
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     .yapp .y-feed-col {
       width: min(100%, calc(var(--y-fill-h) * 9 / 16));
+      overflow: visible;
     }
   }
 
@@ -1400,13 +1466,11 @@ html.dark .yapp {
     position: relative;
     display: flex;
     flex-direction: column;
-    gap: 8px;
     height: 100%;
     overflow-y: auto;
     overscroll-behavior: contain;
     scroll-snap-type: y mandatory;
     scrollbar-width: none;
-    border-radius: var(--y-r-block);
   }
   .yapp .y-feed::-webkit-scrollbar {
     display: none;
@@ -1423,25 +1487,34 @@ html.dark .yapp {
   }
   .yapp .y-feed-placeholder {
     height: 100%;
-    border-radius: var(--y-r-block);
     background: var(--y-mist);
   }
 
-  /* One reel: a full-height card that follows the finger on a horizontal swipe. */
+  /* One reel: follows the finger on a horizontal swipe. */
   .yapp .y-reel {
     position: relative;
     height: 100%;
     overflow: hidden;
     isolation: isolate;
-    border-radius: var(--y-r-block);
     container-type: size;
     touch-action: pan-y;
     user-select: none;
     -webkit-user-select: none;
     -webkit-touch-callout: none;
   }
-  .yapp .y-reel .y-pill[data-variant="neon"] {
-    box-shadow: 0 0 0 2px var(--y-on-color);
+  .yapp .y-feed-fill {
+    border-radius: 0;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-feed {
+      gap: 8px;
+      border-radius: var(--y-r-block);
+    }
+    .yapp .y-feed-placeholder,
+    .yapp .y-reel,
+    .yapp .y-feed-fill {
+      border-radius: var(--y-r-block);
+    }
   }
 
   /* Revealed behind a reel while it's swiped. */
@@ -1453,8 +1526,7 @@ html.dark .yapp {
     justify-content: flex-end;
     gap: 8px;
     padding-inline-end: 22px;
-    border-radius: var(--y-r-block);
-    background: var(--y-paper);
+    background: var(--y-soft);
     color: var(--y-ink);
     font-weight: 600;
     opacity: 0;
@@ -1463,7 +1535,7 @@ html.dark .yapp {
     opacity: 1;
   }
 
-  /* Video reels: dark, white text over a bottom scrim (≥ 55% black under any text). */
+  /* Video reels: dark, white text over a soft bottom scrim. */
   .yapp .y-reel[data-kind="video"] {
     background: #0e0e10;
     color: #fff;
@@ -1472,6 +1544,7 @@ html.dark .yapp {
     --b-chip: rgb(255 255 255 / 0.16);
     --b-chip-fg: #fff;
   }
+  /* Taller than the spec's 22%: at 22% the gradient has already faded out under the description. */
   .yapp .y-reel-scrim {
     position: absolute;
     inset: 0;
@@ -1479,138 +1552,678 @@ html.dark .yapp {
     pointer-events: none;
     background: linear-gradient(
       to top,
-      rgb(14 14 16 / 0.82) 0%,
-      rgb(14 14 16 / 0.62) 30%,
-      rgb(14 14 16 / 0) 58%
+      rgb(14 14 16 / 0.62) 0%,
+      rgb(14 14 16 / 0.45) 24%,
+      rgb(14 14 16 / 0) 42%
     );
   }
   .yapp .y-reel-shadow {
     text-shadow: 0 1px 2px rgb(14 14 16 / 0.6);
   }
 
-  /* Order and campaign reels: one template, a bold gradient page picked by id (6 presets). */
-  .yapp .y-reel-paint {
+  /* Order and campaign reels: a full-screen light canvas, one of six palettes picked by id. */
+  .yapp .y-reel[data-kind="order"],
+  .yapp .y-reel[data-kind="campaign"] {
     background: linear-gradient(160deg, var(--r-from) 0%, var(--r-to) 100%);
-    color: var(--r-ink);
-    --b-bg: var(--r-from);
-    --b-fg: var(--r-ink);
-    --b-fg-2: var(--r-ink);
-    --b-fg-3: var(--r-ink);
-    --b-line: color-mix(in srgb, var(--r-ink) 24%, transparent);
-    --b-chip: color-mix(in srgb, var(--r-ink) 12%, transparent);
-    --b-chip-fg: var(--r-ink);
+    color: #1d1d1f;
+    color-scheme: light;
+    --y-ink: #1d1d1f;
+    --y-ink-2: #48484d;
+    --y-ink-3: #636366;
+    --y-paper: #ffffff;
+    --y-mist: #e4e4df;
+    --y-line: rgb(14 14 16 / 0.12);
+    --y-line-strong: rgb(14 14 16 / 0.22);
+    --b-bg: #ffffff;
+    --b-fg: #1d1d1f;
+    --b-fg-2: #48484d;
+    --b-fg-3: #636366;
+    --b-line: rgb(14 14 16 / 0.12);
+    --b-chip: rgb(14 14 16 / 0.07);
+    --b-chip-fg: #1d1d1f;
   }
-  .yapp .y-reel-paint[data-reel="1"] {
+  .yapp .y-reel[data-reel="1"] {
     --r-from: var(--y-reel-1-from);
     --r-to: var(--y-reel-1-to);
-    --r-ink: var(--y-reel-1-ink);
+    --r-glow-a: var(--y-reel-1-glow-a);
+    --r-glow-b: var(--y-reel-1-glow-b);
   }
-  .yapp .y-reel-paint[data-reel="2"] {
+  .yapp .y-reel[data-reel="2"] {
     --r-from: var(--y-reel-2-from);
     --r-to: var(--y-reel-2-to);
-    --r-ink: var(--y-reel-2-ink);
+    --r-glow-a: var(--y-reel-2-glow-a);
+    --r-glow-b: var(--y-reel-2-glow-b);
   }
-  .yapp .y-reel-paint[data-reel="3"] {
+  .yapp .y-reel[data-reel="3"] {
     --r-from: var(--y-reel-3-from);
     --r-to: var(--y-reel-3-to);
-    --r-ink: var(--y-reel-3-ink);
+    --r-glow-a: var(--y-reel-3-glow-a);
+    --r-glow-b: var(--y-reel-3-glow-b);
   }
-  .yapp .y-reel-paint[data-reel="4"] {
+  .yapp .y-reel[data-reel="4"] {
     --r-from: var(--y-reel-4-from);
     --r-to: var(--y-reel-4-to);
-    --r-ink: var(--y-reel-4-ink);
+    --r-glow-a: var(--y-reel-4-glow-a);
+    --r-glow-b: var(--y-reel-4-glow-b);
   }
-  .yapp .y-reel-paint[data-reel="5"] {
+  .yapp .y-reel[data-reel="5"] {
     --r-from: var(--y-reel-5-from);
     --r-to: var(--y-reel-5-to);
-    --r-ink: var(--y-reel-5-ink);
+    --r-glow-a: var(--y-reel-5-glow-a);
+    --r-glow-b: var(--y-reel-5-glow-b);
   }
-  .yapp .y-reel-paint[data-reel="6"] {
+  .yapp .y-reel[data-reel="6"] {
     --r-from: var(--y-reel-6-from);
     --r-to: var(--y-reel-6-to);
-    --r-ink: var(--y-reel-6-ink);
+    --r-glow-a: var(--y-reel-6-glow-a);
+    --r-glow-b: var(--y-reel-6-glow-b);
   }
-  /* Graphics are drawn only in the two gradient end colours, so text contrast holds over them. */
-  .yapp .y-reel-shape-to {
-    background: var(--r-to);
+  .yapp .y-reel-backdrop {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
   }
-  .yapp .y-reel-shape-from {
-    background: var(--r-from);
+  .yapp .y-reel-backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.6 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
   }
-  .yapp .y-reel-ring-to {
-    box-shadow: inset 0 0 0 14cqw var(--r-to);
+  .yapp .y-reel-glow {
+    position: absolute;
+    width: 70cqw;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.75;
   }
-  /* Type on order reels scales with the reel (a size container), so short screens still fit. */
+  .yapp .y-reel-glow[data-glow="a"] {
+    top: -12cqh;
+    inset-inline-end: -22cqw;
+    background: var(--r-glow-a);
+  }
+  .yapp .y-reel-glow[data-glow="b"] {
+    bottom: 12cqh;
+    inset-inline-start: -26cqw;
+    background: var(--r-glow-b);
+  }
+
+  /* Who it's from: top start, level with the first feed tab. */
+  .yapp .y-reel-who {
+    position: absolute;
+    z-index: 5;
+    top: var(--reel-top);
+    inset-inline-start: 16px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    max-width: calc(100% - 130px);
+    min-height: 28px;
+    border-radius: var(--y-r-sm);
+  }
+  .yapp .y-reel[data-kind="video"] .y-reel-who {
+    color: #fff;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.38), 0 0 1px rgb(0 0 0 / 0.2);
+  }
+  .yapp .y-reel-who-avatar {
+    flex: none;
+    display: inline-flex;
+    border-radius: 999px;
+    box-shadow:
+      0 0 0 1.5px rgb(255 255 255 / 0.9),
+      0 1px 3px rgb(0 0 0 / 0.2);
+  }
+  .yapp .y-reel-who-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+  .yapp .y-reel-who-sub {
+    display: block;
+    font-size: 11.5px;
+    line-height: 1.25;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The post: text below the name and the tabs' column, then characters, then the facts. */
+  .yapp .y-reel-post {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-block: calc(var(--reel-top) + 108px) var(--reel-bottom);
+    padding-inline: 20px;
+  }
   .yapp .y-reel-title {
-    font-size: clamp(28px, min(10.5cqw, 6.2cqh), 50px);
-    line-height: 1.04;
+    font-size: clamp(24px, min(7.05cqw, 4.4cqh), 34px);
+    font-weight: 800;
+    line-height: 1.08;
     letter-spacing: -0.035em;
   }
-  .yapp .y-reel-line {
-    font-size: clamp(15px, min(4.4cqw, 2.6cqh), 19px);
-    line-height: 1.4;
+  .yapp .y-reel-sub {
+    margin-block-start: 10px;
+    font-size: 15px;
+    line-height: 1.45;
+    color: #48484d;
+  }
+  .yapp .y-reel-tag {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    min-height: 26px;
+    margin-block-end: 10px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.55);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.8);
+    color: #48484d;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Characters: five overlapping shapes scaled as one group, so narrow and short screens fit. */
+  .yapp .y-reel-cast {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin-block: 8px 14px;
+    container-type: size;
+  }
+  .yapp .y-reel-cast-box {
+    position: relative;
+    height: min(100cqh, 44cqw, 170px);
+    aspect-ratio: 340 / 150;
+  }
+  .yapp .y-reel-char {
+    position: absolute;
+    bottom: 0;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.86;
+    mix-blend-mode: multiply;
+    transform-origin: 50% 100%;
+    animation: y-char-float 5s ease-in-out infinite;
+  }
+  .yapp .y-reel-char svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .yapp .y-reel-prop {
+    position: absolute;
+    pointer-events: none;
+  }
+  .yapp .y-reel-prop svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  @container (max-height: 64px) {
+    .yapp .y-reel-cast-box {
+      display: none;
+    }
+  }
+
+  /* The facts and the one button. */
+  .yapp .y-reel-facts {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-block-end: 14px;
   }
   .yapp .y-reel-big {
-    font-size: clamp(30px, min(10cqw, 5.8cqh), 48px);
+    font-size: 34px;
+    font-weight: 800;
     line-height: 1;
-    letter-spacing: -0.04em;
+    letter-spacing: -0.03em;
   }
-  .yapp .y-reel-seats {
-    font-size: clamp(22px, min(7.4cqw, 4.2cqh), 32px);
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+  .yapp .y-reel-unit {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--b-fg-2);
   }
-  .yapp .y-reel-chip {
+  .yapp .y-reel-meta {
+    margin-block-start: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--b-fg-2);
+  }
+
+  /* Video reels' bottom block: caption, one description line, the button. */
+  .yapp .y-reel-bottom {
+    position: absolute;
+    z-index: 4;
+    inset-inline: 16px;
+    bottom: var(--reel-bottom);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+  }
+  .yapp .y-reel-desc {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(14 14 16 / 0.6);
+  }
+
+  .yapp .y-pill.y-reel-cta {
+    position: relative;
+    flex: none;
+    width: 100%;
+    min-height: 52px;
+    padding-inline: 20px;
+    text-shadow: none;
+    pointer-events: auto;
+  }
+  .yapp .y-pill.y-reel-cta[data-variant="neon"] {
+    box-shadow:
+      0 10px 26px -10px rgb(52 240 108 / 0.75),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+  }
+  .yapp .y-pill.y-reel-cta .y-arrow {
+    position: absolute;
+    inset-inline-end: 6px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+  /* Room for the arrow, so a long label truncates instead of running under it. */
+  .yapp .y-pill.y-reel-cta[data-arrow="true"] {
+    padding-inline: 52px;
+  }
+  .yapp .y-pill.y-reel-cta[data-count="true"] {
+    justify-content: flex-start;
+    padding-inline: 20px 6px;
+  }
+  .yapp .y-reel-count {
+    flex: none;
+    margin-inline: auto 46px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgb(11 11 12 / 0.12);
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .yapp .y-reel-count[data-last="true"] {
+    background: #0b0b0c;
+    color: var(--y-neon);
+  }
+  .yapp .y-reel-count-short {
+    display: none;
+  }
+
+  /* Floating controls, above the reel and the short fades. */
+  .yapp .y-reel-fade {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 25;
+    pointer-events: none;
+    transition: opacity var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-reel-fade[data-edge="top"] {
+    top: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 62px);
+    background: linear-gradient(
+      to bottom,
+      rgb(var(--reel-fade) / var(--reel-fade-top)),
+      rgb(var(--reel-fade) / 0)
+    );
+  }
+  .yapp .y-reel-fade[data-edge="bottom"] {
+    bottom: 0;
+    height: calc(env(safe-area-inset-bottom, 0px) + 84px);
+    background: linear-gradient(
+      to top,
+      rgb(var(--reel-fade) / var(--reel-fade-bottom)),
+      rgb(var(--reel-fade) / 0)
+    );
+  }
+  .yapp .y-reel-top {
+    position: absolute;
+    z-index: 30;
+    top: calc(env(safe-area-inset-top, 0px) + 4px);
+    inset-inline: 16px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    color: var(--reel-ink);
+    pointer-events: none;
+    transition: color var(--y-dur-2) var(--y-ease);
+    --b-bg: var(--reel-mark-dot);
+  }
+  .yapp .y-reel-top > * {
+    pointer-events: auto;
+  }
+  .yapp .y-reel-logo {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 32px;
-    padding-inline: 12px;
-    border-radius: 999px;
-    box-shadow: inset 0 0 0 1.5px var(--r-ink);
-    font-size: 0.8125rem;
-    font-weight: 600;
+    min-height: 40px;
+    border-radius: var(--y-r-sm);
+    text-shadow: var(--reel-shadow);
   }
-  .yapp .y-reel-pip {
-    width: 10px;
-    height: 10px;
+  .yapp .y-reel-plus {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
     border-radius: 999px;
-    box-shadow: inset 0 0 0 2px var(--r-ink);
-  }
-  .yapp .y-reel-pip[data-taken="true"] {
-    background: var(--r-ink);
+    border: 1px solid var(--reel-glass-line);
+    background: var(--reel-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow:
+      0 6px 24px -10px rgb(0 0 0 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+    color: var(--reel-ink);
+    cursor: pointer;
+    transition:
+      color var(--y-dur-2) var(--y-ease),
+      background-color var(--y-dur-2) var(--y-ease);
   }
 
-  /* Quiet overlays on top of reels (the For you · Orders · Videos switch). */
-  .yapp .y-reel-overlay {
-    --b-bg: #0e0e10;
-    --b-fg: #fff;
-    --b-chip: rgb(255 255 255 / 0.16);
-    padding: 2px;
+  /* Mix · Yapps · Orders: plain text stacked at the top end, level with the name. */
+  .yapp .y-reel-tabs {
+    position: absolute;
+    z-index: 30;
+    top: var(--reel-top);
+    inset-inline-end: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: var(--reel-ink);
+    text-shadow: var(--reel-shadow);
+    transition: color var(--y-dur-2) var(--y-ease);
+  }
+  /* 32px rows and a wide start edge: the most a tight word stack can give fingers. */
+  .yapp .y-reel-tabs button {
+    position: relative;
+    height: 32px;
+    padding-inline-start: 18px;
+    color: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px;
+    opacity: 0.8;
+    text-shadow: inherit;
+    cursor: pointer;
+  }
+  .yapp .y-reel-tabs button[aria-selected="true"] {
+    font-weight: 700;
+    opacity: 1;
+  }
+  .yapp .y-reel-tabs button[aria-selected="true"]::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    inset-inline-start: 7px;
+    width: 5px;
+    height: 5px;
+    margin-top: -2.5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .yapp .y-reel-hint {
+    position: absolute;
+    z-index: 29;
+    top: 42%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
+    padding: 8px 14px;
     border-radius: 999px;
-    background: rgb(14 14 16 / 0.55);
+    background: rgb(14 14 16 / 0.62);
     color: #fff;
-    -webkit-backdrop-filter: blur(10px);
-    backdrop-filter: blur(10px);
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: y-reel-hint 2.8s var(--y-ease) both;
   }
-  .yapp .y-reel-overlay .y-seg {
-    padding: 0;
-    box-shadow: none;
+  .yapp[dir="rtl"] .y-reel-hint {
+    translate: 50% -50%;
   }
-  .yapp .y-reel-overlay .y-seg button {
+
+  @media (min-width: 1024px) {
+    .yapp .y-reel-top,
+    .yapp .y-reel-fade,
+    .yapp .y-reel-hint {
+      display: none;
+    }
+  }
+
+  /* Swipe left: the details layer. The logo, "+" and the tab bar stay above it. */
+  .yapp .y-details {
+    position: absolute;
+    inset: 0;
+    z-index: 28;
+    display: flex;
+    flex-direction: column;
+    outline: none;
+    background: var(--y-soft);
+    color: var(--y-ink);
+    container-type: inline-size;
+    animation: y-details-in 340ms var(--y-ease) both;
+    --y-details-x: 100%;
+  }
+  .yapp[dir="rtl"] .y-details {
+    --y-details-x: -100%;
+  }
+  .yapp .y-details-scroll {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block: calc(env(safe-area-inset-top, 0px) + 52px) calc(var(--reel-bottom) + 96px);
+    padding-inline: 12px;
+  }
+  .yapp .y-details-back {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
     min-height: 44px;
-    padding-inline: 14px;
+    padding-inline: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .yapp .y-detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: none;
+    padding: 20px;
+    border-radius: 24px;
+    background: var(--y-detail-card);
+    color: var(--b-fg);
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 12px 32px -16px rgb(14 14 16 / 0.16),
+      var(--y-detail-card-edge);
+  }
+  .yapp .y-details-fade {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1;
+    height: calc(var(--reel-bottom) + 96px);
+    background: linear-gradient(to top, var(--y-soft) 72%, rgb(var(--y-soft-rgb) / 0));
+    pointer-events: none;
+  }
+  .yapp .y-details-cta {
+    position: absolute;
+    z-index: 2;
+    inset-inline: 16px;
+    bottom: var(--reel-bottom);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-details {
+      overflow: hidden;
+      border-radius: var(--y-r-block);
+      animation-name: y-details-fade;
+    }
+    .yapp .y-details-scroll {
+      padding-block-start: 12px;
+    }
+  }
+
+  .yapp .y-slotbar {
+    display: flex;
+    gap: 4px;
+  }
+  .yapp .y-slotbar span {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--b-fg) 14%, transparent);
+  }
+  .yapp .y-slotbar span[data-taken="true"] {
+    background: var(--b-fg);
+  }
+
+  /* The Create sheet is glass; other sheets stay solid. */
+  .yapp .y-sheet:has(.y-create-options) {
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+  }
+  .yapp .y-create-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px;
+    border-radius: 20px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    text-align: start;
+    cursor: pointer;
+  }
+
+  /* The phone's glass tab bar. Icons follow the reel in view on the feed. */
+  .yapp .y-tabbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--y-bar-h);
+    padding-inline: 7px;
+    border: 1px solid var(--reel-glass-line);
+    border-radius: 22px;
+    background: var(--reel-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow:
+      0 6px 24px -10px rgb(0 0 0 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.4);
+    color: var(--reel-ink);
+    transition:
+      color var(--y-dur-2) var(--y-ease),
+      background-color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-tabbar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 55%);
+  }
+  .yapp .y-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 999px;
+    color: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition:
+      background-color var(--y-dur-2) var(--y-ease),
+      padding var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-tab[aria-current="page"] {
+    padding-inline: 12px 14px;
+    background: var(--y-glossy-black);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
+    color: #fff;
+  }
+  html.dark:not([data-reel-tone]) .yapp .y-tab[aria-current="page"] {
+    background: #f4f4f0;
+    color: #0e0e10;
+  }
+  .yapp .y-tab[aria-current="page"] .y-tab-label {
+    animation: y-tab-label 220ms var(--y-ease);
+  }
+  .yapp .y-tab-dot {
+    position: absolute;
+    top: 9px;
+    inset-inline-end: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #e5383b;
+    box-shadow: 0 0 0 1.5px #fff;
+  }
+  .yapp .y-tab[aria-current="page"] .y-tab-dot {
+    inset-inline-start: 26px;
+    inset-inline-end: auto;
+  }
+  .yapp .y-tab-me {
+    flex: none;
+    display: inline-flex;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1.5px #fff;
   }
 }
 
-/* Short reels drop the secondary lines and keep titles to three (unlayered, so it beats the
-   display and line-clamp utilities). */
-@container (max-height: 540px) {
-  .yapp .y-reel-hide-short {
-    display: none;
-  }
+/* Short and narrow screens (unlayered, so it beats the display and line-clamp utilities). */
+@container (max-height: 700px) {
   .yapp .y-reel-title {
     -webkit-line-clamp: 3;
     line-clamp: 3;
+  }
+}
+@container (max-height: 600px) {
+  .yapp .y-reel-hide-short {
+    display: none;
+  }
+}
+@container (max-width: 350px) {
+  .yapp .y-reel-count-long {
+    display: none;
+  }
+  .yapp .y-reel-count-short {
+    display: inline;
   }
 }

@@ -1,0 +1,197 @@
+/* Sign-in panel: full glass page on phones, end-side glass panel on desktop.
+   Scope every rule under .yapp, inside @layer components, like app/globals.css. */
+
+@keyframes y-signin-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes y-signin-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes y-signin-up {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+@keyframes y-signin-down {
+  to {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+}
+@keyframes y-signin-side-in {
+  from {
+    transform: translateX(var(--y-signin-x));
+  }
+}
+@keyframes y-signin-side-out {
+  to {
+    transform: translateX(var(--y-signin-x));
+  }
+}
+
+@layer components {
+  .yapp .y-signin {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    --y-signin-x: calc(100% + 32px);
+  }
+  .yapp[dir="rtl"] .y-signin {
+    --y-signin-x: calc(-100% - 32px);
+  }
+
+  .yapp .y-signin-scrim {
+    position: absolute;
+    inset: 0;
+    background: rgb(var(--y-soft-rgb) / 0.5);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    animation: y-signin-fade-in var(--y-dur-2) var(--y-ease) both;
+  }
+
+  .yapp .y-signin-page {
+    position: absolute;
+    inset-block-start: calc(env(safe-area-inset-top, 0px) + 12px);
+    inset-block-end: 0;
+    inset-inline: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 12px 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 28px 28px 0 0;
+    color: var(--b-fg);
+    outline: none;
+    animation: y-signin-up 340ms var(--y-ease) both;
+  }
+
+  @media (min-width: 1024px) {
+    .yapp .y-signin-scrim {
+      background: rgb(var(--y-soft-rgb) / 0.25);
+      -webkit-backdrop-filter: blur(3px);
+      backdrop-filter: blur(3px);
+    }
+    .yapp .y-signin-page {
+      inset-block: 16px;
+      inset-inline: auto 16px;
+      width: 440px;
+      padding: 20px 28px 28px;
+      border-radius: 28px;
+      animation-name: y-signin-side-in;
+    }
+  }
+
+  /* Closing back to the page, or leaving for the feed once signed in. */
+  .yapp .y-signin[data-state="closing"] .y-signin-scrim,
+  .yapp .y-signin[data-state="leaving"] .y-signin-scrim,
+  .yapp .y-signin[data-state="leaving"] .y-signin-page {
+    animation: y-signin-fade-out 180ms var(--y-ease) both;
+  }
+  .yapp .y-signin[data-state="closing"] .y-signin-page {
+    animation: y-signin-down 180ms var(--y-ease) both;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-signin[data-state="closing"] .y-signin-page {
+      animation-name: y-signin-side-out;
+    }
+  }
+
+  /* Country code: reads as "+966", opens the native list with full country names. */
+  .yapp .y-signin-cc {
+    position: relative;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 52px;
+    padding-inline: 16px 12px;
+    border-radius: 999px;
+    border: 1.5px solid transparent;
+    background: var(--b-chip);
+    color: var(--b-chip-fg);
+    font-weight: 600;
+  }
+  .yapp .y-signin-cc:has(select:focus-visible) {
+    border-color: var(--b-fg);
+  }
+  .yapp .y-signin-cc select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .yapp .y-signin-provider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 52px;
+    border-radius: 999px;
+    background: var(--b-chip);
+    color: var(--b-chip-fg);
+    box-shadow: inset 0 0 0 1px var(--y-line);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      transform var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease),
+      opacity var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-signin-provider:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1.5px var(--y-line-strong);
+  }
+  .yapp .y-signin-provider:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .yapp .y-signin-provider:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  /* Apple's pill inverts with the theme: black on light, white on dark. */
+  .yapp .y-signin-provider[data-provider="apple"] {
+    background: var(--y-ink);
+    color: var(--y-canvas);
+    box-shadow: none;
+  }
+
+  .yapp .y-signin-account {
+    display: flex;
+    align-items: center;
+    border-radius: var(--y-r-tile);
+    background: var(--b-chip);
+    color: var(--b-chip-fg);
+  }
+  .yapp .y-signin-account-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 68px;
+    padding-block: 10px;
+    padding-inline: 12px 6px;
+    border-radius: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  .yapp .y-signin-account-main:disabled {
+    cursor: not-allowed;
+  }
+  .yapp .y-signin-account .y-round {
+    background: transparent;
+  }
+  .yapp .y-signin-account .y-round:hover:not(:disabled) {
+    background: var(--y-mist);
+  }
+}

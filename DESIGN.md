@@ -24,7 +24,7 @@ action per screen, and a cast of blob characters. Layouts are our own.
 | Side               | Which side of a deal the viewer is on: ordering ("business") or making ("creator"). Derived per order or commission (`sideOf`), never an account type. UI copy: "You ordered" / "You're making". |
 | Order              | What a buyer places: a **custom request** (creators pitch), a **UGC campaign**, or a direct order from a creator's profile. |
 | UGC campaign       | 10+ videos (steps of 5), each from a different creator, at a fixed price per video set by the **follower tier**. Budget held up front; creators **take a slot** first come, first served. |
-| Slot / yapp        | One creator's place on a campaign; in campaign and feed copy one video is "a yapp" ("Only 3 yapps left"). |
+| Slot / Yapp        | One creator's place on a campaign; in campaign and feed copy one video is "a Yapp" ("Make a Yapp", "1 of 10 remaining"). Other surfaces still say "video". |
 | Review copy        | A campaign video before approval: watermarked, low quality. Approval unlocks the full-quality file. |
 | Wallet             | Where a creator's money sits: **pending** (approved campaign videos, unlocks at month end if the post stays up), **available** (withdraw), paid out. |
 
@@ -77,24 +77,36 @@ Tokens are CSS custom properties on `.yapp` (see `app/globals.css`), redefined f
   colour alone; badges always pair an icon and a label.
 - Illustration tints (`--y-c-violet | sun | sea | coral | mint | blush`) are for characters,
   avatars and thumbnails only, never behind text.
-- **Exception: order reels on Home.** The PM asked for orders in the feed as bold, full-colour
-  pages. They use six gradient presets (`--y-reel-{1..6}-from | -to | -ink`, light and dark sets in
-  `app/globals.css`), picked deterministically per order (`reelGradient(id)`). Every `-ink` passes
-  WCAG AA against both ends of its gradient. Use them only for full-bleed order reels, never for
-  blocks or cards. Neon pills on reels get a 2px ink ring so their edge stays visible on light
-  gradients.
+- **Glass** (`.y-glass`, `data-glass="clear|strong"`, `--y-glass*`, background `--y-soft`) belongs
+  only to the signed-out welcome, sign-in, the reels chrome and the feed's details layer. Every
+  other page stays on `--y-canvas` with solid blocks.
+- **Order and campaign reels** are light pastel canvases with soft glows and film grain, and they
+  stay light in dark mode (they count as media, like video). Their characters use the illustration
+  tints and never sit behind text.
 
 ## The reels feed (Home)
 
 Home (`/home`) is the one full-bleed screen. Rules:
-- The site header and the bottom bar stay exactly as everywhere else. The reel fills the space
-  between them (`--y-fill-h`); on desktop it's a centred phone-width 9:16 column with ↑/↓ buttons.
+- Layers, back to front: media or canvas, reel content, short fades, floating controls. Nothing
+  covers the logo, "+", tabs or the tab bar.
+- Phones: no header. The reel fills the screen under a floating logo and "+", and the glass tab bar
+  floats over its foot. Desktop keeps the header and a centred phone-width 9:16 column with ↑/↓
+  buttons; logo and "+" are hidden there.
+- Mix · Yapps · Orders is a plain vertical word stack on the right, with the name at the top start
+  on the same level. Rows are 32px with a wide start edge (the spec's own tight stack can't reach
+  44px; this is the one accepted exception to the touch-target rule).
+- Colour follows the reel in view: `data-reel-tone="dark|light"` on `<html>` drives the logo, tabs,
+  fades and tab bar icons. Video is dark; canvases are light. Use this attribute, not `data-tone`
+  (which sets a block's surface).
 - One template per reel type, never free-form: creator video (generated scene + captions), custom
-  request and campaign (gradient text pages). One neon pill per reel at the bottom: **Order**
-  (video), **Pitch** (custom request), **Accept** (campaign), **Manage** (your own order). An order
-  the viewer can't act on gets a non-neon "See details".
-- Swipe up for the next reel, swipe left (or tap the pill) for details. Respect reduced motion (no
-  autoplay, no follow-finger animation). The ⋯ menu holds secondary actions (Not interested, Share,
+  request and campaign (light canvases with five tappable characters and one topic prop picked by
+  niche; characters drop out on short screens). One neon pill per reel: **Order** (video), **Pitch**
+  (custom request), **Make a Yapp** with "N of T remaining" inside it (campaign). Other states are
+  non-neon: **Manage** (your own), **Your Yapp · in progress**, **See details** plus one line why,
+  **Campaign full**.
+- Swipe up for the next reel. Swipe left, tap the pill, or press → opens the details layer with one
+  sticky button; Back closes it. Respect reduced motion (no autoplay, no follow-finger animation).
+  The ⋯ menu sits at the end of the bottom row and holds secondary actions (Not interested, Share,
   Report; Edit and Close on your own order).
 - Every other page stays card-based and calm.
 
@@ -171,11 +183,13 @@ Feature entry points: `components/feed` (`ReelFeed`), `components/campaigns` (`C
 without a creator profile tries to pitch or take a slot), `components/work`, `components/explore`.
 
 Shell (`components/shell/`):
-- `AppShell` for signed-in pages (header + mobile bottom bar with one nav for everyone: Home,
-  Explore, Work, Messages, Profile; `focus` hides the bottom bar for wizards/checkout that own the
-  bottom edge; `fullscreen` for the feed).
-- `PublicShell` for marketing, browsing, profiles and auth (header adapts to the session;
-  `footer={false}` for auth/focused pages).
+- `AppShell` for signed-in pages (desktop header: Home, Discover, Work, Messages, Profile, plus
+  bell and avatar; phone glass tab bar: Home, Work, Discover, Inbox, Profile, with the header down
+  to logo and "+"; `focus` hides the tab bar for wizards/checkout that own the bottom edge;
+  `fullscreen` for the feed).
+- `PublicShell` for marketing, browsing and profiles (header adapts to the session;
+  `footer={false}` for focused pages). The signed-out welcome and sign-in use neither: they are
+  their own full-screen scene (`components/landing`, `components/auth/sign-in-panel.tsx`).
 
 ## Data and state
 

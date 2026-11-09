@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useSyncExternalStore } from "react";
 
+import { savedAccounts } from "./saved-accounts";
 import { ACCOUNT_COOKIE, actions } from "./store";
 
 /**
@@ -26,10 +27,16 @@ type Prefs = {
   toggleTheme: () => void;
   /** Signed-in account id, or null when signed out. */
   account: string | null;
+  /** The visitor logged out on purpose: signed-in pages send them to the welcome screen. */
+  loggedOut: boolean;
   /** Sign in (or switch) to a demo account. Purely a prototype session. */
   signIn: (accountId: string) => void;
-  signOut: () => void;
+  /** Log out. `forget` also removes the account from this device's saved accounts. */
+  signOut: (options?: { forget?: boolean }) => void;
 };
+
+/** Set by logging out, cleared by signing in. Tells it apart from a first visit via a shared link. */
+const LOGGED_OUT_COOKIE = "yapp_logged_out";
 
 const PrefsContext = createContext<Prefs | null>(null);
 
@@ -54,10 +61,16 @@ const themeSnapshot = (): Theme =>
   document.documentElement.classList.contains("dark") ? "dark" : "light";
 
 const accountSnapshot = (): string | null => readCookie(ACCOUNT_COOKIE) || null;
+const loggedOutSnapshot = (): boolean => readCookie(LOGGED_OUT_COOKIE) === "1";
+
+/** Keeps the pre-paint `y-session` class (see lib/site.ts) true after the first load. */
+const markSession = (signedIn: boolean) =>
+  document.documentElement.classList.toggle("y-session", signedIn);
 
 export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const theme = useSyncExternalStore(subscribe, themeSnapshot, () => "light" as Theme);
   const account = useSyncExternalStore(subscribe, accountSnapshot, () => null);
+  const loggedOut = useSyncExternalStore(subscribe, loggedOutSnapshot, () => false);
 
   const setTheme = useCallback((next: Theme) => {
     writeCookie("yapp_theme", next);
@@ -68,12 +81,19 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback((accountId: string) => {
     writeCookie(ACCOUNT_COOKIE, accountId);
+    writeCookie(LOGGED_OUT_COOKIE, null);
+    markSession(true);
     actions.switchAccount(accountId);
+    savedAccounts.touch(accountId);
     emit();
   }, []);
 
-  const signOut = useCallback(() => {
+  const signOut = useCallback((options?: { forget?: boolean }) => {
+    const current = readCookie(ACCOUNT_COOKIE);
+    if (options?.forget && current) savedAccounts.forget(current);
     writeCookie(ACCOUNT_COOKIE, null);
+    writeCookie(LOGGED_OUT_COOKIE, "1");
+    markSession(false);
     try {
       window.sessionStorage.removeItem("yapp-account");
     } catch {
@@ -89,10 +109,11 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
       setTheme,
       toggleTheme: () => setTheme(theme === "dark" ? "light" : "dark"),
       account,
+      loggedOut,
       signIn,
       signOut,
     }),
-    [theme, account, setTheme, signIn, signOut],
+    [theme, account, loggedOut, setTheme, signIn, signOut],
   );
 
   return <PrefsContext.Provider value={value}>{children}</PrefsContext.Provider>;

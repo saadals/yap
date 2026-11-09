@@ -12,6 +12,8 @@
 export type ExploreTab = "creators" | "orders";
 export type WorkTab = "ordered" | "making";
 export type OrderType = "campaign" | "custom";
+/** Which door a signed-out visitor came through: order videos, or make them. */
+export type SignInIntent = "ask" | "make";
 
 const q = (params: Record<string, string | number | undefined | null | false>) => {
   const entries = Object.entries(params).filter(
@@ -25,6 +27,7 @@ const q = (params: Record<string, string | number | undefined | null | false>) =
 export const paths = {
   /* public */
   landing: "/",
+  about: "/about",
   howItWorks: "/how-it-works",
   forCreators: "/for-creators",
   creators: "/creators",
@@ -36,7 +39,7 @@ export const paths = {
   ) => `/creators/${handle}/commission${q(params)}`,
 
   /* auth */
-  signIn: (params: { next?: string } = {}) => `/signin${q(params)}`,
+  signIn: (params: { next?: string; intent?: SignInIntent } = {}) => `/signin${q(params)}`,
   signUp: "/signup",
   onboarding: (params: { start?: "order" | "make" | "both"; name?: string; domain?: string } = {}) =>
     `/onboarding${q(params)}`,
@@ -59,6 +62,8 @@ export const paths = {
     `/orders/${id}${q(params)}`,
   pitches: "/pitches",
   messages: (thread?: string) => `/messages${q({ thread })}`,
+  /** The Inbox's Alerts tab (the mobile bar's Inbox holds messages and alerts). */
+  alerts: "/messages?tab=alerts",
   profile: "/profile",
   editProfile: (section?: string) => `/profile/edit${section ? `#${section}` : ""}`,
   wallet: "/wallet",

@@ -117,7 +117,7 @@ export function ThreadList({
           headingLevel={3}
           action={
             <PillButton href={paths.explore()} variant="contrast" size="sm">
-              Explore
+              Discover
             </PillButton>
           }
         />

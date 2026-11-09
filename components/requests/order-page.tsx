@@ -62,12 +62,12 @@ function OrderRouter() {
         <Block tone="paper" pad="lg">
           <EmptyState
             title="We couldn't find that order"
-            body="It may have been deleted, or the link is out of date. Open orders are all in Explore."
+            body="It may have been deleted, or the link is out of date. Open orders are all in Discover."
             shape="dome"
             tint="violet"
             action={
               <PillButton href={paths.explore("orders")} variant="contrast">
-                Explore orders
+                Discover orders
               </PillButton>
             }
           />
