@@ -6,7 +6,6 @@ import { MarketingMain } from "@/components/marketing/blocks";
 import { PublicShell } from "@/components/shell/app-shell";
 import { homeFor } from "@/components/shell/nav";
 import { Block } from "@/components/ui/block";
-import { Character } from "@/components/ui/character";
 import { PillButton } from "@/components/ui/pill-button";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
@@ -40,7 +39,7 @@ export default function NotFound() {
                 Find creators
               </PillButton>
               <PillButton
-                href={homeFor(signedIn)}
+                href={homeFor()}
                 variant="outline"
                 size="lg"
                 icon={<House size={18} aria-hidden />}
@@ -54,21 +53,12 @@ export default function NotFound() {
             pad="lg"
             className="flex min-h-[320px] items-center justify-center overflow-hidden lg:col-span-5"
           >
-            <div
+            <p
               aria-hidden
-              className="y-display y-num flex items-center gap-1 text-[120px] leading-none font-semibold tracking-[-0.06em] md:text-[168px]"
+              className="y-display y-num text-[120px] leading-none tracking-[-0.06em] md:text-[168px]"
             >
-              <span>4</span>
-              <Character
-                shape="ball"
-                tint="sea"
-                face="wow"
-                look={-1}
-                animate
-                className="h-[0.78em] w-auto translate-y-[0.04em]"
-              />
-              <span>4</span>
-            </div>
+              404
+            </p>
           </Block>
         </section>
       </MarketingMain>

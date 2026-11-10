@@ -13,7 +13,15 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { lengthLabel, money, plural, shortDate, timeOf } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import type { DemoState } from "@/lib/store";
-import { addonById, aspects, formatById, languageById, platforms } from "@/lib/taxonomy";
+import {
+  addonById,
+  aspects,
+  formatById,
+  languageById,
+  platforms,
+  RAW_FOOTAGE_INCLUDED,
+  usageOptions,
+} from "@/lib/taxonomy";
 import type { Aspect, Creator, FormatId } from "@/lib/types";
 
 import { extraDaysLabel, tierName } from "../profile-utils";
@@ -606,10 +614,37 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
 /* -------------------------------------------------------------------------- */
 
 export function AddonsEditor({ creator, d, x, set }: EditorProps) {
-  if (!creator.addons.length)
-    return <p className="y-small y-fg-2">{creator.firstName} doesn&apos;t offer add-ons yet.</p>;
   return (
     <>
+      <fieldset className="flex flex-col gap-2">
+        <legend className="y-label mb-2">How you&apos;ll use the videos</legend>
+        <div className="grid gap-2 sm:grid-cols-2">
+          {usageOptions.map((option) => (
+            <label
+              key={option.id}
+              className={`y-tile flex cursor-pointer items-start gap-3 px-4 py-3 ${d.usage === option.id ? "shadow-[inset_0_0_0_2px_var(--b-fg)]" : ""}`}
+            >
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="y-small font-semibold">{option.name}</span>
+                <span className="y-micro y-fg-2">{option.description}</span>
+              </span>
+              <input
+                type="radio"
+                name="usage"
+                className="y-check mt-0.5 flex-none !rounded-full"
+                checked={d.usage === option.id}
+                onChange={() => set({ usage: option.id })}
+              />
+            </label>
+          ))}
+        </div>
+        <p className="y-micro y-fg-2 px-1">
+          Part of the package price, with no separate rights fee. {RAW_FOOTAGE_INCLUDED}
+        </p>
+      </fieldset>
+      {creator.addons.length ? null : (
+        <p className="y-small y-fg-2">{creator.firstName} doesn&apos;t offer add-ons yet.</p>
+      )}
       <ul className="flex flex-col gap-2">
         {creator.addons.map((addon) => {
           const info = addonById[addon.id];
@@ -645,7 +680,6 @@ export function AddonsEditor({ creator, d, x, set }: EditorProps) {
       <p className="y-small y-fg-2">
         Revisions included: <span className="font-semibold text-(--b-fg)">{x.revisions}</span>
         {d.addons.includes("extra-revision") ? ` (${x.pkg.revisions} in the package + 1 extra)` : ` with ${tierName[x.pkg.tier]}`}.
-        Organic use on your own accounts is always included.
       </p>
     </>
   );

@@ -1,0 +1,2828 @@
+@import "tailwindcss";
+@import "./styles/landing.css";
+@import "./styles/auth.css";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Inter carries only 400, 500 and 600 (brand book), so the heavier weight utilities resolve to 600
+   instead of a synthesised bold. */
+@theme {
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+}
+
+html,
+body {
+  margin: 0;
+  background: #f7f7f9;
+}
+html.dark,
+html.dark body {
+  background: #0b0b0c;
+}
+
+/* Yapp design system: the Yapping brand package (round 3) on the structure of the "Stack" system.
+   About 70% light, 20% dark, 10% green; green is a signal, never a wallpaper.
+   Every custom rule is scoped under .yapp. Tokens are unlayered; component classes live in
+   @layer components so Tailwind utilities can override them. */
+
+/* -------------------------------------------------------------------------- */
+/* Tokens                                                                      */
+/* -------------------------------------------------------------------------- */
+
+.yapp {
+  /* Surfaces. --y-paper stays opaque (the package's 90% let content show through sheets, sticky
+     bars and sticky table columns). --y-mist is translucent: chips, tracks, quiet fills. */
+  --y-canvas: #f7f7f9;
+  --y-paper: #ffffff;
+  --y-mist: rgb(29 29 31 / 0.05);
+  --y-night: #0b0b0c;
+  --y-night-fg: #f5f5f7;
+  --y-footer: #141416;
+  --y-field: #ffffff;
+
+  /* Text. --y-ink-2 is the secondary text colour (4.7:1 on the canvas). --y-ink-3 is 2.6:1:
+     decorative marks only (chevrons, axis ticks, dividers), never text people must read.
+     --y-ink-2-mist keeps secondary text at 4.5:1 on a mist block over the canvas. */
+  --y-ink: #1d1d1f;
+  --y-ink-2: #6e6e73;
+  --y-ink-2-mist: #5f5f64;
+  --y-ink-3: #9a9aa0;
+  --y-line: rgb(29 29 31 / 0.06);
+  --y-line-strong: rgb(29 29 31 / 0.12);
+
+  /* Brand green: fills and the one primary action. Text on green is always --y-on-color; green
+     text on light surfaces is --y-green-text; chart lines --y-green-line. */
+  --y-neon: #34f06c;
+  --y-neon-press: #22d95a;
+  --y-on-color: #0b0b0c;
+  --y-green-text: #0a7a33;
+  --y-green-line: #1fc75a;
+  --y-green-tint: #d3fbe0;
+
+  /* Illustration palette: characters, avatars, reel covers. Never a page, card or button fill. */
+  --y-lavender: #cfc8fa;
+  --y-butter: #f7e39b;
+  --y-sky: #bfe3f5;
+
+  /* illustration tints (characters, avatars; never behind text) */
+  --y-c-violet: #8e7cf6;
+  --y-c-sun: #ffc93c;
+  --y-c-sea: #4db6e8;
+  --y-c-coral: #ff8a6b;
+  --y-c-mint: #34f06c;
+  --y-c-blush: #f6a8d8;
+  --y-face: #0e0e10;
+
+  /* Status. Text colours reach 4.5:1 on their own -soft fill, on white and on the canvas, so
+     small chip text stays legible: the package's #16a34a and #e5483b (3.3:1 and 3.9:1) become
+     the darker greens and reds below, and amber goes one step darker. The brand red stays for the
+     notification dot and urgent marks only (--y-red). --y-active-soft fills "moving" chips. */
+  --y-success: #0a7a33;
+  --y-success-soft: rgb(52 240 108 / 0.14);
+  --y-active-fg: #0b0b0c;
+  --y-active-soft: rgb(52 240 108 / 0.2);
+  --y-warning: #a14a08;
+  --y-warning-soft: rgb(245 158 11 / 0.14);
+  --y-danger: #c22a1e;
+  --y-danger-soft: rgb(229 72 59 / 0.1);
+  --y-red: #e5483b;
+  --y-info: #1f55c9;
+  --y-info-soft: rgb(31 85 201 / 0.1);
+  --y-whatsapp: #128c4a;
+
+  /* Shape: soft corners 12 / 18 / 28, sheets 30, fields 14, every button and chip a pill. */
+  --y-r-block: 28px;
+  --y-r-sheet: 30px;
+  --y-r-tile: 18px;
+  --y-r-field: 14px;
+  --y-r-sm: 12px;
+  --y-r-pill: 999px;
+
+  /* Elevation. White cards on a near-white canvas: the hairline ring and the soft drop shadow are
+     what define a card. --y-shadow-float is for menus and fixed bars that sit over content. */
+  --y-shadow-card:
+    0 0 0 1px rgb(29 29 31 / 0.05), inset 0 1px 0 #ffffff, 0 24px 48px -22px rgb(20 20 40 / 0.14),
+    0 2px 6px rgb(20 20 40 / 0.03);
+  --y-shadow-card-hover:
+    0 0 0 1px rgb(29 29 31 / 0.1), inset 0 1px 0 #ffffff, 0 28px 52px -22px rgb(20 20 40 / 0.2),
+    0 2px 6px rgb(20 20 40 / 0.04);
+  --y-shadow-float:
+    0 0 0 1px rgb(29 29 31 / 0.06), inset 0 1px 0 #ffffff, 0 24px 48px -20px rgb(20 20 40 / 0.22),
+    0 4px 12px rgb(20 20 40 / 0.06);
+  --y-shadow-sheet: 0 0 0 1px rgb(29 29 31 / 0.04), 0 24px 64px -12px rgb(11 11 12 / 0.3);
+  --y-shadow-toast: 0 12px 32px -8px rgb(11 11 12 / 0.45);
+  --y-shadow-glow: 0 10px 28px rgb(52 240 108 / 0.4);
+  --y-scrim: rgb(11 11 12 / 0.42);
+  --y-scrim-blur: blur(4px);
+
+  /* Buttons. --y-btn-dark and --y-btn-light are fixed; --y-btn-primary is the primary dark button
+     for the theme (it turns light in dark mode). Blocks set --b-btn for their own surface. */
+  --y-btn-dark: linear-gradient(180deg, #2a2a2c, #0b0b0c);
+  --y-btn-light: linear-gradient(180deg, #ffffff, #e8e8eb);
+  --y-btn-primary: var(--y-btn-dark);
+  --y-btn-primary-fg: #ffffff;
+  --y-toast: #1d1d1f;
+
+  /* motion */
+  --y-dur-1: 140ms;
+  --y-dur-2: 220ms;
+  --y-dur-3: 320ms;
+  --y-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --y-ease-pop: cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  /* Inter, and nothing else. It has no Arabic glyphs, so Arabic snippets fall through to the
+     system's Arabic face. */
+  --y-stack-text:
+    var(--y-font-text), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  /* reels feed: the light canvas behind order and campaign reels, picked by id. These pages are
+     media, so they stay light in dark mode and always use the fixed ink set on .y-reel. */
+  --y-reel-1-from: #eaf2ff;
+  --y-reel-1-to: #f3ecff;
+  --y-reel-1-glow-a: #bcd9ff;
+  --y-reel-1-glow-b: #d9c8ff;
+  --y-reel-2-from: #effff4;
+  --y-reel-2-to: #fff8e6;
+  --y-reel-2-glow-a: #b8f5cc;
+  --y-reel-2-glow-b: #ffe7a8;
+  --y-reel-3-from: #fff4ea;
+  --y-reel-3-to: #eef6ff;
+  --y-reel-3-glow-a: #ffd2b0;
+  --y-reel-3-glow-b: #c8e2ff;
+  --y-reel-4-from: #f1eeff;
+  --y-reel-4-to: #eafbf6;
+  --y-reel-4-glow-a: #d6ccff;
+  --y-reel-4-glow-b: #b8f0dd;
+  --y-reel-5-from: #fdeef5;
+  --y-reel-5-to: #f0f4ff;
+  --y-reel-5-glow-a: #ffc9de;
+  --y-reel-5-glow-b: #c9d6ff;
+  --y-reel-6-from: #fff9e3;
+  --y-reel-6-to: #eafaff;
+  --y-reel-6-glow-a: #ffe59a;
+  --y-reel-6-glow-b: #b8e8f7;
+
+  /* glass: the signed-out welcome, sign-in, the reels chrome and details. Everything else keeps
+     --y-canvas and solid blocks. --y-soft-rgb is for fades that must melt into --y-soft. */
+  --y-soft: #f7f7f9;
+  --y-soft-rgb: 247 247 249;
+  --y-glass: rgb(255 255 255 / 0.6);
+  --y-glass-clear: rgb(255 255 255 / 0.3);
+  --y-glass-strong: rgb(255 255 255 / 0.78);
+  --y-glass-border: rgb(255 255 255 / 0.7);
+  --y-glass-border-clear: rgb(255 255 255 / 0.45);
+  --y-glass-blur: blur(24px) saturate(180%);
+  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  /* Fixed dark gradient (the tab bar's active pill on video stays dark in both themes). */
+  --y-glossy-black: var(--y-btn-dark);
+  --y-detail-card: rgb(255 255 255 / 0.82);
+  --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.8);
+
+  /* page */
+  --y-gutter: 12px;
+  --y-bar-h: 56px;
+
+  color-scheme: light;
+  background: var(--y-canvas);
+  color: var(--y-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Dark mode: the package has no dark values, so this is a matching neutral set. Cards are a step
+   above the canvas, text keeps 4.5:1 (secondary #a1a1a6 is 7:1 on a card), ink-3 stays decorative,
+   status colours lighten to read on their tinted fills. Green and the brand red don't change. */
+html.dark .yapp {
+  --y-canvas: #0b0b0c;
+  --y-paper: #161618;
+  --y-mist: rgb(255 255 255 / 0.07);
+  --y-night: #1c1c1f;
+  --y-night-fg: #f5f5f7;
+  --y-footer: #141416;
+  --y-field: #1c1c1f;
+  --y-ink: #f5f5f7;
+  --y-ink-2: #a1a1a6;
+  --y-ink-2-mist: #a1a1a6;
+  --y-ink-3: #6e6e73;
+  --y-line: rgb(255 255 255 / 0.08);
+  --y-line-strong: rgb(255 255 255 / 0.16);
+
+  --y-green-text: #4ade80;
+  --y-green-line: #34f06c;
+  --y-green-tint: rgb(52 240 108 / 0.16);
+
+  --y-lavender: #b8aef2;
+  --y-butter: #e6d184;
+  --y-sky: #a3d0e8;
+
+  --y-c-violet: #9c8cf7;
+  --y-c-sea: #5cbfeb;
+
+  --y-success: #4ade80;
+  --y-success-soft: rgb(52 240 108 / 0.14);
+  --y-active-fg: #f5f5f7;
+  --y-active-soft: rgb(52 240 108 / 0.2);
+  --y-warning: #f5b04c;
+  --y-warning-soft: rgb(245 158 11 / 0.16);
+  --y-danger: #ff8077;
+  --y-danger-soft: rgb(229 72 59 / 0.16);
+  --y-info: #8db1ff;
+  --y-info-soft: rgb(141 177 255 / 0.14);
+  --y-whatsapp: #1fae5e;
+
+  --y-shadow-card:
+    inset 0 0 0 1px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 24px 48px -22px rgb(0 0 0 / 0.7), 0 2px 6px rgb(0 0 0 / 0.3);
+  --y-shadow-card-hover:
+    inset 0 0 0 1px rgb(255 255 255 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 28px 52px -22px rgb(0 0 0 / 0.8), 0 2px 6px rgb(0 0 0 / 0.35);
+  --y-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.1), 0 16px 40px -8px rgb(0 0 0 / 0.7);
+  --y-shadow-sheet: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.8);
+  --y-shadow-toast: 0 0 0 1px rgb(255 255 255 / 0.1), 0 12px 32px -8px rgb(0 0 0 / 0.7);
+  --y-scrim: rgb(0 0 0 / 0.6);
+
+  --y-btn-primary: var(--y-btn-light);
+  --y-btn-primary-fg: #0b0b0c;
+  --y-toast: #2c2c2e;
+
+  --y-soft: #0b0b0c;
+  --y-soft-rgb: 11 11 12;
+  --y-glass: rgb(28 28 30 / 0.6);
+  --y-glass-clear: rgb(28 28 30 / 0.38);
+  --y-glass-strong: rgb(22 22 24 / 0.8);
+  --y-glass-border: rgb(255 255 255 / 0.1);
+  --y-glass-border-clear: rgb(255 255 255 / 0.12);
+  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --y-detail-card: rgb(22 22 24 / 0.82);
+  --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
+
+  color-scheme: dark;
+}
+
+@media (min-width: 768px) {
+  .yapp {
+    --y-gutter: 24px;
+  }
+}
+
+/* Fonts: Inter everywhere, headings included. */
+.yapp,
+.yapp :is(input, textarea, select, button) {
+  font-family: var(--y-stack-text);
+}
+/* Arabic content snippets inside the English UI (hooks, captions, names). */
+.yapp :lang(ar) {
+  line-height: 1.6;
+}
+.yapp .y-display:lang(ar),
+.yapp .y-display :lang(ar) {
+  line-height: 1.3;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Components                                                                  */
+/* -------------------------------------------------------------------------- */
+
+@layer components {
+  .yapp {
+    min-height: 100dvh;
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .yapp ::selection {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  /* The browser makes these bold (700); the brand stops at 600. */
+  .yapp :is(th, b, strong) {
+    font-weight: 600;
+  }
+
+  /* Focus: the ring takes the foreground colour of whatever block it sits on. */
+  .yapp :focus-visible {
+    outline: 2.5px solid var(--b-fg, var(--y-ink));
+    outline-offset: 2px;
+  }
+  .yapp :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* ---------------------------------------------------------------- type */
+  /* Inter 400 / 500 / 600 only. Headings 600 with tight tracking. Scale: H1 52 (34 on phones),
+     H2 34 (26), H3 18, eyebrow 12 caps, body 15–16. A headline with a .y-strong part sets the rest
+     at 400 so the strong words still stand out. Big numbers: see the unlayered rule at the end. */
+  .yapp .y-display {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .yapp .y-display:has(.y-strong) {
+    font-weight: 400;
+  }
+  .yapp .y-hero {
+    font-size: clamp(2.375rem, 1.6rem + 3.3vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+  }
+  .yapp .y-t-display {
+    font-size: clamp(2.125rem, 1.55rem + 2.4vw, 3.25rem);
+    line-height: 1.04;
+    letter-spacing: -0.038em;
+  }
+  .yapp .y-title {
+    font-size: clamp(1.625rem, 1.38rem + 1vw, 2.125rem);
+    line-height: 1.1;
+    font-weight: 600;
+    letter-spacing: -0.032em;
+  }
+  .yapp .y-head {
+    font-size: 1.125rem;
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.017em;
+  }
+  .yapp .y-body {
+    font-size: 1rem;
+    line-height: 1.55;
+  }
+  .yapp .y-lead {
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  .yapp .y-small {
+    font-size: 0.875rem;
+    line-height: 1.45;
+  }
+  .yapp .y-micro {
+    font-size: 0.75rem;
+    line-height: 1.35;
+    font-weight: 500;
+  }
+  /* Small caps label above a title or a group (12 / 500, +0.08em, secondary colour). */
+  .yapp .y-eyebrow {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-num {
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-strong {
+    font-weight: 600;
+  }
+
+  /* Arabic: bigger, taller, never tracked. Zain runs small, so display sizes get +4px. */
+  .yapp[dir="rtl"] .y-hero {
+    font-size: clamp(3.5rem, 2.3rem + 5.4vw, 6.75rem);
+    line-height: 1.25;
+  }
+  .yapp[dir="rtl"] .y-t-display {
+    font-size: clamp(2.5rem, 1.9rem + 2.5vw, 4rem);
+    line-height: 1.28;
+  }
+  .yapp[dir="rtl"] .y-title {
+    font-size: clamp(1.75rem, 1.6rem + 0.5vw, 2rem);
+    line-height: 1.35;
+  }
+  .yapp[dir="rtl"] .y-head {
+    font-size: 1.1875rem;
+    line-height: 1.5;
+  }
+  .yapp[dir="rtl"] .y-body {
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+  .yapp[dir="rtl"] .y-lead {
+    font-size: 1.125rem;
+    line-height: 1.8;
+  }
+  .yapp[dir="rtl"] .y-small {
+    font-size: 0.9375rem;
+    line-height: 1.65;
+  }
+  .yapp[dir="rtl"] .y-micro {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+  .yapp[dir="rtl"] .y-display .y-strong,
+  .yapp[dir="rtl"] .y-display.y-strong {
+    font-weight: 600;
+  }
+  .yapp[dir="rtl"] .y-eyebrow {
+    letter-spacing: 0;
+    text-transform: none;
+  }
+
+  /* --------------------------------------------------------------- blocks */
+  .yapp .y-block {
+    position: relative;
+    background: var(--b-bg);
+    color: var(--b-fg);
+    border-radius: var(--y-r-block);
+  }
+  /* White cards. The pastel tones (lavender, butter, sky) render as plain white cards too: the
+     brand allows no extra hues behind content. The tokens stay for characters and covers. */
+  .yapp .y-block:where([data-tone="paper"], [data-tone="lavender"], [data-tone="butter"], [data-tone="sky"]) {
+    box-shadow: var(--y-shadow-card);
+  }
+  .yapp [data-tone] {
+    --b-fg: var(--y-on-color);
+    --b-fg-2: rgb(11 11 12 / 0.72);
+    --b-fg-3: rgb(11 11 12 / 0.5);
+    --b-line: rgb(11 11 12 / 0.14);
+    --b-line-strong: rgb(11 11 12 / 0.22);
+    --b-chip: rgb(255 255 255 / 0.55);
+    --b-chip-fg: var(--y-on-color);
+    --b-btn: var(--y-btn-dark);
+    --b-btn-fg: #ffffff;
+  }
+  .yapp [data-tone="paper"],
+  .yapp [data-tone="canvas"],
+  .yapp [data-tone="mist"],
+  .yapp [data-tone="lavender"],
+  .yapp [data-tone="butter"],
+  .yapp [data-tone="sky"] {
+    --b-bg: var(--y-paper);
+    --b-fg: var(--y-ink);
+    --b-fg-2: var(--y-ink-2);
+    --b-fg-3: var(--y-ink-3);
+    --b-line: var(--y-line);
+    --b-line-strong: var(--y-line-strong);
+    --b-chip: var(--y-mist);
+    --b-chip-fg: var(--y-ink);
+    --b-btn: var(--y-btn-primary);
+    --b-btn-fg: var(--y-btn-primary-fg);
+  }
+  .yapp [data-tone="canvas"] {
+    --b-bg: var(--y-canvas);
+    --b-chip: var(--y-paper);
+  }
+  .yapp [data-tone="mist"] {
+    --b-bg: var(--y-mist);
+    --b-fg-2: var(--y-ink-2-mist);
+    --b-chip: var(--y-paper);
+  }
+  .yapp [data-tone="night"] {
+    --b-bg: var(--y-night);
+    --b-fg: var(--y-night-fg);
+    --b-fg-2: rgb(245 245 247 / 0.72);
+    --b-fg-3: rgb(245 245 247 / 0.45);
+    --b-line: rgb(255 255 255 / 0.14);
+    --b-line-strong: rgb(255 255 255 / 0.26);
+    --b-chip: rgb(255 255 255 / 0.1);
+    --b-chip-fg: var(--y-night-fg);
+    --b-btn: var(--y-btn-light);
+    --b-btn-fg: #0b0b0c;
+  }
+  .yapp [data-tone="neon"] {
+    --b-bg: var(--y-neon);
+    --b-chip: rgb(11 11 12 / 0.08);
+  }
+  html.dark .yapp [data-tone="night"] {
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
+  }
+
+  .yapp .y-pad-sm {
+    padding: 16px;
+  }
+  .yapp .y-pad-md {
+    padding: 20px;
+  }
+  .yapp .y-pad-lg {
+    padding: 24px;
+  }
+  @media (min-width: 768px) {
+    .yapp .y-pad-md {
+      padding: 28px;
+    }
+    .yapp .y-pad-lg {
+      padding: 40px;
+    }
+  }
+
+  .yapp .y-fg-2 {
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  /* Tertiary used to be a third, lighter text colour. The brand's tertiary (#9a9aa0, 2.6:1) can't
+     carry readable text, so text with .y-fg-3 takes the secondary colour; only icons (chevrons,
+     spinners: decorative marks) keep the tertiary tone. */
+  .yapp .y-fg-3 {
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp svg.y-fg-3 {
+    color: var(--b-fg-3, var(--y-ink-3));
+  }
+  .yapp .y-hairline {
+    border-color: var(--b-line, var(--y-line));
+  }
+  .yapp .y-tile {
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
+    border-radius: var(--y-r-tile);
+  }
+
+  /* --------------------------------------------------------------- pills */
+  .yapp .y-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 48px;
+    padding-inline: 22px;
+    border-radius: var(--y-r-pill);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform var(--y-dur-1) var(--y-ease),
+      background-color var(--y-dur-1) var(--y-ease),
+      color var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease),
+      opacity var(--y-dur-1) var(--y-ease);
+  }
+  .yapp[dir="rtl"] .y-pill {
+    font-size: 1rem;
+  }
+  .yapp .y-pill:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+  .yapp .y-pill:disabled,
+  .yapp .y-pill[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .yapp .y-pill[data-size="sm"] {
+    min-height: 40px;
+    padding-inline: 16px;
+    font-size: 0.875rem;
+  }
+  .yapp .y-pill[data-size="lg"] {
+    min-height: 56px;
+    padding-inline: 26px;
+    font-size: 1rem;
+  }
+  .yapp .y-pill[data-arrow="true"] {
+    padding-inline-end: 6px;
+  }
+  .yapp .y-pill[data-arrow="true"][data-size="sm"] {
+    padding-inline-end: 4px;
+  }
+  /* Primary green: solid neon, black text, never white. */
+  .yapp .y-pill[data-variant="neon"] {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
+  }
+  .yapp .y-pill[data-variant="neon"]:hover:not(:disabled) {
+    background: var(--y-neon-press);
+  }
+  /* Primary dark: a #2a2a2c → #0b0b0c gradient with white text (light on dark surfaces and in dark
+     mode). On devices with hover it turns green with black text, lifts 1px and glows. */
+  .yapp .y-pill[data-variant="contrast"] {
+    background: var(--b-btn, var(--y-btn-primary));
+    color: var(--b-btn-fg, var(--y-btn-primary-fg));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-pill[data-variant="contrast"]:hover:not(:disabled, [aria-disabled="true"]) {
+      background: var(--y-neon);
+      color: var(--y-on-color);
+      transform: translateY(-1px);
+      box-shadow: var(--y-shadow-glow);
+    }
+    .yapp .y-pill[data-variant="contrast"]:hover:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .yapp .y-pill[data-variant="contrast"]:hover:not(:disabled) .y-arrow {
+      background: var(--y-on-color);
+      color: var(--y-neon);
+    }
+  }
+  /* Secondary: the ghost pills. Soft is a quiet fill, outline a white pill with a hairline. */
+  .yapp .y-pill[data-variant="soft"] {
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
+  }
+  .yapp .y-pill[data-variant="soft"]:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-pill[data-variant="outline"] {
+    background: var(--b-bg, var(--y-paper));
+    color: var(--b-fg, var(--y-ink));
+    box-shadow:
+      inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong)),
+      0 2px 6px rgb(20 20 40 / 0.03);
+  }
+  .yapp .y-pill[data-variant="outline"]:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-pill[data-variant="ghost"] {
+    background: transparent;
+    color: var(--b-fg, var(--y-ink));
+    padding-inline: 14px;
+  }
+  .yapp .y-pill[data-variant="ghost"]:hover:not(:disabled) {
+    background: var(--b-chip, var(--y-mist));
+  }
+  .yapp .y-pill[data-variant="whatsapp"] {
+    background: var(--y-whatsapp);
+    color: #fff;
+  }
+
+  /* arrow circle inside pills (pilo "Book a ride ->") */
+  .yapp .y-arrow {
+    display: inline-grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    margin-inline-start: 6px;
+    background: var(--y-on-color);
+    color: var(--y-neon);
+    flex: none;
+    transition: transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-pill[data-size="lg"] .y-arrow {
+    width: 44px;
+    height: 44px;
+  }
+  .yapp .y-pill[data-size="sm"] .y-arrow {
+    width: 32px;
+    height: 32px;
+  }
+  .yapp .y-pill[data-variant="contrast"] .y-arrow {
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    color: inherit;
+  }
+  .yapp .y-pill[data-variant="soft"] .y-arrow,
+  .yapp .y-pill[data-variant="outline"] .y-arrow {
+    background: var(--b-fg, var(--y-ink));
+    color: var(--b-bg, var(--y-paper));
+  }
+  .yapp .y-pill:hover .y-arrow {
+    transform: translateX(2px);
+  }
+  .yapp[dir="rtl"] .y-pill:hover .y-arrow {
+    transform: translateX(-2px);
+  }
+  .yapp[dir="rtl"] .y-flip {
+    transform: scaleX(-1);
+  }
+
+  /* ---------------------------------------------------------- round icons */
+  .yapp .y-round {
+    display: inline-grid;
+    place-items: center;
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition:
+      transform var(--y-dur-1) var(--y-ease),
+      background-color var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-round[data-size="sm"] {
+    width: 44px;
+    height: 44px;
+  }
+  .yapp .y-round[data-size="lg"] {
+    width: 56px;
+    height: 56px;
+  }
+  .yapp .y-round:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+  .yapp .y-round[data-tone-btn="soft"] {
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
+  }
+  .yapp .y-round[data-tone-btn="soft"]:hover {
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-round[data-tone-btn="contrast"] {
+    background: var(--b-btn, var(--y-btn-primary));
+    color: var(--b-btn-fg, var(--y-btn-primary-fg));
+  }
+  .yapp .y-round[data-tone-btn="outline"] {
+    background: var(--b-bg, var(--y-paper));
+    color: var(--b-fg, var(--y-ink));
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-round[data-tone-btn="outline"]:hover {
+    box-shadow: inset 0 0 0 1px var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-round[data-tone-btn="neon"] {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  .yapp .y-round[aria-pressed="true"] {
+    background: var(--b-fg, var(--y-ink));
+    color: var(--b-bg, var(--y-paper));
+  }
+
+  /* ------------------------------------------------------------ segmented */
+  /* A quiet track with the selected option as a dark pill (selection is black and white, never
+     green). */
+  .yapp .y-seg {
+    display: inline-flex;
+    padding: 3px;
+    gap: 2px;
+    border-radius: 999px;
+    background: var(--b-chip, var(--y-mist));
+  }
+  .yapp .y-seg button {
+    min-height: 34px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--b-fg, var(--y-ink));
+    transition:
+      background-color var(--y-dur-2) var(--y-ease),
+      color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp[dir="rtl"] .y-seg button {
+    font-size: 0.875rem;
+  }
+  .yapp .y-seg[data-size="md"] button {
+    min-height: 40px;
+    padding-inline: 18px;
+    font-size: 0.875rem;
+  }
+  .yapp .y-seg button[aria-checked="true"] {
+    background: var(--b-fg, var(--y-ink));
+    color: var(--b-bg, var(--y-paper));
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgb(11 11 12 / 0.16);
+  }
+  .yapp .y-seg button[aria-checked="false"]:hover {
+    background: var(--b-line, var(--y-line));
+  }
+
+  /* ---------------------------------------------------------------- chips */
+  .yapp .y-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 32px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .yapp[dir="rtl"] .y-chip {
+    font-size: 0.875rem;
+  }
+  .yapp .y-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding-inline: 18px;
+    border-radius: 999px;
+    background: var(--b-chip, var(--y-paper));
+    color: var(--b-chip-fg, var(--y-ink));
+    box-shadow: inset 0 0 0 1px var(--b-line, var(--y-line));
+    font-weight: 500;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--y-dur-2) var(--y-ease),
+      color var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease),
+      transform var(--y-dur-1) var(--y-ease);
+  }
+  .yapp[dir="rtl"] .y-filter {
+    font-size: 0.9375rem;
+  }
+  .yapp .y-filter:hover {
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-filter:active {
+    transform: scale(0.97);
+  }
+  .yapp .y-filter[aria-pressed="true"],
+  .yapp .y-filter[aria-checked="true"],
+  .yapp .y-filter[aria-current="true"] {
+    background: var(--b-fg, var(--y-ink));
+    color: var(--b-bg, var(--y-paper));
+    box-shadow: none;
+    font-weight: 600;
+  }
+  .yapp .y-filter .y-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 24px;
+    height: 24px;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: var(--b-bg, var(--y-canvas));
+    color: var(--b-fg, var(--y-ink));
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-filter[aria-pressed="true"] .y-count,
+  .yapp .y-filter[aria-checked="true"] .y-count,
+  .yapp .y-filter[aria-current="true"] .y-count {
+    background: var(--b-bg, var(--y-paper));
+    color: var(--b-fg, var(--y-ink));
+  }
+
+  /* ---------------------------------------------------------------- badge */
+  /* Status chips, 12.5 / 500 pills, five looks: waiting = neutral, moving = active (black on a
+     green tint), done = success, needs attention = warning, negative = danger. Always icon + label. */
+  .yapp .y-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    min-height: 26px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    font-size: 0.78125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .yapp[dir="rtl"] .y-badge {
+    font-size: 0.875rem;
+  }
+  .yapp .y-badge[data-tone-badge="neutral"] {
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
+  }
+  .yapp .y-badge[data-tone-badge="active"] {
+    background: var(--y-active-soft);
+    color: var(--y-active-fg);
+  }
+  .yapp .y-badge[data-tone-badge="success"] {
+    background: var(--y-success-soft);
+    color: var(--y-success);
+  }
+  .yapp .y-badge[data-tone-badge="warning"] {
+    background: var(--y-warning-soft);
+    color: var(--y-warning);
+  }
+  .yapp .y-badge[data-tone-badge="danger"] {
+    background: var(--y-danger-soft);
+    color: var(--y-danger);
+  }
+  .yapp .y-badge[data-tone-badge="info"] {
+    background: var(--y-info-soft);
+    color: var(--y-info);
+  }
+  .yapp .y-badge[data-tone-badge="ink"] {
+    background: var(--b-fg, var(--y-ink));
+    color: var(--b-bg, var(--y-paper));
+  }
+  .yapp .y-badge[data-tone-badge="neon"] {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  /* Semantic badges on a green block: solid white (dark in dark mode) so the text stays legible. */
+  .yapp
+    [data-tone="neon"]
+    .y-badge:is(
+      [data-tone-badge="active"],
+      [data-tone-badge="success"],
+      [data-tone-badge="warning"],
+      [data-tone-badge="danger"],
+      [data-tone-badge="info"]
+    ) {
+    background: #fff;
+  }
+  html.dark
+    .yapp
+    [data-tone="neon"]
+    .y-badge:is(
+      [data-tone-badge="active"],
+      [data-tone-badge="success"],
+      [data-tone-badge="warning"],
+      [data-tone-badge="danger"],
+      [data-tone-badge="info"]
+    ) {
+    background: #0b0b0c;
+  }
+
+  /* ---------------------------------------------------------------- forms */
+  .yapp .y-label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp[dir="rtl"] .y-label {
+    font-size: 0.9375rem;
+  }
+  /* Inputs: 48px, radius 14, white fill, hairline border; focus is a dark green line with a soft
+     green halo (the line carries the 3:1, the halo is decoration); errors use the danger colour. */
+  .yapp .y-input {
+    width: 100%;
+    min-height: 48px;
+    padding-inline: 16px;
+    border-radius: var(--y-r-field);
+    background-color: var(--y-field);
+    color: var(--y-ink);
+    border: 1px solid var(--y-line-strong);
+    font-size: 1rem;
+    transition:
+      border-color var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease),
+      background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp textarea.y-input {
+    padding-block: 12px;
+    line-height: 1.55;
+    resize: vertical;
+  }
+  .yapp[dir="rtl"] textarea.y-input {
+    line-height: 1.8;
+  }
+  .yapp select.y-input {
+    appearance: none;
+    padding-inline-end: 44px;
+    background-image:
+      linear-gradient(45deg, transparent 50%, currentColor 50%),
+      linear-gradient(135deg, currentColor 50%, transparent 50%);
+    background-position:
+      calc(100% - 22px) 50%,
+      calc(100% - 17px) 50%;
+    background-size: 5px 5px;
+    background-repeat: no-repeat;
+  }
+  .yapp[dir="rtl"] select.y-input {
+    background-position:
+      17px 50%,
+      22px 50%;
+  }
+  .yapp .y-input::placeholder {
+    color: var(--y-ink-2);
+    opacity: 1;
+  }
+  .yapp .y-input:hover {
+    border-color: color-mix(in srgb, var(--y-ink) 24%, transparent);
+  }
+  .yapp .y-input:focus-visible {
+    outline: none;
+    border-color: var(--y-green-text);
+    box-shadow:
+      0 0 0 1px var(--y-green-text),
+      0 0 0 4px rgb(52 240 108 / 0.25);
+  }
+  .yapp .y-input[aria-invalid="true"] {
+    border-color: var(--y-danger);
+  }
+  .yapp .y-input[aria-invalid="true"]:focus-visible {
+    box-shadow:
+      0 0 0 1px var(--y-danger),
+      0 0 0 4px var(--y-danger-soft);
+  }
+  .yapp .y-check {
+    appearance: none;
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 7px;
+    box-shadow: inset 0 0 0 1.5px var(--b-line-strong, var(--y-line-strong));
+    background: var(--b-bg, var(--y-paper));
+    display: inline-grid;
+    place-items: center;
+    cursor: pointer;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-check:checked {
+    background: var(--b-fg, var(--y-ink));
+    box-shadow: none;
+  }
+  .yapp .y-check:checked::after {
+    content: "";
+    width: 10px;
+    height: 6px;
+    border-inline-start: 2px solid var(--b-bg, var(--y-paper));
+    border-bottom: 2px solid var(--b-bg, var(--y-paper));
+    transform: translateY(-1px) rotate(-45deg);
+  }
+  .yapp[dir="rtl"] .y-check:checked::after {
+    transform: translateY(-1px) rotate(45deg);
+  }
+  .yapp .y-switch {
+    appearance: none;
+    flex: none;
+    width: 48px;
+    height: 28px;
+    border-radius: 999px;
+    background: var(--b-line, var(--y-line-strong));
+    position: relative;
+    cursor: pointer;
+    transition: background-color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-switch::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    inset-inline-start: 3px;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: #fff;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.24);
+    transition: inset-inline-start var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-switch:checked {
+    background: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-switch:checked::after {
+    inset-inline-start: 23px;
+    background: var(--y-neon);
+  }
+
+  /* --------------------------------------------------------------- glass */
+  .yapp .y-glass {
+    background: var(--y-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    border: 1px solid var(--y-glass-border);
+    box-shadow: var(--y-glass-shadow);
+  }
+  .yapp .y-glass[data-glass="clear"] {
+    background: var(--y-glass-clear);
+    border-color: var(--y-glass-border-clear);
+  }
+  .yapp .y-glass[data-glass="strong"] {
+    background: var(--y-glass-strong);
+  }
+
+  /* ---------------------------------------------------------- navigation */
+  /* Sticky phone action bars: glass that floats over the page. The stronger fill keeps the bar's
+     own text legible whatever scrolls behind it. */
+  .yapp .y-bar {
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    border: 1px solid var(--y-glass-border);
+    box-shadow: var(--y-glass-shadow);
+    color: var(--y-ink);
+    --b-bg: var(--y-paper);
+    --b-fg: var(--y-ink);
+    --b-fg-2: var(--y-ink-2);
+    --b-fg-3: var(--y-ink-3);
+    --b-line: var(--y-line);
+    --b-line-strong: var(--y-line-strong);
+    --b-chip: var(--y-mist);
+    --b-chip-fg: var(--y-ink);
+    --b-btn: var(--y-btn-primary);
+    --b-btn-fg: var(--y-btn-primary-fg);
+  }
+  .yapp .y-rail-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 48px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    color: rgb(244 244 240 / 0.72);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    transition:
+      background-color var(--y-dur-2) var(--y-ease),
+      color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-rail-item:hover {
+    color: #f4f4f0;
+    background: rgb(255 255 255 / 0.08);
+  }
+  .yapp .y-rail-item[aria-current="page"] {
+    background: #f4f4f0;
+    color: #0e0e10;
+    font-weight: 600;
+  }
+  .yapp .y-navlink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    font-weight: 500;
+    font-size: 0.9375rem;
+    color: var(--y-ink-2);
+    transition:
+      background-color var(--y-dur-1) var(--y-ease),
+      color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-navlink:hover {
+    color: var(--y-ink);
+    background: var(--y-mist);
+  }
+  .yapp .y-navlink[aria-current="page"] {
+    color: var(--y-ink);
+    background: var(--y-paper);
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 2px 6px rgb(20 20 40 / 0.05);
+    font-weight: 600;
+  }
+
+  /* ------------------------------------------------------------ skeleton */
+  .yapp .y-skel {
+    background: var(--b-chip, var(--y-mist));
+    border-radius: 999px;
+    animation: y-pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes y-pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* ------------------------------------------------------- sheet/dialog */
+  .yapp .y-scrim {
+    background: var(--y-scrim);
+    -webkit-backdrop-filter: var(--y-scrim-blur);
+    backdrop-filter: var(--y-scrim-blur);
+    animation: y-fade var(--y-dur-3) var(--y-ease) both;
+  }
+  .yapp .y-sheet {
+    animation: y-sheet-up var(--y-dur-3) var(--y-ease) both;
+    box-shadow: var(--y-shadow-sheet);
+  }
+  @media (min-width: 768px) {
+    .yapp .y-sheet[data-side="end"] {
+      animation-name: y-sheet-in-end;
+    }
+    .yapp[dir="rtl"] .y-sheet[data-side="end"] {
+      animation-name: y-sheet-in-start;
+    }
+    .yapp .y-sheet[data-side="center"] {
+      animation-name: y-pop;
+    }
+  }
+  @keyframes y-fade {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes y-sheet-up {
+    from {
+      transform: translateY(32px);
+      opacity: 0;
+    }
+  }
+  @keyframes y-sheet-in-end {
+    from {
+      transform: translateX(40px);
+      opacity: 0;
+    }
+  }
+  @keyframes y-sheet-in-start {
+    from {
+      transform: translateX(-40px);
+      opacity: 0;
+    }
+  }
+  @keyframes y-pop {
+    from {
+      transform: scale(0.96) translateY(8px);
+      opacity: 0;
+    }
+  }
+  .yapp .y-grabber {
+    width: 40px;
+    height: 5px;
+    border-radius: 999px;
+    background: var(--b-line, var(--y-line-strong));
+  }
+
+  /* -------------------------------------------------------------- toast */
+  /* A dark pill in both themes (a step lighter than the canvas in dark mode). */
+  .yapp .y-toast {
+    --b-bg: var(--y-toast);
+    box-shadow: var(--y-shadow-toast);
+    animation: y-toast-in var(--y-dur-2) var(--y-ease) both;
+  }
+  @keyframes y-toast-in {
+    from {
+      transform: translateY(12px) scale(0.98);
+      opacity: 0;
+    }
+  }
+
+  /* --------------------------------------------------------- reveal/pop */
+  .yapp .y-enter {
+    animation: y-rise var(--y-dur-3) var(--y-ease) both;
+  }
+  @keyframes y-rise {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+  }
+  .yapp .y-char-pop {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: y-char-pop 560ms var(--y-ease-pop) both;
+  }
+  @keyframes y-char-pop {
+    from {
+      transform: translateY(40%) scale(0.6);
+      opacity: 0;
+    }
+    60% {
+      opacity: 1;
+    }
+  }
+  .yapp .y-burst line {
+    stroke-dasharray: 14;
+    stroke-dashoffset: 14;
+    animation: y-burst 520ms var(--y-ease) 420ms forwards;
+  }
+  @keyframes y-burst {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* characters: transparent overlap in light mode */
+  .yapp .y-cast-shape {
+    mix-blend-mode: multiply;
+  }
+  html.dark .yapp .y-cast-shape,
+  .yapp [data-tone="night"] .y-cast-shape {
+    mix-blend-mode: normal;
+  }
+
+  /* ------------------------------------------------------------ helpers */
+  .yapp .y-scroll-x {
+    overflow-x: auto;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x proximity;
+  }
+  .yapp .y-scroll-x::-webkit-scrollbar {
+    display: none;
+  }
+  .yapp .y-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .yapp .y-link {
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 3px;
+    text-decoration-color: var(--b-line, var(--y-line-strong));
+    transition: text-decoration-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-link:hover {
+    text-decoration-color: currentColor;
+  }
+  .yapp .y-safe-bottom {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+  .yapp .y-dots {
+    background-image: radial-gradient(currentColor 1.1px, transparent 1.3px);
+    background-size: 9px 9px;
+  }
+  .yapp .y-bars-grow {
+    transform-origin: bottom;
+    animation: y-grow var(--y-dur-3) var(--y-ease) both;
+  }
+  @keyframes y-grow {
+    from {
+      transform: scaleY(0.2);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yapp *,
+  .yapp *::before,
+  .yapp *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+  .yapp .y-burst line {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Marketplace additions                                                       */
+/* -------------------------------------------------------------------------- */
+
+@layer components {
+  /* Clickable tiles: a hairline ring on hover. Clickable white cards deepen their shadow instead,
+     so they don't lose the edge that defines them. */
+  .yapp .y-hoverable {
+    transition:
+      box-shadow var(--y-dur-1) var(--y-ease),
+      transform var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-hoverable:hover {
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-block.y-hoverable:where([data-tone="paper"], [data-tone="lavender"], [data-tone="butter"], [data-tone="sky"]):hover {
+    box-shadow: var(--y-shadow-card-hover);
+  }
+  .yapp .y-hoverable:active {
+    transform: scale(0.995);
+  }
+
+  /* Video thumbnails (generated, no remote media). */
+  .yapp .y-thumb {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    border-radius: var(--y-r-tile);
+    color: #0e0e10;
+  }
+  .yapp .y-thumb::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(14 14 16 / 0.42), transparent 46%);
+    pointer-events: none;
+    z-index: 1;
+  }
+  .yapp .y-thumb-caption {
+    display: inline;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: #fff;
+    color: #0b0b0c;
+    font-weight: 600;
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
+    line-height: 1.55;
+  }
+  .yapp .y-play {
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.92);
+    color: #0e0e10;
+    box-shadow: 0 6px 18px -6px rgb(14 14 16 / 0.45);
+    transition: transform var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .group:hover .y-play {
+    transform: scale(1.06);
+  }
+
+  /* Range input (budgets, rates). */
+  .yapp .y-range {
+    appearance: none;
+    width: 100%;
+    height: 28px;
+    background: transparent;
+    cursor: pointer;
+  }
+  .yapp .y-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--b-line, var(--y-line-strong));
+  }
+  .yapp .y-range::-moz-range-track {
+    height: 6px;
+    border-radius: 999px;
+    background: var(--b-line, var(--y-line-strong));
+  }
+  .yapp .y-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    margin-top: -10px;
+    border-radius: 999px;
+    background: var(--b-fg, var(--y-ink));
+    box-shadow: 0 0 0 4px var(--b-bg, var(--y-paper));
+  }
+  .yapp .y-range::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--b-fg, var(--y-ink));
+    box-shadow: 0 0 0 4px var(--b-bg, var(--y-paper));
+  }
+
+  /* File drop zone. */
+  .yapp .y-dropzone {
+    border-radius: var(--y-r-tile);
+    border: 2px dashed var(--b-line, var(--y-line-strong));
+    background: var(--b-chip, var(--y-mist));
+    transition:
+      border-color var(--y-dur-1) var(--y-ease),
+      background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-dropzone[data-over="true"],
+  .yapp .y-dropzone:hover {
+    border-color: var(--b-fg, var(--y-ink));
+  }
+
+  /* Typing indicator. */
+  .yapp .y-typing {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .yapp .y-typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.4;
+    animation: y-typing 1.1s ease-in-out infinite;
+  }
+  .yapp .y-typing span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+  .yapp .y-typing span:nth-child(3) {
+    animation-delay: 0.3s;
+  }
+  @keyframes y-typing {
+    0%,
+    100% {
+      opacity: 0.35;
+      transform: translateY(0);
+    }
+    50% {
+      opacity: 1;
+      transform: translateY(-2px);
+    }
+  }
+
+  /* Recording dot (brand + live states). */
+  .yapp .y-rec {
+    animation: y-rec 1.6s ease-in-out infinite;
+  }
+  @keyframes y-rec {
+    50% {
+      opacity: 0.45;
+    }
+  }
+
+  /* Thin progress bar. */
+  .yapp .y-progress {
+    position: relative;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--b-line, var(--y-line-strong));
+    overflow: hidden;
+  }
+  .yapp .y-progress > span {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    border-radius: 999px;
+    background: var(--b-fg, var(--y-ink));
+    transition: width var(--y-dur-3) var(--y-ease);
+  }
+
+  .yapp .y-kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding-inline: 6px;
+    border-radius: 6px;
+    background: var(--b-chip, var(--y-mist));
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .yapp .y-scroll-y {
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yapp .y-typing span,
+  .yapp .y-rec {
+    animation: none !important;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feed / reels (Home: components/feed)                                        */
+/* -------------------------------------------------------------------------- */
+
+/* Below 1024px a reel is the whole screen and every control floats over it: logo and "+" on top,
+   the glass tab bar at the bottom. From 1024px it's a 9:16 column under the header.
+   --reel-top and --reel-bottom are where a reel's own content starts and ends. */
+.yapp {
+  --y-header-h: 72px;
+  --y-fill-h: 100dvh;
+  --reel-top: calc(env(safe-area-inset-top, 0px) + 54px);
+  --reel-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--y-bar-h) + 14px);
+
+  /* What floats over a reel follows the reel in view (the feed sets data-reel-tone on <html>).
+     With no reel in view (details, the end card, every other page) it follows the theme. */
+  --reel-ink: var(--y-ink);
+  --reel-shadow: none;
+  --reel-glass: var(--y-glass);
+  --reel-glass-line: var(--y-glass-border);
+  --reel-fade: var(--y-soft-rgb);
+  --reel-fade-top: 0.7;
+  --reel-fade-bottom: 0.75;
+}
+/* The tab bar's white glass is thinner on video than the spec's 30%: over a bright frame, 30% left
+   white icons below 3:1. */
+/* On video the top fade is the logo's scrim (the brand book: never on busy video without one). */
+html[data-reel-tone="dark"] .yapp {
+  --reel-ink: #ffffff;
+  --reel-shadow: 0 1px 3px rgb(0 0 0 / 0.38), 0 0 1px rgb(0 0 0 / 0.2);
+  --reel-glass: rgb(255 255 255 / 0.18);
+  --reel-glass-line: rgb(255 255 255 / 0.28);
+  --reel-fade: 0 0 0;
+  --reel-fade-top: 0.42;
+  --reel-fade-bottom: 0.28;
+}
+html[data-reel-tone="light"] .yapp {
+  --reel-ink: #1d1d1f;
+  --reel-shadow: 0 1px 1px rgb(255 255 255 / 0.6);
+  --reel-glass: rgb(255 255 255 / 0.3);
+  --reel-glass-line: rgb(255 255 255 / 0.45);
+  --reel-fade: 247 247 249;
+}
+@media (min-width: 1024px) {
+  .yapp {
+    --y-fill-h: max(520px, calc(100dvh - var(--y-header-h) - 24px));
+    --reel-top: 14px;
+    --reel-bottom: 16px;
+  }
+}
+
+@keyframes y-char-float {
+  50% {
+    translate: 0 -6px;
+  }
+}
+@keyframes y-details-in {
+  from {
+    transform: translateX(var(--y-details-x));
+  }
+}
+@keyframes y-details-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes y-reel-hint {
+  0% {
+    opacity: 0;
+  }
+  12%,
+  82% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes y-tab-label {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@layer components {
+  .yapp .y-feed-col {
+    position: relative;
+    width: 100%;
+    height: var(--y-fill-h);
+    margin-inline: auto;
+    overflow: hidden;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-feed-col {
+      width: min(100%, calc(var(--y-fill-h) * 9 / 16));
+      overflow: visible;
+    }
+  }
+
+  /* The vertical scroller: one reel per snap. */
+  .yapp .y-feed {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: y mandatory;
+    scrollbar-width: none;
+  }
+  .yapp .y-feed::-webkit-scrollbar {
+    display: none;
+  }
+  .yapp .y-feed:focus-visible {
+    outline-offset: -2.5px;
+  }
+  .yapp .y-feed-slot {
+    position: relative;
+    flex: none;
+    height: var(--y-fill-h);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  .yapp .y-feed-placeholder {
+    height: 100%;
+    background: var(--y-mist);
+  }
+
+  /* One reel: follows the finger on a horizontal swipe. */
+  .yapp .y-reel {
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    isolation: isolate;
+    container-type: size;
+    touch-action: pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+  }
+  .yapp .y-feed-fill {
+    border-radius: 0;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-feed {
+      gap: 8px;
+      border-radius: var(--y-r-block);
+    }
+    .yapp .y-feed-placeholder,
+    .yapp .y-reel,
+    .yapp .y-feed-fill {
+      border-radius: var(--y-r-block);
+    }
+  }
+
+  /* Revealed behind a reel while it's swiped. */
+  .yapp .y-reel-reveal {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-inline-end: 22px;
+    background: var(--y-soft);
+    color: var(--y-ink);
+    font-weight: 600;
+    opacity: 0;
+  }
+  .yapp [data-swiping] > .y-reel-reveal {
+    opacity: 1;
+  }
+
+  /* Video reels: dark, white text over a soft bottom scrim. */
+  .yapp .y-reel[data-kind="video"] {
+    background: #0b0b0c;
+    color: #fff;
+    --b-bg: #0b0b0c;
+    --b-fg: #fff;
+    --b-line-strong: rgb(255 255 255 / 0.3);
+    --b-chip: rgb(255 255 255 / 0.16);
+    --b-chip-fg: #fff;
+    --b-btn: var(--y-btn-light);
+    --b-btn-fg: #0b0b0c;
+  }
+  /* Taller than the spec's 22%: at 22% the gradient has already faded out under the description. */
+  /* The top part sits behind the name and the Mix · Yapps · Orders stack: white text needs it on a
+     bright frame (the covers are light illustrations, not dark footage). */
+  .yapp .y-reel-scrim {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        to bottom,
+        rgb(14 14 16 / 0.46) 0,
+        rgb(14 14 16 / 0.34) calc(var(--reel-top) + 56px),
+        rgb(14 14 16 / 0.14) calc(var(--reel-top) + 116px),
+        rgb(14 14 16 / 0) calc(var(--reel-top) + 180px)
+      ),
+      linear-gradient(
+        to top,
+        rgb(14 14 16 / 0.62) 0%,
+        rgb(14 14 16 / 0.45) 24%,
+        rgb(14 14 16 / 0) 42%
+      );
+  }
+  .yapp .y-reel-shadow {
+    text-shadow: 0 1px 2px rgb(14 14 16 / 0.6);
+  }
+
+  /* Order and campaign reels: a full-screen light canvas, one of six palettes picked by id. */
+  .yapp .y-reel[data-kind="order"],
+  .yapp .y-reel[data-kind="campaign"] {
+    background: linear-gradient(160deg, var(--r-from) 0%, var(--r-to) 100%);
+    color: #1d1d1f;
+    color-scheme: light;
+    --y-ink: #1d1d1f;
+    --y-ink-2: #48484d;
+    --y-ink-3: #636366;
+    --y-paper: #ffffff;
+    --y-mist: rgb(29 29 31 / 0.06);
+    --y-line: rgb(29 29 31 / 0.1);
+    --y-line-strong: rgb(29 29 31 / 0.18);
+    --b-bg: #ffffff;
+    --b-fg: #1d1d1f;
+    --b-fg-2: #48484d;
+    --b-fg-3: #636366;
+    --b-line: rgb(29 29 31 / 0.1);
+    --b-line-strong: rgb(29 29 31 / 0.18);
+    --b-chip: rgb(29 29 31 / 0.07);
+    --b-chip-fg: #1d1d1f;
+    --b-btn: var(--y-btn-dark);
+    --b-btn-fg: #ffffff;
+  }
+  .yapp .y-reel[data-reel="1"] {
+    --r-from: var(--y-reel-1-from);
+    --r-to: var(--y-reel-1-to);
+    --r-glow-a: var(--y-reel-1-glow-a);
+    --r-glow-b: var(--y-reel-1-glow-b);
+  }
+  .yapp .y-reel[data-reel="2"] {
+    --r-from: var(--y-reel-2-from);
+    --r-to: var(--y-reel-2-to);
+    --r-glow-a: var(--y-reel-2-glow-a);
+    --r-glow-b: var(--y-reel-2-glow-b);
+  }
+  .yapp .y-reel[data-reel="3"] {
+    --r-from: var(--y-reel-3-from);
+    --r-to: var(--y-reel-3-to);
+    --r-glow-a: var(--y-reel-3-glow-a);
+    --r-glow-b: var(--y-reel-3-glow-b);
+  }
+  .yapp .y-reel[data-reel="4"] {
+    --r-from: var(--y-reel-4-from);
+    --r-to: var(--y-reel-4-to);
+    --r-glow-a: var(--y-reel-4-glow-a);
+    --r-glow-b: var(--y-reel-4-glow-b);
+  }
+  .yapp .y-reel[data-reel="5"] {
+    --r-from: var(--y-reel-5-from);
+    --r-to: var(--y-reel-5-to);
+    --r-glow-a: var(--y-reel-5-glow-a);
+    --r-glow-b: var(--y-reel-5-glow-b);
+  }
+  .yapp .y-reel[data-reel="6"] {
+    --r-from: var(--y-reel-6-from);
+    --r-to: var(--y-reel-6-to);
+    --r-glow-a: var(--y-reel-6-glow-a);
+    --r-glow-b: var(--y-reel-6-glow-b);
+  }
+  .yapp .y-reel-backdrop {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+  }
+  .yapp .y-reel-backdrop::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0.6 0'/></filter><rect width='160' height='160' filter='url(%23n)'/></svg>");
+  }
+  .yapp .y-reel-glow {
+    position: absolute;
+    width: 70cqw;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.75;
+  }
+  .yapp .y-reel-glow[data-glow="a"] {
+    top: -12cqh;
+    inset-inline-end: -22cqw;
+    background: var(--r-glow-a);
+  }
+  .yapp .y-reel-glow[data-glow="b"] {
+    bottom: 12cqh;
+    inset-inline-start: -26cqw;
+    background: var(--r-glow-b);
+  }
+
+  /* Who it's from: top start, level with the first feed tab. */
+  .yapp .y-reel-who {
+    position: absolute;
+    z-index: 5;
+    top: var(--reel-top);
+    inset-inline-start: 16px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    max-width: calc(100% - 130px);
+    min-height: 28px;
+    border-radius: var(--y-r-sm);
+  }
+  .yapp .y-reel[data-kind="video"] .y-reel-who {
+    color: #fff;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.38), 0 0 1px rgb(0 0 0 / 0.2);
+  }
+  .yapp .y-reel-who-avatar {
+    flex: none;
+    display: inline-flex;
+    border-radius: 999px;
+    box-shadow:
+      0 0 0 1.5px rgb(255 255 255 / 0.9),
+      0 1px 3px rgb(0 0 0 / 0.2);
+  }
+  .yapp .y-reel-who-name {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.15;
+  }
+  .yapp .y-reel-who-sub {
+    display: block;
+    font-size: 11.5px;
+    line-height: 1.25;
+    opacity: 0.85;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The post: text below the name and the tabs' column, then characters, then the facts. */
+  .yapp .y-reel-post {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding-block: calc(var(--reel-top) + 108px) var(--reel-bottom);
+    padding-inline: 20px;
+  }
+  .yapp .y-reel-title {
+    font-size: clamp(24px, min(7.05cqw, 4.4cqh), 34px);
+    font-weight: 600;
+    line-height: 1.08;
+    letter-spacing: -0.035em;
+  }
+  .yapp .y-reel-sub {
+    margin-block-start: 10px;
+    font-size: 15px;
+    line-height: 1.45;
+    color: #48484d;
+  }
+  .yapp .y-reel-tag {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    min-height: 26px;
+    margin-block-end: 10px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 0.55);
+    box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.8);
+    color: #48484d;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* Characters: five overlapping shapes scaled as one group, so narrow and short screens fit. */
+  .yapp .y-reel-cast {
+    flex: 1 1 0;
+    min-height: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin-block: 8px 14px;
+    container-type: size;
+  }
+  .yapp .y-reel-cast-box {
+    position: relative;
+    height: min(100cqh, 44cqw, 170px);
+    aspect-ratio: 340 / 150;
+  }
+  .yapp .y-reel-char {
+    position: absolute;
+    bottom: 0;
+    padding: 0;
+    cursor: pointer;
+    opacity: 0.86;
+    mix-blend-mode: multiply;
+    transform-origin: 50% 100%;
+    animation: y-char-float 5s ease-in-out infinite;
+  }
+  .yapp .y-reel-char svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .yapp .y-reel-prop {
+    position: absolute;
+    pointer-events: none;
+  }
+  .yapp .y-reel-prop svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  @container (max-height: 64px) {
+    .yapp .y-reel-cast-box {
+      display: none;
+    }
+  }
+
+  /* The facts and the one button. */
+  .yapp .y-reel-facts {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 12px;
+    margin-block-end: 14px;
+  }
+  /* A big number: light on purpose (the brand's KPI style). */
+  .yapp .y-reel-big {
+    font-size: 34px;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .yapp .y-reel-unit {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--b-fg-2);
+  }
+  .yapp .y-reel-meta {
+    margin-block-start: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
+    color: var(--b-fg-2);
+  }
+
+  /* Video reels' bottom block: caption, one description line, the button. */
+  .yapp .y-reel-bottom {
+    position: absolute;
+    z-index: 4;
+    inset-inline: 16px;
+    bottom: var(--reel-bottom);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+  }
+  .yapp .y-reel-desc {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 0 1px 2px rgb(14 14 16 / 0.6);
+  }
+
+  .yapp .y-pill.y-reel-cta {
+    position: relative;
+    flex: none;
+    width: 100%;
+    min-height: 52px;
+    padding-inline: 20px;
+    text-shadow: none;
+    pointer-events: auto;
+  }
+  .yapp .y-pill.y-reel-cta[data-variant="neon"] {
+    box-shadow:
+      0 10px 26px -10px rgb(52 240 108 / 0.75),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+  }
+  .yapp .y-pill.y-reel-cta .y-arrow {
+    position: absolute;
+    inset-inline-end: 6px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+  /* Room for the arrow, so a long label truncates instead of running under it. */
+  .yapp .y-pill.y-reel-cta[data-arrow="true"] {
+    padding-inline: 52px;
+  }
+  .yapp .y-pill.y-reel-cta[data-count="true"] {
+    justify-content: flex-start;
+    padding-inline: 20px 6px;
+  }
+  .yapp .y-reel-count {
+    flex: none;
+    margin-inline: auto 46px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgb(11 11 12 / 0.12);
+    font-size: 12.5px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .yapp .y-reel-count[data-last="true"] {
+    background: #0b0b0c;
+    color: var(--y-neon);
+  }
+  .yapp .y-reel-count-short {
+    display: none;
+  }
+
+  /* Floating controls, above the reel and the short fades. */
+  .yapp .y-reel-fade {
+    position: absolute;
+    inset-inline: 0;
+    z-index: 25;
+    pointer-events: none;
+    transition: opacity var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-reel-fade[data-edge="top"] {
+    top: 0;
+    height: calc(env(safe-area-inset-top, 0px) + 84px);
+    background: linear-gradient(
+      to bottom,
+      rgb(var(--reel-fade) / var(--reel-fade-top)),
+      rgb(var(--reel-fade) / calc(var(--reel-fade-top) * 0.6)) 45%,
+      rgb(var(--reel-fade) / 0)
+    );
+  }
+  .yapp .y-reel-fade[data-edge="bottom"] {
+    bottom: 0;
+    height: calc(env(safe-area-inset-bottom, 0px) + 84px);
+    background: linear-gradient(
+      to top,
+      rgb(var(--reel-fade) / var(--reel-fade-bottom)),
+      rgb(var(--reel-fade) / 0)
+    );
+  }
+  .yapp .y-reel-top {
+    position: absolute;
+    z-index: 30;
+    top: calc(env(safe-area-inset-top, 0px) + 4px);
+    inset-inline: 16px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 40px;
+    color: var(--reel-ink);
+    pointer-events: none;
+    transition: color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-reel-top > * {
+    pointer-events: auto;
+  }
+  .yapp .y-reel-logo {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    border-radius: var(--y-r-sm);
+  }
+  .yapp .y-reel-plus {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--reel-glass-line);
+    background: var(--reel-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow:
+      0 6px 24px -10px rgb(0 0 0 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.45);
+    color: var(--reel-ink);
+    cursor: pointer;
+    transition:
+      color var(--y-dur-2) var(--y-ease),
+      background-color var(--y-dur-2) var(--y-ease);
+  }
+
+  /* Mix · Yapps · Orders: plain text stacked at the top end, level with the name. */
+  .yapp .y-reel-tabs {
+    position: absolute;
+    z-index: 30;
+    top: var(--reel-top);
+    inset-inline-end: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    color: var(--reel-ink);
+    text-shadow: var(--reel-shadow);
+    transition: color var(--y-dur-2) var(--y-ease);
+  }
+  /* 32px rows and a wide start edge: the most a tight word stack can give fingers. */
+  .yapp .y-reel-tabs button {
+    position: relative;
+    height: 32px;
+    padding-inline-start: 18px;
+    color: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 20px;
+    opacity: 0.8;
+    text-shadow: inherit;
+    cursor: pointer;
+  }
+  .yapp .y-reel-tabs button:hover,
+  .yapp .y-reel-tabs button[aria-selected="true"] {
+    opacity: 1;
+  }
+  .yapp .y-reel-tabs button[aria-selected="true"] {
+    font-weight: 600;
+  }
+  .yapp .y-reel-tabs button[aria-selected="true"]::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    inset-inline-start: 7px;
+    width: 5px;
+    height: 5px;
+    margin-top: -2.5px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  .yapp .y-reel-hint {
+    position: absolute;
+    z-index: 29;
+    top: 42%;
+    inset-inline-start: 50%;
+    translate: -50% -50%;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: rgb(14 14 16 / 0.62);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    pointer-events: none;
+    animation: y-reel-hint 2.8s var(--y-ease) both;
+  }
+  .yapp[dir="rtl"] .y-reel-hint {
+    translate: 50% -50%;
+  }
+
+  @media (min-width: 1024px) {
+    .yapp .y-reel-top,
+    .yapp .y-reel-fade,
+    .yapp .y-reel-hint {
+      display: none;
+    }
+  }
+
+  /* Swipe left: the details layer. The logo, "+" and the tab bar stay above it. */
+  .yapp .y-details {
+    position: absolute;
+    inset: 0;
+    z-index: 28;
+    display: flex;
+    flex-direction: column;
+    outline: none;
+    background: var(--y-soft);
+    color: var(--y-ink);
+    container-type: inline-size;
+    animation: y-details-in 340ms var(--y-ease) both;
+    --y-details-x: 100%;
+  }
+  .yapp[dir="rtl"] .y-details {
+    --y-details-x: -100%;
+  }
+  .yapp .y-details-scroll {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-block: calc(env(safe-area-inset-top, 0px) + 52px) calc(var(--reel-bottom) + 96px);
+    padding-inline: 12px;
+  }
+  .yapp .y-details-back {
+    display: inline-flex;
+    align-items: center;
+    align-self: flex-start;
+    gap: 6px;
+    min-height: 44px;
+    padding-inline: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .yapp .y-detail-card {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: none;
+    padding: 20px;
+    border-radius: 24px;
+    background: var(--y-detail-card);
+    color: var(--b-fg);
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 12px 32px -16px rgb(14 14 16 / 0.16),
+      var(--y-detail-card-edge);
+  }
+  .yapp .y-details-fade {
+    position: absolute;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 1;
+    height: calc(var(--reel-bottom) + 96px);
+    background: linear-gradient(to top, var(--y-soft) 72%, rgb(var(--y-soft-rgb) / 0));
+    pointer-events: none;
+  }
+  .yapp .y-details-cta {
+    position: absolute;
+    z-index: 2;
+    inset-inline: 16px;
+    bottom: var(--reel-bottom);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-details {
+      overflow: hidden;
+      border-radius: var(--y-r-block);
+      animation-name: y-details-fade;
+    }
+    .yapp .y-details-scroll {
+      padding-block-start: 12px;
+    }
+  }
+
+  .yapp .y-slotbar {
+    display: flex;
+    gap: 4px;
+  }
+  .yapp .y-slotbar span {
+    flex: 1;
+    height: 5px;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--b-fg) 14%, transparent);
+  }
+  .yapp .y-slotbar span[data-taken="true"] {
+    background: var(--b-fg);
+  }
+
+  /* The Create sheet is glass; other sheets stay solid. */
+  .yapp .y-sheet:has(.y-create-options) {
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+  }
+  .yapp .y-create-option {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px;
+    border-radius: var(--y-r-tile);
+    background: var(--y-paper);
+    color: var(--y-ink);
+    text-align: start;
+    cursor: pointer;
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 2px 6px rgb(20 20 40 / 0.04);
+    transition: box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-create-option:hover {
+    box-shadow:
+      0 0 0 1px var(--y-line-strong),
+      0 6px 16px -6px rgb(20 20 40 / 0.12);
+  }
+
+  /* The phone's glass tab bar. Icons follow the reel in view on the feed. */
+  .yapp .y-tabbar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: var(--y-bar-h);
+    padding-inline: 7px;
+    border: 1px solid var(--reel-glass-line);
+    border-radius: 22px;
+    background: var(--reel-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow:
+      0 6px 24px -10px rgb(0 0 0 / 0.25),
+      inset 0 1px 0 rgb(255 255 255 / 0.4);
+    color: var(--reel-ink);
+    transition:
+      color var(--y-dur-2) var(--y-ease),
+      background-color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-tabbar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 55%);
+  }
+  .yapp .y-tab {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 44px;
+    min-width: 44px;
+    border-radius: 999px;
+    color: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    transition:
+      background-color var(--y-dur-2) var(--y-ease),
+      padding var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-tab[aria-current="page"] {
+    padding-inline: 12px 14px;
+    background: var(--y-glossy-black);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
+    color: #fff;
+  }
+  html.dark:not([data-reel-tone]) .yapp .y-tab[aria-current="page"] {
+    background: var(--y-btn-light);
+    color: #0b0b0c;
+  }
+  .yapp .y-tab[aria-current="page"] .y-tab-label {
+    animation: y-tab-label 220ms var(--y-ease);
+  }
+  .yapp .y-tab-dot {
+    position: absolute;
+    top: 9px;
+    inset-inline-end: 11px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--y-red);
+    box-shadow: 0 0 0 1.5px #fff;
+  }
+  .yapp .y-tab[aria-current="page"] .y-tab-dot {
+    inset-inline-start: 26px;
+    inset-inline-end: auto;
+  }
+  .yapp .y-tab-me {
+    flex: none;
+    display: inline-flex;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1.5px #fff;
+  }
+
+  /* The logo (components/ui/brand.tsx): a pinned tone renders one file; "auto" renders the light
+     and the on-dark file and shows one. It follows the theme, and inside the feed's floating top
+     it follows the reel in view. html.dark is set before paint, data-reel-tone by the feed. */
+  .yapp .y-logo {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+  }
+  .yapp .y-logo > img {
+    display: block;
+  }
+  .yapp .y-logo[data-logo="auto"] > .y-logo-dark,
+  html.dark .yapp .y-logo[data-logo="auto"] > .y-logo-light,
+  html[data-reel-tone="dark"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-light,
+  html[data-reel-tone="light"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-dark {
+    display: none;
+  }
+  html.dark .yapp .y-logo[data-logo="auto"] > .y-logo-dark,
+  html[data-reel-tone="dark"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-dark,
+  html[data-reel-tone="light"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-light {
+    display: block;
+  }
+}
+
+/* Big numbers are light on purpose (brand book: KPIs, prices and money at 400). Unlayered, so it
+   wins over a weight utility written next to it: `y-display y-num` always renders at 400. */
+.yapp .y-display.y-num {
+  font-weight: 400;
+}
+
+/* Short and narrow screens (unlayered, so it beats the display and line-clamp utilities). */
+@container (max-height: 700px) {
+  .yapp .y-reel-title {
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+}
+@container (max-height: 600px) {
+  .yapp .y-reel-hide-short {
+    display: none;
+  }
+}
+@container (max-width: 350px) {
+  .yapp .y-reel-count-long {
+    display: none;
+  }
+  .yapp .y-reel-count-short {
+    display: inline;
+  }
+}
+
+/* ========================================================================== */
+/* V2 refresh                                                                  */
+/* ========================================================================== */
+/* Same brand (logo, colours, Inter, green as a signal, pills, glass that floats), at a product
+   scale: page titles 26–32px instead of 34–52, 40px buttons, 20px card corners, softer shadows,
+   lists as rows in one card. Everything above still applies; this section only resizes it and
+   adds the V2 primitives (.y-list / .y-row, .y-tabs, .y-progress, .y-kv, .y-rail, .y-header).
+   It sits in the components layer after the rules it overrides, so utilities still win. */
+
+.yapp {
+  --y-r-block: 20px;
+  --y-r-sheet: 24px;
+  --y-r-tile: 14px;
+  --y-r-field: 12px;
+  --y-r-sm: 10px;
+  --y-shadow-card:
+    0 0 0 1px rgb(29 29 31 / 0.06), 0 1px 2px rgb(20 20 40 / 0.04), 0 12px 28px -16px rgb(20 20 40 / 0.14);
+  --y-shadow-card-hover:
+    0 0 0 1px rgb(29 29 31 / 0.1), 0 2px 4px rgb(20 20 40 / 0.05), 0 18px 36px -18px rgb(20 20 40 / 0.2);
+  --y-header-h: 60px;
+  --y-content: 1200px;
+  --y-content-narrow: 760px;
+  --y-rail-w: 340px;
+}
+@media (min-width: 1024px) {
+  .yapp {
+    --y-gutter: 32px;
+  }
+}
+
+@layer components {
+  .yapp {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  /* ---------------------------------------------------------------- type */
+  .yapp .y-hero {
+    font-size: clamp(2.5rem, 1.55rem + 3.9vw, 4.5rem);
+    line-height: 1.02;
+    letter-spacing: -0.042em;
+  }
+  /* Marketing section titles (between hero and page title). */
+  .yapp .y-t-section {
+    font-size: clamp(1.75rem, 1.4rem + 1.5vw, 2.625rem);
+    line-height: 1.08;
+    letter-spacing: -0.034em;
+    font-weight: 600;
+  }
+  /* App page titles: 26 on phones, 32 on desktop. */
+  .yapp .y-t-display {
+    font-size: clamp(1.625rem, 1.38rem + 0.95vw, 2rem);
+    line-height: 1.15;
+    letter-spacing: -0.028em;
+  }
+  .yapp .y-title {
+    font-size: clamp(1.25rem, 1.16rem + 0.4vw, 1.5rem);
+    line-height: 1.25;
+    letter-spacing: -0.022em;
+  }
+  .yapp .y-head {
+    font-size: 1rem;
+    line-height: 1.35;
+    letter-spacing: -0.011em;
+  }
+  .yapp .y-body {
+    font-size: 0.9375rem;
+    line-height: 1.55;
+  }
+  .yapp .y-lead {
+    font-size: 1.0625rem;
+    line-height: 1.55;
+  }
+  .yapp .y-small {
+    font-size: 0.8125rem;
+    line-height: 1.45;
+  }
+  .yapp .y-micro {
+    font-size: 0.75rem;
+    line-height: 1.35;
+  }
+  .yapp .y-eyebrow {
+    font-size: 0.6875rem;
+    letter-spacing: 0.07em;
+  }
+
+  /* --------------------------------------------------------------- blocks */
+  .yapp .y-pad-sm {
+    padding: 14px;
+  }
+  .yapp .y-pad-md {
+    padding: 20px;
+  }
+  .yapp .y-pad-lg {
+    padding: 24px;
+  }
+  @media (min-width: 768px) {
+    .yapp .y-pad-md {
+      padding: 24px;
+    }
+    .yapp .y-pad-lg {
+      padding: 32px;
+    }
+  }
+
+  /* --------------------------------------------------------------- pills */
+  .yapp .y-pill {
+    min-height: 40px;
+    padding-inline: 18px;
+    font-size: 0.875rem;
+    gap: 7px;
+  }
+  .yapp .y-pill[data-size="sm"] {
+    min-height: 34px;
+    padding-inline: 14px;
+    font-size: 0.8125rem;
+  }
+  .yapp .y-pill[data-size="lg"] {
+    min-height: 48px;
+    padding-inline: 22px;
+    font-size: 0.9375rem;
+  }
+  .yapp .y-pill[data-arrow="true"] {
+    padding-inline-end: 5px;
+  }
+  .yapp .y-pill[data-arrow="true"][data-size="sm"] {
+    padding-inline-end: 4px;
+  }
+  .yapp .y-arrow {
+    width: 30px;
+    height: 30px;
+  }
+  .yapp .y-pill[data-size="lg"] .y-arrow {
+    width: 38px;
+    height: 38px;
+  }
+  .yapp .y-pill[data-size="sm"] .y-arrow {
+    width: 26px;
+    height: 26px;
+  }
+  .yapp .y-round {
+    width: 40px;
+    height: 40px;
+  }
+  .yapp .y-round[data-size="sm"] {
+    width: 36px;
+    height: 36px;
+  }
+  .yapp .y-round[data-size="lg"] {
+    width: 48px;
+    height: 48px;
+  }
+  .yapp .y-input {
+    min-height: 44px;
+  }
+  .yapp .y-seg[data-size="md"] button {
+    min-height: 36px;
+  }
+  .yapp .y-navlink {
+    min-height: 36px;
+    font-size: 0.875rem;
+  }
+  /* Touch screens keep 44px targets. */
+  @media (pointer: coarse) {
+    .yapp .y-pill {
+      min-height: 44px;
+    }
+    .yapp .y-pill[data-size="sm"] {
+      min-height: 40px;
+    }
+    .yapp .y-round,
+    .yapp .y-round[data-size="sm"] {
+      width: 44px;
+      height: 44px;
+    }
+    .yapp .y-input {
+      min-height: 48px;
+    }
+  }
+
+  /* ---------------------------------------------------------- app header */
+  /* Full-width glass bar (floating chrome), 60px. */
+  .yapp .y-header {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    height: var(--y-header-h);
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    border-bottom: 1px solid var(--y-line);
+  }
+  html.dark .yapp .y-header {
+    background: rgb(11 11 12 / 0.78);
+  }
+  .yapp .y-modepill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--y-ink);
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-modepill:hover {
+    background: var(--y-mist);
+  }
+
+  /* ----------------------------------------------------- lists as rows */
+  /* A card of rows separated by hairlines: calmer than a stack of cards. Rows that are links or
+     buttons get a quiet hover. Use <List> / <Row> from components/ui/list.tsx. */
+  .yapp .y-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .yapp .y-list > .y-row + .y-row,
+  .yapp .y-list > * + * > .y-row:first-child {
+    border-top: 1px solid var(--b-line, var(--y-line));
+  }
+  .yapp .y-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 64px;
+    padding: 12px 20px;
+    text-align: start;
+    width: 100%;
+  }
+  .yapp :is(a, button).y-row {
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp :is(a, button).y-row:hover {
+    background: rgb(29 29 31 / 0.025);
+  }
+  html.dark .yapp :is(a, button).y-row:hover {
+    background: rgb(255 255 255 / 0.035);
+  }
+  .yapp .y-list > .y-row:first-child {
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+  .yapp .y-list > .y-row:last-child {
+    border-end-start-radius: inherit;
+    border-end-end-radius: inherit;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-row {
+      padding: 12px 16px;
+    }
+  }
+
+  /* ----------------------------------------------------- underline tabs */
+  .yapp .y-tabs {
+    display: flex;
+    gap: 22px;
+    border-bottom: 1px solid var(--b-line, var(--y-line));
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .yapp .y-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .yapp .y-tabs > :is(a, button) {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 42px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--b-fg-2, var(--y-ink-2));
+    white-space: nowrap;
+  }
+  .yapp .y-tabs > :is(a, button):hover {
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-tabs > :is([aria-current="page"], [aria-selected="true"]) {
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-tabs > :is([aria-current="page"], [aria-selected="true"])::after {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: -1px;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-tabs .y-count {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+
+  /* ----------------------------------------------------- progress bar */
+  .yapp .y-progress {
+    position: relative;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--b-chip, var(--y-mist));
+    overflow: hidden;
+  }
+  .yapp .y-progress > span {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    border-radius: inherit;
+    background: var(--b-fg, var(--y-ink));
+    transition: width var(--y-dur-3) var(--y-ease);
+  }
+  .yapp .y-progress[data-tone="done"] > span {
+    background: var(--y-green-line);
+  }
+
+  /* ----------------------------------------------------- key / value */
+  .yapp .y-kv {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 16px;
+    row-gap: 10px;
+    font-size: 0.875rem;
+  }
+  .yapp .y-kv > dt {
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-kv > dd {
+    text-align: end;
+    font-weight: 500;
+  }
+
+  /* ----------------------------------------------------- side rail */
+  @media (min-width: 1024px) {
+    .yapp .y-rail {
+      position: sticky;
+      top: calc(var(--y-header-h) + 16px);
+    }
+  }
+
+  /* Count bubble (nav, tabs). */
+  .yapp .y-bubble {
+    display: inline-grid;
+    place-items: center;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 5px;
+    border-radius: 999px;
+    background: var(--y-ink);
+    color: var(--y-paper);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+}
+
+@layer components {
+  .yapp .y-round[data-tone-btn="ghost"] {
+    background: transparent;
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-round[data-tone-btn="ghost"]:hover {
+    background: var(--b-chip, var(--y-mist));
+  }
+}
+
+@layer components {
+  /* V2: the active nav item is a quiet fill on the glass bar (not a white pill on white). */
+  .yapp .y-header .y-navlink[aria-current="page"] {
+    background: var(--y-mist);
+    box-shadow: none;
+    color: var(--y-ink);
+  }
+  html.dark .yapp .y-header .y-navlink[aria-current="page"] {
+    background: rgb(255 255 255 / 0.08);
+  }
+}

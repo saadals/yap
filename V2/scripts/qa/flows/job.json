@@ -1,0 +1,344 @@
+{
+  "account": "nour",
+  "steps": [
+    {
+      "go": "/jobs/c-201",
+      "after": 4000
+    },
+    {
+      "text": "Review version 1 from Layla"
+    },
+    {
+      "text": "It approves itself on Fri, Nov 6"
+    },
+    {
+      "text": "Approve and release $300"
+    },
+    {
+      "shot": "job-c201-review"
+    },
+    {
+      "type": {
+        "sel": "#job-note",
+        "text": "Hold the WhatsApp send on screen a second longer"
+      }
+    },
+    {
+      "click": "Add note"
+    },
+    {
+      "text": "Hold the WhatsApp send on screen a second longer"
+    },
+    {
+      "text": "2 open"
+    },
+    {
+      "click": "Approve and release $300"
+    },
+    {
+      "text": "Approve version 1?"
+    },
+    {
+      "text": "won't be sent as change requests"
+    },
+    {
+      "click": "Approve and release $300 to Layla",
+      "after": 1500
+    },
+    {
+      "text": "Approved \u00b7 $300 released to Layla"
+    },
+    {
+      "text": "How did Layla do?"
+    },
+    {
+      "shot": "job-c201-approved"
+    },
+    {
+      "clickSel": "[aria-label='Quality of the video'] [role=radio]:nth-child(5)",
+      "after": 300
+    },
+    {
+      "clickSel": "[aria-label='Communication'] [role=radio]:nth-child(5)",
+      "after": 300
+    },
+    {
+      "clickSel": "[aria-label='On time'] [role=radio]:nth-child(4)",
+      "after": 300
+    },
+    {
+      "type": {
+        "sel": "textarea[name=review-text]",
+        "text": "Layla nailed the shop counter. The send moment lands in the first three seconds."
+      }
+    },
+    {
+      "click": "Post review",
+      "after": 1200
+    },
+    {
+      "text": "Your review"
+    },
+    {
+      "text": "Tick what should carry into your next brief for Daftar Invoices"
+    },
+    {
+      "click": "Hold the WhatsApp send on screen a second longer"
+    },
+    {
+      "click": "Save 1 learning",
+      "after": 1200
+    },
+    {
+      "text": "1 learning from this job saved to Daftar Invoices"
+    },
+    {
+      "text": "Order again from Layla"
+    },
+    {
+      "eval": "[...document.querySelectorAll('a')].filter(a => a.getClientRects().length && a.innerText.includes('Order again from Layla')).map(a => a.getAttribute('href')).join(' ')"
+    },
+    {
+      "eval": "document.querySelector('a[href*=\"/creators/laylatalks/order\"][href*=\"again=c-201\"]') ? 'order-again link ok' : 'order-again link MISSING'"
+    },
+    {
+      "text": "See it in your Library"
+    },
+    {
+      "shot": "job-c201-done",
+      "full": true
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/jobs/c-302",
+      "after": 3500
+    },
+    {
+      "text": "Qalamy wants to work with you"
+    },
+    {
+      "text": "You earn"
+    },
+    {
+      "notText": "Used 0 of 2"
+    },
+    {
+      "click": "Accept offer",
+      "after": 1500
+    },
+    {
+      "text": "Deliver version 1 by"
+    },
+    {
+      "text": "Upload version 1"
+    },
+    {
+      "click": "Upload version 1"
+    },
+    {
+      "text": "Brief checklist"
+    },
+    {
+      "click": "No file handy? Use a sample",
+      "after": 7000
+    },
+    {
+      "type": {
+        "sel": "textarea[name=deliver-note]",
+        "text": "Version 1: the work email one first. The Arabic landlord message is next."
+      }
+    },
+    {
+      "click": "Send version 1 for review"
+    },
+    {
+      "text": "aren't ticked yet"
+    },
+    {
+      "click": "Send it anyway",
+      "after": 1200
+    },
+    {
+      "text": "Version 1 is with Qalamy"
+    },
+    {
+      "click": "Done"
+    },
+    {
+      "text": "Waiting for Qalamy's review"
+    },
+    {
+      "text": "Version 1: the work email one first"
+    },
+    {
+      "shot": "job-c302-delivered"
+    },
+    {
+      "go": "/orders/r-150",
+      "after": 3500
+    },
+    {
+      "click": "Take a slot"
+    },
+    {
+      "click": "I'll post with the tag"
+    },
+    {
+      "click": "Take the slot",
+      "after": 1800
+    },
+    {
+      "click": "Open the job",
+      "after": 3500
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Film your review copy by"
+    },
+    {
+      "text": "Talking points"
+    },
+    {
+      "click": "Upload review copy"
+    },
+    {
+      "click": "No file handy? Use a sample",
+      "after": 7000
+    },
+    {
+      "click": "Send your review copy for review"
+    },
+    {
+      "click": "Send it anyway",
+      "after": 1200
+    },
+    {
+      "text": "Your review copy is with Daftar"
+    },
+    {
+      "click": "Done"
+    },
+    {
+      "text": "Waiting for Daftar's review"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/jobs/c-n1",
+      "after": 3500
+    },
+    {
+      "text": "Review Layla's copy"
+    },
+    {
+      "text": "Watermarked, low-quality preview"
+    },
+    {
+      "shot": "job-slot-review"
+    },
+    {
+      "click": "Approve video"
+    },
+    {
+      "text": "Approve this video?"
+    },
+    {
+      "clickSel": "[role=dialog] [aria-label='Rate Layla'] [role=radio]:nth-child(5)",
+      "after": 300
+    },
+    {
+      "click": "Approve video",
+      "after": 1500
+    },
+    {
+      "text": "Full-quality file unlocked"
+    },
+    {
+      "text": "Download full quality"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/jobs/c-n1",
+      "after": 3500
+    },
+    {
+      "text": "Post it to unlock $30"
+    },
+    {
+      "text": "Tag @daftar.app in the caption."
+    },
+    {
+      "type": {
+        "sel": "input[name=post-link]",
+        "text": "https://www.tiktok.com/@laylatalks/video/7301234567"
+      }
+    },
+    {
+      "click": "Submit post",
+      "after": 1200
+    },
+    {
+      "text": "Checking your post"
+    },
+    {
+      "wait": 5000
+    },
+    {
+      "text": "Verified: tag found, disclosure found"
+    },
+    {
+      "text": "is released on"
+    },
+    {
+      "text": "Keep it up until"
+    },
+    {
+      "shot": "job-slot-verified"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/creators/omarfahad.studio/order",
+      "after": 4000
+    },
+    {
+      "click": "Send offer",
+      "after": 3000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Waiting for Omar to accept"
+    },
+    {
+      "wait": 7000
+    },
+    {
+      "text": "Omar is making your video"
+    },
+    {
+      "text": "Omar accepted the offer"
+    },
+    {
+      "wait": 27000
+    },
+    {
+      "text": "Review version 1 from Omar"
+    },
+    {
+      "text": "Approve and release $520"
+    },
+    {
+      "shot": "job-live-delivered"
+    }
+  ]
+}

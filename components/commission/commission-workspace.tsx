@@ -1,45 +1,49 @@
 "use client";
 
-import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { useCallback, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { BusinessLogo } from "@/components/domain/business-logo";
-import { StageTrack } from "@/components/domain/stage-track";
 import { Block } from "@/components/ui/block";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { EmptyState } from "@/components/ui/empty-state";
-import { FaceAvatar } from "@/components/ui/face-avatar";
-import { Page } from "@/components/ui/page";
-import { PillButton } from "@/components/ui/pill-button";
+import { BackPill, WidePage } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StickyActionBar } from "@/components/ui/sticky-bar";
 import { paths } from "@/lib/paths";
 import {
+  brandHandleFor,
   businessById,
   commissionById,
   commissionTotals,
   creatorById,
+  isAdCopy,
   latestDelivery,
   productById,
   requestById,
   sideOf,
+  slotPlatform,
+  unreadComments,
 } from "@/lib/selectors";
-import { type DemoState, useDemo, useHydrated } from "@/lib/store";
-import { campaignPlatformById, formatById } from "@/lib/taxonomy";
+import { actions, type DemoState, useDemo, useHydrated } from "@/lib/store";
+import { campaignPlatformById } from "@/lib/taxonomy";
 import type { Commission, Role } from "@/lib/types";
 
-import { type SheetName, type SlotContext, type TabId, type Workspace } from "./helpers";
-import { NextStep } from "./next-step";
-import { ReviewArea } from "./review-area";
+import { unreadIds } from "./comments-panel";
+import { Deliveries, type DeliveriesRequest } from "./deliveries";
+import { type Confirmation, scrollMotion, type SheetName, type SlotContext, TAB_IDS, type TabId, type Workspace } from "./helpers";
+import { useNextStep } from "./next-step";
+import { OrderHeader } from "./order-header";
 import { WorkspaceSheets } from "./sheets";
 import { SidePanels } from "./side-panels";
 import { WorkspaceTabs } from "./workspace-tabs";
 
 /**
- * The commission workspace at /work/[id], for whoever is looking: the side (ordering or making)
- * comes from the signed-in account. One header (who, what, progress and the next step), the
- * review area for deliveries, then messages/brief/activity/files. One slim Details block sits on
- * the side. Campaign slots get their own steps: watermarked review copies, approve / ask for
- * changes / reject, and the creator's post.
+ * The order page at /work/[id] (Work spec 6.8), the same page for the brand and the creator: the
+ * side comes from the signed-in account. Main column: the header card (who, what, status, stages,
+ * next step), Deliveries (versions, player, comments) and the tabs card (Activity, Messages, Brief,
+ * Files). Side column: Details (money) and the person card. Phones: one column, with the stage's
+ * main action in a sticky bar. `?version=`, `?comment=` and `?tab=` open a version, highlight a
+ * comment, or pick a tab.
  */
 export function CommissionWorkspace({ id }: { id: string }) {
   const s = useDemo();
@@ -49,85 +53,112 @@ export function CommissionWorkspace({ id }: { id: string }) {
   if (!hydrated) return <WorkspaceSkeleton />;
   const side = commission ? sideOf(s, commission) : undefined;
   if (!commission || !side) return <NotFound />;
-  return <WorkspaceView key={commission.id} commission={commission} side={side} />;
+  return <WorkspaceView key={`${commission.id}-${side}`} commission={commission} side={side} />;
 }
 
 function NotFound() {
   return (
-    <Page>
-      <Block tone="paper" pad="lg" className="mt-2">
+    <WidePage>
+      <BackPill href={paths.work()} label="Work" />
+      <Block tone="paper" pad="lg">
         <EmptyState
           headingLevel={2}
-          shape="dome"
-          tint="violet"
-          face="sleepy"
-          title="We couldn't find that commission"
+          title="We couldn't find that order"
           body="It may belong to another account, or the link is out of date. Everything you ordered or are making is in Work."
-          action={
-            <PillButton href={paths.work()} variant="contrast" arrow>
-              Go to Work
-            </PillButton>
-          }
         />
       </Block>
-    </Page>
+    </WidePage>
   );
 }
 
 function WorkspaceSkeleton() {
   return (
-    <Page>
-      <div aria-busy="true" aria-label="Loading commission" className="flex flex-col gap-2">
-        <Skeleton className="mb-3 h-6 w-36" />
-        <div className="grid grid-cols-1 gap-2 lg:grid-cols-12">
-          <div className="flex flex-col gap-2 lg:col-span-8">
-            <div data-tone="paper" className="y-block y-pad-lg flex flex-col gap-5">
+    <WidePage>
+      <div aria-busy="true" aria-label="Loading order" className="flex flex-col">
+        <Skeleton className="mb-[18px] h-9 w-24 !rounded-full" />
+        <div className="y-ord-grid">
+          <div className="y-ord-main">
+            <div data-tone="paper" className="y-block y-ord-card y-ord-head flex flex-col gap-5">
               <div className="flex items-center gap-3">
                 <Skeleton className="size-11 !rounded-full" />
                 <Skeleton className="h-4 w-40" />
               </div>
               <Skeleton className="h-12 w-4/5" />
-              <div className="flex gap-2">
-                <Skeleton className="h-8 w-28" />
-                <Skeleton className="h-8 w-24" />
-              </div>
-              <Skeleton className="h-14 w-full" />
+              <Skeleton className="h-3 w-full" />
+              <Skeleton className="h-24 w-full" />
             </div>
-            <div data-tone="paper" className="y-block y-pad-md flex flex-col gap-3">
-              <Skeleton className="h-7 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-12 w-48" />
+            <div data-tone="paper" className="y-block y-ord-card y-ord-body flex flex-col gap-3">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-72 w-full" />
             </div>
           </div>
-          <div className="flex flex-col gap-2 lg:col-span-4">
-            <div data-tone="paper" className="y-block y-pad-md flex flex-col gap-3">
+          <div className="y-ord-side">
+            <div data-tone="paper" className="y-block y-ord-card y-ord-body flex flex-col gap-3">
               <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-32 w-full" />
             </div>
           </div>
         </div>
       </div>
-    </Page>
+    </WidePage>
   );
 }
 
+const isTab = (value: string | null): value is TabId => Boolean(value) && TAB_IDS.includes(value as TabId);
+
 function WorkspaceView({ commission, side }: { commission: Commission; side: Role }) {
   const s = useDemo();
+  const params = useSearchParams();
   const creator = creatorById(s, commission.creatorId);
   const business = businessById(s, commission.businessId);
   const product = productById(s, commission.brief.productId);
   const latest = latestDelivery(commission);
   const [sheet, setSheet] = useState<SheetName | null>(null);
   const [sheetKey, setSheetKey] = useState(0);
-  // A new offer, or a campaign slot still to film, opens on the brief (what to make).
-  const [tab, setTab] = useState<TabId>(
-    side === "creator" &&
-      (commission.status === "offered" || (commission.source === "campaign" && commission.status === "in_progress"))
-      ? "brief"
-      : "messages",
-  );
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
+  const [tab, setTab] = useState<TabId>(() => (isTab(params.get("tab")) ? (params.get("tab") as TabId) : "activity"));
+  const [request, setRequest] = useState<DeliveriesRequest | undefined>();
   const tabsRef = useRef<HTMLElement>(null);
+  const deliveriesRef = useRef<HTMLElement>(null);
+
+  // The URL can open a version, highlight a comment or pick a tab (links from Messages, Alerts,
+  // Work). Applied while rendering when the query changes; the scroll happens in the effect below.
+  const query = params.toString();
+  const [seenQuery, setSeenQuery] = useState<string | null>(null);
+  const [scrollTo, setScrollTo] = useState<{ target: "deliveries" | "tabs"; key: number } | null>(null);
+  if (query !== seenQuery) {
+    setSeenQuery(query);
+    const version = Number(params.get("version"));
+    const comment = params.get("comment") ?? undefined;
+    const delivery = version ? commission.deliveries.find((d) => d.version === version) : undefined;
+    if (delivery || comment) {
+      setRequest({ deliveryId: delivery?.id, commentId: comment, key: (request?.key ?? 0) + 1 });
+      setScrollTo({ target: "deliveries", key: (scrollTo?.key ?? 0) + 1 });
+    }
+    const wanted = params.get("tab");
+    if (seenQuery !== null && isTab(wanted)) {
+      setTab(wanted);
+      setScrollTo({ target: "tabs", key: (scrollTo?.key ?? 0) + 1 });
+    }
+  }
+  useEffect(() => {
+    if (!scrollTo) return;
+    const node = scrollTo.target === "deliveries" ? deliveriesRef.current : tabsRef.current;
+    window.requestAnimationFrame(() => node?.scrollIntoView({ behavior: scrollMotion(), block: "start" }));
+  }, [scrollTo]);
+
+  // What was new to this side when the order opened (and anything that arrives while it's open):
+  // kept for the visit so the "New" marks and version dots survive marking everything read.
+  const unreadNow = unreadIds(commission.deliveries, side);
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set(unreadNow));
+  if (unreadNow.some((id) => !fresh.has(id))) setFresh(new Set([...fresh, ...unreadNow]));
+
+  // Opening the order clears this side's unread comments and replies (the badges in Work).
+  const unread = unreadComments(commission, side);
+  useEffect(() => {
+    if (unread > 0) actions.markCommentsRead(commission.id);
+  }, [commission.id, unread]);
 
   const openSheet = useCallback((name: SheetName) => {
     setSheetKey((key) => key + 1);
@@ -136,22 +167,24 @@ function WorkspaceView({ commission, side }: { commission: Commission; side: Rol
 
   const showTab = useCallback((next: TabId) => {
     setTab(next);
-    window.requestAnimationFrame(() =>
-      tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-    );
+    window.requestAnimationFrame(() => tabsRef.current?.scrollIntoView({ behavior: scrollMotion(), block: "start" }));
   }, []);
 
   const goToMessages = useCallback(() => {
     setTab("messages");
     window.setTimeout(() => {
-      tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      tabsRef.current?.scrollIntoView({ behavior: scrollMotion(), block: "start" });
       tabsRef.current?.querySelector<HTMLTextAreaElement>("textarea")?.focus({ preventScroll: true });
     }, 60);
   }, []);
 
-  const hasDeliveries = commission.deliveries.length > 0;
+  const showDeliveries = useCallback((deliveryId?: string) => {
+    if (deliveryId) setRequest((current) => ({ deliveryId, key: (current?.key ?? 0) + 1 }));
+    window.requestAnimationFrame(() => deliveriesRef.current?.scrollIntoView({ behavior: scrollMotion(), block: "start" }));
+  }, []);
+
   const creatorName = creator?.firstName ?? "the creator";
-  const businessName = business?.name ?? "the client";
+  const businessName = business?.name ?? "the brand";
   const slot = commission.source === "campaign" ? slotContext(s, commission) : undefined;
   const ws: Workspace = {
     commission,
@@ -165,139 +198,87 @@ function WorkspaceView({ commission, side }: { commission: Commission; side: Rol
     otherName: side === "business" ? creatorName : businessName,
     latest,
     slot,
+    adCopy: isAdCopy(commission),
     openSheet,
+    confirm: setConfirmation,
     goToMessages,
     showTab,
+    showDeliveries,
   };
+  const step = useNextStep(ws);
+
+  // An offer, or an order that ended before anything was delivered, has no Deliveries card.
+  const showDeliveriesCard =
+    commission.deliveries.length > 0 ||
+    (commission.status !== "offered" && commission.status !== "cancelled" && commission.status !== "declined");
 
   // The ordering side manages a campaign from its order page; everyone else goes back to Work.
   const back =
     slot && side === "business" && commission.requestId
-      ? { href: paths.order(commission.requestId), label: "Back to campaign" }
+      ? { href: paths.order(commission.requestId), label: "Campaign" }
       : { href: paths.work(side === "business" ? "ordered" : "making"), label: "Work" };
 
   return (
-    <Page>
-      <Link
-        href={back.href}
-        className="y-small y-fg-2 ms-0 mb-2 inline-flex w-fit items-center gap-1.5 rounded-full px-1 py-2 font-medium hover:text-(--y-ink) md:mb-3"
-      >
-        <ArrowLeft size={16} aria-hidden className="y-flip" />
-        {back.label}
-      </Link>
-
-      {/* Mobile order: header, review, details, tabs. On desktop, details sit in the side column. */}
-      <div className="grid grid-cols-1 items-start gap-2 lg:grid-cols-12 [&>*]:min-w-0">
-        <div className="lg:col-span-8">
-          <Header ws={ws} />
-        </div>
-        {hasDeliveries ? (
-          <div className="lg:col-span-8">
-            <ReviewArea ws={ws} />
-          </div>
-        ) : null}
-        <aside
-          aria-labelledby="details-title"
-          className={`lg:col-span-4 lg:col-start-9 lg:row-start-1 ${hasDeliveries ? "lg:row-span-3" : "lg:row-span-2"}`}
-        >
-          <SidePanels ws={ws} />
-        </aside>
-        <div className="lg:col-span-8">
+    <WidePage className={step.bar ? "y-ord-has-bar" : ""}>
+      <BackPill href={back.href} label={back.label} />
+      <div className="y-ord-grid">
+        <div className="y-ord-main">
+          <OrderHeader ws={ws} step={step} />
+          {showDeliveriesCard ? <Deliveries ws={ws} request={request} fresh={fresh} sectionRef={deliveriesRef} /> : null}
           <WorkspaceTabs ws={ws} tab={tab} onTab={setTab} sectionRef={tabsRef} />
         </div>
+        <aside className="y-ord-side" aria-label="Details">
+          <SidePanels ws={ws} />
+        </aside>
       </div>
 
+      {step.bar ? <StickyActionBar label="Next step">{step.bar}</StickyActionBar> : null}
+
       <WorkspaceSheets ws={ws} sheet={sheet} sheetKey={sheetKey} onClose={() => setSheet(null)} />
-    </Page>
+      <ConfirmModal
+        open={Boolean(confirmation)}
+        onClose={() => setConfirmation(null)}
+        title={confirmation?.title ?? ""}
+        primary={{
+          label: confirmation?.primary?.label ?? "Done",
+          onClick: () => {
+            confirmation?.primary?.onClick?.();
+            setConfirmation(null);
+          },
+        }}
+        link={
+          confirmation?.link
+            ? {
+                label: confirmation.link.label,
+                href: confirmation.link.href,
+                onClick: () => {
+                  confirmation.link?.onClick?.();
+                  setConfirmation(null);
+                },
+              }
+            : undefined
+        }
+      >
+        {confirmation?.body}
+      </ConfirmModal>
+    </WidePage>
   );
 }
 
 function slotContext(s: DemoState, commission: Commission): SlotContext {
   const request = commission.requestId ? requestById(s, commission.requestId) : undefined;
   const terms = request?.campaign;
-  const platform = terms ? campaignPlatformById[terms.platform] : undefined;
+  // The one platform this creator posts on (chosen when they picked the slot).
+  const platformId = slotPlatform(commission, request);
+  const platform = terms ? campaignPlatformById[platformId] : undefined;
   const creator = creatorById(s, commission.creatorId);
   return {
     request,
     terms,
+    platform: platformId,
     platformName: platform?.name ?? "the campaign's platform",
     disclosure: platform?.disclosure ?? "Paid partnership label",
-    brandHandle: terms?.brandHandle ?? "the brand account",
-    social: terms ? creator?.socials?.find((a) => a.platform === terms.platform) : undefined,
+    brandHandle: terms ? brandHandleFor(terms, platformId) : "the brand account",
+    social: terms ? creator?.socials?.find((a) => a.platform === platformId) : undefined,
   };
-}
-
-function Header({ ws }: { ws: Workspace }) {
-  const { commission, slot } = ws;
-  // Progress only while work is moving; offers, endings and payouts are said by the next step.
-  // A campaign slot keeps moving after approval until the post is live.
-  const moving =
-    ["in_progress", "revision", "delivered", "disputed"].includes(commission.status) ||
-    (Boolean(slot) && commission.status === "completed" && commission.post?.status !== "live");
-
-  return (
-    <Block as="header" tone="paper" pad="lg" className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4">
-        <WhoLine ws={ws} />
-        <h1 className="y-display y-t-display max-w-[22ch] lg:!text-[52px]">{commission.title}</h1>
-      </div>
-      {moving ? (
-        <StageTrack status={commission.status} campaign={slot ? { post: commission.post } : undefined} />
-      ) : null}
-      <div className="border-t border-(--b-line) pt-6">
-        <NextStep ws={ws} />
-      </div>
-    </Block>
-  );
-}
-
-/** "(avatar) Layla Mansour · App demo · Repeat of “…”": who it's with, the format and where it came from. */
-function WhoLine({ ws }: { ws: Workspace }) {
-  const s = useDemo();
-  const { commission, side, creator, business, slot } = ws;
-  const request = commission.requestId ? requestById(s, commission.requestId) : undefined;
-  const previous = commission.previousCommissionId
-    ? commissionById(s, commission.previousCommissionId)
-    : undefined;
-
-  const source = slot ? (
-    commission.requestId ? (
-      <Link href={paths.order(commission.requestId)} className="y-link">
-        Slot {commission.campaignSlot ?? ""}
-        <span className="max-sm:hidden"> of {request ? `“${request.title}”` : "the campaign"}</span>
-      </Link>
-    ) : (
-      `Slot ${commission.campaignSlot ?? ""}`
-    )
-  ) : commission.previousCommissionId ? (
-    <Link href={paths.commission(commission.previousCommissionId)} className="y-link">
-      Repeat<span className="max-sm:hidden"> of {previous ? `“${previous.title}”` : "an earlier commission"}</span>
-    </Link>
-  ) : commission.source === "request" && commission.requestId ? (
-    <Link href={paths.order(commission.requestId)} className="y-link">
-      From request{request ? <span className="max-sm:hidden"> “{request.title}”</span> : null}
-    </Link>
-  ) : (
-    "Direct offer"
-  );
-
-  return (
-    <div className="flex items-center gap-3">
-      {side === "business" && creator ? <FaceAvatar id={creator.id} name="" size={36} /> : null}
-      {side === "creator" && business ? <BusinessLogo business={business} size={36} /> : null}
-      <p className="y-small y-fg-2 min-w-0">
-        {side === "business" && creator ? (
-          <Link href={paths.creator(creator.handle)} className="font-semibold text-(--b-fg) hover:underline">
-            {creator.name}
-          </Link>
-        ) : (
-          <span className="font-semibold text-(--b-fg)">{ws.businessName}</span>
-        )}
-        {" · "}
-        {slot ? "UGC campaign" : formatById[commission.brief.format]?.name}
-        {" · "}
-        {source}
-      </p>
-    </div>
-  );
 }

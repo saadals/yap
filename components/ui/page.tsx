@@ -4,7 +4,7 @@ import Link from "next/link";
 import { textDir } from "@/lib/taxonomy";
 import type { LanguageId } from "@/lib/types";
 
-/** Standard page container: max 1360px, page gutter, top spacing under the header. */
+/** Standard page container: the page gutter (the header's 72px sides on desktop), top spacing under the header. */
 export function Page({
   children,
   className = "",
@@ -12,13 +12,13 @@ export function Page({
 }: {
   children: React.ReactNode;
   className?: string;
-  /** wide = 1360px app/browse pages, narrow = 880px forms and focused tasks. */
+  /** wide = app/browse pages on the header's margins (1376px at most), narrow = 880px forms and focused tasks. */
   width?: "wide" | "narrow";
 }) {
   return (
     <div
       className={`mx-auto w-full px-(--y-gutter) pt-3 md:pt-5 ${
-        width === "narrow" ? "max-w-[calc(880px+var(--y-gutter)*2)]" : "max-w-[calc(1360px+var(--y-gutter)*2)]"
+        width === "narrow" ? "max-w-[calc(880px+var(--y-gutter)*2)]" : "max-w-[calc(1376px+var(--y-gutter)*2)]"
       } ${className}`}
     >
       {children}
@@ -84,6 +84,103 @@ export function SectionLabel({
         {children}
       </h2>
       {action}
+    </div>
+  );
+}
+
+/**
+ * Container for the redesigned pages (Discover, Work, the job page, the order page, New order,
+ * Productivity; round 3 answers, item 56): 1520px wide, 72px sides from 1024px, 20px on phones,
+ * 36px under the header on desktop. Restyled pages keep `Page`.
+ */
+export function WidePage({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={`y-wide ${className}`}>{children}</div>;
+}
+
+/** The back pill above a detail page: "← Work", "← Find work". 44px tap target. */
+export function BackPill({
+  href,
+  label,
+  onClick,
+  className = "",
+}: {
+  href: string;
+  label: string;
+  onClick?: () => void;
+  className?: string;
+}) {
+  return (
+    <Link href={href} onClick={onClick} className={`y-back ${className}`}>
+      <ArrowLeft size={16} strokeWidth={2} aria-hidden className="y-flip" />
+      {label}
+    </Link>
+  );
+}
+
+/**
+ * Section head on the redesigned pages: eyebrow, H2 (34px, 26 on phones) and an optional item on
+ * the end side (a link, the "Sample data" chip, arrows). 26px below it.
+ */
+export function SectionHead({
+  title,
+  eyebrow,
+  aside,
+  id,
+  as: Heading = "h2",
+  className = "",
+}: {
+  title: React.ReactNode;
+  eyebrow?: React.ReactNode;
+  aside?: React.ReactNode;
+  id?: string;
+  as?: "h1" | "h2" | "h3";
+  className?: string;
+}) {
+  return (
+    <div className={`y-sechead ${className}`}>
+      <div className="y-sechead-l">
+        {eyebrow ? <span className="y-eyebrow">{eyebrow}</span> : null}
+        <Heading id={id} className="y-display y-title">
+          {title}
+        </Heading>
+      </div>
+      {aside ? <div className="flex flex-none items-center gap-3">{aside}</div> : null}
+    </div>
+  );
+}
+
+/**
+ * Card head: an 18px title, an optional muted count after it, and a link or meta on the end side
+ * ("Your orders 3 · All orders", "Deliveries · 1 version · 1 of 2 revisions used").
+ */
+export function CardHead({
+  title,
+  count,
+  aside,
+  id,
+  as: Heading = "h3",
+  className = "",
+}: {
+  title: React.ReactNode;
+  count?: React.ReactNode;
+  aside?: React.ReactNode;
+  id?: string;
+  as?: "h2" | "h3";
+  className?: string;
+}) {
+  return (
+    <div className={`y-cardhead ${className}`}>
+      <Heading id={id} className="y-cardhead-t">
+        {title}
+        {count !== undefined && count !== null ? <span className="y-cardhead-n">{count}</span> : null}
+      </Heading>
+      {aside ? <div className="y-cardhead-a">{aside}</div> : null}
     </div>
   );
 }

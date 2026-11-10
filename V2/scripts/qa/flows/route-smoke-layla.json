@@ -1,0 +1,356 @@
+{
+ "account": "layla",
+ "steps": [
+  {
+   "go": "/home",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/discover",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/discover?tab=saved",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/discover/watch",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/creators/laylatalks",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/creators/omarfahad.studio",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/creators/laylatalks/order",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders?view=open",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders?view=done",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/new",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/new?type=custom",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/new?type=campaign",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/new?draft=r-104",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-101",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-102",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-150",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-201",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-250",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-252",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-201",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-204",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-205",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-203",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-150-2",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-150-3",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-302",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-305",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-301",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/library",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/products",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/products/new",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/products/p-daftar-invoices",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/billing",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/work",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/work?kind=campaign",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/jobs",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/jobs?tab=pitches",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/jobs?tab=done",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/earnings",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/studio/profile",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/messages",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/messages?thread=t-401",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/messages?tab=alerts",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/account",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/settings",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/how-it-works",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/for-creators",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/legal",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  }
+ ],
+ "theme": "dark"
+}

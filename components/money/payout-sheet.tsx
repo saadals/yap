@@ -9,7 +9,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { DAY, NOW, TZ_OFFSET } from "@/lib/clock";
-import { money, weekdayDate } from "@/lib/format";
+import { moneyExact, weekdayDate } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 
@@ -49,17 +49,17 @@ export function PayoutSheet({
   const [done, setDone] = useState<{ amount: number; label: string } | null>(null);
 
   const chosen = methods.find((m) => m.id === (methodId || defaultId));
-  const display = amount ?? String(available);
+  const display = amount ?? String(Math.round(available * 100) / 100);
   const value = Number(display);
   const error =
     display.trim() === ""
       ? "Enter an amount to withdraw."
       : !Number.isFinite(value) || value <= 0
       ? "Enter an amount above $0."
-      : !Number.isInteger(value)
-        ? "Use whole dollars."
-        : value > available
-          ? `You can withdraw up to ${money(available)}.`
+      : !/^\d+(\.\d{1,2})?$/.test(display.trim())
+        ? "Use dollars and cents, like 120 or 96.40."
+        : value > available + 0.001
+          ? `You can withdraw up to ${moneyExact(available)}.`
           : null;
   const arrival = weekdayDate(arrivalDate());
 
@@ -75,7 +75,7 @@ export function PayoutSheet({
     setTouched(true);
     if (error || !chosen) return;
     actions.requestPayout(value, chosen.id);
-    toast({ message: `Payout of ${money(value)} requested. It's on its way to ${chosen.label}.` });
+    toast({ message: `Payout of ${moneyExact(value)} requested. It's on its way to ${chosen.label}.` });
     setDone({ amount: value, label: payoutLabel(chosen) });
   };
 
@@ -98,7 +98,7 @@ export function PayoutSheet({
         <div className="flex flex-col items-center gap-4 text-center">
           <Celebrate className="h-32 w-52" />
           <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
-            {money(done.amount)}
+            {moneyExact(done.amount)}
           </p>
           <p className="y-body y-fg-2 max-w-[36ch]" aria-live="polite">
             Heading to {done.label}. Expect it by {arrival}. You&apos;ll see it as processing in your
@@ -114,7 +114,7 @@ export function PayoutSheet({
       open={open}
       onClose={close}
       title="Withdraw earnings"
-      description={`${money(available)} available. Payouts are free.`}
+      description={`${moneyExact(available)} available. Payouts are free.`}
       width="sm"
       footer={
         methods.length ? (
@@ -125,7 +125,7 @@ export function PayoutSheet({
               variant="contrast"
               disabled={Boolean(error) || !chosen}
             >
-              {error ? "Withdraw" : `Withdraw ${money(value)}`}
+              {error ? "Withdraw" : `Withdraw ${moneyExact(value)}`}
             </PillButton>
             <PillButton variant="ghost" onClick={close}>
               Cancel
@@ -161,7 +161,7 @@ export function PayoutSheet({
           <FieldShell
             label="Amount"
             required
-            hint={`Whole dollars, up to ${money(available)}.`}
+            hint={`Up to ${moneyExact(available)}.`}
             error={touched ? error : null}
           >
             {({ id, describedBy }) => (
@@ -184,8 +184,8 @@ export function PayoutSheet({
                   variant="soft"
                   size="sm"
                   className="absolute end-1.5"
-                  onClick={() => setAmount(String(available))}
-                  aria-label={`Withdraw the maximum, ${money(available)}`}
+                  onClick={() => setAmount(String(Math.round(available * 100) / 100))}
+                  aria-label={`Withdraw the maximum, ${moneyExact(available)}`}
                 >
                   Max
                 </PillButton>

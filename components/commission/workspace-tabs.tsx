@@ -1,58 +1,41 @@
 "use client";
 
-import {
-  Ban,
-  BadgeCheck,
-  Banknote,
-  CalendarClock,
-  CheckCircle2,
-  Download,
-  FileText,
-  Film,
-  Handshake,
-  Image as ImageIcon,
-  KeyRound,
-  LifeBuoy,
-  Lightbulb,
-  Megaphone,
-  Minus,
-  Palette,
-  Plus,
-  Repeat2,
-  Send,
-  ShieldCheck,
-  Star,
-  Ticket,
-  UserCheck,
-  UserMinus,
-  Wallet,
-  XCircle,
-} from "lucide-react";
+import { Download, FileText, Film, Image as ImageIcon, KeyRound, Lightbulb, Palette, Video as VideoIcon } from "lucide-react";
 import Link from "next/link";
 
-import { BriefSummary } from "@/components/domain/brief-summary";
 import { ThreadView } from "@/components/domain/thread-view";
-import { Chip } from "@/components/ui/chip";
+import { DefinitionList } from "@/components/ui/data";
 import { EmptyState } from "@/components/ui/empty-state";
-import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/components/ui/toast";
-import { shortDate, timeAgo, timeOf, weekdayDate } from "@/lib/format";
+import { bytesLabel } from "@/lib/files";
+import { clock, lengthLabel, plural, quoted, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { creatorById, threadById } from "@/lib/selectors";
+import { commentAuthor, creatorById, jobTypeOf, threadById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
-import type { CommissionEvent, ProductAsset } from "@/lib/types";
+import {
+  addonById,
+  aspects,
+  CAMPAIGN_KEEP_LIVE_DAYS,
+  CAMPAIGN_RELEASE_DAYS,
+  formatById,
+  jobTypeById,
+  languageById,
+  platformById,
+  usageById,
+} from "@/lib/taxonomy";
+import type { BriefAttachment, CommissionEvent, ProductAsset } from "@/lib/types";
 
-import { autoApproveDate, type TabId, type Workspace } from "./helpers";
+import { categoryOf, type TabId, whenLabel, type Workspace } from "./helpers";
 
 const tabs: { value: TabId; label: string }[] = [
+  { value: "activity", label: "Activity" },
   { value: "messages", label: "Messages" },
   { value: "brief", label: "Brief" },
-  { value: "activity", label: "Activity" },
   { value: "files", label: "Files" },
 ];
 
+/** The tabs card under Deliveries (Work spec 6.8.4): Activity · Messages · Brief · Files. */
 export function WorkspaceTabs({
   ws,
   tab,
@@ -67,28 +50,83 @@ export function WorkspaceTabs({
   return (
     <section
       ref={sectionRef}
-      aria-label="Commission details"
+      aria-label="Order details"
       data-tone="paper"
-      className="y-block y-pad-md flex scroll-mt-24 flex-col gap-5"
+      className="y-block y-ord-card y-ord-body scroll-mt-28"
     >
-      <SegmentedToggle
-        label="Show"
-        options={tabs}
-        value={tab}
-        onChange={onTab}
-        size="md"
-        className="w-full sm:w-fit [&>button]:flex-1"
-      />
-      <div key={tab} className="y-enter">
+      <SegmentedToggle label="Show" options={tabs} value={tab} onChange={onTab} size="md" fill />
+      <div key={tab} className="y-enter pt-[18px]">
+        {tab === "activity" ? <Activity ws={ws} /> : null}
         {tab === "messages" ? <Messages ws={ws} /> : null}
         {tab === "brief" ? <BriefTab ws={ws} /> : null}
-        {tab === "activity" ? <Activity ws={ws} /> : null}
         {tab === "files" ? <FilesTab ws={ws} /> : null}
       </div>
     </section>
   );
 }
 
+/* -------------------------------------------------------------------------- */
+/* Activity                                                                    */
+/* -------------------------------------------------------------------------- */
+
+const moneyKinds: CommissionEvent["kind"][] = ["funded", "paid", "payout_available"];
+const badKinds: CommissionEvent["kind"][] = ["cancelled", "disputed", "video_rejected", "creator_replaced", "offer_declined"];
+
+type Row = { id: string; at: string; text: string; look?: "money" | "bad" };
+
+/** Newest first; money events marked green, endings and disputes red. Comments join the log. */
+function Activity({ ws }: { ws: Workspace }) {
+  const s = useDemo();
+  const { commission } = ws;
+  const rows: Row[] = commission.events.map((event) => ({
+    id: event.id,
+    at: event.at,
+    text: event.text,
+    look: moneyKinds.includes(event.kind) ? "money" : badKinds.includes(event.kind) ? "bad" : undefined,
+  }));
+  for (const delivery of commission.deliveries) {
+    for (const comment of delivery.comments) {
+      if (comment.deletedAt) continue;
+      const who = commentAuthor(s, commission, comment);
+      const name = who.own ? "you" : who.firstName;
+      rows.push({
+        id: comment.id,
+        at: comment.createdAt,
+        text:
+          comment.atSec === null
+            ? `General comment from ${name} on version ${delivery.version}`
+            : `Comment from ${name} at ${clock(comment.atSec)} on version ${delivery.version}`,
+      });
+    }
+  }
+  rows.sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+
+  if (!rows.length) {
+    return (
+      <EmptyState
+        headingLevel={3}
+        title="No activity yet"
+        body="Offers, deliveries, comments, approvals and payments are logged here as they happen."
+      />
+    );
+  }
+  return (
+    <ol className="y-ord-act" aria-label="Activity, newest first">
+      {rows.map((row) => (
+        <li key={row.id} data-look={row.look}>
+          <span className="sr-only">{row.look === "money" ? "Money: " : ""}</span>
+          {row.text}
+          <small>
+            <time dateTime={row.at}>{whenLabel(row.at)}</time>
+          </small>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Messages                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function Messages({ ws }: { ws: Workspace }) {
@@ -98,10 +136,8 @@ function Messages({ ws }: { ws: Workspace }) {
     return (
       <EmptyState
         headingLevel={3}
-        shape="bean"
-        tint="sea"
         title="No conversation yet"
-        body="Messages about this commission will appear here."
+        body="Messages about this order show up here."
       />
     );
   }
@@ -110,12 +146,172 @@ function Messages({ ws }: { ws: Workspace }) {
       threadId={thread.id}
       role={ws.side}
       maxHeight="min(56dvh, 560px)"
-      placeholder={`Message ${ws.otherName} about this commission…`}
+      placeholder={`Message ${ws.otherName}…`}
     />
   );
 }
 
 /* -------------------------------------------------------------------------- */
+/* Brief                                                                       */
+/* -------------------------------------------------------------------------- */
+
+const bullets = (items: string[]) =>
+  items.length === 1 ? (
+    items[0]
+  ) : (
+    <ul className="y-ord-bullets">
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  );
+
+function BriefTab({ ws }: { ws: Workspace }) {
+  const s = useDemo();
+  const { commission, product, side, slot, adCopy } = ws;
+  const brief = commission.brief;
+  const format = formatById[brief.format];
+  const learnings = product?.learnings ?? [];
+  const category = categoryOf(ws);
+  const deadlineDays = slot?.terms?.deadlineDays;
+
+  const items: { term: React.ReactNode; detail: React.ReactNode; wide?: boolean }[] = [
+    { term: "Product", detail: product ? product.name : commission.title },
+    {
+      term: "Job type",
+      detail: adCopy ? jobTypeById[jobTypeOf(commission)].name : `${jobTypeById[jobTypeOf(commission)].name} · ${format?.name ?? ""}`,
+    },
+  ];
+  if (adCopy) {
+    if (brief.copy?.pieces.length) items.push({ term: "What to write", detail: bullets(brief.copy.pieces) });
+    if (brief.copy?.placements.length)
+      items.push({ term: "Where it runs", detail: brief.copy.placements.map((id) => platformById[id].name).join(", ") });
+  } else {
+    items.push({
+      term: "Length",
+      detail: `${brief.videoCount > 1 ? `${plural(brief.videoCount, "video")} · ` : ""}About ${lengthLabel(brief.durationSec)} · ${aspects.find((a) => a.id === brief.aspect)?.id ?? brief.aspect}`,
+    });
+    items.push(
+      slot
+        ? { term: "Post on", detail: `${slot.platformName} · tag ${slot.brandHandle}` }
+        : { term: "Platform", detail: brief.platforms.map((id) => platformById[id].name).join(", ") || "Any" },
+    );
+  }
+  if (brief.hook) items.push({ term: "Hook", detail: brief.hook });
+  if (brief.mustInclude.length) items.push({ term: adCopy ? "Must include" : "Must show", detail: bullets(brief.mustInclude) });
+  if (brief.avoid.length) items.push({ term: "Don't say", detail: bullets(brief.avoid) });
+  if (category) items.push({ term: "Category", detail: category });
+  items.push({ term: "Language", detail: brief.languages.map((id) => languageById[id].name).join(", ") });
+  items.push({
+    term: "Deadline",
+    detail: deadlineDays
+      ? `Upload within ${plural(deadlineDays, "day")} of picking · set by ${ws.businessName}`
+      : `Due ${weekdayDate(commission.dueDate)} · set by ${ws.businessName}`,
+  });
+  items.push({
+    term: "Usage",
+    detail: `${usageById[brief.usage].name} · included in the price${adCopy ? "" : " · raw footage included"}`,
+  });
+  if (!adCopy) items.push({ term: "On camera", detail: brief.onCamera ? "Creator on camera" : "Voiceover only" });
+  items.push({ term: "Who it's for", detail: brief.audience, wide: true });
+  items.push({ term: "Goal", detail: brief.goal, wide: true });
+  items.push({ term: "Key message", detail: quoted(brief.keyMessage), wide: true });
+  if (brief.addons.length)
+    items.push({ term: "Add-ons", detail: brief.addons.map((id) => addonById[id].name).join(", ") });
+  if (brief.references.length)
+    items.push({
+      term: "References",
+      detail: bullets(brief.references.map((r) => (r.note ? `${r.label}: ${r.note}` : r.label))),
+      wide: true,
+    });
+  if (brief.notes) items.push({ term: "Notes", detail: brief.notes, wide: true });
+  if (slot) {
+    items.push({ term: "Label", detail: slot.disclosure });
+    items.push({
+      term: "Keep it up",
+      detail: `${CAMPAIGN_KEEP_LIVE_DAYS} days from verification · paid ${CAMPAIGN_RELEASE_DAYS} days after verification, if it's still up`,
+    });
+  }
+
+  const files = brief.attachments ?? [];
+  const assets = product?.assets ?? [];
+
+  return (
+    <div className="flex flex-col gap-8">
+      <DefinitionList items={items} />
+
+      {files.length || assets.length ? (
+        <div className="flex flex-col gap-2">
+          <h3 className="y-ord-subh">Files from {ws.businessName}</h3>
+          <ul className="y-ord-files">
+            {files.map((file) => (
+              <AttachmentRow key={file.id} file={file} />
+            ))}
+            {assets.map((asset) => (
+              <AssetRow key={asset.id} asset={asset} />
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {product ? (
+        <div className="flex flex-col gap-3">
+          <h3 className="y-ord-subh inline-flex items-center gap-2">
+            <Lightbulb size={16} aria-hidden /> Carried forward from {product.name}
+          </h3>
+          {product.tone.length || product.dos.length || product.donts.length ? (
+            <DefinitionList
+              items={[
+                ...(product.tone.length ? [{ term: "Tone", detail: product.tone.join(", ") }] : []),
+                ...(product.dos.length ? [{ term: "Do", detail: bullets(product.dos) }] : []),
+                ...(product.donts.length ? [{ term: "Don't", detail: bullets(product.donts) }] : []),
+              ]}
+            />
+          ) : null}
+          {learnings.length ? (
+            <ul className="flex flex-col gap-2">
+              {learnings.map((learning) => {
+                const by = learning.creatorId ? creatorById(s, learning.creatorId) : undefined;
+                const fromHere = learning.sourceCommissionId === commission.id;
+                const sourceVisible =
+                  learning.sourceCommissionId &&
+                  !fromHere &&
+                  s.commissions.some(
+                    (c) =>
+                      c.id === learning.sourceCommissionId &&
+                      (side === "business" ? c.businessId === commission.businessId : c.creatorId === commission.creatorId),
+                  );
+                return (
+                  <li key={learning.id} className="y-tile flex flex-col gap-1 px-4 py-3">
+                    <p className="y-small font-medium">{learning.text}</p>
+                    <p className="y-micro y-fg-2">
+                      {fromHere ? "From this order" : by ? `From work with ${by.firstName}` : "Saved by the team"} ·{" "}
+                      {shortDate(learning.createdAt)}
+                      {sourceVisible ? (
+                        <>
+                          {" · "}
+                          <Link href={paths.commission(learning.sourceCommissionId!)} className="y-link">
+                            View order
+                          </Link>
+                        </>
+                      ) : null}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="y-small y-fg-2 max-w-[62ch]">
+              {side === "business"
+                ? "Nothing saved yet. When you review an order, tick what you learned and it shows up here next time."
+                : "No learnings saved for this product yet."}
+            </p>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const assetIcon: Record<ProductAsset["kind"], React.ReactNode> = {
   logo: <ImageIcon size={18} aria-hidden />,
@@ -125,438 +321,184 @@ const assetIcon: Record<ProductAsset["kind"], React.ReactNode> = {
   footage: <Film size={18} aria-hidden />,
 };
 
-function BriefTab({ ws }: { ws: Workspace }) {
-  const s = useDemo();
-  const toast = useToast();
-  const { commission, product, side, slot } = ws;
-  const learnings = product?.learnings ?? [];
-
-  return (
-    <div className="flex flex-col gap-8">
-      <BriefSummary brief={commission.brief} product={product} />
-
-      {slot ? <Posting ws={ws} /> : null}
-
-      {product ? (
-        <div className="flex flex-col gap-6 border-t border-(--b-line) pt-6">
-          <div className="flex flex-col gap-1">
-            <h3 className="y-head">Product context</h3>
-            <p className="y-small y-fg-2 max-w-[62ch]">
-              {side === "business"
-                ? `Saved on ${product.name} and shared with every creator you work with.`
-                : `What ${ws.businessName} wants every video about ${product.name} to get right.`}
-            </p>
-          </div>
-
-          {product.tone.length ? (
-            <div className="flex flex-col gap-2">
-              <h4 className="y-micro y-fg-2">Tone</h4>
-              <div className="flex flex-wrap gap-1.5">
-                {product.tone.map((word) => (
-                  <Chip key={word}>{word}</Chip>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {product.dos.length || product.donts.length ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {product.dos.length ? (
-                <div className="flex flex-col gap-2">
-                  <h4 className="y-micro y-fg-2">Do</h4>
-                  <ul className="flex flex-col gap-2">
-                    {product.dos.map((item) => (
-                      <li key={item} className="flex items-start gap-2.5">
-                        <span className="mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-(--b-fg) text-(--b-bg)">
-                          <Plus size={12} strokeWidth={3} aria-hidden />
-                        </span>
-                        <span className="y-small">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-              {product.donts.length ? (
-                <div className="flex flex-col gap-2">
-                  <h4 className="y-micro y-fg-2">Don&apos;t</h4>
-                  <ul className="flex flex-col gap-2">
-                    {product.donts.map((item) => (
-                      <li key={item} className="flex items-start gap-2.5">
-                        <span className="mt-0.5 grid size-5 flex-none place-items-center rounded-full bg-(--b-chip) shadow-[inset_0_0_0_1.5px_var(--b-line)]">
-                          <Minus size={12} strokeWidth={3} aria-hidden />
-                        </span>
-                        <span className="y-small">{item}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          {product.assets.length ? (
-            <div className="flex flex-col gap-2">
-              <h4 className="y-micro y-fg-2">Assets</h4>
-              <ul className="grid gap-2 md:grid-cols-2">
-                {product.assets.map((asset) => (
-                  <li key={asset.id} className="y-tile flex items-center gap-3 py-2 ps-4 pe-2">
-                    <span className="flex-none">{assetIcon[asset.kind]}</span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="y-small truncate font-semibold">{asset.name}</span>
-                      <span className="y-micro y-fg-2">{asset.size}</span>
-                    </span>
-                    <RoundIconButton
-                      size="sm"
-                      label={asset.kind === "demo-account" ? `Copy ${asset.name}` : `Download ${asset.name}`}
-                      className="!bg-(--b-bg)"
-                      onClick={() =>
-                        toast({
-                          message:
-                            asset.kind === "demo-account"
-                              ? "Demo login copied. Use it only for filming."
-                              : `Downloading ${asset.name}`,
-                          tone: "info",
-                        })
-                      }
-                    >
-                      {asset.kind === "demo-account" ? <KeyRound size={18} aria-hidden /> : <Download size={18} aria-hidden />}
-                    </RoundIconButton>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-1">
-              <h4 className="y-head inline-flex items-center gap-2">
-                <Lightbulb size={18} aria-hidden /> Carried forward
-              </h4>
-              <p className="y-small y-fg-2 max-w-[62ch]">
-                {learnings.length
-                  ? side === "business"
-                    ? "Learnings from earlier commissions for this product. Every creator sees them with the brief."
-                    : "What worked (and didn't) in earlier videos for this product. Worth reading before you film."
-                  : side === "business"
-                    ? "Nothing saved yet. When you review a commission, tick what you learned and it shows up here next time."
-                    : "No learnings saved for this product yet."}
-              </p>
-            </div>
-            {learnings.length ? (
-              <ul className="flex flex-col gap-2">
-                {learnings.map((learning) => {
-                  const by = learning.creatorId ? creatorById(s, learning.creatorId) : undefined;
-                  const fromHere = learning.sourceCommissionId === commission.id;
-                  const sourceVisible =
-                    learning.sourceCommissionId &&
-                    !fromHere &&
-                    s.commissions.some(
-                      (c) =>
-                        c.id === learning.sourceCommissionId &&
-                        (side === "business" ? c.businessId === commission.businessId : c.creatorId === commission.creatorId),
-                    );
-                  return (
-                    <li key={learning.id} className="y-tile flex flex-col gap-1 p-4">
-                      <p className="y-small font-medium">{learning.text}</p>
-                      <p className="y-micro y-fg-2">
-                        {fromHere ? "From this commission" : by ? `From work with ${by.firstName}` : "Saved by the team"} ·{" "}
-                        {shortDate(learning.createdAt)}
-                        {sourceVisible ? (
-                          <>
-                            {" · "}
-                            <Link href={paths.commission(learning.sourceCommissionId!)} className="y-link">
-                              View commission
-                            </Link>
-                          </>
-                        ) : null}
-                      </p>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** Campaign slots: where and how the approved video gets posted. */
-function Posting({ ws }: { ws: Workspace }) {
-  const slot = ws.slot!;
-  const rows = [
-    { label: "Post on", value: slot.platformName },
-    { label: "Tag", value: slot.brandHandle },
-    { label: "Turn on", value: slot.disclosure },
-    { label: "Keep it up", value: `${CAMPAIGN_KEEP_LIVE_DAYS} days from verification` },
-    { label: "Paid", value: `${CAMPAIGN_RELEASE_DAYS} days after verification, if it's still up` },
-  ];
-  return (
-    <div className="flex flex-col gap-3 border-t border-(--b-line) pt-6">
-      <div className="flex flex-col gap-1">
-        <h3 className="y-head inline-flex items-center gap-2">
-          <Megaphone size={18} aria-hidden /> Posting
-        </h3>
-        <p className="y-small y-fg-2 max-w-[62ch]">
-          {ws.side === "business"
-            ? `After you approve, ${ws.creatorName} posts it on their own account.`
-            : "After approval, you post it on your own account."}
-        </p>
-      </div>
-      <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
-        {rows.map((row) => (
-          <div key={row.label} className="flex flex-col gap-0.5 border-t border-(--b-line) py-3">
-            <dt className="y-micro y-fg-2">{row.label}</dt>
-            <dd className="y-small font-semibold">{row.value}</dd>
-          </div>
-        ))}
-      </dl>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-
-const eventIcon: Record<CommissionEvent["kind"], React.ReactNode> = {
-  offer_sent: <Send size={16} aria-hidden className="y-flip" />,
-  offer_accepted: <Handshake size={16} aria-hidden />,
-  offer_declined: <XCircle size={16} aria-hidden />,
-  hired: <UserCheck size={16} aria-hidden />,
-  funded: <ShieldCheck size={16} aria-hidden />,
-  brief_updated: <FileText size={16} aria-hidden />,
-  delivered: <Film size={16} aria-hidden />,
-  revision_requested: <Repeat2 size={16} aria-hidden />,
-  approved: <CheckCircle2 size={16} aria-hidden />,
-  paid: <Banknote size={16} aria-hidden />,
-  reviewed: <Star size={16} aria-hidden />,
-  cancelled: <Ban size={16} aria-hidden />,
-  disputed: <LifeBuoy size={16} aria-hidden />,
-  due_changed: <CalendarClock size={16} aria-hidden />,
-  slot_accepted: <Ticket size={16} aria-hidden />,
-  creator_replaced: <UserMinus size={16} aria-hidden />,
-  video_rejected: <XCircle size={16} aria-hidden />,
-  posted: <Megaphone size={16} aria-hidden />,
-  post_verified: <BadgeCheck size={16} aria-hidden />,
-  payout_available: <Wallet size={16} aria-hidden />,
+const attachmentIcon: Record<BriefAttachment["kind"], React.ReactNode> = {
+  document: <FileText size={18} aria-hidden />,
+  image: <ImageIcon size={18} aria-hidden />,
+  video: <VideoIcon size={18} aria-hidden />,
 };
 
-function Activity({ ws }: { ws: Workspace }) {
-  const { commission, side } = ws;
-  const events = [...commission.events].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
-  const who = (actor: CommissionEvent["actor"]) =>
-    actor === "system" ? "Yapp" : actor === side ? "You" : actor === "business" ? ws.businessName : ws.creatorName;
-
-  if (!events.length) {
-    return (
-      <div className="flex flex-col gap-6">
-        <KeyDates ws={ws} />
-        <EmptyState
-          headingLevel={3}
-          shape="pill"
-          tint="sun"
-          title="No activity yet"
-          body="Offers, deliveries, approvals and payments are logged here as they happen."
-        />
-      </div>
-    );
-  }
-  return (
-    <div className="flex flex-col gap-6">
-      <KeyDates ws={ws} />
-      <ol className="flex flex-col" aria-label="Activity, newest first">
-        {events.map((event, index) => (
-          <li key={event.id} className="flex gap-4">
-            <div className="flex flex-col items-center">
-              <span
-                className={`grid size-9 flex-none place-items-center rounded-full ${
-                  index === 0 ? "bg-(--b-fg) text-(--b-bg)" : "bg-(--b-chip) text-(--b-chip-fg)"
-                }`}
-              >
-                {eventIcon[event.kind] ?? <BadgeCheck size={16} aria-hidden />}
-              </span>
-              {index < events.length - 1 ? <span className="w-0.5 flex-1 bg-(--b-line)" aria-hidden /> : null}
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-0.5 pt-1.5 pb-5">
-              <p className="y-small font-medium">{event.text}</p>
-              <p className="y-micro y-fg-2">
-                {who(event.actor)} ·{" "}
-                <time dateTime={event.at}>
-                  {timeAgo(event.at) === shortDate(event.at) ? (
-                    `${shortDate(event.at)}, ${timeOf(event.at)}`
-                  ) : (
-                    <>
-                      {timeAgo(event.at)}
-                      <span className="y-fg-3">
-                        {" "}
-                        · {shortDate(event.at)}, {timeOf(event.at)}
-                      </span>
-                    </>
-                  )}
-                </time>
-              </p>
-            </div>
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
-/** Key dates at a glance, above the full log. */
-function KeyDates({ ws }: { ws: Workspace }) {
-  const { commission, latest, slot } = ws;
-  const auto = commission.status === "delivered" ? autoApproveDate(commission, latest) : undefined;
-  const ended = ["completed", "cancelled", "declined"].includes(commission.status);
-  const rows: { label: string; value: string }[] = slot
-    ? [
-        { label: "Slot taken", value: commission.createdAt },
-        // The brand's upload deadline (version 1).
-        ...(latest || ended ? [] : [{ label: "Upload by", value: commission.dueDate }]),
-        ...(latest ? [{ label: `Review copy ${latest.version} uploaded`, value: latest.deliveredAt }] : []),
-        ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
-        ...(commission.completedAt ? [{ label: "Approved", value: commission.completedAt }] : []),
-        ...(commission.post?.at ? [{ label: "Posted", value: commission.post.at }] : []),
-        ...(commission.post?.verifiedAt ? [{ label: "Verified", value: commission.post.verifiedAt }] : []),
-        ...(commission.withdrawableFrom && commission.payment.status === "pending"
-          ? [{ label: "Pay released", value: commission.withdrawableFrom }]
-          : []),
-      ]
-    : [
-        { label: commission.source === "request" ? "Hired" : "Offer sent", value: commission.createdAt },
-        ...(commission.acceptedAt && commission.source !== "request"
-          ? [{ label: "Accepted", value: commission.acceptedAt }]
-          : []),
-        ...(ended ? [] : [{ label: "Due", value: commission.dueDate }]),
-        ...(latest ? [{ label: `Version ${latest.version} delivered`, value: latest.deliveredAt }] : []),
-        ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
-        ...(commission.completedAt ? [{ label: "Completed", value: commission.completedAt }] : []),
-      ];
-  return (
-    <dl className="grid grid-cols-2 gap-x-6 gap-y-4 border-b border-(--b-line) pb-6 sm:grid-cols-3">
-      {rows.map((row) => (
-        <div key={row.label} className="flex flex-col gap-0.5">
-          <dt className="y-micro y-fg-2">{row.label}</dt>
-          <dd className="y-small y-num font-semibold">
-            {weekdayDate(row.value)} <span className="y-fg-2 font-normal">· {timeOf(row.value)}</span>
-          </dd>
-        </div>
-      ))}
-    </dl>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-
 function FileRow({
+  icon,
   name,
   meta,
-  icon,
-  onDownload,
+  action = "Download",
+  onAction,
 }: {
+  icon: React.ReactNode;
   name: string;
   meta: string;
-  icon: React.ReactNode;
-  onDownload: (name: string) => void;
+  action?: string;
+  onAction: () => void;
 }) {
   return (
-    <li className="y-tile flex items-center gap-3 py-2 ps-4 pe-2">
-      <span className="flex-none">{icon}</span>
-      <span className="flex min-w-0 flex-1 flex-col">
-        <span className="y-small truncate font-semibold">{name}</span>
-        <span className="y-micro y-fg-2">{meta}</span>
+    <li className="y-ord-file">
+      <span className="y-ord-file-ic">{icon}</span>
+      <span className="min-w-0">
+        <b className="block truncate font-semibold">{name}</b>
+        <small className="y-fg-2">{meta}</small>
       </span>
-      <RoundIconButton size="sm" label={`Download ${name}`} className="!bg-(--b-bg)" onClick={() => onDownload(name)}>
-        <Download size={18} aria-hidden />
-      </RoundIconButton>
+      <button type="button" className="y-ord-ghost" onClick={onAction}>
+        {action === "Download" ? <Download size={15} aria-hidden /> : <KeyRound size={15} aria-hidden />}
+        {action}
+        <span className="sr-only"> {name}</span>
+      </button>
     </li>
   );
 }
 
+function AttachmentRow({ file }: { file: BriefAttachment }) {
+  const toast = useToast();
+  return (
+    <FileRow
+      icon={attachmentIcon[file.kind]}
+      name={file.name}
+      meta={`${bytesLabel(file.bytes)}${file.durationSec ? ` · ${clock(file.durationSec)}` : ""}`}
+      onAction={() => toast({ message: `Downloading ${file.name}`, tone: "info" })}
+    />
+  );
+}
+
+function AssetRow({ asset }: { asset: ProductAsset }) {
+  const toast = useToast();
+  const demo = asset.kind === "demo-account";
+  return (
+    <FileRow
+      icon={assetIcon[asset.kind]}
+      name={asset.name}
+      meta={demo ? "Login details · use it only for filming" : asset.size}
+      action={demo ? "Copy" : "Download"}
+      onAction={() =>
+        toast({ message: demo ? "Demo login copied. Use it only for filming." : `Downloading ${asset.name}`, tone: "info" })
+      }
+    />
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Files                                                                       */
+/* -------------------------------------------------------------------------- */
+
+/** The review copy until approval; then the clean file and the raw footage, which is included. */
 function FilesTab({ ws }: { ws: Workspace }) {
   const s = useDemo();
   const toast = useToast();
-  const { commission, side, product, slot } = ws;
+  const { commission, side, product, adCopy } = ws;
   const thread = threadById(s, commission.threadId);
-  const shared = (thread?.messages ?? []).filter(
-    (m) => m.attachment && m.attachment.kind !== "video",
-  );
+  const shared = (thread?.messages ?? []).filter((m) => m.attachment && m.attachment.kind !== "video");
   const versions = [...commission.deliveries].reverse();
-  const download = (name: string) => toast({ message: `Downloading ${name}`, tone: "info" });
+  const download = (name: string, how = "") => toast({ message: `Downloading ${how}${name}`, tone: "info" });
+  const brandFiles = commission.brief.attachments ?? [];
+  const assets = product?.assets ?? [];
+  const slugOf = (name: string) => name.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]?review[_-]?copy[_-]?/i, "");
 
-  const empty = !versions.some((d) => d.files.length) && !shared.length && !product?.assets.length;
-  if (empty) {
+  if (!versions.length && !shared.length && !brandFiles.length && !assets.length) {
     return (
       <EmptyState
         headingLevel={3}
-        shape="ball"
-        tint="sea"
         title="No files yet"
         body={
           side === "business"
-            ? `Videos and files ${ws.creatorName} delivers show up here, with anything shared in messages.`
-            : "Your deliveries and anything shared in messages show up here."
+            ? `What ${ws.creatorName} delivers shows up here, with anything shared in Messages.`
+            : "Your deliveries and anything shared in Messages show up here."
         }
       />
     );
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-7">
       {versions.map((delivery) => {
-        if (!delivery.files.length) return null;
-        // The ordering side only gets the watermarked preview of a review copy until it's approved.
-        const preview = Boolean(delivery.reviewCopy) && side === "business" && delivery.status !== "approved";
+        if (!delivery.files.length && !delivery.text) return null;
+        const approved = delivery.status === "approved";
+        // The brand gets the watermarked review copy until approval, then the clean file.
+        const preview = side === "business" && !approved && !adCopy;
+        const firstVideo = delivery.files.find((f) => !f.kind || f.kind === "video");
         return (
           <div key={delivery.id} className="flex flex-col gap-2">
-            <h3 className="y-small font-semibold">
-              {slot ? "Review copy" : "Version"} {delivery.version}
-              <span className="y-fg-2 font-normal"> · {shortDate(delivery.deliveredAt)}</span>
+            <h3 className="y-ord-subh">
+              Version {delivery.version}
+              <span className="y-fg-2 font-normal">
+                {" "}
+                · {shortDate(delivery.deliveredAt)}
+                {approved ? " · approved" : ""}
+              </span>
             </h3>
-            <ul className="flex flex-col gap-2">
-              {delivery.files.map((file) => (
+            <ul className="y-ord-files">
+              {delivery.files.map((file) => {
+                const video = !file.kind || file.kind === "video";
+                const label = adCopy
+                  ? approved
+                    ? "Final copy"
+                    : "Document"
+                  : video
+                    ? preview
+                      ? "Review copy · watermarked"
+                      : approved
+                        ? "Clean file, no watermark"
+                        : "Your upload"
+                    : file.kind === "subtitles"
+                      ? "Subtitles"
+                      : "File";
+                return (
+                  <FileRow
+                    key={file.name}
+                    icon={video ? <Film size={18} aria-hidden /> : <FileText size={18} aria-hidden />}
+                    name={file.name}
+                    meta={`${label} · ${file.size}`}
+                    onAction={() => download(file.name, video && preview ? "the watermarked review copy of " : "")}
+                  />
+                );
+              })}
+              {approved && !adCopy ? (
                 <FileRow
-                  key={file.name}
-                  name={file.name}
-                  meta={preview ? `${file.size} · Watermarked preview` : file.size}
                   icon={<Film size={18} aria-hidden />}
-                  onDownload={(name) =>
-                    toast({
-                      message: preview ? `Downloading the watermarked preview of ${name}` : `Downloading ${name}`,
-                      tone: "info",
-                    })
-                  }
+                  name={`${slugOf(firstVideo?.name ?? "raw-footage")}_raw_footage.zip`}
+                  meta="Raw footage · included with every approved video"
+                  onAction={() => download("the raw footage")}
                 />
-              ))}
+              ) : null}
             </ul>
           </div>
         );
       })}
-      {shared.length ? (
+
+      {brandFiles.length || assets.length ? (
         <div className="flex flex-col gap-2">
-          <h3 className="y-small font-semibold">Shared in messages</h3>
-          <ul className="flex flex-col gap-2">
-            {shared.map((message) => (
-              <FileRow
-                key={message.id}
-                onDownload={download}
-                name={message.attachment!.name}
-                meta={`${message.from === side ? "You" : message.from === "business" ? ws.businessName : ws.creatorName} · ${shortDate(message.at)}${message.attachment!.size ? ` · ${message.attachment!.size}` : ""}`}
-                icon={<FileText size={18} aria-hidden />}
-              />
+          <h3 className="y-ord-subh">From {ws.businessName}</h3>
+          <ul className="y-ord-files">
+            {brandFiles.map((file) => (
+              <AttachmentRow key={file.id} file={file} />
+            ))}
+            {assets.map((asset) => (
+              <AssetRow key={asset.id} asset={asset} />
             ))}
           </ul>
         </div>
       ) : null}
-      {product?.assets.length ? (
+
+      {shared.length ? (
         <div className="flex flex-col gap-2">
-          <h3 className="y-small font-semibold">Product assets from {ws.businessName}</h3>
-          <ul className="flex flex-col gap-2">
-            {product.assets
-              .filter((asset) => asset.kind !== "demo-account")
-              .map((asset) => (
-                <FileRow key={asset.id} name={asset.name} meta={asset.size} icon={assetIcon[asset.kind]} onDownload={download} />
-              ))}
+          <h3 className="y-ord-subh">Shared in Messages</h3>
+          <ul className="y-ord-files">
+            {shared.map((message) => (
+              <FileRow
+                key={message.id}
+                icon={<FileText size={18} aria-hidden />}
+                name={message.attachment!.name}
+                meta={`${message.from === side ? "You" : message.from === "business" ? ws.businessName : ws.creatorName} · ${shortDate(message.at)}${message.attachment!.size ? ` · ${message.attachment!.size}` : ""}`}
+                onAction={() => download(message.attachment!.name)}
+              />
+            ))}
           </ul>
         </div>
       ) : null}

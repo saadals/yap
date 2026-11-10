@@ -6,8 +6,9 @@
     { "click": "Hire Nina", "after": 1500 },
     { "click": "Hire Nina", "after": 2000 },
     { "click": "Open commission", "after": 3000 },
-    { "text": "In production" },
+    { "text": "Nina is working on version 1" },
     { "wait": 29000 },
-    { "text": "Review version 1 from Nina" }
+    { "text": "Version 1 is in. Approve it" },
+    { "text": "v1 · Ready to review" }
   ]
 }

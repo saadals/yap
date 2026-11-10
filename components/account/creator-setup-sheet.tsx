@@ -35,7 +35,7 @@ export function CreatorSetupSheet({
   open: boolean;
   onClose: () => void;
   onDone?: (creatorId: string) => void;
-  /** Why it opened, e.g. "to take a slot on this campaign". */
+  /** Why it opened, e.g. "to pick a slot on this campaign". */
   reason?: string;
 }) {
   return (

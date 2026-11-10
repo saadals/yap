@@ -2,6 +2,46 @@
   "account": "layla",
   "steps": [
     {
+      "go": "/discover",
+      "after": 1600
+    },
+    {
+      "go": "/alerts",
+      "after": 1600
+    },
+    {
+      "go": "/more",
+      "after": 1600
+    },
+    {
+      "go": "/productivity",
+      "after": 1600
+    },
+    {
+      "go": "/services/ugc-ads",
+      "after": 1600
+    },
+    {
+      "go": "/services/native-posts",
+      "after": 1600
+    },
+    {
+      "go": "/services/hook-lab",
+      "after": 1600
+    },
+    {
+      "go": "/services/go-to-market",
+      "after": 1600
+    },
+    {
+      "go": "/for/tech-teams",
+      "after": 1600
+    },
+    {
+      "go": "/legal",
+      "after": 1600
+    },
+    {
       "go": "/home",
       "after": 1600
     },
@@ -210,5 +250,5 @@
       "after": 1600
     }
   ],
-  "theme": "dark"
+  "theme": "light"
 }

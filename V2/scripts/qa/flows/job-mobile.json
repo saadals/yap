@@ -1,0 +1,171 @@
+{
+  "account": "nour",
+  "width": 390,
+  "height": 844,
+  "mobile": true,
+  "steps": [
+    {
+      "go": "/jobs/c-201",
+      "after": 4000
+    },
+    {
+      "text": "Review version 1 from Layla"
+    },
+    {
+      "text": "Approve and release $300"
+    },
+    {
+      "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
+    },
+    {
+      "shot": "job-m-c201-top"
+    },
+    {
+      "shot": "job-m-c201-full",
+      "full": true
+    },
+    {
+      "click": "Details"
+    },
+    {
+      "text": "Held safely"
+    },
+    {
+      "shot": "job-m-c201-details"
+    },
+    {
+      "click": "Timeline"
+    },
+    {
+      "type": {
+        "sel": "#job-note",
+        "text": "Slow the reminder moment down a touch"
+      }
+    },
+    {
+      "click": "Add note"
+    },
+    {
+      "text": "Slow the reminder moment down a touch"
+    },
+    {
+      "click": "Ask for changes (2)"
+    },
+    {
+      "text": "Send 2 notes to Layla"
+    },
+    {
+      "click": "Send 2 notes to Layla",
+      "after": 1500
+    },
+    {
+      "text": "Layla is working on version 2"
+    },
+    {
+      "text": "Message"
+    },
+    {
+      "shot": "job-m-c201-revision"
+    },
+    {
+      "go": "/jobs/c-205",
+      "after": 3000
+    },
+    {
+      "text": "Waiting for Maya to accept"
+    },
+    {
+      "click": "Withdraw offer"
+    },
+    {
+      "text": "Withdraw this offer?"
+    },
+    {
+      "click": "Withdraw offer",
+      "after": 1200
+    },
+    {
+      "text": "You withdrew this offer"
+    },
+    {
+      "text": "Find another creator"
+    },
+    {
+      "shot": "job-m-c205-withdrawn"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/jobs/c-305",
+      "after": 3500
+    },
+    {
+      "text": "Wayfolk asked for changes"
+    },
+    {
+      "text": "Upload version 2"
+    },
+    {
+      "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
+    },
+    {
+      "shot": "job-m-c305"
+    },
+    {
+      "go": "/jobs/c-302",
+      "after": 3500
+    },
+    {
+      "text": "Accept offer"
+    },
+    {
+      "text": "Decline"
+    },
+    {
+      "shot": "job-m-c302-offer"
+    },
+    {
+      "click": "Decline"
+    },
+    {
+      "text": "Decline this offer?"
+    },
+    {
+      "click": "I'm booked on these dates"
+    },
+    {
+      "click": "Decline offer",
+      "after": 1200
+    },
+    {
+      "text": "You declined this offer"
+    },
+    {
+      "text": "Find new work"
+    },
+    {
+      "shot": "job-m-c302-declined"
+    },
+    {
+      "go": "/jobs/c-n39",
+      "after": 3000
+    },
+    {
+      "text": "We couldn't find that job"
+    },
+    {
+      "go": "/jobs/c-150-3",
+      "after": 3000
+    },
+    {
+      "text": "This job isn't in your account"
+    },
+    {
+      "text": "Go to Home"
+    },
+    {
+      "shot": "job-m-not-yours"
+    }
+  ]
+}

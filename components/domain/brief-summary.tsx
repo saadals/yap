@@ -2,8 +2,9 @@ import { Check, Link2, Minus, Sparkles, Video as VideoIcon, VideoOff } from "luc
 
 import { MatchScore } from "@/components/ui/match-score";
 import { lengthLabel, plural, quoted } from "@/lib/format";
+import { isAdCopy } from "@/lib/selectors";
 import type { Fit } from "@/lib/selectors";
-import { addonById, aspects, formatById, languageById, platformById } from "@/lib/taxonomy";
+import { addonById, aspects, formatById, languageById, platformById, usageById } from "@/lib/taxonomy";
 import type { Brief, Product } from "@/lib/types";
 
 function Fact({ label, children }: { label: string; children: React.ReactNode }) {
@@ -39,6 +40,7 @@ export function BriefSummary({
 }) {
   const format = formatById[brief.format];
   const FormatIcon = format.icon;
+  const adCopy = isAdCopy({ brief });
   return (
     <div className="flex flex-col gap-6">
       {showProduct && product ? (
@@ -57,6 +59,25 @@ export function BriefSummary({
         </div>
       ) : null}
 
+      {adCopy ? (
+        // Ad copy: no format, length, aspect, platform or camera to show.
+        <dl className="grid grid-cols-2 gap-x-6 md:grid-cols-3">
+          <Fact label="Job type">
+            <span className="inline-flex items-center gap-1.5">
+              <FormatIcon size={16} aria-hidden /> {format.name}
+            </span>
+          </Fact>
+          {brief.copy?.pieces.length ? <Fact label="What to write">{brief.copy.pieces.join(" · ")}</Fact> : null}
+          {brief.copy?.placements.length ? (
+            <Fact label="Where it runs">{brief.copy.placements.map((id) => platformById[id].name).join(", ")}</Fact>
+          ) : null}
+          <Fact label="Language">{brief.languages.map((id) => languageById[id].name).join(", ")}</Fact>
+          <Fact label="Usage">
+            {usageById[brief.usage].name}
+            <span className="y-micro y-fg-2 block font-normal">Part of the price</span>
+          </Fact>
+        </dl>
+      ) : (
       <dl className="grid grid-cols-2 gap-x-6 md:grid-cols-3">
         <Fact label="Format">
           <span className="inline-flex items-center gap-1.5">
@@ -77,7 +98,12 @@ export function BriefSummary({
             {brief.onCamera ? "Creator on camera" : "Voiceover only"}
           </span>
         </Fact>
+        <Fact label="Usage">
+          {usageById[brief.usage].name}
+          <span className="y-micro y-fg-2 block font-normal">Part of the price · raw footage included</span>
+        </Fact>
       </dl>
+      )}
 
       <div className="flex flex-col gap-5">
         <Prose label="Who it's for">{brief.audience}</Prose>

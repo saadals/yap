@@ -97,7 +97,7 @@ export function OpportunityFilters({
         />
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="y-micro y-fg-2">
-            Hides requests whose top budget is below this. Your default is{" "}
+            Hides custom orders whose top budget is below this. Your default is{" "}
             {savedMinBudget > 0 ? money(savedMinBudget) : "any budget"}.
           </p>
           {value.minBudget !== savedMinBudget ? (

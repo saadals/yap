@@ -1,0 +1,133 @@
+/* The Inbox (/messages): the conversation list, the open conversation, message bubbles.
+   Imported by components/inbox/inbox.tsx. Scoped under .yapp, in the components layer. */
+
+@layer components {
+  /* Desktop: one white card, list 360px + conversation. Phones: the list as a card; an open
+     conversation fills the screen under the header (the tab bar hides, see <AppShell focus>). */
+  .yapp .y-inbox {
+    display: flex;
+    flex-direction: column;
+  }
+  .yapp .y-inbox-list {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-radius: var(--y-r-block);
+    background: var(--y-paper);
+    box-shadow: var(--y-shadow-card);
+  }
+  .yapp .y-inbox-pane {
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background: var(--y-paper);
+  }
+  .yapp .y-inbox[data-open="true"] .y-inbox-list {
+    display: none;
+  }
+  .yapp .y-inbox[data-open="true"] .y-inbox-pane {
+    display: flex;
+    position: fixed;
+    inset-inline: 0;
+    top: var(--y-header-h);
+    bottom: 0;
+    z-index: 30;
+  }
+  .yapp .y-inbox-composer {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  }
+
+  @media (min-width: 1024px) {
+    .yapp .y-inbox {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      height: calc(100dvh - var(--y-header-h) - 240px);
+      min-height: 540px;
+      overflow: hidden;
+      border-radius: var(--y-r-block);
+      background: var(--y-paper);
+      box-shadow: var(--y-shadow-card);
+    }
+    .yapp .y-inbox-list,
+    .yapp .y-inbox[data-open="true"] .y-inbox-list {
+      display: flex;
+      border-radius: 0;
+      box-shadow: none;
+      border-inline-end: 1px solid var(--y-line);
+    }
+    .yapp .y-inbox-pane,
+    .yapp .y-inbox[data-open="true"] .y-inbox-pane {
+      display: flex;
+      position: static;
+    }
+    .yapp .y-inbox-composer {
+      padding-bottom: 14px;
+    }
+  }
+
+  /* Rows: hairlines between them, a quiet fill on hover and on the open conversation. */
+  .yapp .y-inbox-rowwrap + .y-inbox-rowwrap .y-inbox-row::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    inset-inline: 72px 16px;
+    height: 1px;
+    background: var(--y-line);
+  }
+  .yapp .y-inbox-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 76px;
+    padding: 12px 16px;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-inbox-row:hover {
+    background: rgb(29 29 31 / 0.025);
+  }
+  .yapp .y-inbox-row[aria-current="true"] {
+    background: var(--y-mist);
+  }
+  .yapp .y-inbox-row[aria-current="true"]::before,
+  .yapp .y-inbox-rowwrap:has(+ .y-inbox-rowwrap .y-inbox-row[aria-current="true"]) + .y-inbox-rowwrap .y-inbox-row::before {
+    display: none;
+  }
+  .yapp .y-inbox-rowwrap:has(.y-inbox-row[aria-current="true"]) + .y-inbox-rowwrap .y-inbox-row::before {
+    display: none;
+  }
+  html.dark .yapp .y-inbox-row:hover {
+    background: rgb(255 255 255 / 0.035);
+  }
+  html.dark .yapp .y-inbox-row[aria-current="true"] {
+    background: rgb(255 255 255 / 0.07);
+  }
+  .yapp .y-inbox-chip {
+    min-height: 34px;
+    padding-inline: 14px;
+    font-size: 0.8125rem;
+  }
+  @media (pointer: coarse) {
+    .yapp .y-inbox-chip {
+      min-height: 40px;
+    }
+  }
+
+  /* Message bubbles: yours in ink, theirs in a quiet fill. */
+  .yapp .y-msg-mine {
+    background: var(--y-ink);
+    color: var(--y-paper);
+  }
+  .yapp .y-msg-theirs {
+    background: var(--y-mist);
+    color: var(--y-ink);
+  }
+  html.dark .yapp .y-msg-theirs {
+    background: rgb(255 255 255 / 0.08);
+  }
+  .yapp .y-inbox-input {
+    field-sizing: content;
+  }
+}

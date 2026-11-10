@@ -15,10 +15,22 @@ import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
 import { ContactNotice } from "@/components/requests/contact-notice";
 import { at } from "@/lib/clock";
-import { daysFromNow, money, moneyRange, plural, priceLimitError, priceLimits, quoted, weekdayDate } from "@/lib/format";
+import {
+  creatorNet,
+  daysFromNow,
+  money,
+  moneyExact,
+  moneyRange,
+  netRange,
+  plural,
+  priceLimitError,
+  priceLimits,
+  quoted,
+  weekdayDate,
+} from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { actions } from "@/lib/store";
-import { addonById, formatById } from "@/lib/taxonomy";
+import { addonById, FEE_PCT, formatById, RAW_FOOTAGE_INCLUDED, usageById } from "@/lib/taxonomy";
 import type { Business, ContentRequest, Creator, Pitch, Product, Video } from "@/lib/types";
 
 import {
@@ -257,7 +269,12 @@ export function PitchComposer({
           ) : null}
         </article>
 
-        <PriceSummary price={priceNum} perspective="creator" priceLabel="Your price" showRights={false} />
+        <PriceSummary
+          price={priceNum}
+          perspective="creator"
+          priceLabel="Price the brand pays"
+          usage={request.brief.usage}
+        />
 
         <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <PillButton
@@ -282,7 +299,7 @@ export function PitchComposer({
     <div ref={rootRef} className="flex scroll-mt-24 flex-col gap-7">
       <div className="flex flex-col gap-1">
         <p className="y-micro y-fg-2">Step 1 of 2 · {existing ? "Edit your pitch" : "Write your pitch"}</p>
-        <h2 className="y-display y-title">{existing ? "Update your pitch" : "Pitch on this request"}</h2>
+        <h2 className="y-display y-title">{existing ? "Update your pitch" : "Pitch on this custom order"}</h2>
       </div>
 
       {/* Angle */}
@@ -353,7 +370,7 @@ export function PitchComposer({
         <div className="grid gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-3">
             <TextField
-              label="Your price (USD)"
+              label="Price the brand pays (USD)"
               required
               type="number"
               inputMode="numeric"
@@ -363,9 +380,15 @@ export function PitchComposer({
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               onBlur={() => touch("price")}
-              hint={`Their budget: ${moneyRange(request.budget.min, request.budget.max)}`}
+              hint={`Their budget: ${moneyRange(request.budget.min, request.budget.max)} · you'd earn ${netRange(request.budget.min, request.budget.max)}`}
               error={show("price")}
             />
+            {priceValid ? (
+              <p className="y-small px-1" aria-live="polite">
+                You receive <span className="y-num font-semibold">{moneyExact(creatorNet(priceNum))}</span>
+                <span className="y-fg-2"> after the {FEE_PCT}% Yapp fee</span>
+              </p>
+            ) : null}
             <div aria-live="polite" className="flex flex-wrap gap-1.5 px-1">
               {fit === "within" ? (
                 <Badge tone="success" icon={<BadgeCheck size={14} aria-hidden />}>
@@ -437,12 +460,14 @@ export function PitchComposer({
               </div>
             ) : null}
           </div>
-          <div className="y-tile flex flex-col gap-3 p-4">
-            {priceValid ? (
-              <PriceSummary price={priceNum} perspective="creator" priceLabel="Your price" />
-            ) : (
-              <p className="y-small y-fg-2">Enter a price to see what you earn.</p>
-            )}
+          <div className="y-tile flex flex-col gap-2 p-4">
+            <p className="y-micro y-fg-2">Your price covers</p>
+            <p className="y-head">{usageById[request.brief.usage].name}</p>
+            <p className="y-small y-fg-2">
+              {usageById[request.brief.usage].description} {businessName} picked this, and it&apos;s part of
+              the price: there&apos;s no separate rights fee.
+            </p>
+            <p className="y-small y-fg-2">{RAW_FOOTAGE_INCLUDED}</p>
           </div>
         </div>
       </div>

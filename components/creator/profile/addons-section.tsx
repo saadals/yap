@@ -4,8 +4,9 @@ import { useState } from "react";
 
 import { TextField } from "@/components/ui/field";
 import { useToast } from "@/components/ui/toast";
+import { creatorNet, moneyExact } from "@/lib/format";
 import { actions } from "@/lib/store";
-import { addonById, addons } from "@/lib/taxonomy";
+import { addonById, addons, FEE_PCT } from "@/lib/taxonomy";
 import type { AddonId, Creator, CreatorAddon } from "@/lib/types";
 
 import { ProfileSection, useDraft } from "./section";
@@ -18,10 +19,7 @@ const show = (value: number) => (Number.isNaN(value) ? "" : String(value));
 /** Sensible starting prices when an add-on is first switched on. */
 const suggested: Record<AddonId, { price: number; extraDays: number }> = {
   "extra-revision": { price: 35, extraDays: 1 },
-  "raw-footage": { price: 50, extraDays: 0 },
   subtitles: { price: 40, extraDays: 0 },
-  "ad-rights-90": { price: 90, extraDays: 0 },
-  "ad-rights-365": { price: 220, extraDays: 0 },
   rush: { price: 80, extraDays: -2 },
   "extra-hooks": { price: 60, extraDays: 1 },
   "post-to-account": { price: 150, extraDays: 0 },
@@ -67,7 +65,7 @@ export function AddonsSection({ creator }: { creator: Creator }) {
     <ProfileSection
       id="addons"
       title="Add-ons"
-      description="Extras buyers can add to any package. Organic use is always included."
+      description={`Extras buyers can add to any package. Usage rights and raw footage come with every order, so they aren't add-ons. Prices are what the buyer pays; you earn them less the ${FEE_PCT}% Yapp fee.`}
       summary={
         creator.addons.length
           ? `${creator.addons.length} offered · ${creator.addons.map((a) => addonById[a.id].name).join(", ")}`
@@ -135,6 +133,7 @@ export function AddonsSection({ creator }: { creator: Creator }) {
                     min={5}
                     value={show(row.price)}
                     onChange={(e) => patch(addon.id, { price: toNum(e.target.value) })}
+                    hint={row.price > 0 ? `You earn ${moneyExact(creatorNet(row.price))}` : undefined}
                     error={attempted || dirty ? errors[addon.id].price : null}
                   />
                   <TextField

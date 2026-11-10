@@ -88,7 +88,7 @@ export function ReelMenu({ item }: { item: OrderItem | CampaignItem }) {
         description={
           confirming
             ? campaign
-              ? "No one new can take a slot and open slots are refunded to your card. Videos already in progress carry on."
+              ? "No one new can pick a slot and open slots are refunded to your card. Videos already in progress carry on."
               : "Creators can't pitch on it any more. You can reopen it from the order page."
             : undefined
         }

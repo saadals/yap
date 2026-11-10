@@ -1,0 +1,323 @@
+{
+  "width": 390,
+  "height": 844,
+  "mobile": true,
+  "steps": [
+    {
+      "go": "/",
+      "after": 4000
+    },
+    {
+      "text": "Short videos for your app, made by real creators."
+    },
+    {
+      "text": "Get videos made"
+    },
+    {
+      "text": "Three ways to get videos made"
+    },
+    {
+      "shot": "public-account-m-landing"
+    },
+    {
+      "shot": "public-account-m-landing-full",
+      "full": true
+    },
+    {
+      "click": "Make videos, get paid",
+      "after": 3500
+    },
+    {
+      "text": "Make videos for tech brands. You keep 100% of your price."
+    },
+    {
+      "shot": "public-account-m-signin"
+    },
+    {
+      "click": "Layla Mansour",
+      "after": 4000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Studio"
+    },
+    {
+      "go": "/messages",
+      "after": 3500
+    },
+    {
+      "text": "Inbox"
+    },
+    {
+      "text": "Roundleaf"
+    },
+    {
+      "notText": "You're making"
+    },
+    {
+      "shot": "public-account-m-inbox"
+    },
+    {
+      "click": "Unread",
+      "after": 800
+    },
+    {
+      "text": "Wayfolk"
+    },
+    {
+      "notText": "Roundleaf"
+    },
+    {
+      "click": "All",
+      "after": 800
+    },
+    {
+      "click": "Daftar",
+      "after": 3000
+    },
+    {
+      "text": "Message Daftar"
+    },
+    {
+      "text": "Open job"
+    },
+    {
+      "shot": "public-account-m-thread"
+    },
+    {
+      "type": {
+        "sel": "textarea[placeholder='Message Daftar']",
+        "text": "Version 2 is coming tomorrow morning."
+      }
+    },
+    {
+      "click": "Send message",
+      "after": 1200
+    },
+    {
+      "text": "Version 2 is coming tomorrow morning."
+    },
+    {
+      "click": "Back to all messages",
+      "after": 2000
+    },
+    {
+      "text": "Inbox"
+    },
+    {
+      "click": "Alerts",
+      "after": 2500
+    },
+    {
+      "text": "Mark all as read"
+    },
+    {
+      "shot": "public-account-m-alerts"
+    },
+    {
+      "go": "/account",
+      "after": 3500
+    },
+    {
+      "text": "Account"
+    },
+    {
+      "text": "Switch to ordering"
+    },
+    {
+      "text": "Edit your profile"
+    },
+    {
+      "shot": "public-account-m-account"
+    },
+    {
+      "go": "/settings",
+      "after": 3500
+    },
+    {
+      "text": "Settings"
+    },
+    {
+      "text": "Match alerts"
+    },
+    {
+      "text": "Vacation mode"
+    },
+    {
+      "notText": "Change password"
+    },
+    {
+      "shot": "public-account-m-settings"
+    },
+    {
+      "shot": "public-account-m-settings-full",
+      "full": true
+    },
+    {
+      "go": "/onboarding?start=make",
+      "after": 3500
+    },
+    {
+      "text": "What do you want to do first?"
+    },
+    {
+      "shot": "public-account-m-onboarding"
+    },
+    {
+      "click": "Continue",
+      "after": 1500
+    },
+    {
+      "text": "Set up your creator profile"
+    },
+    {
+      "text": "How people will see you"
+    },
+    {
+      "shot": "public-account-m-onboarding-profile"
+    },
+    {
+      "type": {
+        "sel": "#main input[autocomplete='name']",
+        "text": "Sam Rivera"
+      },
+      "after": 1500
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('#main select'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, \"value\").set; set.call(el, el.options[1].value); el.dispatchEvent(new Event(\"change\", { bubbles: true })); return el.value; })()"
+    },
+    {
+      "click": "Everyday presenter"
+    },
+    {
+      "wait": 1000
+    },
+    {
+      "click": "Continue",
+      "after": 1200
+    },
+    {
+      "text": "What do you make?"
+    },
+    {
+      "click": "App demo"
+    },
+    {
+      "click": "Consumer apps"
+    },
+    {
+      "click": "Continue",
+      "after": 1200
+    },
+    {
+      "text": "Show your best work"
+    },
+    {
+      "click": "No video handy? Add a demo clip",
+      "after": 4500
+    },
+    {
+      "shot": "public-account-m-make-portfolio"
+    },
+    {
+      "click": "Continue",
+      "after": 1200
+    },
+    {
+      "text": "Connect your TikTok"
+    },
+    {
+      "click": "Skip for now",
+      "after": 1200
+    },
+    {
+      "text": "Set your prices"
+    },
+    {
+      "shot": "public-account-m-make-prices"
+    },
+    {
+      "click": "Continue",
+      "after": 1200
+    },
+    {
+      "text": "Where should we pay you?"
+    },
+    {
+      "click": "Digital wallet"
+    },
+    {
+      "type": {
+        "sel": "#main input[autocomplete='email']",
+        "text": "sam@example.com"
+      }
+    },
+    {
+      "click": "Verify with your ID",
+      "after": 1200
+    },
+    {
+      "click": "Passport"
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('[role=dialog] select'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, \"value\").set; set.call(el, el.options[1].value); el.dispatchEvent(new Event(\"change\", { bubbles: true })); return el.value; })()"
+    },
+    {
+      "click": "Take photo",
+      "after": 1500
+    },
+    {
+      "click": "Submit for checking",
+      "after": 4500
+    },
+    {
+      "shot": "public-account-m-make-paid"
+    },
+    {
+      "click": "Publish my profile",
+      "after": 2500
+    },
+    {
+      "text": "Your creator profile is ready"
+    },
+    {
+      "shot": "public-account-m-make-done"
+    },
+    {
+      "click": "Go to Studio",
+      "after": 3000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "go": "/how-it-works",
+      "after": 3500
+    },
+    {
+      "text": "Simple to order, safe to pay."
+    },
+    {
+      "shot": "public-account-m-how"
+    },
+    {
+      "go": "/for-creators",
+      "after": 3500
+    },
+    {
+      "text": "Get paid to talk about tech you'd actually use."
+    },
+    {
+      "shot": "public-account-m-creators"
+    },
+    {
+      "go": "/legal",
+      "after": 3000
+    },
+    {
+      "text": "In legal review"
+    }
+  ]
+}

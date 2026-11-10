@@ -8,7 +8,7 @@ import { PublicShell } from "@/components/shell/app-shell";
 
 export default function OnboardingPage() {
   return (
-    <PublicShell footer={false} bottomBar={false}>
+    <PublicShell footer="none" bottomBar={false}>
       <Suspense fallback={<AuthSkeleton variant="wizard" />}>
         <Onboarding />
       </Suspense>

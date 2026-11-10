@@ -9,28 +9,55 @@ import {
   isCampaign,
   mySlot,
   openSlotCount,
+  platformList,
 } from "./campaigns";
 import { DAY, NOW, localDay } from "./clock";
+import { unreadRepliesTo } from "./comments";
 import { cities, payouts as seedPayouts } from "./data";
-import { daysFromNow, plural, priceBreakdown } from "./format";
-import type { DemoState } from "./store";
+import { creatorNet, daysFromNow, money, moneyExact, moneyRange, netRange, plural, priceBreakdown } from "./format";
+import type { DemoState, OrderDraft, OrderDraftKind } from "./store";
 import { activeAccount, activeIds } from "./store";
-import { countries, formatById, languageById, nicheById } from "./taxonomy";
+import {
+  NEW_ORDER_DAYS,
+  PICK_NOW,
+  WORK_PAGE_SIZE,
+  WORK_CLOSING_STEPS,
+  WORK_PAY_STEPS,
+  countries,
+  formatById,
+  formats as videoFormats,
+  jobTypes,
+  languageById,
+  nicheById,
+  niches,
+  platforms as allPlatforms,
+} from "./taxonomy";
 import type {
+  Brief,
   Business,
+  CampaignPlatformId,
   Commission,
   CommissionStatus,
   ContentRequest,
   Creator,
   Delivery,
+  FollowerTierId,
+  FormatId,
+  JobType,
+  NicheId,
   Pitch,
+  PlatformId,
   Role,
   Settings,
   Thread,
+  UsageOptionId,
   Video,
 } from "./types";
 
 export {
+  allBrandHandles,
+  brandHandleFor,
+  campaignBudget,
   campaignMoney,
   campaignProgress,
   campaignSlots,
@@ -39,10 +66,28 @@ export {
   keepLiveUntil,
   mySlot,
   openSlotCount,
+  platformEligibility,
+  platformList,
+  postLinkProblem,
   slotHistory,
-  withCampaignFee,
+  slotPlatform,
 } from "./campaigns";
-export type { Eligibility, IneligibleReason, SlotView } from "./campaigns";
+export type { Eligibility, IneligibleReason, PlatformEligibility, SlotView } from "./campaigns";
+export {
+  commentCounts,
+  commentPermissions,
+  commentsAreGeneralOnly,
+  commentsCloseAt,
+  commentsOpen,
+  isLatestDelivery,
+  openComments,
+  requestedComments,
+  unreadComments,
+  unreadOn,
+  unreadRepliesTo,
+  visibleComments,
+  visibleReplies,
+} from "./comments";
 
 /* -------------------------------------------------------------------------- */
 /* Lookups                                                                     */
@@ -71,7 +116,7 @@ export function videoById(s: DemoState, id: string): Video | undefined {
   const portfolio = s.videos.find((v) => v.id === id);
   if (portfolio) return portfolio;
   for (const c of s.commissions) {
-    const delivery = c.deliveries.find((d) => d.video.id === id);
+    const delivery = c.deliveries.find((d) => d.video?.id === id);
     if (delivery) return delivery.video;
   }
   return undefined;
@@ -96,8 +141,22 @@ export const me = {
   },
   settings: (s: DemoState): Settings =>
     s.settings[s.activeAccountId] ?? Object.values(s.settings)[0],
-  /** The request wizard's autosaved draft for this account. */
+  /** The previous request wizard's autosaved draft for this account. */
   draft: (s: DemoState) => s.requestDrafts[s.activeAccountId] ?? null,
+  /**
+   * The new-order form's saved draft of one kind for this account (null = none). `data` comes back
+   * exactly as it was saved; pass its type: `me.orderDraft<MyForm>(s, "campaign")`.
+   */
+  orderDraft: <T = unknown>(s: DemoState, kind: OrderDraftKind): OrderDraft<T> | null =>
+    (s.orderDrafts[s.activeAccountId]?.[kind] as OrderDraft<T> | undefined) ?? null,
+  /** Both kinds of draft for this account, newest first (for "Your orders"). */
+  orderDrafts: (s: DemoState): OrderDraft[] =>
+    Object.values(s.orderDrafts[s.activeAccountId] ?? {})
+      .filter((d): d is OrderDraft => Boolean(d))
+      .sort((a, b) => Date.parse(b.savedAt) - Date.parse(a.savedAt)),
+  /** The accounts creators must tag, saved on this account's buyer profile ("@daftar.app" per platform). */
+  brandHandles: (s: DemoState): Partial<Record<CampaignPlatformId, string>> =>
+    businessById(s, activeIds(s).businessId)?.handles ?? {},
   paymentMethods: (s: DemoState) =>
     s.paymentMethods.filter((m) => m.businessId === activeIds(s).businessId),
   payoutMethods: (s: DemoState) =>
@@ -215,7 +274,11 @@ export function fit(s: DemoState, creator: Creator, request: ContentRequest): Fi
     gaps.push(`Doesn't list ${brief.languages.map((l) => languageById[l].name).join(" or ")}`);
   }
 
-  if (creator.formats.includes(brief.format)) {
+  if (isAdCopy(request)) {
+    // Ad copy has no format to match: anyone can pitch; listing it counts as a plus.
+    score += creator.formats.includes("ad-copy") ? 22 : 12;
+    if (creator.formats.includes("ad-copy")) reasons.push("Offers ad copy writing");
+  } else if (creator.formats.includes(brief.format)) {
     score += 22;
     const made = portfolio(s, creator).filter((v) => v.format === brief.format).length;
     const [one, many] = formatById[brief.format].noun;
@@ -249,10 +312,41 @@ export function fit(s: DemoState, creator: Creator, request: ContentRequest): Fi
 }
 
 /* -------------------------------------------------------------------------- */
+/* Job types (video or ad copy) and order basics                               */
+/* -------------------------------------------------------------------------- */
+
+/** "video" or "ad-copy", for an order, a commission or a brief's holder. */
+export const jobTypeOf = (item: { brief: Pick<Brief, "jobType" | "format"> }): JobType =>
+  item.brief.jobType ?? (item.brief.format === "ad-copy" ? "ad-copy" : "video");
+
+/**
+ * Ad copy: a custom order whose delivery is text, with general comments only, no posting, no tier,
+ * and no format, platform, length or aspect to show. Works on orders and commissions alike.
+ */
+export const isAdCopy = (item: { brief: Pick<Brief, "jobType" | "format"> }) => jobTypeOf(item) === "ad-copy";
+
+/** A delivery of text (ad copy) rather than a video. */
+export const isTextDelivery = (d: Pick<Delivery, "kind">) => d.kind === "text";
+
+/** "custom" or "campaign": the two kinds of order ("Custom order", "UGC campaign"). */
+export const orderKindOf = (r: Pick<ContentRequest, "kind">): "custom" | "campaign" =>
+  r.kind === "campaign" ? "campaign" : "custom";
+
+/** Days the creator has to deliver version 1, set by the brand (undefined on older custom orders). */
+export const deadlineDaysOf = (r: Pick<ContentRequest, "deadlineDays" | "campaign">) =>
+  r.campaign?.deadlineDays ?? r.deadlineDays;
+
+/** Posted within the last two days (the "New" tag). */
+export const isNewOrder = (r: Pick<ContentRequest, "postedAt">) => NOW - Date.parse(r.postedAt) < NEW_ORDER_DAYS * DAY;
+
+/** Whole days until the order closes (0 = today, negative = past). */
+export const closesInDays = (r: Pick<ContentRequest, "closesAt">) => daysFromNow(r.closesAt);
+
+/* -------------------------------------------------------------------------- */
 /* Requests and pitches                                                        */
 /* -------------------------------------------------------------------------- */
 
-/** Orders a buyer profile placed (custom requests and campaigns), newest first. */
+/** Orders a buyer profile placed (custom orders and campaigns), newest first. */
 export function requestsForBusiness(s: DemoState, businessId: string = activeIds(s).businessId) {
   return s.requests
     .filter((r) => r.businessId === businessId)
@@ -285,7 +379,7 @@ export const myPitchFor = (
   );
 
 /**
- * Open custom requests a creator can pitch on (public or invited), best fit first. Excludes UGC
+ * Open custom orders a creator can pitch on (public or invited), best fit first. Excludes UGC
  * campaigns (see `openCampaigns`) and the account's own orders.
  */
 export function opportunities(s: DemoState, creatorId: string | undefined = activeIds(s).creatorId) {
@@ -322,6 +416,7 @@ export function opportunities(s: DemoState, creatorId: string | undefined = acti
 export const latestDelivery = (c: Commission): Delivery | undefined =>
   c.deliveries[c.deliveries.length - 1];
 
+/** A commission's split: `total` (the brand pays), `fee` (Yapp, 20%), `creatorEarns` (the creator, 80%). */
 export const commissionTotals = (c: Commission) => priceBreakdown(c.price, c.addons, c.feeRate);
 
 /** Statuses where the given side has something to do. */
@@ -393,6 +488,83 @@ export const isActive = (c: Commission) =>
   c.status === "disputed" ||
   // An approved campaign video still needs posting (or posting again).
   (c.source === "campaign" && c.status === "completed" && (c.post?.status === "due" || c.post?.status === "removed"));
+
+/* -------------------------------------------------------------------------- */
+/* Comments on deliveries (rules in lib/comments.ts)                           */
+/* -------------------------------------------------------------------------- */
+
+export type CommentAuthorView = {
+  side: Role;
+  /** "Karim Saleh", "Layla Mansour", "Daftar". */
+  name: string;
+  firstName: string;
+  /** "Co-founder & CEO, Daftar" for a team member; undefined otherwise. */
+  title?: string;
+  /** Id for <FaceAvatar> when a person wrote it (team member, creator, personal buyer). */
+  faceId?: string;
+  /** The brand, for <BusinessLogo> when there's no person to show. */
+  business?: Business;
+  /** Written by the signed-in account's side ("You" / "Your team"). */
+  mine: boolean;
+  /** Written by the signed-in person themselves: only they may edit or delete it. */
+  own: boolean;
+};
+
+/** Who wrote a comment or reply on this commission, for a name and a face. */
+export function commentAuthor(
+  s: DemoState,
+  c: Pick<Commission, "businessId" | "creatorId">,
+  item: { author: Role; authorId: string },
+): CommentAuthorView {
+  const mine = sideOf(s, c) === item.author;
+  const ids = activeIds(s);
+  const own = mine && item.authorId === (item.author === "business" ? (ids.memberId ?? ids.businessId) : ids.creatorId);
+  if (item.author === "creator") {
+    const creator = creatorById(s, item.authorId) ?? creatorById(s, c.creatorId);
+    return {
+      side: "creator",
+      name: creator?.name ?? "The creator",
+      firstName: creator?.firstName ?? "The creator",
+      faceId: creator?.id,
+      mine,
+      own,
+    };
+  }
+  const business = businessById(s, c.businessId);
+  const member = memberById(s, item.authorId);
+  if (member) {
+    return {
+      side: "business",
+      name: member.name,
+      firstName: member.name.split(" ")[0],
+      title: business ? `${member.title}, ${business.name}` : member.title,
+      faceId: member.id,
+      business,
+      mine,
+      own,
+    };
+  }
+  const name = business?.name ?? "The brand";
+  return {
+    side: "business",
+    name,
+    firstName: business?.kind === "personal" ? name.split(" ")[0] : name,
+    faceId: business?.kind === "personal" ? (business.faceId ?? business.id) : undefined,
+    business,
+    mine,
+    own,
+  };
+}
+
+/**
+ * Replies the creator hasn't read, on comments they wrote, across their commissions: "Daftar replied
+ * to your comment" in Work's "Needs you". Newest first.
+ */
+export function repliesForCreator(s: DemoState) {
+  return commissionsForCreator(s)
+    .flatMap((commission) => unreadRepliesTo(commission, "creator").map((hit) => ({ commission, ...hit })))
+    .sort((a, b) => Date.parse(b.reply.createdAt) - Date.parse(a.reply.createdAt));
+}
 
 /* -------------------------------------------------------------------------- */
 /* Campaigns                                                                   */
@@ -481,8 +653,12 @@ export const unreadNotificationCount = (s: DemoState) =>
 /* Money                                                                       */
 /* -------------------------------------------------------------------------- */
 
+/** Sums of nets carry cents ($125.60); keep them exact to the cent. */
+const toCents = (amount: number) => Math.round(amount * 100) / 100;
+
 /**
- * Creator money: available to withdraw, held in protection, lifetime, and the last 6 months.
+ * Creator money, all net of Yapp's 20% fee (what the creator actually receives): available to
+ * withdraw, held in protection, pending campaign pay, lifetime, and the last 6 months.
  *
  * The seed only contains a creator's recent commissions, while seeded payouts (and the
  * creator's `completed` count) reflect earlier history. So: seeded payouts are treated as
@@ -515,9 +691,15 @@ export function creatorEarnings(s: DemoState, creatorId: string | undefined = ac
     .reduce((sum, c) => sum + earned(c), 0);
   const seededPayoutIds = new Set(seedPayouts.map((p) => p.id));
   const newPayouts = s.payouts.filter((p) => p.creatorId === creatorId && !seededPayoutIds.has(p.id));
-  const available = Math.max(0, releasedTotal - newPayouts.reduce((sum, p) => sum + p.amount, 0));
+  // Released work a seeded payout already paid out (older history) isn't available again.
+  const paidOut = new Set(
+    s.payouts.filter((p) => p.creatorId === creatorId).flatMap((p) => p.commissionIds ?? []),
+  );
+  const unpaidReleased = released.filter((c) => !paidOut.has(c.id)).reduce((sum, c) => sum + earned(c), 0);
+  const available = Math.max(0, toCents(unpaidReleased - newPayouts.reduce((sum, p) => sum + p.amount, 0)));
 
-  const typical = creator?.packages.length ? startingPrice(creator) * 1.4 : 0;
+  // Earlier work, estimated from the creator's prices (net of the fee, like everything here).
+  const typical = creator?.packages.length ? creatorNet(startingPrice(creator) * 1.4) : 0;
   const earlierCount = Math.max(0, (creator?.completed ?? 0) - released.length);
   const lifetime = Math.round((earlierCount * typical + releasedTotal) / 10) * 10;
 
@@ -545,23 +727,24 @@ export function creatorEarnings(s: DemoState, creatorId: string | undefined = ac
   );
   return {
     available,
-    held,
-    pending,
+    held: toCents(held),
+    pending: toCents(pending),
     /** Part of `pending` with no release date yet: the post isn't verified, or it came down. */
-    pendingWaiting,
+    pendingWaiting: toCents(pendingWaiting),
     pendingItems,
     lifetime,
-    thisMonth: monthly[monthly.length - 1],
-    monthly,
+    thisMonth: toCents(monthly[monthly.length - 1]),
+    monthly: monthly.map(toCents),
     monthLabels,
     completedCount: creator?.completed ?? released.length,
   };
 }
 
 /**
- * Business money: currently protected, spent, and fees, all with the service fee included (it's
- * charged and held with each payment). Campaigns count through their own hold (`campaignMoney`);
- * their slot commissions are left out so nothing is counted twice. Spent = released to creators.
+ * Business money, in listed prices (what the brand pays; no fee is ever added): currently held,
+ * authorized, spent and this month. Campaigns count through their own hold (`campaignMoney`); their
+ * slot commissions are left out so nothing is counted twice. Spent = released on approval (the
+ * creator receives 80% of it, Yapp keeps 20%).
  */
 export function businessSpend(s: DemoState, businessId: string = activeIds(s).businessId) {
   const mine = s.commissions.filter((c) => c.businessId === businessId && c.source !== "campaign");
@@ -582,9 +765,6 @@ export function businessSpend(s: DemoState, businessId: string = activeIds(s).bu
   const campaignReleased = s.commissions.filter(
     (c) => c.businessId === businessId && c.source === "campaign" && c.payment.status === "released",
   );
-  const fees =
-    released.reduce((a, c) => a + commissionTotals(c).fee, 0) +
-    campaignReleased.reduce((a, c) => a + commissionTotals(c).fee, 0);
   const campaignThisMonth = campaignReleased
     .filter((c) => (c.withdrawableFrom ?? c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey)
     .reduce((a, c) => a + total(c), 0);
@@ -598,7 +778,6 @@ export function businessSpend(s: DemoState, businessId: string = activeIds(s).bu
     campaignHeld,
     authorized,
     spent: spent + campaignSpent,
-    fees,
     thisMonth,
     completedCount: released.length,
   };
@@ -621,7 +800,7 @@ export function receipts(s: DemoState, businessId: string = activeIds(s).busines
 
 /**
  * Campaign money movements (charge, top-ups, refunds) as receipt lines, newest first. Signed:
- * refunds are negative. `amount` is what moved on the card; `subtotal` + `fee` = `amount`.
+ * refunds are negative. `amount` is what moved on the card (listed prices, nothing added).
  */
 export function campaignReceipts(s: DemoState, businessId: string = activeIds(s).businessId) {
   return s.requests
@@ -638,24 +817,463 @@ export function campaignReceipts(s: DemoState, businessId: string = activeIds(s)
           entry,
           date: entry.at,
           amount: sign * entry.amount,
-          fee: sign * entry.fee,
-          subtotal: sign * (entry.amount - entry.fee),
         };
       }),
     )
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
 }
 
+/** A brand needs this many hires on Yapp before any reliability figure shows (else "—"). */
+export const RELIABILITY_MIN_HIRES = 3;
+
+export type ReliabilityFigureId = "paysOnTime" | "reviewSpeed" | "hireRate" | "autoApproved" | "sharesResults";
+
+export type ReliabilityFigure = {
+  id: ReliabilityFigureId;
+  /** "Pays on time" */
+  label: string;
+  /** "100%", "9h", "2 days", or "—" until there is enough data. */
+  value: string;
+  /** False when `value` is "—". */
+  known: boolean;
+  /** One sentence for a tooltip or an info panel. */
+  hint: string;
+};
+
+const hoursLabel = (hours: number) => (hours < 24 ? `${Math.round(hours)}h` : plural(Math.round(hours / 24), "day"));
+
 /**
- * A brand's reliability for creators, in one line ("Reviews in about 14h · 2% approved by the
- * timer · 7 hires"), or undefined for a brand with no history yet.
+ * A brand's five reliability figures for creators (round 3 answers, item 20), in this order: Pays
+ * on time, Review speed, Hire rate, Auto-approved, Shares results. Each is "—" until there is
+ * enough data (a brand with fewer than 3 hires shows "—" everywhere). "Shares results" needs ad
+ * accounts, which can't be connected yet, so it is always "—". No stars for brands.
  */
-export function reliabilityLine(business: Business): string | undefined {
-  const r = business.reliability;
-  if (!r || business.hires === 0) return undefined;
-  const speed = r.reviewHours < 24 ? `${r.reviewHours}h` : plural(Math.round(r.reviewHours / 24), "day");
-  const timer = r.timerApprovedPct > 0 ? `${r.timerApprovedPct}% approved by the timer` : "Always reviews before the timer";
-  return [`Reviews in about ${speed}`, timer, plural(business.hires, "hire")].join(" · ");
+export function reliabilityFigures(business: Business | undefined): ReliabilityFigure[] {
+  const r = business && business.hires >= RELIABILITY_MIN_HIRES ? business.reliability : undefined;
+  const pct = (value: number | null | undefined) => (value === null || value === undefined ? undefined : `${Math.round(value)}%`);
+  const rows: [ReliabilityFigureId, string, string | undefined, string][] = [
+    ["paysOnTime", "Pays on time", pct(r?.paysOnTimePct), "Orders where the money was held from the start and released without a dispute."],
+    [
+      "reviewSpeed",
+      "Review speed",
+      r?.reviewHours === null || r?.reviewHours === undefined ? undefined : hoursLabel(r.reviewHours),
+      "Typical time from a delivered version to the brand's approval or change request.",
+    ],
+    ["hireRate", "Hire rate", pct(r?.hireRatePct), "Custom orders that ended with someone hired."],
+    [
+      "autoApproved",
+      "Auto-approved",
+      pct(r?.timerApprovedPct),
+      "Versions approved by the 3-day timer because the brand didn't respond. Lower is better.",
+    ],
+    ["sharesResults", "Shares results", undefined, "Shown once brands can connect an ad account."],
+  ];
+  return rows.map(([id, label, value, hint]) => ({ id, label, value: value ?? "—", known: value !== undefined, hint }));
+}
+
+/**
+ * The reliability figures in one line for compact places ("Pays on time 100% · Reviews in about 9h
+ * · Hires 64% of the time · 0% auto-approved"), or undefined when none is known yet.
+ */
+export function reliabilitySummary(business: Business | undefined): string | undefined {
+  const known = reliabilityFigures(business).filter((f) => f.known);
+  if (!known.length) return undefined;
+  const phrase: Record<ReliabilityFigureId, (v: string) => string> = {
+    paysOnTime: (v) => `Pays on time ${v}`,
+    reviewSpeed: (v) => `Reviews in about ${v}`,
+    hireRate: (v) => `Hires ${v} of the time`,
+    autoApproved: (v) => `${v} auto-approved`,
+    sharesResults: (v) => `Shares results ${v}`,
+  };
+  return known.map((f) => phrase[f.id](f.value)).join(" · ");
+}
+
+/* -------------------------------------------------------------------------- */
+/* Find work (Work spec 6.5): every open campaign and custom order, one list   */
+/* -------------------------------------------------------------------------- */
+
+export type WorkKind = "campaign" | "custom";
+export type WorkSort = "recommended" | "closing" | "newest" | "pay-high" | "pay-low";
+
+export type WorkQuery = {
+  /** Default "all". */
+  kind?: "all" | WorkKind;
+  /** Brand, product, title or category; case-insensitive. */
+  q?: string;
+  /** Product categories, OR within the group. Empty = any. */
+  categories?: NicheId[];
+  /** Job types, OR within the group. Empty = any. */
+  jobTypes?: JobType[];
+  /** One video format, or "all" (default). Ad copy has no format, so any format filter leaves it out. */
+  format?: FormatId | "all";
+  /** One platform (the job includes it), or "any" (default). Ad copy has none. */
+  platform?: PlatformId | "any";
+  /** Listed pay at least this much (per Yapp for campaigns, the budget's top for custom orders). 0 = any. */
+  minPay?: number;
+  /** Closes within this many days (today counts). 0 = any time. */
+  closingWithinDays?: number;
+  /** Default "recommended". */
+  sort?: WorkSort;
+  /** 1-based (default 1; clamped to the last page). */
+  page?: number;
+  /** Default 12 (`WORK_PAGE_SIZE`). */
+  pageSize?: number;
+  /** Include orders this account dismissed from its feed (default false). */
+  includeHidden?: boolean;
+};
+
+/** Why this viewer can't pick or pitch. */
+export type WorkBlock =
+  | "no_profile"
+  | "own"
+  | "closed"
+  | "full"
+  | "joined"
+  | "excluded"
+  | "no_account"
+  | "unverified"
+  | "below"
+  | "above"
+  | "pitched";
+
+export type WorkAction = {
+  kind: "pick" | "pitch";
+  can: boolean;
+  /** Default copy: "Pick now", "Pitch now", or why not ("All slots taken", "Create a creator profile to take work"). */
+  label: string;
+  reason?: WorkBlock;
+  /** Pick only: the campaign platforms this creator qualifies on (choose one when picking). */
+  platforms?: CampaignPlatformId[];
+};
+
+export type WorkPay = {
+  unit: "per-yapp" | "budget";
+  /** What the pay filter and sort use: the price per Yapp, or the top of the budget. */
+  amount: number;
+  min: number;
+  max: number;
+  /** The creator's net (80%) of `amount`, `min` and `max`. */
+  net: number;
+  netMin: number;
+  netMax: number;
+  /** "$140 per Yapp", "$200–350 budget". */
+  label: string;
+  /** "you earn $112", "you earn $160–280". */
+  netLabel: string;
+};
+
+/** One open order, ready for a card or a list row. */
+export type WorkItem = {
+  id: string;
+  kind: WorkKind;
+  request: ContentRequest;
+  business: Business;
+  brandName: string;
+  productName?: string;
+  title: string;
+  category: NicheId;
+  jobType: JobType;
+  /** Undefined for ad copy. */
+  format?: FormatId;
+  /** Campaigns: where creators may post. Custom orders: where the brand runs it. Empty for ad copy. */
+  platforms: PlatformId[];
+  /** Campaigns only. */
+  tierId?: FollowerTierId;
+  usage: UsageOptionId;
+  /** Days to deliver version 1, set by the brand (undefined on older custom orders). */
+  deadlineDays?: number;
+  pay: WorkPay;
+  /** Campaigns only. */
+  slots?: { total: number; taken: number; left: number };
+  /** Custom orders: pitches so far (0 for campaigns). */
+  pitches: number;
+  postedAt: string;
+  closesAt: string;
+  closesInDays: number;
+  isNew: boolean;
+  /** Invited to an invite-only custom order. */
+  invited: boolean;
+  hidden: boolean;
+  /** Custom orders, for a viewer with a creator profile. */
+  fit?: Fit;
+  action: WorkAction;
+  /** The viewer's slot on this campaign, or their pitch on this order. */
+  mySlot?: Commission;
+  myPitch?: Pitch;
+};
+
+export type WorkFacets = {
+  /** The type bar: every other filter applied, not the kind. */
+  kind: Record<WorkKind, number>;
+  categories: Record<NicheId, number>;
+  jobTypes: Record<JobType, number>;
+  /** Video formats, plus "all" (every other filter applied, any format, ad copy included). */
+  formats: Record<FormatId | "all", number>;
+  platforms: Record<PlatformId | "any", number>;
+  /** Keyed by threshold: 0 (any), 150, 300, 500. */
+  minPay: Record<number, number>;
+  /** Keyed by days: 0 (any time), 3, 7. */
+  closingWithin: Record<number, number>;
+};
+
+export type WorkResult = {
+  items: WorkItem[];
+  /** Matches across every page. */
+  total: number;
+  page: number;
+  pageSize: number;
+  pageCount: number;
+  /** Each group's counts apply every other active filter but not its own (search always applies). */
+  facets: WorkFacets;
+  /** Open slots across the matching campaigns ("Yapps open"). */
+  openSlots: number;
+};
+
+const blockLabel = (reason: WorkBlock, item: { platforms: PlatformId[] }): string => {
+  switch (reason) {
+    case "no_profile":
+      return "Create a creator profile to take work";
+    case "full":
+      return "All slots taken";
+    case "joined":
+      return "You picked a slot";
+    case "closed":
+      return "Closed";
+    case "own":
+      return "Your order";
+    case "excluded":
+      return "Not open to you";
+    case "no_account":
+      return `Connect your ${platformList(item.platforms as CampaignPlatformId[])} to pick`;
+    case "unverified":
+      return "Verify your account to pick";
+    case "below":
+    case "above":
+      return "Not in your follower tier";
+    case "pitched":
+      return "Pitch sent";
+  }
+};
+
+function workPay(request: ContentRequest): WorkPay {
+  if (request.campaign) {
+    const price = request.campaign.pricePerVideo;
+    const net = creatorNet(price);
+    return {
+      unit: "per-yapp",
+      amount: price,
+      min: price,
+      max: price,
+      net,
+      netMin: net,
+      netMax: net,
+      label: `${money(price)} per Yapp`,
+      netLabel: `you earn ${moneyExact(net)}`,
+    };
+  }
+  const { min, max } = request.budget;
+  return {
+    unit: "budget",
+    amount: max,
+    min,
+    max,
+    net: creatorNet(max),
+    netMin: creatorNet(min),
+    netMax: creatorNet(max),
+    label: `${moneyRange(min, max)} budget`,
+    netLabel: `you earn ${netRange(min, max)}`,
+  };
+}
+
+/** Every open order this viewer could look at, before any filter. */
+function workCatalogue(s: DemoState): WorkItem[] {
+  const ids = activeIds(s);
+  const creator = ids.creatorId ? creatorById(s, ids.creatorId) : undefined;
+  const hidden = s.hidden[s.activeAccountId] ?? [];
+  const base = (request: ContentRequest) => {
+    const business = businessById(s, request.businessId)!;
+    const product = productById(s, request.brief.productId);
+    const adCopy = isAdCopy(request);
+    return {
+      id: request.id,
+      request,
+      business,
+      brandName: business?.name ?? "A brand",
+      productName: product?.name,
+      title: request.title,
+      category: product?.niche ?? business?.industry ?? "consumer",
+      jobType: jobTypeOf(request),
+      format: adCopy ? undefined : request.brief.format,
+      platforms: adCopy ? [] : request.campaign ? request.campaign.platforms : request.brief.platforms,
+      usage: request.brief.usage,
+      deadlineDays: deadlineDaysOf(request),
+      pay: workPay(request),
+      postedAt: request.postedAt,
+      closesAt: request.closesAt,
+      closesInDays: closesInDays(request),
+      isNew: isNewOrder(request),
+      hidden: hidden.includes(request.id),
+    };
+  };
+
+  const customs: WorkItem[] = creator
+    ? opportunities(s).map((o) => ({
+        ...base(o.request),
+        kind: "custom" as const,
+        pitches: o.pitchCount,
+        invited: o.invited,
+        fit: o.fit,
+        myPitch: o.pitch,
+        action: o.pitch
+          ? { kind: "pitch" as const, can: false, reason: "pitched" as const, label: blockLabel("pitched", { platforms: [] }) }
+          : { kind: "pitch" as const, can: true, label: "Pitch now" },
+      }))
+    : s.requests
+        .filter((r) => !isCampaign(r) && r.businessId !== ids.businessId && r.status === "open" && r.visibility === "public")
+        .map((request) => ({
+          ...base(request),
+          kind: "custom" as const,
+          pitches: pitchesForRequest(s, request.id).length,
+          invited: false,
+          action: { kind: "pitch" as const, can: false, reason: "no_profile" as const, label: blockLabel("no_profile", { platforms: [] }) },
+        }));
+
+  const campaigns: WorkItem[] = openCampaigns(s).map((o) => {
+    const item = base(o.request);
+    const total = o.request.slots;
+    const left = o.openSlots;
+    const reason = o.eligibility.ok ? undefined : (o.eligibility.reason as WorkBlock);
+    return {
+      ...item,
+      kind: "campaign" as const,
+      tierId: o.request.campaign?.tierId,
+      slots: { total, taken: total - left, left },
+      pitches: 0,
+      invited: false,
+      mySlot: o.slot,
+      action: o.eligibility.ok
+        ? { kind: "pick" as const, can: true, label: PICK_NOW, platforms: o.eligibility.platforms }
+        : { kind: "pick" as const, can: false, reason, label: blockLabel(reason!, item) },
+    };
+  });
+
+  return [...campaigns, ...customs];
+}
+
+type WorkFilterKey = "kind" | "categories" | "jobTypes" | "format" | "platform" | "minPay" | "closing";
+
+function matches(item: WorkItem, query: WorkQuery, skip?: WorkFilterKey): boolean {
+  const kind = query.kind ?? "all";
+  if (skip !== "kind" && kind !== "all" && item.kind !== kind) return false;
+  if (skip !== "categories" && query.categories?.length && !query.categories.includes(item.category)) return false;
+  if (skip !== "jobTypes" && query.jobTypes?.length && !query.jobTypes.includes(item.jobType)) return false;
+  if (skip !== "format" && query.format && query.format !== "all" && item.format !== query.format) return false;
+  if (skip !== "platform" && query.platform && query.platform !== "any" && !item.platforms.includes(query.platform)) return false;
+  if (skip !== "minPay" && query.minPay && item.pay.amount < query.minPay) return false;
+  if (
+    skip !== "closing" &&
+    query.closingWithinDays &&
+    !(item.closesInDays >= 0 && item.closesInDays <= query.closingWithinDays)
+  )
+    return false;
+  return true;
+}
+
+function matchesSearch(item: WorkItem, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const hay = [
+    item.brandName,
+    item.productName ?? "",
+    item.title,
+    nicheById[item.category].name,
+    item.format ? formatById[item.format].name : "",
+    jobTypes.find((j) => j.id === item.jobType)?.name ?? "",
+  ]
+    .join(" ")
+    .toLowerCase();
+  return needle.split(/\s+/).every((word) => hay.includes(word));
+}
+
+/** Recommended: invited first, then new, then what this viewer can act on, then fit, then closing soonest. */
+function relevance(item: WorkItem, creator: Creator | undefined): number {
+  let score = 0;
+  if (item.invited) score += 1000;
+  if (item.isNew) score += 400;
+  if (item.action.can) score += 200;
+  if (item.fit) score += item.fit.score;
+  else if (item.kind === "campaign") score += item.action.can ? 70 : 30;
+  if (creator?.niches.includes(item.category)) score += 15;
+  return score;
+}
+
+/**
+ * Find work: every open UGC campaign and custom order this account could look at (its own orders,
+ * drafts, closed and hired orders, and invite-only orders it isn't invited to are left out), as cards
+ * a page renders directly, filtered, sorted and paged, with facet counts. Built on `opportunities()`
+ * (custom orders and fit), `openCampaigns()` (slots and eligibility) and `fit()`. An account without
+ * a creator profile sees the public orders with `action.can: false` ("Create a creator profile to
+ * take work"). Full campaigns stay listed with "All slots taken".
+ */
+export function findWork(s: DemoState, query: WorkQuery = {}): WorkResult {
+  const creator = me.creator(s);
+  const all = workCatalogue(s).filter((item) => (query.includeHidden || !item.hidden) && matchesSearch(item, query.q ?? ""));
+  const count = (skip: WorkFilterKey, test: (item: WorkItem) => boolean) =>
+    all.filter((item) => matches(item, query, skip) && test(item)).length;
+
+  const facets: WorkFacets = {
+    kind: {
+      campaign: count("kind", (i) => i.kind === "campaign"),
+      custom: count("kind", (i) => i.kind === "custom"),
+    },
+    categories: Object.fromEntries(niches.map((n) => [n.id, count("categories", (i) => i.category === n.id)])) as Record<NicheId, number>,
+    jobTypes: Object.fromEntries(jobTypes.map((j) => [j.id, count("jobTypes", (i) => i.jobType === j.id)])) as Record<JobType, number>,
+    formats: {
+      all: count("format", () => true),
+      ...Object.fromEntries(videoFormats.map((f) => [f.id, count("format", (i) => i.format === f.id)])),
+      "ad-copy": 0,
+    } as Record<FormatId | "all", number>,
+    platforms: {
+      any: count("platform", () => true),
+      ...Object.fromEntries(allPlatforms.map((p) => [p.id, count("platform", (i) => i.platforms.includes(p.id))])),
+    } as Record<PlatformId | "any", number>,
+    minPay: Object.fromEntries([0, ...WORK_PAY_STEPS].map((v) => [v, count("minPay", (i) => i.pay.amount >= v)])),
+    closingWithin: Object.fromEntries(
+      [0, ...WORK_CLOSING_STEPS].map((d) => [d, count("closing", (i) => d === 0 || (i.closesInDays >= 0 && i.closesInDays <= d))]),
+    ),
+  };
+
+  const matched = all.filter((item) => matches(item, query));
+  const sort = query.sort ?? "recommended";
+  const byClosing = (a: WorkItem, b: WorkItem) => Date.parse(a.closesAt) - Date.parse(b.closesAt);
+  const byNewest = (a: WorkItem, b: WorkItem) => Date.parse(b.postedAt) - Date.parse(a.postedAt);
+  matched.sort((a, b) => {
+    switch (sort) {
+      case "closing":
+        return byClosing(a, b) || byNewest(a, b);
+      case "newest":
+        return byNewest(a, b);
+      case "pay-high":
+        return b.pay.amount - a.pay.amount || byClosing(a, b);
+      case "pay-low":
+        return a.pay.amount - b.pay.amount || byClosing(a, b);
+      default:
+        return relevance(b, creator) - relevance(a, creator) || byClosing(a, b) || a.id.localeCompare(b.id);
+    }
+  });
+
+  const pageSize = Math.max(1, query.pageSize ?? WORK_PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(matched.length / pageSize));
+  const page = Math.min(Math.max(1, Math.floor(query.page ?? 1)), pageCount);
+  return {
+    items: matched.slice((page - 1) * pageSize, page * pageSize),
+    total: matched.length,
+    page,
+    pageSize,
+    pageCount,
+    facets,
+    openSlots: matched.reduce((n, item) => n + (item.slots?.left ?? 0), 0),
+  };
 }
 
 /* -------------------------------------------------------------------------- */

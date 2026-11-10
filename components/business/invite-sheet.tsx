@@ -13,7 +13,7 @@ import { actions, useDemo } from "@/lib/store";
 import type { Creator } from "@/lib/types";
 
 /**
- * Pick one of the account's open custom requests and invite this creator to pitch on it.
+ * Pick one of the account's open custom orders and invite this creator to pitch on it.
  * Campaigns are first come, first served, so nobody is invited to those.
  */
 export function InviteToRequestSheet({
@@ -31,7 +31,7 @@ export function InviteToRequestSheet({
     <Sheet
       open={creator !== null}
       onClose={onClose}
-      title={creator ? `Invite ${creator.firstName} to a request` : "Invite to a request"}
+      title={creator ? `Invite ${creator.firstName} to a custom order` : "Invite to a custom order"}
       description={
         creator
           ? `${creator.firstName} gets a notification and can pitch with an angle, a price and samples.`
@@ -44,14 +44,14 @@ export function InviteToRequestSheet({
             variant="outline"
             icon={<Plus size={16} aria-hidden />}
           >
-            {creator ? `New request inviting ${creator.firstName}` : "Post a new request"}
+            {creator ? `New custom order inviting ${creator.firstName}` : "Post a new custom order"}
           </PillButton>
         </div>
       }
     >
       {creator ? (
         open.length ? (
-          <ul className="flex flex-col gap-2" aria-label="Your open requests">
+          <ul className="flex flex-col gap-2" aria-label="Your open custom orders">
             {open.map((request) => {
               const product = productById(s, request.brief.productId);
               const pitch = myPitchFor(s, request.id, creator.id);
@@ -94,7 +94,7 @@ export function InviteToRequestSheet({
           </ul>
         ) : (
           <div className="y-tile flex flex-col gap-2 p-4">
-            <p className="y-small font-semibold">You have no open requests</p>
+            <p className="y-small font-semibold">You have no open custom orders</p>
             <p className="y-small y-fg-2">
               Post one and invite {creator.firstName} from there, or send a direct offer from their
               profile.

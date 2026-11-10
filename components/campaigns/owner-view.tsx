@@ -14,6 +14,7 @@ import {
   Play,
   RotateCcw,
   SlidersHorizontal,
+  TrendingUp,
   UserMinus,
   UserPlus,
   UserRound,
@@ -26,27 +27,29 @@ import { RequestBadge, SlotBadge } from "@/components/domain/status-badge";
 import { Block } from "@/components/ui/block";
 import { StackedBar } from "@/components/ui/charts";
 import { FaceAvatar } from "@/components/ui/face-avatar";
-import { PageHeader } from "@/components/ui/page";
+import { BackPill, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { money, plural, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
+  brandHandleFor,
   campaignMoney,
   campaignProgress,
   campaignSlots,
   creatorById,
   productById,
+  slotPlatform,
 } from "@/lib/selectors";
 import { absoluteUrl } from "@/lib/site";
 import { useDemo } from "@/lib/store";
 import {
-  CAMPAIGN_FEE_RATE,
   CAMPAIGN_MAX_REASSIGNMENTS,
   campaignPlatformById,
   languageById,
   tierById,
+  usageById,
 } from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
@@ -56,13 +59,14 @@ import {
   CloseCampaignSheet,
   EditCampaignSheet,
   LearningSheet,
+  RaisePriceSheet,
   RemoveCreatorSheet,
   type CampaignRequest,
 } from "./owner-sheets";
 import { ActionList, Bullets, Disclosure, RowMenu, type MenuItem } from "./parts";
 import { deadlineLine, followersOn, perYapp, postingRule } from "./shared";
 
-type SheetKind = "more" | "tier" | "close" | "edit" | "learning";
+type SheetKind = "more" | "tier" | "price" | "close" | "edit" | "learning";
 
 /** Remove is only for a creator who hasn't uploaded anything yet. */
 const canRemove = (c: Commission) => c.status === "in_progress" && c.deliveries.length === 0;
@@ -77,7 +81,6 @@ export function OwnerView({ request }: { request: CampaignRequest }) {
   const terms = request.campaign;
   const product = productById(s, request.brief.productId);
   const tier = tierById[terms.tierId];
-  const platform = campaignPlatformById[terms.platform];
   const closed = request.status === "closed";
   const feedHref = paths.reel(request.id);
 
@@ -102,6 +105,12 @@ export function OwnerView({ request }: { request: CampaignRequest }) {
           : undefined,
       onSelect: () => setSheet("tier"),
     },
+    {
+      label: "Raise price",
+      icon: <TrendingUp size={18} aria-hidden />,
+      disabled: closed ? "The campaign is closed" : undefined,
+      onSelect: () => setSheet("price"),
+    },
     { label: "Edit details", icon: <Pencil size={18} aria-hidden />, onSelect: () => setSheet("edit") },
     {
       label: "Run again",
@@ -124,7 +133,15 @@ export function OwnerView({ request }: { request: CampaignRequest }) {
       : [{ label: "Close campaign", icon: <Ban size={18} aria-hidden />, onSelect: () => setSheet("close") }]),
   ];
 
-  const meta = [product?.name, platform.name, terms.brandHandle, tier.label, perYapp(terms.pricePerVideo)]
+  const price = terms.postedPrice
+    ? `${perYapp(terms.pricePerVideo)} (raised from ${money(terms.postedPrice)})`
+    : perYapp(terms.pricePerVideo);
+  const meta = [
+    product?.name,
+    terms.platforms.map((p) => `${campaignPlatformById[p].name} ${brandHandleFor(terms, p)}`).join(", "),
+    tier.label,
+    price,
+  ]
     .filter(Boolean)
     .join(" · ");
 
@@ -133,8 +150,8 @@ export function OwnerView({ request }: { request: CampaignRequest }) {
 
   return (
     <div className="flex flex-col gap-2">
+      <BackPill href={paths.work("ordered")} label="Work" className="!mb-0 w-fit" />
       <PageHeader
-        back={{ href: paths.orders(), label: "Your orders" }}
         title={<span className="block max-w-[24ch]">{request.title}</span>}
         description={
           <span className="flex flex-col items-start gap-2">
@@ -179,6 +196,7 @@ export function OwnerView({ request }: { request: CampaignRequest }) {
         </Sheet>
       ) : null}
       {sheet === "tier" ? <ChangeTierSheet request={request} onClose={() => setSheet(null)} /> : null}
+      {sheet === "price" ? <RaisePriceSheet request={request} onClose={() => setSheet(null)} /> : null}
       {sheet === "close" ? <CloseCampaignSheet request={request} onClose={() => setSheet(null)} /> : null}
       {sheet === "edit" ? <EditCampaignSheet request={request} onClose={() => setSheet(null)} /> : null}
       {sheet === "learning" && product ? (
@@ -264,8 +282,8 @@ function ProgressBlock({ request }: { request: CampaignRequest }) {
       </ul>
       <p className="y-small y-fg-2 border-t border-(--b-line) pt-3">
         {closed
-          ? "Closed. Open slots were refunded with their fee; creators already filming carry on."
-          : `Open until ${weekdayDate(request.campaign.closesAt)}, unless you close it sooner. Slots nobody takes are refunded with their fee when it closes.`}
+          ? "Closed. Unpicked slots were refunded; creators already filming carry on."
+          : `Open until ${weekdayDate(request.campaign.closesAt)}, unless you close it sooner.`}
       </p>
     </Block>
   );
@@ -279,7 +297,6 @@ function SlotsBlock({ request, onRemove }: { request: CampaignRequest; onRemove:
   const s = useDemo();
   const slots = campaignSlots(s, request);
   const closed = request.status === "closed";
-  const platform = request.campaign.platform;
   const history = slots.flatMap((view) => view.previous.map((c) => ({ slot: view.slot, commission: c })));
 
   return (
@@ -307,7 +324,7 @@ function SlotsBlock({ request, onRemove }: { request: CampaignRequest; onRemove:
               </li>
             );
           }
-          const followers = followersOn(creator, platform);
+          const followers = followersOn(creator, slotPlatform(c, request));
           const items: MenuItem[] = [
             { label: "View profile", icon: <UserRound size={18} aria-hidden />, href: paths.creator(creator.handle) },
             { label: "Open", icon: <ArrowUpRight size={18} aria-hidden />, href: paths.commission(c.id) },
@@ -387,7 +404,7 @@ function MoneyBlock({ request }: { request: CampaignRequest }) {
   const ledger = [...request.campaign.ledger].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
   const stats = [
     { label: "Held now", value: totals.held },
-    { label: "Paid to creators", value: totals.paidOut },
+    { label: "Released", value: totals.released },
     { label: "Refunded", value: totals.refunded },
   ];
   return (
@@ -397,7 +414,7 @@ function MoneyBlock({ request }: { request: CampaignRequest }) {
           Money
         </h2>
         <p className="y-micro y-fg-2">
-          {method ? `On ${paymentLabel(method)} · ` : ""}Includes the {Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee
+          {method ? `On ${paymentLabel(method)} · ` : ""}Total {money(totals.total)}, nothing added on top
         </p>
       </div>
       <dl className="grid grid-cols-3 gap-3">
@@ -410,6 +427,11 @@ function MoneyBlock({ request }: { request: CampaignRequest }) {
           </div>
         ))}
       </dl>
+      <p className="y-small y-fg-2">
+        {request.status === "closed"
+          ? "Each slot is paid out after you approve its video. Unpicked slots were refunded when the campaign closed."
+          : "The full amount is held when you post. Each slot is paid out after you approve its video. Unpicked slots are refunded when the campaign closes."}
+      </p>
       {ledger.length ? (
         <div className="border-t border-(--b-line) pt-1">
           <Disclosure summary="See all money movements">
@@ -481,6 +503,10 @@ function BriefBlock({ request }: { request: CampaignRequest }) {
               {deadlineLine(terms)}
             </p>
           </div>
+          <p className="y-small">
+            <span className="y-fg-2">Usage: </span>
+            {usageById[brief.usage].name}, included in the price. Raw footage included.
+          </p>
           {brief.languages.length ? (
             <p className="y-small">
               <span className="y-fg-2">Languages: </span>

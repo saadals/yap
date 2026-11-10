@@ -1,0 +1,56 @@
+/* Order owner view (components/order-owner): the pitch compare columns and the review-copy card.
+   Colours come from tokens only, so dark mode follows. */
+
+@layer components {
+  /* Compare: one column per pitch; every column shares the same 9 rows (subgrid), so the same fact
+     sits on the same line across columns. Scrolls sideways (snapping) on phones and past 3 columns. */
+  .yapp .oo-compare {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(78%, 1fr);
+    grid-template-rows: repeat(9, auto);
+    column-gap: 8px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--y-gutter);
+    scrollbar-width: thin;
+  }
+  @media (min-width: 640px) {
+    .yapp .oo-compare {
+      grid-auto-columns: 240px;
+      scroll-padding-inline: 0;
+    }
+    /* Two or three columns share the width; four or more keep 240px and scroll. */
+    .yapp .oo-compare[data-count="2"] {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .yapp .oo-compare[data-count="3"] {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .yapp .oo-col {
+    display: grid;
+    grid-row: span 9;
+    grid-template-rows: subgrid;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 0;
+    scroll-snap-align: start;
+    min-width: 0;
+  }
+  .yapp .oo-col > .oo-cell {
+    border-top: 1px solid var(--b-line, var(--y-line));
+  }
+
+  /* Review copies: the watermarked player beside the decision (stacked on phones). */
+  .yapp .oo-review {
+    display: grid;
+    gap: 16px;
+  }
+  @media (min-width: 640px) {
+    .yapp .oo-review {
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: 24px;
+    }
+  }
+}

@@ -4,12 +4,12 @@ import { Film, MailOpen } from "lucide-react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { languageList } from "@/components/domain/chips";
-import { clock, dueLabel, money, moneyRange, plural, shortDate } from "@/lib/format";
+import { clock, creatorNet, dueLabel, money, moneyExact, moneyRange, netRange, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import type { IneligibleReason } from "@/lib/selectors";
-import { businessById, productById } from "@/lib/selectors";
+import { businessById, platformList, productById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { campaignPlatformById, formatById, requestStatus, tierById } from "@/lib/taxonomy";
+import { CAMPAIGN_FEE_RATE, PICK_NOW, formatById, requestStatus, tierById } from "@/lib/taxonomy";
 import type { Business } from "@/lib/types";
 
 import type { CampaignItem, OrderItem } from "./feed-items";
@@ -18,7 +18,7 @@ import { ReelBackdrop, ReelCast } from "./reel-canvas";
 import { ReelCta, ReelFrame, ReelWho, type ReelProps } from "./reel-frame";
 import { ReelMenu } from "./reel-menu";
 
-/** A custom request as a reel: what they want, the budget, and Pitch. */
+/** A custom order as a reel: what they want, the budget, and Pitch. */
 export function OrderReel({ item, reducedMotion, onOpen, position, setSize }: ReelProps<OrderItem>) {
   const s = useDemo();
   const { request, own } = item;
@@ -50,7 +50,9 @@ export function OrderReel({ item, reducedMotion, onOpen, position, setSize }: Re
       price={
         <>
           <span className="y-display y-num y-reel-big">{moneyRange(request.budget.min, request.budget.max)}</span>{" "}
-          <span className="y-reel-unit">budget</span>
+          <span className="y-reel-unit">
+            budget{own ? "" : ` · you earn ${netRange(request.budget.min, request.budget.max)}`}
+          </span>
         </>
       }
       meta={
@@ -126,7 +128,7 @@ export function CampaignReel({
   const business = businessById(s, request.businessId);
   if (!terms) return null;
   const tier = tierById[terms.tierId];
-  const platform = campaignPlatformById[terms.platform].name;
+  const platform = platformList(terms.platforms);
   const state = campaignState(item);
   const toDetails = () => onOpen(item.id);
   const reason = state.kind === "ineligible" ? reasonLine[state.reason]?.(platform) : undefined;
@@ -140,11 +142,11 @@ export function CampaignReel({
       <ReelCta label="Campaign full" disabled />
     ) : state.kind === "make" ? (
       <ReelCta
-        label="Make a Yapp"
+        label={PICK_NOW}
         neon
         chip={{ open: openSlots, total: request.slots }}
         onClick={toDetails}
-        ariaLabel={`Make a Yapp, ${openSlots} of ${request.slots} remaining`}
+        ariaLabel={`${PICK_NOW}, ${openSlots} of ${request.slots} remaining`}
       />
     ) : (
       <ReelCta label="See details" onClick={toDetails} />
@@ -163,7 +165,10 @@ export function CampaignReel({
       price={
         <>
           <span className="y-display y-num y-reel-big">{money(terms.pricePerVideo)}</span>{" "}
-          <span className="y-reel-unit">per Yapp</span>
+          <span className="y-reel-unit">
+            per Yapp
+            {state.kind === "manage" ? "" : ` · you earn ${moneyExact(creatorNet(terms.pricePerVideo, CAMPAIGN_FEE_RATE))}`}
+          </span>
         </>
       }
       meta={

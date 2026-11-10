@@ -108,7 +108,7 @@ export function ReelWho({
   return <div className="y-reel-who">{body}</div>;
 }
 
-/** The chip inside "Make a Yapp": how many are still open out of how many were ordered. */
+/** The chip inside "Pick now": how many are still open out of how many were ordered. */
 export type ReelCtaChip = { open: number; total: number };
 
 /**

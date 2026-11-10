@@ -1,0 +1,216 @@
+/* Studio business pages (Jobs, Earnings, Profile): a few rules the shared CSS doesn't cover.
+   Colours only through tokens, so dark mode follows. */
+
+/* A row whose title is a stretched link (so the row can also hold a menu button). */
+.yapp .sb-linkrow {
+  transition: background-color var(--y-dur-1) var(--y-ease);
+}
+.yapp .sb-linkrow:hover {
+  background: rgb(29 29 31 / 0.025);
+}
+html.dark .yapp .sb-linkrow:hover {
+  background: rgb(255 255 255 / 0.035);
+}
+.yapp .sb-stretch {
+  display: block;
+  outline: none;
+}
+.yapp .sb-stretch::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+.yapp .sb-stretch:focus-visible::after {
+  outline: 2px solid var(--y-ink);
+  outline-offset: -2px;
+}
+.yapp .sb-amount {
+  min-width: 56px;
+  text-align: end;
+}
+
+/* Row menu (portal): a small solid panel. */
+.yapp .sb-menu {
+  position: fixed;
+  z-index: 85;
+  min-width: 208px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  border-radius: var(--y-r-tile);
+  background: var(--y-paper);
+  color: var(--y-ink);
+  box-shadow: var(--y-shadow-card-hover), 0 18px 40px -12px rgb(0 0 0 / 0.22);
+  animation: sb-pop var(--y-dur-1, 120ms) var(--y-ease, ease-out);
+}
+.yapp .sb-menu[data-up="true"] {
+  transform: translateY(-100%);
+  animation-name: sb-pop-up;
+}
+.yapp .sb-menu [role="menuitem"] {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding-inline: 12px;
+  border-radius: var(--y-r-sm);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: start;
+  outline: none;
+}
+.yapp .sb-menu [role="menuitem"]:hover,
+.yapp .sb-menu [role="menuitem"]:focus-visible {
+  background: var(--y-mist);
+}
+.yapp .sb-menu [role="menuitem"][data-tone="danger"] {
+  color: var(--y-danger);
+}
+@media (pointer: coarse) {
+  .yapp .sb-menu [role="menuitem"] {
+    min-height: 44px;
+  }
+}
+@keyframes sb-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes sb-pop-up {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-100% + 4px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yapp .sb-menu {
+    animation: none;
+  }
+}
+
+/* Profile editor: the section nav (desktop) and the jump row (phones and tablets). */
+.yapp .sb-nav a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding-inline: 12px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--y-ink-2);
+  transition: background-color var(--y-dur-1) var(--y-ease), color var(--y-dur-1) var(--y-ease);
+}
+.yapp .sb-nav a:hover {
+  color: var(--y-ink);
+}
+.yapp .sb-nav a[aria-current="true"] {
+  background: var(--y-paper);
+  color: var(--y-ink);
+  box-shadow: var(--y-shadow-card);
+}
+.yapp .sb-jump {
+  position: sticky;
+  top: var(--y-header-h, 60px);
+  z-index: 30;
+  background: rgb(var(--y-soft-rgb) / 0.88);
+  -webkit-backdrop-filter: var(--y-glass-blur);
+  backdrop-filter: var(--y-glass-blur);
+}
+.yapp .sb-jump a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--y-ink-2);
+}
+.yapp .sb-jump a[aria-current="true"] {
+  background: var(--y-ink);
+  color: var(--y-paper);
+}
+@media (pointer: coarse) {
+  .yapp .sb-jump a {
+    min-height: 40px;
+  }
+}
+
+/* Profile editor: the unsaved-changes bar floats above the phone tab bar. */
+.yapp .sb-savebar {
+  position: fixed;
+  inset-inline: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--y-bar-h) + 10px);
+  z-index: 45;
+  margin-inline: auto;
+  max-width: 720px;
+  border-radius: 20px;
+  animation: sb-rise var(--y-dur-2, 200ms) var(--y-ease, ease-out);
+}
+@media (min-width: 1024px) {
+  .yapp .sb-savebar {
+    bottom: 20px;
+  }
+}
+@keyframes sb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .yapp .sb-savebar {
+    animation: none;
+  }
+}
+
+/* Money input with a leading "$". */
+.yapp .sb-money {
+  position: relative;
+}
+.yapp .sb-money > span {
+  position: absolute;
+  inset-inline-start: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--y-ink-2);
+  font-weight: 500;
+  pointer-events: none;
+}
+.yapp .sb-money > input {
+  padding-inline-start: 28px;
+}
+
+/* Number input with a unit after it ("3 extra days"). */
+.yapp .sb-suffix {
+  position: relative;
+}
+.yapp .sb-suffix > span {
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--y-ink-2);
+  font-size: 0.75rem;
+  pointer-events: none;
+}
+.yapp .sb-suffix > input {
+  padding-inline-end: 64px;
+  -moz-appearance: textfield;
+}
+.yapp .sb-suffix > input::-webkit-inner-spin-button,
+.yapp .sb-suffix > input::-webkit-outer-spin-button,
+.yapp .sb-money > input::-webkit-inner-spin-button,
+.yapp .sb-money > input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+.yapp .sb-money > input {
+  -moz-appearance: textfield;
+}

@@ -104,7 +104,7 @@ function ReelPlayback({
         type="button"
         onClick={toggle}
         aria-label={playing ? `Pause ${video.title}` : `Play ${video.title}`}
-        className="absolute inset-0 z-[2] cursor-pointer focus-visible:outline-offset-[-6px]"
+        className="y-reel-play absolute inset-0 z-[2] cursor-pointer focus-visible:outline-offset-[-6px]"
       >
         {playing ? null : (
           <span

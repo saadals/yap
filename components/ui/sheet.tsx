@@ -1,19 +1,20 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, useSyncExternalStore } from "react";
+import { useId, useRef } from "react";
 import { createPortal } from "react-dom";
 
 import type { BlockTone } from "./block";
-
-const subscribeNoop = () => () => {};
-
-const focusable =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import { useModal, usePortalHost } from "./dialog";
 
 /**
- * Modal sheet: bottom sheet on mobile, end-side panel or centred dialog from 768px.
- * Focus is trapped, Esc closes, focus returns to the opener, the page behind is inert to scroll.
+ * Modal sheet. Phones: a bottom sheet with a grabber. From 768px: `side="end"` is the side sheet
+ * (16px from the edges, radius 30) for multi-step actions, `side="center"` a centred dialog.
+ * Head: 22px title, one line of description, a 44px close circle (glass with a hairline on side
+ * sheets). `step` draws the two-segment progress for a two-step sheet (approve, then review).
+ * `footer` is the sticky foot; put its buttons in `SheetActions`. Focus is trapped, Esc closes,
+ * focus returns to the opener, the page behind doesn't scroll. For a short confirmation with one
+ * primary and a text link, use `ConfirmModal` instead.
  */
 export function Sheet({
   open,
@@ -24,6 +25,7 @@ export function Sheet({
   width = "md",
   tone = "paper",
   hideTitle = false,
+  step,
   footer,
   children,
 }: {
@@ -32,76 +34,31 @@ export function Sheet({
   title: string;
   description?: string;
   side?: "end" | "center";
-  width?: "sm" | "md" | "lg";
+  /** sm 420, md 480 (the side sheet), wide 560 (Discover's side panel), lg 640. */
+  width?: "sm" | "md" | "wide" | "lg";
   tone?: BlockTone;
   hideTitle?: boolean;
+  /** Progress for a multi-step sheet: `{ current: 1, total: 2 }` is step 1 of 2. */
+  step?: { current: number; total: number };
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const descId = useId();
-  const host = useSyncExternalStore(
-    subscribeNoop,
-    () => document.getElementById("yapp-root") ?? document.body,
-    () => null,
-  );
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-
-  useEffect(() => {
-    if (!open) return;
-    const opener = document.activeElement as HTMLElement | null;
-    const panel = panelRef.current;
-    const first = panel?.querySelector<HTMLElement>("[data-autofocus]") ?? panel;
-    first?.focus();
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.stopPropagation();
-        onCloseRef.current();
-        return;
-      }
-      if (event.key !== "Tab" || !panel) return;
-      const items = Array.from(panel.querySelectorAll<HTMLElement>(focusable)).filter(
-        (node) => node.offsetParent !== null,
-      );
-      if (items.length === 0) return;
-      const firstItem = items[0];
-      const lastItem = items[items.length - 1];
-      if (
-        event.shiftKey &&
-        (document.activeElement === firstItem || document.activeElement === panel)
-      ) {
-        event.preventDefault();
-        lastItem.focus();
-      } else if (!event.shiftKey && document.activeElement === lastItem) {
-        event.preventDefault();
-        firstItem.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = previousOverflow;
-      opener?.focus?.();
-    };
-  }, [open, host]);
+  const host = usePortalHost();
+  useModal({ open, ready: Boolean(host), panelRef, onClose });
 
   if (!open || !host) return null;
 
   const widthClass =
     side === "center"
-      ? { sm: "md:max-w-md", md: "md:max-w-lg", lg: "md:max-w-2xl" }[width]
-      : { sm: "md:w-[420px]", md: "md:w-[520px]", lg: "md:w-[640px]" }[width];
+      ? { sm: "md:max-w-md", md: "md:max-w-lg", wide: "md:max-w-xl", lg: "md:max-w-2xl" }[width]
+      : { sm: "md:w-[420px]", md: "md:w-[480px]", wide: "md:w-[560px]", lg: "md:w-[640px]" }[width];
   const placement =
     side === "center"
       ? `md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[88dvh] md:rounded-(--y-r-sheet) ${widthClass}`
-      : `md:inset-y-2 md:end-2 md:start-auto md:bottom-2 md:max-h-none md:rounded-(--y-r-sheet) ${widthClass}`;
+      : `md:inset-y-4 md:end-4 md:start-auto md:bottom-4 md:max-h-none md:rounded-(--y-r-sheet) ${widthClass}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[80]">
@@ -121,14 +78,14 @@ export function Sheet({
           <span className="y-grabber" />
         </div>
         <div
-          className={`flex items-start gap-3 px-5 pt-3 pb-2 md:px-7 md:pt-6 ${hideTitle ? "justify-end" : ""}`}
+          className={`y-sheet-head ${hideTitle ? "!justify-end !border-b-0 !bg-transparent" : ""}`}
         >
-          <div className={hideTitle ? "sr-only" : "flex min-w-0 flex-1 flex-col gap-1"}>
-            <h2 id={titleId} className="y-display y-title">
+          <div className={hideTitle ? "sr-only" : "flex min-w-0 flex-1 flex-col"}>
+            <h2 id={titleId} className="y-display y-sheet-title">
               {title}
             </h2>
             {description ? (
-              <p id={descId} className="y-small y-fg-2">
+              <p id={descId} className="y-sheet-desc">
                 {description}
               </p>
             ) : null}
@@ -141,17 +98,44 @@ export function Sheet({
             data-size="sm"
             aria-label="Close"
           >
-            <X size={20} />
+            <X size={20} aria-hidden />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 pb-5 md:px-7 md:pb-7">{children}</div>
-        {footer ? (
-          <div className="y-safe-bottom border-t border-(--b-line) px-5 pt-3 md:px-7 md:pb-5">
-            {footer}
-          </div>
-        ) : null}
+        <div className="y-sheet-body">
+          {step ? <SheetSteps current={step.current} total={step.total} /> : null}
+          {children}
+        </div>
+        {footer ? <div className="y-sheet-foot">{footer}</div> : null}
       </div>
     </div>,
     host,
   );
+}
+
+/** The thin segmented progress at the top of a multi-step sheet. */
+function SheetSteps({ current, total }: { current: number; total: number }) {
+  return (
+    <div className="y-sheet-steps">
+      <span className="sr-only">
+        Step {current} of {total}
+      </span>
+      {Array.from({ length: total }, (_, index) => (
+        <span key={index} aria-hidden data-on={index < current ? "true" : undefined} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Footer buttons for a sheet (Work spec 6.10): a ghost pill first, then the primary, which fills
+ * the rest of the row; both 50px. Order: secondary, primary.
+ */
+export function SheetActions({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return <div className={`y-sheet-actions ${className}`}>{children}</div>;
 }

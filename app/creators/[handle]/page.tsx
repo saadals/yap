@@ -13,7 +13,7 @@ export default function CreatorProfilePage() {
   // The footer is rendered here (not by the shell) so the spacer after it keeps its last line
   // clear of the fixed mobile commission bar.
   return (
-    <PublicShell bottomBar={false} footer={false}>
+    <PublicShell bottomBar={false} footer="none">
       <Page>
         <CreatorProfile key={handle} handle={handle} />
       </Page>

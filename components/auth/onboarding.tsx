@@ -473,7 +473,7 @@ function Done({ data, finished }: { data: Data; finished: Finished }) {
         primary={{
           href: paths.explore("orders"),
           label: "Find orders to accept",
-          body: "Custom orders to pitch on and UGC campaigns to take a slot in, newest first.",
+          body: "Custom orders to pitch on and UGC campaigns to pick a slot in, newest first.",
           icon: <Compass size={20} aria-hidden />,
         }}
         others={[

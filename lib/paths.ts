@@ -10,7 +10,8 @@
  */
 
 export type ExploreTab = "creators" | "orders";
-export type WorkTab = "ordered" | "making";
+/** Work's sections. "find" is Find work (every open campaign and custom order, `findWork()`). */
+export type WorkTab = "find" | "ordered" | "making";
 export type OrderType = "campaign" | "custom";
 /** Which door a signed-out visitor came through: order videos, or make them. */
 export type SignInIntent = "ask" | "make";
@@ -27,12 +28,27 @@ const q = (params: Record<string, string | number | undefined | null | false>) =
 export const paths = {
   /* public */
   landing: "/",
+  /**
+   * Discover: the desktop home when signed in (served at "/"), and this address for phones and
+   * for signed-out visitors (round 3 answers, items 11 and 43).
+   */
+  discover: "/discover",
+  /** What Yapp offers brands: the Services menu's pages (answers, item 37). */
+  service: (slug: string) => `/services/${slug}`,
+  /** "For tech teams" and other audience pages. */
+  audience: (slug: string) => `/for/${slug}`,
+  /** The phone's More page: what the desktop footer holds (answers, item 41). */
+  more: "/more",
   about: "/about",
   howItWorks: "/how-it-works",
+  /** The questions people ask, on How it works. */
+  faq: "/how-it-works#faq",
   forCreators: "/for-creators",
   /** Terms, privacy and the other policies (in legal review: names only, no text yet). */
   legal: "/legal",
   creators: "/creators",
+  /** Find creators with filters ("See creators" on a service page). Keys are the browse page's. */
+  findCreators: (params: { format?: string; niche?: string } = {}) => `/creators${q(params)}`,
   creator: (handle: string) => `/creators/${handle}`,
   /** Direct order from a creator's profile (`video` = the reel that inspired it). */
   orderCreator: (
@@ -47,25 +63,45 @@ export const paths = {
     `/onboarding${q(params)}`,
 
   /* signed in */
+  /** The phone feed. Desktop never renders it: "/home" there goes to "/" (answers, items 11, 59). */
   home: "/home",
   /** The feed, starting on one order or video (e.g. "See it in the feed" after publishing). */
   reel: (id: string) => `/home${q({ reel: id })}`,
   explore: (tab?: ExploreTab) => `/explore${q({ tab })}`,
   work: (tab?: WorkTab) => `/work${q({ tab })}`,
-  commission: (id: string, params: { tab?: string; version?: number } = {}) =>
+  /**
+   * Find work with filters in the query string, so a link can be shared and Back works. Pass the
+   * same keys the page reads (the page owns their names and values).
+   */
+  findWork: (filters: Record<string, string | number | undefined | null | false> = {}) =>
+    `/work${q({ tab: "find", ...filters })}`,
+  /** The order in progress (a commission). `version` opens that version, `comment` highlights a comment. */
+  commission: (id: string, params: { tab?: string; version?: number; comment?: string } = {}) =>
     `/work/${id}${q(params)}`,
-  /** The orders you placed (custom requests and campaigns). */
+  /** Statistics for both sides ("Productivity"; round 3 answers, item 17). */
+  productivity: "/productivity",
+  /** The phone feed in read-only preview mode, for a frame on another page (lib/preview.ts). */
+  appPreview: "/app-preview",
+  /** The orders you placed (custom orders and campaigns). */
   orders: (params: { tab?: string } = {}) => `/orders${q(params)}`,
   newOrder: (
-    params: { type?: OrderType; product?: string; creator?: string; draft?: string; again?: string } = {},
+    params: {
+      type?: OrderType;
+      product?: string;
+      creator?: string;
+      draft?: string;
+      again?: string;
+      /** The service page it came from ("ugc-ads", "go-to-market"…), for New order to preselect. */
+      service?: string;
+    } = {},
   ) => `/orders/new${q(params)}`,
   /** One order: the owner manages it, everyone else reads it and accepts or pitches. */
   order: (id: string, params: { tab?: string; pitch?: string; slot?: number } = {}) =>
     `/orders/${id}${q(params)}`,
   pitches: "/pitches",
   messages: (thread?: string) => `/messages${q({ thread })}`,
-  /** The Inbox's Alerts tab (the mobile bar's Inbox holds messages and alerts). */
-  alerts: "/messages?tab=alerts",
+  /** Notifications: the phone's Alerts tab (desktop opens the same list from the bell). */
+  alerts: "/alerts",
   profile: "/profile",
   editProfile: (section?: string) => `/profile/edit${section ? `#${section}` : ""}`,
   wallet: "/wallet",

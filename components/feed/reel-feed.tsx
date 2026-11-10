@@ -11,6 +11,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useReducedMotion } from "@/lib/hooks";
 import { paths } from "@/lib/paths";
+import { isPreviewMode } from "@/lib/preview";
 import { useDemo, useHydrated } from "@/lib/store";
 
 import { CreateSheet } from "./create-sheet";
@@ -32,7 +33,10 @@ const HINT_KEY = "yapp-feed-hint-v1";
 
 type Saved = { account: string; filter: FeedFilter; reel: string | null; id: string | null };
 
+// The read-only preview (/app-preview, framed on Discover) never reads or writes the visitor's
+// storage: it starts at the top every time and always shows the hint.
 function readSaved(): Saved | null {
+  if (isPreviewMode()) return null;
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
     const value = raw ? (JSON.parse(raw) as Partial<Saved>) : null;
@@ -49,6 +53,7 @@ function readSaved(): Saved | null {
 }
 
 function writeSaved(value: Saved) {
+  if (isPreviewMode()) return;
   try {
     window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(value));
   } catch {
@@ -57,6 +62,7 @@ function writeSaved(value: Saved) {
 }
 
 function hintSeen(): boolean {
+  if (isPreviewMode()) return false;
   try {
     return window.localStorage.getItem(HINT_KEY) === "1";
   } catch {
@@ -65,6 +71,7 @@ function hintSeen(): boolean {
 }
 
 function markHintSeen() {
+  if (isPreviewMode()) return;
   try {
     window.localStorage.setItem(HINT_KEY, "1");
   } catch {
@@ -75,7 +82,7 @@ function markHintSeen() {
 /**
  * Home: the reels feed. Swipe (or scroll) up for the next reel; swipe left, tap the pill, press →
  * or Enter for its details layer. Creator videos get Order; custom orders get Pitch; campaigns get
- * Make a Yapp. `?reel=<id>` starts on one order (use `homeReelHref` after publishing); `?details=<id>`
+ * Pick now. `?reel=<id>` starts on one order (use `homeReelHref` after publishing); `?details=<id>`
  * has that reel's details open. Must sit inside <Suspense> (it reads the search params).
  */
 export function ReelFeed() {
@@ -374,7 +381,7 @@ function FloatingTop() {
       <button
         type="button"
         className="y-reel-plus"
-        aria-label="Create: new order or make a Yapp"
+        aria-label="Create: new order or find work"
         aria-haspopup="dialog"
         onClick={() => setCreateOpen(true)}
       >

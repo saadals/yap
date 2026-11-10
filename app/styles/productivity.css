@@ -1,0 +1,507 @@
+/* productivity: page styles for round 3, stage 2. Tokens and the shared kit live in app/globals.css.
+   Sizes come from the Productivity section of the Work preview (.pv-h, .kpis, .kpi, .pv-grid, .blk,
+   .prw): 12px between KPI cards, 16px between cards, 24px card padding, 32px avatars in rows. */
+
+@layer components {
+  .yapp .y-pd {
+    --pd-chart-h: 220px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-pd {
+      --pd-chart-h: 200px;
+    }
+  }
+
+  /* Header: eyebrow and H1; the toggle, date range and Export sit on one row below it. */
+  .yapp .y-pd-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 20px;
+    margin-bottom: 20px;
+  }
+  .yapp .y-pd-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .yapp .y-pd-bar .y-seg button {
+    min-width: 128px;
+    padding-inline: 18px;
+  }
+  .yapp .y-pd-tools {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-pd-bar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .yapp .y-pd-bar .y-seg button {
+      min-width: 0;
+    }
+    .yapp .y-pd-tools > .y-selectpill {
+      flex: 1;
+    }
+  }
+
+  .yapp .y-pd-body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* KPI strip. Desktop: a four-column grid where the hero (first) and the ad card span two, so both
+     sides fill two even rows. 768–1279: two columns. Phones: a sideways scroller that snaps, cards
+     78% wide, bleeding to the screen edges inside the page gutter. */
+  .yapp .y-pd-kpis {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+  @media (min-width: 1280px) {
+    .yapp .y-pd-kpis {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .yapp .y-pd-kpi[data-hero="true"],
+    .yapp .y-pd-kpi[data-wide="true"] {
+      grid-column: span 2;
+    }
+  }
+  @media (min-width: 768px) and (max-width: 1279px) {
+    .yapp .y-pd-kpi[data-hero="true"],
+    .yapp .y-pd-kpi[data-wide="true"] {
+      grid-column: span 2;
+    }
+  }
+  @media (max-width: 767px) {
+    .yapp .y-pd-kpis {
+      display: flex;
+      margin-inline: -20px;
+      padding: 2px 20px 14px;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: 20px;
+      scrollbar-width: none;
+    }
+    .yapp .y-pd-kpis::-webkit-scrollbar {
+      display: none;
+    }
+    .yapp .y-pd-kpis > .y-pd-kpi {
+      flex: 0 0 78%;
+      scroll-snap-align: start;
+    }
+  }
+
+  .yapp .y-pd-kpi {
+    position: relative;
+    display: flex;
+    min-width: 0;
+  }
+  .yapp .y-pd-kpi > .y-kpi {
+    flex: 1;
+    min-height: 150px;
+    transition: box-shadow var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-pd-kpi-l {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .yapp .y-pd-kpi-l > svg {
+    flex: none;
+    opacity: 0.7;
+  }
+  /* "—" and "Not enough data yet" sit where the value would. */
+  .yapp .y-pd-kpi .y-kpi-empty {
+    justify-content: flex-start;
+    gap: 2px;
+    margin-top: 8px;
+  }
+  .yapp .y-pd-kpi[data-wide="true"] .y-kpi-empty {
+    justify-content: flex-end;
+    gap: 4px;
+    margin-top: 14px;
+  }
+  /* The whole card opens the figure's definition. */
+  .yapp .y-pd-kpi-hit {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: var(--y-r-block);
+    cursor: pointer;
+  }
+  .yapp .y-pd-kpi-hit:focus-visible {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+  }
+  @media (hover: hover) {
+    .yapp .y-pd-kpi:hover > .y-kpi[data-tone="paper"] {
+      box-shadow: var(--y-shadow-card-hover, var(--y-shadow-card));
+    }
+  }
+
+  /* Cards: 24px padding (the preview's .blk). */
+  .yapp .y-pd-card {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 24px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-pd-card {
+      padding: 20px 18px;
+    }
+  }
+  /* A long title keeps its line; the end-side item drops below it when both don't fit. */
+  .yapp .y-pd-card > .y-cardhead {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+  .yapp .y-pd-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-pd-grid {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    }
+  }
+  .yapp .y-pd-chart {
+    margin-top: 8px;
+  }
+  /* Desktop: the chart grows to the height of the card beside it. */
+  @media (min-width: 1024px) {
+    .yapp .y-pd-chart {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+    }
+    .yapp .y-pd-chart > .y-chart-plot {
+      flex: 1 1 auto;
+      height: auto;
+      min-height: 240px;
+    }
+    /* Out of the flow, so the square viewBox doesn't give the plot a height of its own. */
+    .yapp .y-pd-chart > .y-chart-plot > svg {
+      position: absolute;
+      inset: 0;
+    }
+  }
+  .yapp .y-pd-flat {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    min-height: 120px;
+    padding: 8px 0;
+  }
+  .yapp .y-pd-link {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.84375rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-pd-link::after {
+    content: "";
+    position: absolute;
+    inset: -12px -6px;
+  }
+  .yapp .y-pd-link:hover {
+    color: var(--y-ink);
+  }
+
+  /* Open work: a status chip and its count per row. */
+  .yapp .y-pd-status {
+    display: flex;
+    flex-direction: column;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-pd-status > li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 44px;
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-pd-status > li:first-child {
+    border-top: 0;
+  }
+  .yapp .y-pd-status > li > .y-num {
+    font-size: 1.125rem;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Small figure tiles (speed, win rate) open their definition too. */
+  .yapp .y-pd-tile {
+    display: flex;
+    min-height: 88px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-pd-tile:hover {
+    background: color-mix(in srgb, var(--y-ink) 7%, transparent);
+  }
+  .yapp .y-pd-tile .y-stat-k {
+    display: inline-flex;
+    font-size: 0.78125rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-pd-tile-sub {
+    margin-top: auto;
+    padding-top: 4px;
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+  }
+
+  /* Pitch funnel: label, bar, count with the share of the step before. */
+  .yapp .y-pd-funnel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-pd-funnel > li {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr) 64px;
+    align-items: center;
+    gap: 12px;
+    min-height: 32px;
+    font-size: 0.875rem;
+  }
+  .yapp .y-pd-funnel-l {
+    font-weight: 500;
+  }
+  .yapp .y-pd-funnel-bar {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--y-mist);
+    overflow: hidden;
+  }
+  .yapp .y-pd-funnel-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--y-green-line);
+  }
+  .yapp .y-pd-funnel > li:not(:first-child) .y-pd-funnel-bar > span {
+    background: var(--y-ink);
+  }
+  .yapp .y-pd-funnel-n {
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 6px;
+    font-size: 1rem;
+  }
+  .yapp .y-pd-funnel-n > small {
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+  }
+
+  /* People: a table from 1024px (rows like the preview's .prw), stacked rows below. */
+  .yapp .y-pd-table {
+    display: none;
+    width: 100%;
+    margin-top: 6px;
+    border-collapse: collapse;
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-pd-table {
+      display: table;
+    }
+  }
+  .yapp .y-pd-table th,
+  .yapp .y-pd-table td {
+    padding: 10px 12px;
+    text-align: end;
+    white-space: nowrap;
+  }
+  .yapp .y-pd-table thead th {
+    padding-block: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-pd-table :is(thead th, tbody th):first-child {
+    padding-inline-start: 0;
+    text-align: start;
+  }
+  .yapp .y-pd-table :is(th, td):last-child {
+    width: 28px;
+    padding-inline-end: 0;
+  }
+  .yapp .y-pd-table tbody tr {
+    position: relative;
+    border-top: 1px solid var(--y-line);
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-pd-table tbody tr:hover {
+    background: color-mix(in srgb, var(--y-ink) 3%, transparent);
+  }
+  .yapp .y-pd-table tbody th {
+    width: 32%;
+    font-weight: 400;
+  }
+  .yapp .y-pd-row-btn {
+    display: flex;
+    max-width: 100%;
+    align-items: center;
+    gap: 10px;
+    text-align: start;
+  }
+  /* The name button stretches over its row. */
+  .yapp .y-pd-row-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+  .yapp .y-pd-row-btn:focus-visible {
+    outline: none;
+  }
+  .yapp .y-pd-table tbody tr:has(.y-pd-row-btn:focus-visible) {
+    outline: 2px solid var(--y-ink);
+    outline-offset: -2px;
+  }
+  .yapp .y-pd-name {
+    display: block;
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-pd-sub {
+    display: block;
+    overflow: hidden;
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-pd-repeat {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px;
+    padding-inline: 9px;
+    border-radius: 999px;
+    background: var(--y-green-tint);
+    color: var(--y-green-text);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+
+  .yapp .y-pd-rows {
+    display: flex;
+    flex-direction: column;
+    margin: 4px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-pd-rows > li + li {
+    border-top: 1px solid var(--y-line);
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-pd-rows {
+      display: none;
+    }
+  }
+  .yapp .y-pd-rowcard {
+    display: flex;
+    width: 100%;
+    min-height: 60px;
+    align-items: center;
+    gap: 12px;
+    padding-block: 10px;
+    text-align: start;
+    font-size: 0.875rem;
+  }
+  .yapp .y-pd-val {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: flex-end;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The orders in a person's sheet. */
+  .yapp .y-pd-orders {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-pd-orders > li + li {
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-pd-order {
+    display: flex;
+    min-height: 56px;
+    align-items: center;
+    gap: 12px;
+    padding-block: 10px;
+    font-size: 0.875rem;
+  }
+  .yapp .y-pd-order:hover .y-pd-name {
+    text-decoration: underline;
+  }
+
+  /* One money line that points to Billing or Wallet. */
+  .yapp .y-pd-money {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 14px;
+    padding: 16px 24px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-pd-money {
+      padding: 16px 18px;
+    }
+  }
+  /* The text keeps at least 240px; on phones the link drops to its own line. */
+  .yapp .y-pd-money-t {
+    min-width: 0;
+    flex: 1 1 240px;
+  }
+  .yapp .y-pd-money-ic {
+    display: grid;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--y-mist);
+  }
+
+  .yapp .y-pd-none {
+    display: flex;
+    min-height: 320px;
+    align-items: center;
+    justify-content: center;
+  }
+}

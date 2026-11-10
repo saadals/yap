@@ -17,12 +17,13 @@ import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { ACCOUNT_HINT, accountNumberError, BANK_CODE_HINT, bankCodeError } from "@/components/money/payout-methods";
 import { cities } from "@/lib/data";
-import { money, priceBreakdown } from "@/lib/format";
+import { money, moneyExact, priceBreakdown } from "@/lib/format";
 import { hashString } from "@/lib/hash";
 import {
   creatorKindById,
   creatorKinds,
   DEFAULT_LANGUAGE,
+  FEE_PCT,
   formatById,
   formats,
   languageById,
@@ -490,8 +491,8 @@ export function TikTokStep({
   return (
     <>
       <p className="y-small y-fg-2 max-w-[56ch]">
-        Optional. Custom orders hire on your portfolio. UGC campaigns pay a fixed price per video by
-        follower tier, starting at {CAMPAIGN_FLOOR} verified followers.
+        Optional. Custom orders hire on your portfolio. UGC campaigns are open to creators by follower
+        tier, starting at {CAMPAIGN_FLOOR} verified followers, at a price per video the brand sets.
       </p>
       <div className="flex flex-col gap-3">
         <FieldShell
@@ -782,19 +783,25 @@ export function KeepAll({ standardPrice }: { standardPrice: number }) {
     <Block as="section" tone="paper" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
       <h2 id={titleId} className="y-head flex items-center gap-2">
         <Wallet size={18} aria-hidden className="flex-none" />
-        You keep 100%
+        What you earn
       </h2>
       <dl className="flex flex-col gap-2">
         <div className="flex justify-between gap-3">
-          <dt className="y-small">You earn</dt>
-          <dd className="y-num y-head">{money(breakdown.creatorEarns)}</dd>
+          <dt className="y-small">The buyer pays</dt>
+          <dd className="y-num y-small">{money(breakdown.total)}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="y-small y-fg-2">The buyer pays, with the 10% fee</dt>
-          <dd className="y-num y-small y-fg-2">{money(breakdown.total)}</dd>
+          <dt className="y-small y-fg-2">Yapp fee ({FEE_PCT}%)</dt>
+          <dd className="y-num y-small y-fg-2">−{moneyExact(breakdown.fee)}</dd>
+        </div>
+        <div className="flex justify-between gap-3 border-t border-(--b-line) pt-2">
+          <dt className="y-small font-semibold">You earn</dt>
+          <dd className="y-num y-head">{moneyExact(breakdown.creatorEarns)}</dd>
         </div>
       </dl>
-      <p className="y-micro y-fg-2">On campaign videos you earn the full tier price; the brand pays the fee.</p>
+      <p className="y-micro y-fg-2">
+        The same {FEE_PCT}% applies to campaign videos and add-ons. Nothing is added to the buyer&apos;s price.
+      </p>
     </Block>
   );
 }

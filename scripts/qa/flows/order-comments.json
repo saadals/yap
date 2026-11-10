@@ -1,0 +1,229 @@
+{
+  "account": "nour",
+  "steps": [
+    {
+      "go": "/work/c-201",
+      "after": 4000
+    },
+    {
+      "text": "Comments (4)"
+    },
+    {
+      "text": "3 open \u00b7 1 done"
+    },
+    {
+      "text": "Private \u00b7 only you and Layla see these comments"
+    },
+    {
+      "text": "New"
+    },
+    {
+      "eval": "(() => { const s = JSON.parse(localStorage.getItem('yapp-demo-v1')); const c = s.commissions.find((x) => x.id === 'c-201'); let n = 0; for (const d of c.deliveries) for (const m of d.comments) { if (m.unread && m.author !== 'business' && !m.deletedAt) n++; for (const r of m.replies) if (r.unread && r.author !== 'business') n++; } document.body.insertAdjacentHTML('beforeend', '<p>qa-unread-brand-' + n + '</p>'); return n; })()"
+    },
+    {
+      "text": "qa-unread-brand-0"
+    },
+    {
+      "eval": "(() => { const tl = document.querySelector('.y-ord-tl'); const r = tl.getBoundingClientRect(); tl.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: r.left + r.width * 0.5, clientY: r.top + 3 })); return true; })()",
+      "after": 500
+    },
+    {
+      "text": "@ 0:21"
+    },
+    {
+      "type": {
+        "sel": "#deliveries form.y-ord-composer textarea",
+        "text": "Hold the invoice on screen here so the amount is readable."
+      }
+    },
+    {
+      "clickSel": "#deliveries form.y-ord-composer button[type=submit]",
+      "after": 1000
+    },
+    {
+      "text": "Comment sent \u00b7 Layla gets a notification"
+    },
+    {
+      "text": "Comments (5)"
+    },
+    {
+      "eval": "(() => { const pins = document.querySelectorAll('.y-ord-pin').length; document.body.insertAdjacentHTML('beforeend', '<p>qa-pins-' + pins + '</p>'); return pins; })()"
+    },
+    {
+      "text": "qa-pins-4"
+    },
+    {
+      "clickSel": ".y-ord-pin[aria-label*='0:17']",
+      "after": 600
+    },
+    {
+      "eval": "(() => { const on = document.querySelector('.y-ord-citem[data-active=true]'); document.body.insertAdjacentHTML('beforeend', '<p>qa-active-' + (on && on.innerText.includes('Marco') ? 'ok' : 'no') + '</p>'); return Boolean(on); })()"
+    },
+    {
+      "text": "qa-active-ok"
+    },
+    {
+      "text": "0:17 / 0:42"
+    },
+    {
+      "shot": "s2d-comments-nour"
+    },
+    {
+      "account": "layla",
+      "after": 4000
+    },
+    {
+      "text": "Hold the invoice on screen here"
+    },
+    {
+      "eval": "(() => { const item = [...document.querySelectorAll('.y-ord-citem')].find((e) => e.innerText.includes('Hold the invoice')); const isNew = item && item.querySelector('.y-ord-new') ? 'yes' : 'no'; document.body.insertAdjacentHTML('beforeend', '<p>qa-new-' + isNew + '</p>'); return isNew; })()"
+    },
+    {
+      "text": "qa-new-yes"
+    },
+    {
+      "eval": "(() => { const s = JSON.parse(localStorage.getItem('yapp-demo-v1')); const c = s.commissions.find((x) => x.id === 'c-201'); let n = 0; for (const d of c.deliveries) for (const m of d.comments) { if (m.unread && m.author !== 'creator' && !m.deletedAt) n++; for (const r of m.replies) if (r.unread && r.author !== 'creator') n++; } document.body.insertAdjacentHTML('beforeend', '<p>qa-unread-creator-' + n + '</p>'); return n; })()"
+    },
+    {
+      "text": "qa-unread-creator-0"
+    },
+    {
+      "eval": "(() => { const item = [...document.querySelectorAll('.y-ord-citem')].find((e) => e.innerText.includes('Hold the invoice')); [...item.querySelectorAll('button')].find((b) => b.innerText.trim() === 'Reply').click(); return true; })()",
+      "after": 500
+    },
+    {
+      "type": {
+        "sel": ".y-ord-reply-form textarea",
+        "text": "Good call, I'll hold it for a full second in version 2."
+      }
+    },
+    {
+      "clickSel": ".y-ord-reply-form button[type=submit]",
+      "after": 1000
+    },
+    {
+      "text": "Reply sent \u00b7 Daftar gets a notification"
+    },
+    {
+      "eval": "(() => { const item = [...document.querySelectorAll('.y-ord-citem')].find((e) => e.innerText.includes('Hold the invoice')); [...item.querySelectorAll('button')].find((b) => b.innerText.trim() === 'Resolve').click(); return true; })()",
+      "after": 800
+    },
+    {
+      "text": "Comment resolved"
+    },
+    {
+      "text": "2 resolved"
+    },
+    {
+      "notText": "Re-open"
+    },
+    {
+      "shot": "s2d-comments-layla"
+    },
+    {
+      "account": "nour",
+      "after": 4000
+    },
+    {
+      "click": "2 resolved",
+      "after": 600
+    },
+    {
+      "text": "Good call, I'll hold it for a full second in version 2."
+    },
+    {
+      "eval": "(() => { const item = [...document.querySelectorAll('.y-ord-citem')].find((e) => e.innerText.includes('Hold the invoice')); [...item.querySelectorAll('button')].find((b) => b.innerText.trim() === 'Re-open').click(); return true; })()",
+      "after": 800
+    },
+    {
+      "text": "Comment re-opened"
+    },
+    {
+      "text": "4 open \u00b7 1 done"
+    },
+    {
+      "click": "Request changes",
+      "after": 1000
+    },
+    {
+      "text": "Send these comments"
+    },
+    {
+      "eval": "(() => { document.querySelectorAll('[role=dialog] label.y-ord-chk').forEach((l) => { const box = l.querySelector('input[type=checkbox]'); const keep = l.innerText.includes('Hold the invoice'); if (box && box.checked !== keep) box.click(); }); return true; })()",
+      "after": 400
+    },
+    {
+      "shot": "s2d-changes-one-ticked"
+    },
+    {
+      "click": "Send to Layla",
+      "after": 1500
+    },
+    {
+      "text": "Changes sent \u00b7 Layla is on version 2"
+    },
+    {
+      "text": "Revision \u00b7 v2"
+    },
+    {
+      "text": "Layla is working on version 2. You sent 1 comment on version 1."
+    },
+    {
+      "account": "layla",
+      "after": 4000
+    },
+    {
+      "text": "Daftar asked for changes on version 1"
+    },
+    {
+      "text": "v2 \u00b7 Not sent yet"
+    },
+    {
+      "click": "Send version 2",
+      "after": 1000
+    },
+    {
+      "text": "Their notes \u00b7 tick what you fixed"
+    },
+    {
+      "eval": "(() => { const n = document.querySelectorAll('[role=dialog] input[type=checkbox]').length; document.body.insertAdjacentHTML('beforeend', '<p>qa-notes-' + n + '</p>'); return n; })()"
+    },
+    {
+      "text": "qa-notes-1"
+    },
+    {
+      "shot": "s2d-deliver-v2-notes"
+    },
+    {
+      "account": "nour",
+      "after": 3000
+    },
+    {
+      "go": "/work/c-203?version=1&comment=dc-203-2",
+      "after": 4000
+    },
+    {
+      "eval": "(() => { const on = document.querySelector('.y-ord-vtab[aria-pressed=true]'); const hl = document.querySelector('.y-ord-citem[data-active=true]'); document.body.insertAdjacentHTML('beforeend', '<p>qa-url-' + (on ? on.innerText.split(' \u00b7')[0] : 'none') + '-' + (hl ? 'hl' : 'nohl') + '</p>'); return [on && on.innerText, hl && hl.dataset.comment]; })()"
+    },
+    {
+      "text": "qa-url-v1-"
+    },
+    {
+      "go": "/work/c-201?tab=messages",
+      "after": 4000
+    },
+    {
+      "text": "new comments on Version 1"
+    },
+    {
+      "click": "View",
+      "after": 1500
+    },
+    {
+      "eval": "(() => { const r = document.getElementById('deliveries').getBoundingClientRect(); document.body.insertAdjacentHTML('beforeend', '<p>qa-scrolled-' + (r.top < 200 ? 'yes' : 'no') + '</p>'); return r.top; })()"
+    },
+    {
+      "text": "qa-scrolled-yes"
+    }
+  ]
+}

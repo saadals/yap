@@ -1,0 +1,152 @@
+/* Sign-in card and the onboarding flow (public-account area). Scoped under .yapp, inside
+   @layer components, like app/globals.css, so Tailwind utilities still win. */
+
+@layer components {
+  /* ------------------------------------------------------------ sign-in */
+  /* Country code: reads as the dialling code and opens the native list with full country names.
+     Styled as a field, to sit beside the phone input. */
+  .yapp .y-signin-cc {
+    position: relative;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    padding-inline: 12px 8px;
+    border-radius: var(--y-r-field);
+    border: 1px solid var(--y-line-strong);
+    background: var(--y-field);
+    color: var(--y-ink);
+    font-weight: 600;
+  }
+  @media (pointer: coarse) {
+    .yapp .y-signin-cc {
+      min-height: 48px;
+    }
+  }
+  .yapp .y-signin-cc:has(select:focus-visible) {
+    border-color: var(--y-green-text);
+    box-shadow:
+      0 0 0 1px var(--y-green-text),
+      0 0 0 4px rgb(52 240 108 / 0.25);
+  }
+  .yapp .y-signin-cc select {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  /* Social sign-in: quiet outlined pills, Apple inverted. */
+  .yapp .y-signin-provider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    min-height: 44px;
+    border-radius: 999px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow: inset 0 0 0 1px var(--y-line-strong);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+      transform var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease),
+      opacity var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-signin-provider:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 1px var(--y-ink);
+  }
+  .yapp .y-signin-provider:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .yapp .y-signin-provider:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .yapp .y-signin-provider[data-provider="apple"] {
+    background: var(--y-ink);
+    color: var(--y-canvas);
+    box-shadow: none;
+  }
+
+  /* Saved accounts: rows with a hairline, the whole row signs in, the cross forgets it. */
+  .yapp .y-signin-account {
+    display: flex;
+    align-items: center;
+    border-radius: var(--y-r-tile);
+    background: var(--y-paper);
+    box-shadow: inset 0 0 0 1px var(--y-line-strong);
+    transition: box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-signin-account:has(.y-signin-account-main:hover:not(:disabled)) {
+    box-shadow: inset 0 0 0 1px var(--y-ink);
+  }
+  .yapp .y-signin-account-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 60px;
+    padding-block: 10px;
+    padding-inline: 12px 6px;
+    border-radius: inherit;
+    text-align: start;
+    cursor: pointer;
+  }
+  .yapp .y-signin-account-main:disabled {
+    cursor: not-allowed;
+  }
+
+  /* --------------------------------------------------------- focused flow */
+  /* One narrow column (640px), a 300px live preview beside it on desktop, and one glass action bar
+     fixed to the bottom edge. */
+  .yapp .y-flow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 112px);
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-flow[data-aside="true"] {
+      max-width: calc(640px + 48px + 300px);
+      grid-template-columns: minmax(0, 640px) 300px;
+      column-gap: 48px;
+      align-items: start;
+    }
+    .yapp .y-flow-aside {
+      position: sticky;
+      top: 24px;
+      padding-top: 112px;
+    }
+  }
+  .yapp .y-flow-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 50;
+    padding: 0 12px calc(env(safe-area-inset-bottom, 0px) + 12px);
+    pointer-events: none;
+  }
+  .yapp .y-flow-bar > * {
+    pointer-events: auto;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-flow[data-aside="true"] .y-flow-bar > * {
+      /* Under the question column, not centred across the preview. */
+      transform: translateX(calc((-300px - 48px) / 2));
+    }
+    .yapp[dir="rtl"] .y-flow[data-aside="true"] .y-flow-bar > * {
+      transform: translateX(calc((300px + 48px) / 2));
+    }
+  }
+}

@@ -35,17 +35,17 @@ export const viewport: Viewport = {
   initialScale: 1,
   // Without this, env(safe-area-inset-*) reads 0 and the full-bleed feed can't clear the notch.
   viewportFit: "cover",
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f7f7f9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
-  ],
+  // Light only: dark mode is paused (round 3 answers, item 49), so the browser chrome stays the
+  // canvas colour and the page declares a light colour scheme whatever the system setting.
+  themeColor: "#f7f7f9",
+  colorScheme: "light",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" dir="ltr" className={inter.variable} suppressHydrationWarning>
       <head>
-        {/* Applies the saved theme before first paint (works on static hosting too). */}
+        {/* Marks a signed-in session before first paint (works on static hosting too). */}
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
       </head>
       <body>

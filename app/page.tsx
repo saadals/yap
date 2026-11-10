@@ -1,6 +1,9 @@
-import { WelcomeScene } from "@/components/landing/welcome-scene";
+import { HomeRoute } from "@/components/shell/home-route";
 
-/** The signed-out welcome: creator bubbles and two ways in. Signed-in visitors go to the feed. */
-export default function WelcomePage() {
-  return <WelcomeScene />;
+/**
+ * "/": the bubble landing signed out; signed in, Discover on desktop (Work for an account that only
+ * makes videos) and the feed on phones. See `HomeRoute`.
+ */
+export default function RootPage() {
+  return <HomeRoute />;
 }

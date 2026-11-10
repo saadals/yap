@@ -10,7 +10,7 @@ export const pitches: Pitch[] = [
     requestId: "r-101",
     creatorId: "cr-nina",
     message:
-      "Hi Nour, half my family runs shops, so the 'I'll pay you tomorrow' customer is basically a relative. I'd film the first video at my aunt's phone-repair counter in Seattle and the second in the kitchen of a friend who bakes from home. Your references say the counter did twice as well, so that's where I'd open, with the WhatsApp send in the first three seconds. $300 covers both videos, subtitles and the 90-day ad rights.",
+      "Hi Nour, half my family runs shops, so the 'I'll pay you tomorrow' customer is basically a relative. I'd film the first video at my aunt's phone-repair counter in Seattle and the second in the kitchen of a friend who bakes from home. Your references say the counter did twice as well, so that's where I'd open, with the WhatsApp send in the first three seconds. $300 covers both videos and the subtitles, and the six months of paid ads is part of it.",
     angle: "A phone buzzes: 'Mike, you still owe me $340…' and the invoice is already in his WhatsApp.",
     price: 300,
     deliveryDays: 5,
@@ -23,7 +23,7 @@ export const pitches: Pitch[] = [
     requestId: "r-101",
     creatorId: "cr-sofia",
     message:
-      "Hi Nour, six years in airline customer service taught me how to ask people for money politely, and how much everyone hates doing it. I'd film one video at my cousin's phone-repair counter in Miami and one with a friend who bakes from home. I'm finishing a project this week, so I'd start Sunday and deliver within six days, still well before your date. $280 with subtitles and the 90-day ad rights.",
+      "Hi Nour, six years in airline customer service taught me how to ask people for money politely, and how much everyone hates doing it. I'd film one video at my cousin's phone-repair counter in Miami and one with a friend who bakes from home. I'm finishing a project this week, so I'd start Sunday and deliver within six days, still well before your date. $280 with subtitles, six months of paid ads included.",
     angle: "A customer walks out saying 'I'll send it tonight'. The invoice reaches his phone before he reaches the door.",
     price: 280,
     deliveryDays: 6,
@@ -135,7 +135,7 @@ export const pitches: Pitch[] = [
     requestId: "r-103",
     creatorId: "cr-omar",
     message:
-      "Hi Nour, I've made first-sale tutorials for two point-of-sale apps, so I know where new users get lost: picking the customer and finding the send button. I'd record on a real iPhone at real speed with a zoom on every tap, English voice and English labels, and film myself at the start and end so it doesn't feel like a help-desk video. $380, plus $60 if you want the raw footage.",
+      "Hi Nour, I've made first-sale tutorials for two point-of-sale apps, so I know where new users get lost: picking the customer and finding the send button. I'd record on a real iPhone at real speed with a zoom on every tap, English voice and English labels, and film myself at the start and end so it doesn't feel like a help-desk video. $380, and you get the raw footage too.",
     angle: "'Stopwatch on. Let's send your first invoice before this hits 60 seconds.'",
     price: 380,
     deliveryDays: 5,
@@ -178,7 +178,7 @@ export const pitches: Pitch[] = [
     requestId: "r-201",
     creatorId: "cr-layla",
     message:
-      "Hi James, I've given up on two pairs of earbuds this year, so I'm your target viewer, not just your presenter. I bought Wrenlow Buds in the spring after losing a bud on the bus, so I already own a pair and wear them every day. I've been filming a few seconds a day with them since last week, so you'd get ten real days of honest diary, including the day I forget to charge them (there's always one). $340 includes the 90-day ad rights.",
+      "Hi James, I've given up on two pairs of earbuds this year, so I'm your target viewer, not just your presenter. I bought Wrenlow Buds in the spring after losing a bud on the bus, so I already own a pair and wear them every day. I've been filming a few seconds a day with them since last week, so you'd get ten real days of honest diary, including the day I forget to charge them (there's always one). $340, with the six months of paid ads included.",
     angle: "'Day 1: the hearing check says my left ear hears less than my right. Day 6: …' An honest diary that ends on street mode letting the traffic in at a busy crossing.",
     price: 340,
     deliveryDays: 5,
@@ -191,7 +191,7 @@ export const pitches: Pitch[] = [
     requestId: "r-203",
     creatorId: "cr-layla",
     message:
-      "Hi Rosa, I bought a Brindle Ring last month after a friend wouldn't stop bragging about her score, so I have three weeks of real data, including the night before a 7am flight (not my finest score). I'd show that morning honestly, the reason the app gave me, and the wind-down reminder I now actually listen to. $230 with the 90-day ad rights.",
+      "Hi Rosa, I bought a Brindle Ring last month after a friend wouldn't stop bragging about her score, so I have three weeks of real data, including the night before a 7am flight (not my finest score). I'd show that morning honestly, the reason the app gave me, and the wind-down reminder I now actually listen to. $230, six months of paid ads included.",
     angle: "'My ring knew I'd had a bad night before I did.' Then the reason, in plain English.",
     price: 230,
     deliveryDays: 4,
@@ -204,7 +204,7 @@ export const pitches: Pitch[] = [
     requestId: "r-205",
     creatorId: "cr-layla",
     message:
-      "Hannah, hello again. I loved working on the Notewren review and I still use it every day (my notes now know more about my meetings than I do). Five hooks, two of them built on the 'I never take notes' confession that worked last time, and one filmed straight after a real call. $240 with the 90-day ad rights.",
+      "Hannah, hello again. I loved working on the Notewren review and I still use it every day (my notes now know more about my meetings than I do). Five hooks, two of them built on the 'I never take notes' confession that worked last time, and one filmed straight after a real call. $240, six months of paid ads included.",
     angle: "'I've said \"I'll send notes after\" 400 times. I've sent them twice.'",
     price: 240,
     deliveryDays: 4,
@@ -527,5 +527,48 @@ export const pitches: Pitch[] = [
     sampleIds: ["v-maya-2", "v-maya-1"],
     status: "sent",
     sentAt: at(-1, "15:15"),
+  },
+
+  /* ---------------------------------------------------------------------- */
+  /* Ad copy orders (no sample videos: the pitch is the writing)             */
+  /* ---------------------------------------------------------------------- */
+  {
+    id: "pt-40",
+    requestId: "r-105",
+    creatorId: "cr-layla",
+    message:
+      "Hi Nour, I've made two Daftar videos, so I already know how your shop owners talk. I'd write every line the way they'd say it at the counter: short, a bit dry, no app-speak. Five headlines, five primary texts, two calls to action, all under the Meta limits, with character counts in the doc.",
+    angle: "'They said tomorrow. Daftar says today.'",
+    price: 160,
+    deliveryDays: 3,
+    sampleIds: [],
+    status: "hired",
+    sentAt: at(-4, "11:30"),
+  },
+  {
+    id: "pt-41",
+    requestId: "r-105",
+    creatorId: "cr-emma",
+    message:
+      "Hi Nour, I write the captions for all my own explainers, and I'd keep these plain and practical: what it does, how fast, what it costs you to try. Happy to send two tones so you can test them against each other.",
+    angle: "'Ten seconds to send. Zero awkward texts.'",
+    price: 180,
+    deliveryDays: 3,
+    sampleIds: [],
+    status: "viewed",
+    sentAt: at(-4, "16:05"),
+  },
+  {
+    id: "pt-42",
+    requestId: "r-213",
+    creatorId: "cr-emma",
+    message:
+      "Hi Brindle team, I'd write this the way people actually feel in the morning: groggy, a bit hopeful, checking their phone before their feet hit the floor. No medical words, just what the score helps you decide.",
+    angle: "'Push or rest? Your ring already knows.'",
+    price: 220,
+    deliveryDays: 5,
+    sampleIds: [],
+    status: "sent",
+    sentAt: at(0, "08:40"),
   },
 ];

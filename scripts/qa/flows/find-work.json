@@ -1,0 +1,293 @@
+{
+  "account": "layla",
+  "width": 1440,
+  "height": 900,
+  "steps": [
+    {
+      "go": "/work",
+      "after": 4500
+    },
+    {
+      "text": "Find work · every open UGC campaign and custom order"
+    },
+    {
+      "text": "Pick a Yapp now"
+    },
+    {
+      "text": "Pitch for it"
+    },
+    {
+      "notText": "10% fee"
+    },
+    {
+      "shot": "s2c-fw-start"
+    },
+    {
+      "text": "Filters"
+    },
+    {
+      "eval": "(window.__n = [...document.querySelectorAll('.y-wnav .y-fopt')].find((b) => b.textContent.trim().startsWith('Fintech')).querySelector('.y-fopt-n').textContent.trim(), Number(window.__n) > 0)",
+      "equals": true
+    },
+    {
+      "click": "Fintech",
+      "after": 700
+    },
+    {
+      "eval": "document.querySelector('.y-resh b')?.textContent.trim() === window.__n",
+      "equals": true
+    },
+    {
+      "click": "Fintech",
+      "after": 700
+    },
+    {
+      "eval": "(window.__n = [...document.querySelectorAll('.y-wnav .y-fopt')].find((b) => b.textContent.trim().startsWith('Ad copy writing')).querySelector('.y-fopt-n').textContent.trim(), Number(window.__n) > 0)",
+      "equals": true
+    },
+    {
+      "click": "Ad copy writing",
+      "after": 700
+    },
+    {
+      "eval": "document.querySelector('.y-resh b')?.textContent.trim() === window.__n",
+      "equals": true
+    },
+    {
+      "click": "Ad copy writing",
+      "after": 700
+    },
+    {
+      "eval": "(window.__n = [...document.querySelectorAll('.y-wnav .y-filter')].find((b) => b.textContent.trim().startsWith('TikTok')).querySelector('.y-count').textContent.trim(), Number(window.__n) > 0)",
+      "equals": true
+    },
+    {
+      "click": "TikTok",
+      "after": 700
+    },
+    {
+      "eval": "document.querySelector('.y-resh b')?.textContent.trim() === window.__n",
+      "equals": true
+    },
+    {
+      "click": "TikTok",
+      "after": 700
+    },
+    {
+      "eval": "(window.__n = [...document.querySelectorAll('.y-fmt')].find((b) => b.textContent.trim().startsWith('App demo')).querySelector('.y-fmt-n').textContent.trim(), Number(window.__n) > 0)",
+      "equals": true
+    },
+    {
+      "click": "App demo",
+      "after": 700
+    },
+    {
+      "eval": "document.querySelector('.y-resh b')?.textContent.trim() === window.__n",
+      "equals": true
+    },
+    {
+      "click": "All formats",
+      "after": 700
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='Search open work']",
+        "text": "daftar"
+      },
+      "after": 1400
+    },
+    {
+      "text": "“daftar”"
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('q') === 'daftar'",
+      "equals": true
+    },
+    {
+      "click": "Fintech",
+      "after": 900
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('cat') === 'fintech'",
+      "equals": true
+    },
+    {
+      "eval": "document.querySelector('select[aria-label=Category]').value === 'fintech'",
+      "equals": true
+    },
+    {
+      "click": "UGC campaigns",
+      "after": 900
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('type') === 'campaign'",
+      "equals": true
+    },
+    {
+      "text": "Showing"
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('select[aria-label=Sort]'); el.value = 'closing'; el.dispatchEvent(new Event('change', { bubbles: true })); return true })()",
+      "after": 900,
+      "equals": true
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('sort') === 'closing'",
+      "equals": true
+    },
+    {
+      "shot": "s2c-fw-filtered"
+    },
+    {
+      "eval": "(setTimeout(() => location.reload(), 50), true)",
+      "after": 6500,
+      "equals": true
+    },
+    {
+      "text": "“daftar”"
+    },
+    {
+      "eval": "document.querySelector('input[aria-label=\"Search open work\"]').value === 'daftar'",
+      "equals": true
+    },
+    {
+      "eval": "document.querySelector('select[aria-label=Sort]').value === 'closing'",
+      "equals": true
+    },
+    {
+      "eval": "document.querySelector('.y-kinds [role=radio][aria-checked=true]')?.textContent.startsWith('UGC campaigns')",
+      "equals": true
+    },
+    {
+      "eval": "document.querySelector('button[role=checkbox][aria-checked=true]')?.textContent.startsWith('Fintech')",
+      "equals": true
+    },
+    {
+      "click": "Show us your first invoice on WhatsApp",
+      "after": 9000
+    },
+    {
+      "shot": "s2c-fw-job"
+    },
+    {
+      "path": "/orders/r-150"
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "text": "Upload within 5 days of picking · set by Daftar"
+    },
+    {
+      "text": "You earn $96 after the 20% Yapp fee"
+    },
+    {
+      "text": "Paid 7 days after your post is verified"
+    },
+    {
+      "text": "Pays on time"
+    },
+    {
+      "notText": "Rating"
+    },
+    {
+      "click": "Find work",
+      "after": 5000
+    },
+    {
+      "eval": "(() => { const p = new URLSearchParams(location.search); return p.get('q') === 'daftar' && p.get('cat') === 'fintech' && p.get('type') === 'campaign' && p.get('sort') === 'closing' })()",
+      "equals": true
+    },
+    {
+      "text": "“daftar”"
+    },
+    {
+      "click": "Pick now",
+      "after": 900
+    },
+    {
+      "text": "Pick a Yapp from Daftar?"
+    },
+    {
+      "text": "earn $96 after the 20% Yapp fee"
+    },
+    {
+      "text": "upload within 5 days"
+    },
+    {
+      "shot": "s2c-fw-pick-modal"
+    },
+    {
+      "click": "Pick now",
+      "after": 1200
+    },
+    {
+      "text": "The slot is yours"
+    },
+    {
+      "text": "7 days after your post on TikTok is verified"
+    },
+    {
+      "click": "Keep browsing",
+      "after": 800
+    },
+    {
+      "notText": "The slot is yours"
+    },
+    {
+      "text": "You picked a slot"
+    },
+    {
+      "click": "Making",
+      "after": 2500
+    },
+    {
+      "eval": "document.querySelector('.y-ocard-t')?.textContent.includes('Show us your first invoice on WhatsApp')",
+      "equals": true
+    },
+    {
+      "text": "Filming"
+    },
+    {
+      "shot": "s2c-fw-making"
+    },
+    {
+      "account": "nour",
+      "after": 3500
+    },
+    {
+      "go": "/work",
+      "after": 4000
+    },
+    {
+      "text": "Ordered · videos you asked creators to make"
+    },
+    {
+      "eval": "document.querySelector('.y-wn-i[aria-current=true]')?.textContent.includes('Ordered')",
+      "equals": true
+    },
+    {
+      "notText": "Service fee"
+    },
+    {
+      "go": "/work?tab=find",
+      "after": 3500
+    },
+    {
+      "text": "Create a creator profile to take work"
+    },
+    {
+      "notText": "Pick now"
+    },
+    {
+      "click": "Create a creator profile to take work",
+      "after": 1200
+    },
+    {
+      "text": "to take work on Yapp"
+    },
+    {
+      "shot": "s2c-fw-nour-setup"
+    }
+  ]
+}

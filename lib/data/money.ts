@@ -21,4 +21,7 @@ export const payouts: Payout[] = [
   { id: "py-3", creatorId: "cr-layla", amount: 780, status: "paid", methodId: "po-2", at: at(-42, "09:00") },
   { id: "py-2", creatorId: "cr-layla", amount: 640, status: "paid", methodId: "po-1", at: at(-63, "09:00") },
   { id: "py-1", creatorId: "cr-layla", amount: 520, status: "paid", methodId: "po-1", at: at(-84, "09:00") },
+  // These two paid out c-307 (Souqly) and c-306 (Pixel Arcade), so neither counts as available.
+  { id: "py-6", creatorId: "cr-layla", amount: 208, status: "paid", methodId: "po-1", at: at(-95, "09:00"), commissionIds: ["c-307"] },
+  { id: "py-7", creatorId: "cr-layla", amount: 144, status: "paid", methodId: "po-2", at: at(-118, "09:00"), commissionIds: ["c-306"] },
 ];

@@ -1,0 +1,1664 @@
+/* work: page styles for round 3, stage 2. Tokens and the shared kit live in app/globals.css.
+   Work (Find work, Ordered, Making) and the job page, from YAPPS_WORK.html: sizes, spacing and
+   radii ported from its <style> onto the app's tokens. Sidebar from 1181px; phone under 1024px. */
+
+@layer components {
+  /* ---------------------------------------------------------------- page */
+  .yapp .y-work-head {
+    margin-bottom: 26px;
+  }
+  .yapp .y-work-head > p {
+    margin-top: 8px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-work-head {
+      margin-bottom: 18px;
+    }
+  }
+  .yapp .y-wide.y-workpage {
+    padding-bottom: 96px;
+  }
+  @media (max-width: 1023px) {
+    .yapp .y-wide.y-workpage {
+      padding-bottom: calc(env(safe-area-inset-bottom) + 112px);
+    }
+  }
+
+  /* Sidebar + main (Work spec 6.3.2): 270px sidebar above 1180px, tabs below. */
+  .yapp .y-wk {
+    display: grid;
+    grid-template-columns: 270px minmax(0, 1fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .yapp .y-wk > * {
+    min-width: 0;
+  }
+  .yapp .y-wk > .y-wnav {
+    position: sticky;
+    top: 92px;
+    max-height: calc(100dvh - 108px);
+    padding: 12px;
+    overflow: auto;
+    scrollbar-width: thin;
+  }
+  .yapp .y-wn {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .yapp .y-wn-g {
+    padding: 14px 12px 6px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-wn-i {
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    column-gap: 10px;
+    align-items: center;
+    min-height: 48px;
+    padding: 8px 10px;
+    border-radius: 16px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-align: start;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-wn-i:hover {
+    background: rgb(29 29 31 / 0.04);
+  }
+  .yapp .y-wn-ic {
+    display: grid;
+    grid-row: 1 / 3;
+    width: 32px;
+    height: 32px;
+    place-items: center;
+    border-radius: 10px;
+    background: var(--y-mist);
+  }
+  .yapp .y-wn-l {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    min-width: 0;
+  }
+  .yapp .y-wn-i:has(.y-wn-sub) .y-wn-l {
+    grid-row: 1;
+  }
+  .yapp .y-wn-sub {
+    grid-column: 2;
+    grid-row: 2;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-wn-n {
+    display: grid;
+    grid-column: 3;
+    grid-row: 1 / 3;
+    min-width: 22px;
+    height: 22px;
+    padding-inline: 7px;
+    place-items: center;
+    border-radius: 999px;
+    background: rgb(29 29 31 / 0.08);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  /* Current section: dark, white text; its count turns green like the segmented control's. */
+  .yapp .y-wn-i[aria-current="true"] {
+    background: var(--y-night);
+    color: #fff;
+  }
+  .yapp .y-wn-i[aria-current="true"] .y-wn-ic {
+    background: rgb(255 255 255 / 0.14);
+  }
+  .yapp .y-wn-i[aria-current="true"] .y-wn-sub {
+    color: rgb(255 255 255 / 0.7);
+  }
+  .yapp .y-wn-i[aria-current="true"] .y-wn-n {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  .yapp .y-wnav .y-fside {
+    margin-top: 10px;
+    padding: 14px 8px 4px;
+    border-top: 1px solid var(--y-line);
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-wk {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .yapp .y-wk > .y-wnav {
+      display: none;
+    }
+  }
+
+  /* --------------------------------------------------------- needs you */
+  /* A white card with a 4px accent bar (Site-wide 5.4.2; answers item 13), not a green block. */
+  .yapp .y-needs {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 32px 28px 36px;
+    overflow: hidden;
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-needs::before {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 4px;
+    background: var(--y-warning);
+  }
+  .yapp .y-needs:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--y-shadow-card-hover);
+  }
+  .yapp .y-needs-main {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+  .yapp .y-needs-ey {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.78125rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .yapp .y-needs-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--y-warning);
+  }
+  .yapp .y-needs-ctx {
+    margin-inline-start: -4px;
+    font-weight: 500;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-needs-t {
+    max-width: 24ch;
+    margin: 10px 0 8px;
+    font-size: 2.125rem;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.032em;
+    text-wrap: balance;
+  }
+  .yapp .y-needs-line {
+    max-width: 62ch;
+    font-size: 0.9375rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-needs-clock {
+    display: flex;
+    max-width: 380px;
+    flex-direction: column;
+    margin-top: 16px;
+  }
+  .yapp .y-needs-when {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-needs-when[data-look="warning"] {
+    color: var(--y-warning);
+  }
+  .yapp .y-needs-when[data-look="danger"] {
+    color: var(--y-danger);
+  }
+  .yapp .y-needs-go {
+    flex: none;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-needs {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 22px 20px 20px 24px;
+    }
+    .yapp .y-needs-t {
+      font-size: 1.625rem;
+    }
+    .yapp .y-needs-go {
+      justify-content: space-between;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .yapp .y-needs:hover {
+      transform: none;
+    }
+  }
+
+  /* ---------------------------------------------------- bar, help, money */
+  /* The same 24px under "Needs you" on every section, and nothing above the first line without
+     it. On Find work above 1180px the bar has nothing to show (no money line, no tabs), so it
+     collapses and the help line comes first. */
+  .yapp .y-needs-wrap {
+    margin-bottom: 24px;
+  }
+  .yapp .y-wbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 0 4px 14px;
+  }
+  @media (min-width: 1181px) {
+    .yapp .y-wbar[data-empty="true"] {
+      display: none;
+    }
+  }
+  .yapp .y-wbar > .y-mainseg {
+    display: none;
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-wbar > .y-mainseg {
+      display: inline-flex;
+    }
+  }
+  @media (max-width: 767px) {
+    .yapp .y-wbar {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .yapp .y-mainseg button {
+      padding-inline: 8px;
+      font-size: 0.84375rem;
+    }
+  }
+  .yapp .y-moneyline {
+    display: flex;
+    min-height: 22px;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-moneyline b {
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  .yapp .y-moneyline a,
+  .yapp .y-pitchline a,
+  .yapp .y-link-btn {
+    position: relative;
+    font-weight: 600;
+    color: var(--y-ink);
+    text-decoration: underline;
+    text-decoration-color: rgb(29 29 31 / 0.25);
+    text-underline-offset: 3px;
+  }
+  .yapp .y-link-btn {
+    font-size: 0.84375rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-link-btn:hover {
+    color: var(--y-ink);
+  }
+  .yapp .y-moneyline[data-hidden="true"] {
+    visibility: hidden;
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-moneyline[data-hidden="true"] {
+      display: none;
+    }
+  }
+  .yapp .y-tabhelp {
+    margin: 0 4px 16px;
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-tabhelp b,
+  .yapp .y-typehelp b {
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+
+  /* ------------------------------------------------------------- finder */
+  .yapp .y-finder {
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .yapp .y-frow {
+    display: flex;
+    gap: 10px;
+    padding: 18px 18px 16px;
+  }
+  .yapp .y-fq {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    height: 64px;
+    padding-inline: 22px;
+    border-radius: 999px;
+    background: var(--y-mist);
+    color: var(--y-ink-2);
+    transition:
+      box-shadow var(--y-dur-1) var(--y-ease),
+      background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-fq:focus-within {
+    background: var(--y-paper);
+    box-shadow:
+      0 0 0 1px var(--y-green-text),
+      0 0 0 5px rgb(52 240 108 / 0.22);
+  }
+  .yapp .y-fq input {
+    min-width: 0;
+    flex: 1;
+    border: 0;
+    background: none;
+    color: var(--y-ink);
+    font: inherit;
+    font-size: 1.0625rem;
+    outline: none;
+  }
+  .yapp .y-fq input::placeholder {
+    color: var(--y-ink-2);
+  }
+  .yapp .y-fq input::-webkit-search-cancel-button {
+    cursor: pointer;
+  }
+  .yapp .y-fcat > select {
+    min-width: 250px;
+  }
+  /* The Search button is the dark pill (answers item 13), green on hover like every dark primary. */
+  .yapp .y-fgo {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 18px;
+    height: 64px;
+    padding-inline: 30px 8px;
+    border-radius: 999px;
+    background: var(--y-btn-dark);
+    color: #fff;
+    font-size: 1.125rem;
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease),
+      background-color var(--y-dur-2) var(--y-ease);
+  }
+  /* The arrow circle of every dark pill: a light tint of the white text, no green (answers,
+     item 13: Pick now is the page's one green action). */
+  .yapp .y-fgo-ar {
+    display: grid;
+    width: 50px;
+    height: 50px;
+    place-items: center;
+    border-radius: 50%;
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    color: inherit;
+    transition: transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-fgo:active {
+    transform: scale(0.97);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-fgo:hover {
+      background: var(--y-neon);
+      color: var(--y-on-color);
+      transform: translateY(-1px);
+      box-shadow: var(--y-shadow-glow);
+    }
+    .yapp .y-fgo:hover .y-fgo-ar {
+      background: var(--y-on-color);
+      color: var(--y-neon);
+      transform: translateX(2px);
+    }
+  }
+  .yapp .y-frow2 {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-fmts {
+    display: flex;
+    min-width: 0;
+    gap: 4px;
+    padding-inline: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .yapp .y-fmts::-webkit-scrollbar {
+    display: none;
+  }
+  .yapp .y-fmt {
+    position: relative;
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 18px 16px 20px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+    white-space: nowrap;
+    transition: color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-fmt:hover {
+    color: var(--y-ink);
+  }
+  .yapp .y-fmt[aria-selected="true"] {
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  .yapp .y-fmt[aria-selected="true"]::after {
+    content: "";
+    position: absolute;
+    inset-inline: 12px;
+    bottom: 0;
+    height: 4px;
+    border-radius: 4px 4px 0 0;
+    background: var(--y-ink);
+  }
+  .yapp .y-fmt-n {
+    position: absolute;
+    top: 10px;
+    inset-inline-end: calc(50% - 30px);
+    display: grid;
+    min-width: 18px;
+    height: 18px;
+    padding-inline: 5px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--y-mist);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-ftools {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 18px 12px 20px;
+    border-inline-start: 1px solid var(--y-line);
+  }
+  .yapp .y-ftools-l {
+    font-size: 0.84375rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-ffilters {
+    display: none;
+    height: 44px;
+    align-items: center;
+    gap: 8px;
+    padding-inline: 16px;
+    border-radius: 999px;
+    background: var(--y-mist);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+  .yapp .y-ffilters-n {
+    display: grid;
+    min-width: 20px;
+    height: 20px;
+    padding-inline: 6px;
+    place-items: center;
+    border-radius: 999px;
+    background: var(--y-night);
+    color: #fff;
+    font-size: 0.71875rem;
+  }
+  .yapp .y-vt {
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 999px;
+    background: var(--y-mist);
+  }
+  .yapp .y-vt > button {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 999px;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-vt > button[aria-pressed="true"] {
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.08);
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-frow2 {
+      flex-direction: column;
+    }
+    .yapp .y-ftools {
+      justify-content: flex-end;
+      border-inline-start: 0;
+      border-top: 1px solid var(--y-line);
+    }
+    .yapp .y-ffilters {
+      display: inline-flex;
+      margin-inline-end: auto;
+    }
+  }
+  @media (max-width: 767px) {
+    .yapp .y-frow {
+      flex-wrap: wrap;
+      padding: 12px;
+    }
+    .yapp .y-fq {
+      flex-basis: 100%;
+      height: 52px;
+      padding-inline: 18px;
+    }
+    .yapp .y-fq input {
+      font-size: 1rem;
+    }
+    .yapp .y-fcat {
+      flex: 1;
+    }
+    .yapp .y-fcat > select {
+      min-width: 0;
+      height: 52px;
+      font-size: 0.9375rem;
+    }
+    .yapp .y-fgo {
+      height: 52px;
+      gap: 12px;
+      padding-inline: 20px 6px;
+      font-size: 1rem;
+    }
+    .yapp .y-fgo-ar {
+      width: 40px;
+      height: 40px;
+    }
+    .yapp .y-fmt {
+      padding: 14px 12px 16px;
+      font-size: 0.8125rem;
+    }
+    .yapp .y-fmt > svg {
+      width: 22px;
+      height: 22px;
+    }
+    .yapp .y-ftools {
+      gap: 8px;
+      padding: 10px 12px;
+    }
+    .yapp .y-ftools-l {
+      display: none;
+    }
+    /* Phones: cards only, as the preview; the toggle shows only to leave a shared list view. */
+    .yapp .y-vt[data-list="false"] {
+      display: none;
+    }
+    .yapp .y-fsort {
+      min-width: 0;
+      flex: 0 1 auto;
+    }
+    .yapp .y-fsort > select {
+      height: 44px;
+      padding-inline: 14px 36px;
+      font-size: 0.875rem;
+    }
+  }
+
+  /* ----------------------------------------------------------- type bar */
+  .yapp .y-typebar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    scroll-margin-top: 96px;
+  }
+  .yapp .y-kinds {
+    flex: none;
+  }
+  .yapp .y-typehelp {
+    min-width: 240px;
+    flex: 1;
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+  @media (max-width: 767px) {
+    .yapp .y-kinds {
+      width: 100%;
+    }
+    .yapp .y-kinds button {
+      padding-inline: 6px;
+      font-size: 0.875rem;
+      white-space: nowrap;
+    }
+    .yapp .y-typehelp {
+      min-width: 0;
+    }
+  }
+  .yapp .y-fw-note {
+    margin: 0 4px 14px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--y-mist);
+    font-size: 0.875rem;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-fw-note b {
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+
+  /* ------------------------------------------------------ results head */
+  .yapp .y-resh {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 2px 4px 12px;
+    scroll-margin-top: 96px;
+  }
+  .yapp .y-resh > p {
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-resh b {
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  .yapp .y-actchips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .yapp .y-ac {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 30px;
+    padding-inline: 12px 6px;
+    border-radius: 999px;
+    background: var(--y-active-soft);
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+  .yapp .y-ac::after {
+    content: "";
+    position: absolute;
+    inset: -7px 0;
+  }
+  .yapp .y-ac > span {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    place-items: center;
+    border-radius: 50%;
+    background: rgb(11 11 12 / 0.1);
+  }
+  .yapp .y-actchips .y-link-btn {
+    margin-inline-start: 6px;
+  }
+
+  /* ------------------------------------------------------------- panels */
+  .yapp .y-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .yapp .y-tpanel {
+    padding: 20px;
+    border-radius: 32px;
+    background: rgb(29 29 31 / 0.04);
+  }
+  .yapp .y-tpanel[data-look="camp"] {
+    background: linear-gradient(180deg, rgb(52 240 108 / 0.16), rgb(52 240 108 / 0.05));
+  }
+  .yapp .y-tp-h {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 6px 8px 18px;
+  }
+  .yapp .y-tp-k {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-tpanel[data-look="camp"] .y-tp-k {
+    color: var(--y-green-text);
+  }
+  .yapp .y-tp-t {
+    margin: 4px 0;
+    font-size: 1.625rem;
+    font-weight: 600;
+    letter-spacing: -0.027em;
+  }
+  .yapp .y-tp-p {
+    max-width: 60ch;
+    font-size: 0.875rem;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-tp-n {
+    flex: none;
+    font-size: 2.125rem;
+    font-weight: 400;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    text-align: end;
+  }
+  .yapp .y-tp-n small {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78125rem;
+    letter-spacing: 0;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-tp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+  }
+  .yapp .y-seeall {
+    display: flex;
+    margin: 16px auto 0;
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-tp-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 767px) {
+    .yapp .y-tp-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .yapp .y-tpanel {
+      padding: 12px;
+      border-radius: 26px;
+    }
+    .yapp .y-tp-h {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .yapp .y-tp-n {
+      text-align: start;
+    }
+  }
+
+  /* ----------------------------------------------------------- job card */
+  .yapp .y-job {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px;
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-job:hover {
+    transform: translateY(-3px);
+  }
+  .yapp .y-job:has(.y-job-link:focus-visible) {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+  }
+  .yapp .y-job-peek {
+    position: absolute;
+    top: 18px;
+    inset-inline-end: 18px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.78125rem;
+    font-weight: 600;
+    opacity: 0;
+    transform: translateX(-4px);
+    transition:
+      opacity var(--y-dur-1) var(--y-ease),
+      transform var(--y-dur-1) var(--y-ease);
+    pointer-events: none;
+  }
+  .yapp .y-job-new {
+    transition: opacity var(--y-dur-1) var(--y-ease);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-job:hover .y-job-peek {
+      opacity: 1;
+      transform: none;
+    }
+    .yapp .y-job:hover .y-job-new {
+      opacity: 0;
+    }
+  }
+  .yapp .y-job-top {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 10px;
+  }
+  .yapp .y-job-cat {
+    font-size: 0.78125rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-job-t {
+    display: -webkit-box;
+    min-height: 48px;
+    overflow: hidden;
+    font-size: 1.1875rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.016em;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .yapp .y-job-link {
+    outline: none;
+  }
+  .yapp .y-job-link::after,
+  .yapp .y-ocard-link::after,
+  .yapp .y-lrow-link::after,
+  .yapp .y-orow-link::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+  }
+  .yapp .y-job-sub {
+    margin-top: -6px;
+    font-size: 0.8125rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-job-bot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: auto;
+    padding-top: 14px;
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-job-net {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78125rem;
+    font-weight: 500;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-job .y-action {
+    position: relative;
+    z-index: 3;
+  }
+  .yapp .y-job-setup .y-action-label {
+    white-space: normal;
+  }
+  .yapp .y-row-act {
+    position: relative;
+    z-index: 3;
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .yapp .y-job:hover {
+      transform: none;
+    }
+  }
+
+  /* ---------------------------------------------------------- list view */
+  .yapp .y-olist {
+    overflow: hidden;
+  }
+  .yapp .y-lrow {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 2.4fr) 76px 128px 118px 140px auto;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-top: 1px solid var(--y-line);
+    font-size: 0.875rem;
+  }
+  .yapp .y-lrow:first-child {
+    border-top: 0;
+  }
+  .yapp .y-lrow:not(.y-lrow-hd):hover {
+    background: rgb(29 29 31 / 0.025);
+  }
+  .yapp .y-lrow-hd {
+    background: rgb(29 29 31 / 0.02);
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-lrow-t {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+  .yapp .y-lrow-link {
+    display: block;
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-lrow-link:focus-visible {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  .yapp .y-lrow-t small {
+    display: block;
+    overflow: hidden;
+    font-size: 0.78125rem;
+    color: var(--y-ink-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-lrow-pay {
+    font-size: 1.0625rem;
+  }
+  .yapp .y-lrow-pay small {
+    margin-inline-start: 3px;
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-lrow-net {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-lrow-n {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.78125rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-lrow-act {
+    justify-self: end;
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-lrow {
+      grid-template-columns: minmax(0, 1fr) 130px 150px auto;
+    }
+    .yapp .y-lrow :is(.y-lrow-type, .y-lrow-fmt) {
+      display: none;
+    }
+  }
+  @media (max-width: 767px) {
+    .yapp .y-lrow {
+      grid-template-columns: minmax(0, 1fr) auto;
+      row-gap: 10px;
+      padding: 14px;
+    }
+    .yapp .y-lrow-hd,
+    .yapp .y-lrow .y-lrow-open {
+      display: none;
+    }
+    .yapp .y-lrow-t {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* -------------------------------------------------------------- pager */
+  .yapp .y-pager {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px;
+    margin-top: 24px;
+  }
+  .yapp .y-pager > button {
+    display: inline-flex;
+    min-width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    background: var(--y-mist);
+    font-weight: 500;
+  }
+  .yapp .y-pager > button[aria-current="page"] {
+    background: var(--y-night);
+    color: #fff;
+  }
+  .yapp .y-pager > button:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+
+  /* ------------------------------------------------------ filter groups */
+  .yapp .y-fside-h {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+  }
+  .yapp .y-fside-h > b {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+  .yapp .y-fgroup {
+    padding-block: 14px;
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-fside-h + .y-fgroup,
+  .yapp .y-fside > .y-fgroup:first-child {
+    border-top: 0;
+  }
+  .yapp .y-fgroup > .y-eyebrow {
+    margin-bottom: 8px;
+  }
+  .yapp .y-fopt {
+    display: flex;
+    width: 100%;
+    min-height: 36px;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 8px;
+    border-radius: 12px;
+    font-size: 0.90625rem;
+    text-align: start;
+  }
+  .yapp .y-fopt:hover {
+    background: rgb(29 29 31 / 0.04);
+  }
+  .yapp .y-fopt-box {
+    display: grid;
+    width: 18px;
+    height: 18px;
+    flex: none;
+    place-items: center;
+    border: 1.5px solid rgb(29 29 31 / 0.3);
+    border-radius: 6px;
+  }
+  .yapp .y-fopt[aria-checked="true"] .y-fopt-box {
+    border-color: var(--y-night);
+    background: var(--y-night);
+  }
+  .yapp .y-fopt[aria-checked="true"] .y-fopt-box::after {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--y-neon);
+  }
+  .yapp .y-fopt-n {
+    margin-inline-start: auto;
+    font-size: 0.8125rem;
+    color: var(--y-ink-2);
+  }
+  /* No match with the other filters: dimmed, still clickable. Text stays at the secondary colour. */
+  .yapp .y-fopt[data-zero="true"] {
+    color: var(--y-ink-2);
+  }
+  .yapp .y-fopt[data-zero="true"] .y-fopt-box {
+    opacity: 0.5;
+  }
+  .yapp .y-fpills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .yapp .y-fpill-zero:not([aria-pressed="true"]) {
+    color: var(--y-ink-2-mist);
+  }
+  @media (max-width: 1023px) {
+    .yapp .y-fopt {
+      min-height: 44px;
+    }
+  }
+
+  /* ---------------------------------------------- Ordered and Making */
+  .yapp .y-ordered {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 1180px) {
+    .yapp .y-ordered {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .yapp .y-side {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .yapp .y-side-card {
+    padding: 24px;
+  }
+  .yapp .y-ochips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-ochips {
+      flex-wrap: nowrap;
+      margin-inline: -20px;
+      padding-inline: 20px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .yapp .y-ochips::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  .yapp .y-olist-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .yapp .y-olist-grid[data-wide="true"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  @media (max-width: 767px) {
+    .yapp .y-olist-grid[data-wide="true"] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+  .yapp .y-ocard {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 16px;
+    padding: 16px;
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-ocard:hover {
+    transform: translateY(-3px);
+  }
+  .yapp .y-ocard:has(.y-ocard-link:focus-visible) {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+  }
+  .yapp .y-ocard-link {
+    outline: none;
+  }
+  .yapp .y-ocard-thumb {
+    width: 72px;
+    aspect-ratio: 9 / 16;
+    overflow: hidden;
+    border-radius: 14px;
+  }
+  .yapp .y-ocard-thumb .y-thumb {
+    height: 100%;
+    border-radius: 14px;
+  }
+  .yapp .y-ocard-doc {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    place-items: center;
+    background: var(--y-mist);
+    color: var(--y-ink-2);
+  }
+  .yapp .y-ocard-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .yapp .y-cbadge {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.84375rem;
+    font-weight: 500;
+  }
+  .yapp .y-cbadge[data-unread="true"]::after {
+    content: "";
+    position: absolute;
+    top: -2px;
+    inset-inline-end: -7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--y-neon);
+    box-shadow: 0 0 0 2px var(--y-paper);
+  }
+  .yapp .y-ocard-t {
+    margin: 8px 0 2px;
+    overflow: hidden;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-ocard-who {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.84375rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-ocard-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--y-line);
+    font-size: 0.8125rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-ocard-due {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+  }
+  .yapp .y-ocard-due[data-look="soon"] {
+    color: var(--y-warning);
+  }
+  .yapp .y-ocard-due[data-look="late"] {
+    color: var(--y-danger);
+  }
+  .yapp .y-ocard-price {
+    font-size: 1.0625rem;
+    font-weight: 400;
+    color: var(--y-ink);
+  }
+  .yapp .y-ocard-price small {
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .yapp .y-ocard:hover {
+      transform: none;
+    }
+  }
+
+  /* Side column: post a new order, your orders, work with them again. */
+  .yapp .y-newcta {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border-radius: 24px;
+    background: var(--y-btn-dark);
+    color: #fff;
+    text-align: start;
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-newcta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px -10px rgb(0 0 0 / 0.4);
+  }
+  .yapp .y-newcta-ic {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  .yapp .y-newcta b {
+    display: block;
+    font-size: 0.96875rem;
+    font-weight: 600;
+  }
+  .yapp .y-newcta small {
+    font-size: 0.78125rem;
+    color: rgb(255 255 255 / 0.7);
+  }
+  .yapp .y-orow {
+    position: relative;
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) 16px;
+    align-items: center;
+    gap: 12px;
+    padding-block: 10px;
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-orow:first-child {
+    border-top: 0;
+  }
+  .yapp .y-orow-ic {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--y-mist);
+  }
+  .yapp .y-orow-link {
+    display: block;
+    overflow: hidden;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-orow-link:focus-visible {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+  .yapp .y-orow small {
+    display: block;
+    overflow: hidden;
+    font-size: 0.78125rem;
+    color: var(--y-ink-2);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-orow em {
+    font-style: normal;
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  .yapp .y-orow:hover .y-orow-link {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .yapp .y-pitchline {
+    padding: 16px 4px 0;
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+
+  /* --------------------------------------------- pick and pitch modals */
+  .yapp .y-pick-where {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 0;
+    padding: 0;
+    margin: 0;
+  }
+  .yapp .y-pick-where > legend {
+    margin-bottom: 8px;
+  }
+  .yapp .y-pick-opt {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: var(--y-mist);
+    cursor: pointer;
+  }
+  .yapp .y-pick-opt[data-off="true"] {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  .yapp .y-pick-opt:has(input:checked) {
+    box-shadow: inset 0 0 0 1.5px var(--y-ink);
+  }
+  .yapp .y-pitch-samples {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
+  }
+  .yapp .y-pitch-sample {
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px;
+    opacity: 0.85;
+    transition: opacity var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-pitch-sample .y-thumb {
+    border-radius: 10px;
+  }
+  .yapp .y-pitch-sample[aria-pressed="true"] {
+    opacity: 1;
+    box-shadow:
+      0 0 0 2px var(--y-paper),
+      0 0 0 4px var(--y-ink);
+  }
+
+  /* ------------------------------------------------------------ job page */
+  /* Work spec 6.6: main column (header, brief, how it goes) and a sticky side (price, brand). */
+  .yapp .y-wide.y-jobpage {
+    padding-bottom: 96px;
+  }
+  @media (max-width: 1023px) {
+    .yapp .y-wide.y-jobpage {
+      padding-bottom: calc(env(safe-area-inset-bottom) + 190px);
+    }
+  }
+  .yapp .y-dgrid {
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+    gap: 16px;
+    align-items: start;
+  }
+  .yapp .y-dgrid > * {
+    min-width: 0;
+  }
+  .yapp .y-dmain,
+  .yapp .y-dside {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .yapp .y-dside {
+    position: sticky;
+    top: 92px;
+  }
+  /* One column. On phones the sticky bar carries the action, so the side cards follow the brief
+     as in the preview; between 1024 and 1180px there is no bar, so the price card moves up under
+     the header and the brand card goes last. */
+  @media (max-width: 1180px) {
+    .yapp .y-dgrid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .yapp .y-dside {
+      position: static;
+    }
+  }
+  @media (min-width: 1024px) and (max-width: 1180px) {
+    .yapp .y-dmain,
+    .yapp .y-dside {
+      display: contents;
+    }
+    .yapp .y-dgrid .y-dhead {
+      order: 1;
+    }
+    .yapp .y-dgrid .y-opcta {
+      order: 2;
+    }
+    .yapp .y-dmain > :not(.y-dhead) {
+      order: 3;
+    }
+    .yapp .y-dside > :not(.y-opcta) {
+      order: 4;
+    }
+  }
+  .yapp .y-dhead {
+    padding: 32px;
+  }
+  .yapp .y-dcard {
+    padding: 24px;
+  }
+  .yapp .y-wholine {
+    display: flex;
+    min-width: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-wholine b {
+    display: block;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  .yapp .y-dhead-t {
+    max-width: 22ch;
+    margin: 18px 0 22px;
+    font-size: 3.25rem;
+    font-weight: 600;
+    line-height: 1.04;
+    letter-spacing: -0.038em;
+    text-wrap: balance;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-dhead {
+      padding: 22px;
+    }
+    .yapp .y-dcard {
+      padding: 18px;
+    }
+    .yapp .y-dhead-t {
+      margin: 14px 0 18px;
+      font-size: 1.875rem;
+      letter-spacing: -0.032em;
+    }
+  }
+  .yapp .y-files {
+    display: flex;
+    flex-direction: column;
+  }
+  .yapp .y-file {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding-block: 10px;
+    border-top: 1px solid var(--y-line);
+  }
+  .yapp .y-file:first-child {
+    border-top: 0;
+  }
+  .yapp .y-file-ic {
+    display: grid;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--y-active-soft);
+  }
+  .yapp .y-file b {
+    display: block;
+    overflow: hidden;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .yapp .y-file small {
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-file-dl {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--y-mist);
+  }
+  .yapp .y-steps5 {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-steps5 > li {
+    padding: 14px;
+    border-radius: 18px;
+    background: rgb(29 29 31 / 0.04);
+    font-size: 0.84375rem;
+    line-height: 1.4;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-steps5 > li > span {
+    display: grid;
+    width: 26px;
+    height: 26px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--y-night);
+    color: var(--y-neon);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .yapp .y-steps5 > li > b {
+    display: block;
+    margin: 6px 0 2px;
+    font-size: 0.90625rem;
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  @media (max-width: 1023px) {
+    .yapp .y-steps5 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  .yapp .y-opcta > .y-fig-xxl {
+    line-height: 1.05;
+  }
+  .yapp .y-opcta .y-fig-unit {
+    font-size: 0.875rem;
+  }
+  .yapp .y-opcta-net {
+    margin-top: 6px;
+    font-size: 0.875rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-opcta-net b {
+    font-weight: 600;
+    color: var(--y-ink);
+  }
+  .yapp .y-person {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+  .yapp .y-person b {
+    display: block;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .yapp .y-person small {
+    font-size: 0.8125rem;
+    color: var(--y-ink-2);
+  }
+}

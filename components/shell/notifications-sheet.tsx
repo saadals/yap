@@ -9,6 +9,7 @@ import {
   Gift,
   Megaphone,
   MessageCircle,
+  MessageSquareText,
   Repeat2,
   Send,
   Star,
@@ -26,6 +27,7 @@ const icons: Record<NotificationKind, React.ReactNode> = {
   pitch: <Send size={18} aria-hidden className="y-flip" />,
   delivery: <Film size={18} aria-hidden />,
   message: <MessageCircle size={18} aria-hidden />,
+  comment: <MessageSquareText size={18} aria-hidden />,
   offer: <Gift size={18} aria-hidden />,
   payment: <Banknote size={18} aria-hidden />,
   review: <Star size={18} aria-hidden />,
@@ -35,7 +37,7 @@ const icons: Record<NotificationKind, React.ReactNode> = {
   system: <Bell size={18} aria-hidden />,
 };
 
-/** The list itself: the bell's sheet on desktop, the Inbox's Alerts tab on phones. */
+/** The list itself: the bell's sheet on desktop, the Alerts page (/alerts) on phones. */
 export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
   const s = useDemo();
   const router = useRouter();
@@ -60,8 +62,7 @@ export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
         <EmptyState
           title="Nothing yet"
           body="Orders, deliveries and payments will show up here."
-          shape="ball"
-          tint="sea"
+          icon={<Bell size={22} aria-hidden />}
           headingLevel={3}
         />
       ) : (
@@ -87,7 +88,7 @@ export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <span className={`y-small ${note.unread ? "font-semibold" : ""}`}>{note.text}</span>
-                  <span className="y-micro y-fg-3">
+                  <span className="y-micro y-fg-2">
                     {note.unread ? "Unread · " : ""}
                     {timeAgo(note.at)}
                   </span>

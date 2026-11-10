@@ -1,0 +1,47 @@
+{
+  "mobile": true,
+  "width": 390,
+  "height": 844,
+  "steps": [
+    { "go": "/discover", "after": 6000 },
+    { "text": "Find the voice that sells your tech." },
+    { "text": "Live briefs" },
+    { "text": "Get the Yapp app" },
+    { "eval": "document.documentElement.scrollWidth === innerWidth", "equals": true },
+    { "eval": "!!document.querySelector('iframe')", "equals": false },
+    { "eval": "[...document.querySelectorAll('.y-sample')].filter((el) => el.offsetParent !== null).length > 3", "equals": true },
+    { "shot": "s2b-phone-top" },
+
+    { "eval": "(() => { document.querySelector('.y-dsc-cab').scrollIntoView({ block: 'center' }); return true })()", "equals": true },
+    { "wait": 800 },
+    { "swipe": "left", "sel": ".y-dsc-cab", "after": 1200 },
+    { "eval": "document.getElementById('dsc-tab-index').getAttribute('aria-selected')", "equals": "true" },
+    { "eval": "(() => { window.__y = scrollY; return true })()", "equals": true },
+    { "swipe": "up", "sel": ".y-dsc-cab", "span": 0.9, "dt": 6, "after": 1200 },
+    { "eval": "[scrollY > window.__y, document.getElementById('dsc-tab-index').getAttribute('aria-selected')]", "equals": [true, "true"] },
+    { "shot": "s2b-phone-cabinet" },
+
+    { "clickSel": ".y-dsc-brief", "after": 1200 },
+    { "text": "The brief" },
+    { "eval": "(() => { const r = document.querySelector('[role=dialog]').getBoundingClientRect(); return [Math.round(r.bottom) === innerHeight, Math.round(r.left) === 0] })()", "equals": [true, true] },
+    { "shot": "s2b-phone-sheet" },
+    { "key": "Escape", "after": 800 },
+    { "eval": "!!document.querySelector('[role=dialog]')", "equals": false },
+
+    { "go": "/app-preview", "after": 6000 },
+    { "eval": "(() => { window.__before = JSON.stringify([Object.entries(localStorage).sort(), Object.entries(sessionStorage).sort(), document.cookie]); return true })()", "equals": true },
+    { "text": "Mix" },
+    { "click": "Order", "after": 400 },
+    { "text": "Available in the Yapp app" },
+    { "path": "/app-preview" },
+    { "shot": "s2b-phone-preview-note" },
+    { "wait": 1600 },
+    { "click": "Yapps", "after": 300 },
+    { "eval": "document.querySelector('.y-reel-tabs [aria-selected=true]').textContent", "equals": "Yapps" },
+    { "notText": "Available in the Yapp app" },
+    { "swipe": "left", "after": 1500 },
+    { "text": "Back to feed" },
+    { "path": "/app-preview" },
+    { "eval": "window.__before === JSON.stringify([Object.entries(localStorage).sort(), Object.entries(sessionStorage).sort(), document.cookie])", "equals": true }
+  ]
+}

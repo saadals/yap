@@ -29,7 +29,7 @@ import { Cast, heroCast } from "@/components/ui/character";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { money, moneyRange, num } from "@/lib/format";
+import { creatorNet, money, moneyExact, moneyRange, netRange, num } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, creatorById, featuredVideo, isCampaign, me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
@@ -291,9 +291,9 @@ function HowItWorks() {
               Need {campaign.minVideos} or more videos? Run a UGC campaign.
             </span>{" "}
             <span className="y-fg-2">
-              A fixed price per video set by follower tier, from {money(campaign.fromPrice)}. Creators take
-              slots first come, first served, and every video comes from a different creator. The
-              budget and the {campaign.feePct}% service fee are held up front.
+              You set one price per video, from {money(campaign.fromPrice)}, and a follower tier for who can
+              pick a slot. Creators pick slots first come, first served, and every video comes from a
+              different creator. The full amount is held when you post, nothing on top.
             </span>
           </p>
           <Link
@@ -381,7 +381,7 @@ const reasons = [
   {
     icon: <ShieldCheck size={22} />,
     title: "Paid only when you approve",
-    body: "Payment and our fee are held while they work, and refunded in full if the video isn't delivered.",
+    body: "Your payment is held while they work, and refunded in full if the video isn't delivered.",
   },
   {
     icon: <Languages size={22} />,
@@ -453,8 +453,8 @@ function CreatorLane() {
             Make videos for tech brands, <span className="y-strong">get paid reliably</span>
           </h2>
           <p className="y-lead y-fg-2 max-w-[46ch]">
-            Keep 100% of your price on custom orders, with payment secured before you film. Have{" "}
-            {facts.floor}+ followers? Take UGC campaign slots at a fixed price per video.
+            Earn your price less the {facts.feePct}% Yapp fee, with payment held before you film. Have{" "}
+            {facts.floor}+ followers? Take UGC campaign slots at the price the brand sets.
           </p>
           <div className="flex flex-wrap gap-2 pt-2">
             <PillButton href={paths.forCreators} variant="neon" size="lg" arrow>
@@ -484,6 +484,12 @@ function CreatorLane() {
                       {isCampaign(request) && request.campaign
                         ? `${money(request.campaign.pricePerVideo)} per Yapp`
                         : moneyRange(request.budget.min, request.budget.max)}
+                      <span className="y-micro y-fg-2 block text-end font-normal">
+                        you earn{" "}
+                        {isCampaign(request) && request.campaign
+                          ? moneyExact(creatorNet(request.campaign.pricePerVideo))
+                          : netRange(request.budget.min, request.budget.max)}
+                      </span>
                     </span>
                   </li>
                 );

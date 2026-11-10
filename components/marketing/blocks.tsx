@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 
 import type { BlockTone } from "@/components/ui/block";
 
-/** Marketing page container: the app's 1360px grid, blocks stacked with the 8px gap. */
+/** Marketing page container: the app's page grid (the header's margins), blocks stacked with the 8px gap. */
 export function MarketingMain({
   children,
   className = "",
@@ -15,7 +15,7 @@ export function MarketingMain({
 }) {
   return (
     <div
-      className={`mx-auto flex w-full max-w-[calc(1360px+var(--y-gutter)*2)] flex-col gap-2 px-(--y-gutter) pt-2 ${className}`}
+      className={`mx-auto flex w-full max-w-[calc(1376px+var(--y-gutter)*2)] flex-col gap-2 px-(--y-gutter) pt-2 ${className}`}
     >
       {children}
     </div>

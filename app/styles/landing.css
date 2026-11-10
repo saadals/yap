@@ -331,6 +331,23 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
   .yapp .y-welcome-order:active {
     transform: scale(0.98);
   }
+  /* "Sign in": the ghost pill beside "Get started" (Site-wide 5.4.4). */
+  .yapp .y-welcome-signin {
+    display: inline-flex;
+    align-items: center;
+    height: 42px;
+    padding-inline: 18px;
+    border-radius: 999px;
+    background: rgb(29 29 31 / 0.05);
+    color: var(--y-ink);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-welcome-signin:hover {
+    background: rgb(29 29 31 / 0.09);
+  }
   .yapp .y-welcome-circle {
     display: grid;
     place-items: center;

@@ -2,6 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 
+import { isPreviewMode } from "./preview";
+
 /**
  * Accounts remembered on this device, for one-tap sign-in after logging out (like Instagram's
  * "Continue as …"). Non-secret fields only, newest first, at most five. Prototype note: the list
@@ -35,6 +37,8 @@ const subscribe = (listener: () => void) => {
 let cache: { raw: string | null; list: SavedAccount[] } | null = null;
 
 function readRaw(): string | null {
+  // Preview mode (lib/preview.ts) never reads this visitor's storage: the seed list shows.
+  if (isPreviewMode()) return null;
   try {
     return window.localStorage.getItem(SAVED_ACCOUNTS_KEY);
   } catch {
@@ -60,6 +64,7 @@ function snapshot(): SavedAccount[] {
 }
 
 function write(list: SavedAccount[]) {
+  if (isPreviewMode()) return;
   try {
     window.localStorage.setItem(SAVED_ACCOUNTS_KEY, JSON.stringify(list));
   } catch {

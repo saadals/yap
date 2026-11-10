@@ -1,34 +1,152 @@
 {
   "account": "layla",
   "steps": [
-    { "go": "/orders/r-101", "after": 3500 },
-    { "click": "Write your pitch", "after": 1000 },
-    { "click": "Open on the moment everyone knows", "after": 500 },
-    { "click": "Use a template", "after": 800 },
-    { "click": "Use package", "after": 500 },
-    { "click": "5 days", "after": 400 },
-    { "eval": "(() => { [...document.querySelectorAll('main input[type=checkbox]')].slice(0, 2).forEach((b) => { if (!b.checked) b.click() }); return true })()" },
-    { "click": "Preview pitch", "after": 1200 },
-    { "click": "Send pitch", "after": 2000 },
-    { "text": "Pitch sent" },
-    { "account": "nour" },
-    { "go": "/orders/r-101", "after": 3500 },
-    { "text": "Pitches · 8" },
-    { "click": "Layla Mansour", "after": 1200 },
-    { "click": "Hire Layla", "after": 1500 },
-    { "click": "Hire Layla", "after": 2000 },
-    { "text": "Layla is on it" },
-    { "click": "Open commission", "after": 3500 },
-    { "text": "In production" },
-    { "account": "layla", "after": 3500 },
-    { "click": "Upload version 1", "after": 1200 },
-    { "click": "No file handy? Use a sample", "after": 6000 },
-    { "type": { "sel": "[role=dialog] textarea", "text": "Here's version 1. Shot at a shop counter, WhatsApp send at second 3, real-speed screen recording." } },
-    { "eval": "(() => { document.querySelectorAll('[role=dialog] input[type=checkbox]').forEach((b) => { if (!b.checked) b.click() }); return true })()" },
-    { "click": "Send version 1 for review", "after": 2500 },
-    { "text": "Waiting for" },
-    { "account": "nour", "after": 3500 },
-    { "text": "Review version 1 from Layla" },
-    { "shot": "cross-role-business-review" }
+    {
+      "go": "/orders/r-101",
+      "after": 5000
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "text": "You earn $160\u2013280 after the 20% Yapp fee"
+    },
+    {
+      "click": "Pitch now",
+      "after": 1000
+    },
+    {
+      "text": "Pitch to Daftar"
+    },
+    {
+      "click": "Send pitch",
+      "after": 600
+    },
+    {
+      "text": "Write your idea in at least 20 characters"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] textarea",
+        "text": "Open on a shop counter: the owner sends an invoice on WhatsApp at second 3, then the reminder lands on her customer's phone."
+      }
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[inputmode=numeric]",
+        "text": "290"
+      }
+    },
+    {
+      "text": "You receive"
+    },
+    {
+      "text": "$232"
+    },
+    {
+      "text": "after the 20% Yapp fee"
+    },
+    {
+      "shot": "s2c-pitch-modal"
+    },
+    {
+      "click": "Send pitch",
+      "after": 1500
+    },
+    {
+      "text": "Pitch sent"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/orders/r-101",
+      "after": 3500
+    },
+    {
+      "text": "Pitches \u00b7 8"
+    },
+    {
+      "click": "Layla Mansour",
+      "after": 1200
+    },
+    {
+      "click": "Hire Layla",
+      "after": 1500
+    },
+    {
+      "notText": "Service fee"
+    },
+    {
+      "text": "Nothing is added on top"
+    },
+    {
+      "shot": "s2a-hire-sheet"
+    },
+    {
+      "click": "Hire Layla",
+      "after": 2000
+    },
+    {
+      "text": "Layla is on it"
+    },
+    {
+      "click": "Open commission",
+      "after": 3500
+    },
+    {
+      "text": "Layla is working on version 1"
+    },
+    {
+      "account": "layla",
+      "after": 3500
+    },
+    {
+      "text": "Make version 1 and upload it here"
+    },
+    {
+      "click": "Upload version 1",
+      "after": 1200
+    },
+    {
+      "text": "The brief \u00b7 tick what you covered"
+    },
+    {
+      "click": "No file handy? Use a sample",
+      "after": 6000
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] textarea",
+        "text": "Here's version 1. Shot at a shop counter, WhatsApp send at second 3, real-speed screen recording."
+      }
+    },
+    {
+      "eval": "(() => { document.querySelectorAll('[role=dialog] input[type=checkbox]').forEach((b) => { if (!b.checked) b.click() }); return true })()"
+    },
+    {
+      "click": "Send version 1",
+      "after": 2500
+    },
+    {
+      "text": "Version 1 is with Daftar"
+    },
+    {
+      "click": "Done",
+      "after": 800
+    },
+    {
+      "text": "They watch it and comment, or approve"
+    },
+    {
+      "account": "nour",
+      "after": 3500
+    },
+    {
+      "text": "Version 1 is in. Approve it"
+    },
+    {
+      "shot": "cross-role-business-review"
+    }
   ]
 }

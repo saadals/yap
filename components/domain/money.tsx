@@ -7,20 +7,22 @@ import { PillButton } from "@/components/ui/pill-button";
 import { money, moneyExact, priceBreakdown } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { addonById, includedRights, SERVICE_FEE_RATE } from "@/lib/taxonomy";
-import type { AddonId, PaymentMethod } from "@/lib/types";
+import { addonById, includedWith, RAW_FOOTAGE_INCLUDED, SERVICE_FEE_RATE } from "@/lib/taxonomy";
+import type { AddonId, PaymentMethod, UsageOptionId } from "@/lib/types";
 
 /**
- * Itemized price. Business view shows the service fee and total; creator view shows what
- * they earn (creators keep 100% of price + add-ons).
+ * Itemized price. The brand's view shows the listed price and add-ons, and the total is their sum:
+ * nothing is added on top. The creator's view shows the same price, Yapp's 20% fee taken from it,
+ * and what they earn. The split comes from `priceBreakdown()`.
  */
 export function PriceSummary({
   price,
-  priceLabel = "Creator's price",
+  priceLabel,
   addons = [],
   feeRate = SERVICE_FEE_RATE,
   perspective = "business",
   showRights = true,
+  usage,
   cents = false,
   className = "",
 }: {
@@ -30,6 +32,8 @@ export function PriceSummary({
   feeRate?: number;
   perspective?: "business" | "creator";
   showRights?: boolean;
+  /** The order's usage option, for the "included" line. */
+  usage?: UsageOptionId;
   /** Receipts show every amount with cents; elsewhere whole dollars stay whole, so the total matches its button. */
   cents?: boolean;
   className?: string;
@@ -37,10 +41,12 @@ export function PriceSummary({
   const totals = priceBreakdown(price, addons, feeRate);
   const fmt = (amount: number) => (cents ? money(amount, true) : moneyExact(amount));
   const row = "flex items-baseline justify-between gap-4";
+  const creator = perspective === "creator";
+  const label = priceLabel ?? (creator ? "Price" : "Creator's price");
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
       <div className={row}>
-        <span className="y-small">{priceLabel}</span>
+        <span className="y-small">{label}</span>
         <span className="y-small y-num font-semibold">{fmt(price)}</span>
       </div>
       {addons.map((addon) => (
@@ -49,39 +55,66 @@ export function PriceSummary({
           <span className="y-small y-num">{fmt(addon.price)}</span>
         </div>
       ))}
-      {perspective === "business" ? (
+      {!creator ? (
+        <div className={`${row} border-t border-(--b-line) pt-2.5`}>
+          <span className="y-head">
+            Total
+            <span className="y-micro y-fg-2 block font-normal">Nothing is added on top</span>
+          </span>
+          <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
+            {fmt(totals.total)}
+          </span>
+        </div>
+      ) : (
         <>
           {feeRate > 0 ? (
             <div className={`${row} border-t border-(--b-line) pt-2.5`}>
-              <span className="y-small y-fg-2">
-                Service fee ({Math.round(feeRate * 100)}%)
-                <span className="y-micro y-fg-3 block">Held with the payment, refunded with it</span>
-              </span>
-              <span className="y-small y-num">{fmt(totals.fee)}</span>
+              <span className="y-small y-fg-2">Yapp fee ({Math.round(feeRate * 100)}%)</span>
+              <span className="y-small y-num y-fg-2">−{fmt(totals.fee)}</span>
             </div>
           ) : null}
           <div className={`${row} border-t border-(--b-line) pt-2.5`}>
-            <span className="y-head">Total</span>
+            <span className="y-head">
+              You earn
+              <span className="y-micro y-fg-2 block font-normal">
+                {feeRate > 0 ? `After the ${Math.round(feeRate * 100)}% Yapp fee` : "Nothing is taken off"}
+              </span>
+            </span>
             <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
-              {fmt(totals.total)}
+              {fmt(totals.creatorEarns)}
             </span>
           </div>
         </>
-      ) : (
-        <div className={`${row} border-t border-(--b-line) pt-2.5`}>
-          <span className="y-head">
-            You earn
-            <span className="y-micro y-fg-3 block font-normal">
-              {feeRate > 0 ? "You keep 100%. The client pays Yapp’s fee." : "You keep 100%."}
-            </span>
-          </span>
-          <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
-            {fmt(totals.creatorEarns)}
-          </span>
-        </div>
       )}
-      {showRights ? <p className="y-micro y-fg-3 pt-1">Included: {includedRights}</p> : null}
+      {showRights ? (
+        <p className="y-micro y-fg-2 pt-1">{usage ? includedWith(usage) : RAW_FOOTAGE_INCLUDED}</p>
+      ) : null}
     </div>
+  );
+}
+
+/** "$140 · you earn $112" as a quiet pair: the price, then the creator's net beside it. */
+export function PriceWithNet({
+  amount,
+  unit,
+  feeRate = SERVICE_FEE_RATE,
+  className = "",
+}: {
+  amount: number;
+  /** "per Yapp" */
+  unit?: string;
+  feeRate?: number;
+  className?: string;
+}) {
+  const net = priceBreakdown(amount, [], feeRate).creatorEarns;
+  return (
+    <span className={`y-num ${className}`}>
+      <span className="font-semibold">
+        {money(amount)}
+        {unit ? ` ${unit}` : ""}
+      </span>
+      <span className="y-fg-2"> · you earn {moneyExact(net)}</span>
+    </span>
   );
 }
 

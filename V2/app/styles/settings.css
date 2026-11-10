@@ -1,0 +1,53 @@
+/* Settings (/settings): the section nav. Imported by app/settings/page.tsx. */
+
+@layer components {
+  /* Phones: chips. Desktop: a quiet vertical list, the current section filled. */
+  .yapp .y-settings-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    background: var(--y-paper);
+    box-shadow: inset 0 0 0 1px var(--y-line);
+    color: var(--y-ink-2);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    transition:
+      background-color var(--y-dur-1) var(--y-ease),
+      color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-settings-link:hover {
+    color: var(--y-ink);
+  }
+  .yapp .y-settings-link[aria-current="true"] {
+    background: var(--y-ink);
+    color: var(--y-paper);
+    box-shadow: none;
+  }
+  @media (pointer: coarse) {
+    .yapp .y-settings-link {
+      min-height: 40px;
+    }
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-settings-link {
+      display: flex;
+      width: 100%;
+      min-height: 38px;
+      padding-inline: 12px;
+      border-radius: var(--y-r-sm);
+      background: transparent;
+      box-shadow: none;
+      font-size: 0.875rem;
+    }
+    .yapp .y-settings-link[aria-current="true"] {
+      background: var(--y-mist);
+      color: var(--y-ink);
+    }
+    html.dark .yapp .y-settings-link[aria-current="true"] {
+      background: rgb(255 255 255 / 0.07);
+    }
+  }
+}

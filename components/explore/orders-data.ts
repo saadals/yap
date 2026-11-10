@@ -3,9 +3,9 @@
  * profile, the one quiet line under a campaign card, and chip counts. Safe in render.
  */
 
-import { me, isCampaign, openCampaigns, pitchesForRequest, type Fit } from "@/lib/selectors";
+import { me, isCampaign, openCampaigns, pitchesForRequest, platformList, type Fit } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { campaignPlatformById, tierById } from "@/lib/taxonomy";
+import { tierById } from "@/lib/taxonomy";
 import type { ContentRequest, Pitch } from "@/lib/types";
 
 export type CampaignItem = ReturnType<typeof openCampaigns>[number];
@@ -21,7 +21,7 @@ export type RequestItem = {
 };
 
 /**
- * Open public custom requests for an account without a creator profile (it can read them and set
+ * Open public custom orders for an account without a creator profile (it can read them and set
  * one up to pitch). Its own orders are left out. Newest first.
  */
 export function openPublicRequests(s: DemoState): RequestItem[] {
@@ -41,11 +41,11 @@ export function openPublicRequests(s: DemoState): RequestItem[] {
 }
 
 /**
- * The one quiet line under a campaign card: who it's for when the viewer can't take a slot, or
+ * The one quiet line under a campaign card: who it's for when the viewer can't pick a slot, or
  * that they already hold one. Nothing when they can take it (the card says the rest).
  */
 export function campaignNote(item: CampaignItem): string | null {
-  if (item.slot) return "You took a slot";
+  if (item.slot) return "You picked a slot";
   const { eligibility, request } = item;
   if (eligibility.ok || !request.campaign) return null;
   switch (eligibility.reason) {
@@ -54,11 +54,11 @@ export function campaignNote(item: CampaignItem): string | null {
     case "no_account":
     case "unverified":
     case "no_profile":
-      return `For ${tierById[request.campaign.tierId].label} followers on ${campaignPlatformById[request.campaign.platform].name}`;
+      return `For ${tierById[request.campaign.tierId].label} followers on ${platformList(request.campaign.platforms)}`;
     case "excluded":
       return "Not open to you on this campaign";
     case "joined":
-      return "You took a slot";
+      return "You picked a slot";
     case "own":
     case "closed":
     case "full":

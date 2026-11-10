@@ -16,12 +16,12 @@ import { Page, PageHeader, SectionLabel } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { money, plural, shortDate, weekdayDate } from "@/lib/format";
+import { money, moneyExact, plural, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, commissionTotals, creatorEarnings, me } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { useDemo, useHydrated } from "@/lib/store";
-import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS } from "@/lib/taxonomy";
+import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS, FEE_PCT } from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
 export default function WalletPage() {
@@ -53,7 +53,7 @@ function NoWallet() {
           tint="sun"
           face="smile"
           title="Your wallet starts when you make your first video"
-          body="Set up a creator profile to pitch on orders and take campaign slots. What you earn lands here, and you keep 100% of your price."
+          body={`Set up a creator profile to pitch on orders and take campaign slots. What you earn lands here: the price less the ${FEE_PCT}% Yapp fee.`}
           action={
             <PillButton variant="neon" arrow onClick={() => setSetup(true)}>
               Set up your creator profile
@@ -88,7 +88,10 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
 
   return (
     <Page>
-      <PageHeader title="Wallet" description="You keep 100% of your price. Withdraw what's available any time." />
+      <PageHeader
+        title="Wallet"
+        description={`What you earn, after the ${FEE_PCT}% Yapp fee. Withdraw what's available any time.`}
+      />
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12">
         {/* Hero: what you can take out today */}
@@ -105,7 +108,7 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
             </h2>
             {hydrated ? (
               <p className="y-display y-num text-[64px] leading-[0.95] font-semibold tracking-[-0.045em] md:text-[88px]">
-                {money(earnings.available)}
+                {moneyExact(earnings.available)}
               </p>
             ) : (
               <Skeleton className="h-16 w-56 md:h-20" />
@@ -145,12 +148,12 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
               sub={
                 held.length
                   ? `${plural(held.length, "commission")}, released on approval`
-                  : "Secured by the client when you start"
+                  : "Held from the client when you start"
               }
-              value={money(earnings.held)}
+              value={moneyExact(earnings.held)}
               loading={!hydrated}
             />
-            <SummaryRow label="Released this month" value={money(earnings.thisMonth)} loading={!hydrated} />
+            <SummaryRow label="Released this month" value={moneyExact(earnings.thisMonth)} loading={!hydrated} />
             <SummaryRow
               label="Lifetime"
               sub={`${plural(earnings.completedCount, "commission")} approved`}
@@ -162,7 +165,7 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
             <p className="y-micro y-fg-2 flex justify-between gap-2">
               <span>Last 6 months</span>
               <span>
-                <span className="y-num font-semibold text-(--b-fg)">{hydrated ? money(sixMonths) : "…"}</span> released
+                <span className="y-num font-semibold text-(--b-fg)">{hydrated ? moneyExact(sixMonths) : "…"}</span> released
               </span>
             </p>
             {hydrated ? (
@@ -180,7 +183,7 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
                     {earnings.monthly.map((value, index) => (
                       <tr key={earnings.monthLabels[index]}>
                         <th scope="row">{earnings.monthLabels[index]}</th>
-                        <td>{money(value)}</td>
+                        <td>{moneyExact(value)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -289,7 +292,7 @@ function PendingBlock({
         </div>
         {hydrated ? (
           <p className="y-display y-num text-[32px] leading-none font-semibold tracking-[-0.03em]">
-            {money(earnings.pending)}
+            {moneyExact(earnings.pending)}
           </p>
         ) : (
           <Skeleton className="h-8 w-24" />
@@ -300,7 +303,7 @@ function PendingBlock({
         <Skeleton className="h-12 w-full !rounded-(--y-r-tile)" />
       ) : items.length === 0 ? (
         <p className="y-small y-fg-2">
-          Nothing pending. When a brand approves your campaign video, its price waits here until{" "}
+          Nothing pending. When a brand approves your campaign video, your pay waits here until{" "}
           {CAMPAIGN_RELEASE_DAYS} days after we verify your post.
         </p>
       ) : (
@@ -317,10 +320,10 @@ function PendingBlock({
                     {c.title}
                   </Link>
                   <p className="y-micro y-fg-2 truncate">
-                    {business?.name} · {releaseLine(c)}
+                    {business?.name} · {releaseLine(c)} · {money(commissionTotals(c).total)} less the fee
                   </p>
                 </div>
-                <span className="y-small y-num flex-none font-semibold">{money(commissionTotals(c).creatorEarns)}</span>
+                <span className="y-small y-num flex-none font-semibold">{moneyExact(commissionTotals(c).creatorEarns)}</span>
                 <span className="flex-none">
                   <PostState c={c} />
                 </span>
@@ -334,7 +337,7 @@ function PendingBlock({
         <p className="y-micro y-fg-2 flex items-start gap-1.5">
           <Clock size={14} aria-hidden className="mt-px flex-none" />
           {earnings.pendingWaiting > 0
-            ? `${money(earnings.pendingWaiting)} gets its date when the post is verified. `
+            ? `${moneyExact(earnings.pendingWaiting)} gets its date when the post is verified. `
             : ""}
           Keep each post up for {CAMPAIGN_KEEP_LIVE_DAYS} days after it&apos;s verified.
         </p>
@@ -390,11 +393,12 @@ function HistoryBlock({ s, hydrated, mine }: { s: DemoState; hydrated: boolean; 
                       {c.title}
                     </Link>
                     <p className="y-micro y-fg-2 truncate">
-                      {business?.name} · {shortDate(c.completedAt ?? c.createdAt)}
+                      {business?.name} · {shortDate(c.completedAt ?? c.createdAt)} ·{" "}
+                      {money(commissionTotals(c).total)} less the fee
                     </p>
                   </div>
                   <span className="y-small y-num flex-none font-semibold">
-                    {money(commissionTotals(c).creatorEarns)}
+                    {moneyExact(commissionTotals(c).creatorEarns)}
                   </span>
                   <ChevronRight size={16} aria-hidden className="y-flip y-fg-3 flex-none" />
                 </li>

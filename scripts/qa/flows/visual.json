@@ -1,14 +1,14 @@
 {
   "account": "nour",
-  "theme": "dark",
+  "theme": "light",
   "steps": [
     { "go": "/work", "after": 3500 },
-    { "shot": "dark-work", "full": true },
+    { "shot": "light-work", "full": true },
     { "go": "/creators", "after": 3500 },
-    { "shot": "dark-creators", "full": true },
+    { "shot": "light-creators", "full": true },
     { "go": "/orders/r-150", "after": 3500 },
-    { "shot": "dark-campaign-owner", "full": true },
+    { "shot": "light-campaign-owner", "full": true },
     { "go": "/home", "after": 3500 },
-    { "shot": "dark-home" }
+    { "shot": "light-home" }
   ]
 }

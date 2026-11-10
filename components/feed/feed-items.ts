@@ -4,7 +4,7 @@
  *
  * - video: creators' portfolio videos (vertical first, one or two per creator), never the
  *   account's own creator profile.
- * - order: open custom requests anyone can pitch on (public, or inviting this account's creator
+ * - order: open custom orders anyone can pitch on (public, or inviting this account's creator
  *   profile), not the account's own, not dismissed ("Not interested").
  * - campaign: open UGC campaigns with slots left, not the account's own, not dismissed.
  *

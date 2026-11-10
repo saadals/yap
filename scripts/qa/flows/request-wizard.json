@@ -1,84 +1,37 @@
 {
   "account": "nour",
   "steps": [
-    {
-      "go": "/orders/new?product=p-daftar-invoices",
-      "after": 5500
-    },
-    {
-      "click": "Custom request",
-      "after": 600
-    },
-    {
-      "click": "Continue",
-      "after": 1500
-    },
-    {
-      "text": "What kind of video?"
-    },
-    {
-      "click": "Testimonial",
-      "after": 600
-    },
-    {
-      "click": "Continue",
-      "after": 800
-    },
-    {
-      "text": "How many videos?"
-    },
-    {
-      "click": "Continue",
-      "after": 800
-    },
-    {
-      "text": "Which language?"
-    },
-    {
-      "click": "Continue",
-      "after": 800
-    },
-    {
-      "click": "Help me write this",
-      "after": 2500
-    },
-    {
-      "click": "Continue",
-      "after": 800
-    },
-    {
-      "text": "What's your budget?"
-    },
-    {
-      "click": "Continue",
-      "after": 800
-    },
-    {
-      "text": "Who can pitch?"
-    },
-    {
-      "click": "Continue",
-      "after": 800
-    },
-    {
-      "text": "The brief"
-    },
-    {
-      "click": "Publish",
-      "after": 2000
-    },
-    {
-      "text": "Your request is live"
-    },
-    {
-      "account": "layla"
-    },
-    {
-      "go": "/explore?tab=orders",
-      "after": 3500
-    },
-    {
-      "text": "Testimonial for Daftar Invoices"
-    }
+    { "go": "/orders/new?product=p-daftar-invoices", "after": 5500 },
+    { "click": "Custom order", "after": 600 },
+    { "click": "Continue", "after": 1500 },
+    { "text": "Your budget" },
+    { "text": "Nothing is charged until you hire." },
+    { "click": "Continue", "after": 1000 },
+    { "text": "The basics" },
+    { "text": "What creators will know about Daftar Invoices" },
+    { "click": "Testimonial", "after": 600 },
+    { "click": "Continue", "after": 1000 },
+    { "text": "The brief" },
+    { "click": "Help me write this", "after": 2500 },
+    { "click": "Continue", "after": 1000 },
+    { "text": "Deadline and rights" },
+    { "text": "Usage rights" },
+    { "eval": "(() => { const c = document.getElementById('nwf-usage'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(c, 'ads-6m'); c.dispatchEvent(new Event('change', { bubbles: true })); return c.value; })()" },
+    { "wait": 400 },
+    { "text": "Included in the price, with no separate rights fee." },
+    { "shot": "s2e-request-wizard-usage" },
+    { "click": "Continue", "after": 1000 },
+    { "text": "Check and post" },
+    { "text": "Paid ads · 6 months" },
+    { "text": "Everyone who fits" },
+    { "click": "The brief is accurate", "after": 300 },
+    { "click": "Post order", "after": 2500 },
+    { "text": "Daftar Invoices is live" },
+    { "text": "Creators can pitch now." },
+    { "account": "layla" },
+    { "go": "/work?tab=find&q=Daftar", "after": 4000 },
+    { "text": "Testimonial for Daftar Invoices" },
+    { "text": "you earn $" },
+    { "shot": "s2e-find-work-layla" }
   ]
 }

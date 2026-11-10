@@ -5,15 +5,17 @@
 
 import { startingPrice } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { compact } from "@/lib/format";
+import { compact, creatorNet } from "@/lib/format";
+import { priceGuidance } from "@/lib/pricing";
 import {
-  CAMPAIGN_FEE_RATE,
   CAMPAIGN_KEEP_LIVE_DAYS,
   CAMPAIGN_MIN_VIDEOS,
   CAMPAIGN_OPEN_DAYS,
   CAMPAIGN_RELEASE_DAYS,
   CAMPAIGN_STEP,
-  SERVICE_FEE_RATE,
+  FEE_PCT,
+  PRICE_MAX_PER_YAPP,
+  PRICE_MIN_PER_YAPP,
   addons as addonList,
   followerTiers,
 } from "@/lib/taxonomy";
@@ -32,37 +34,38 @@ export const MARKETING = {
 };
 
 /**
- * UGC campaign facts for marketing copy, from the taxonomy constants. Only confirmed tiers are
- * quoted (the higher ones are placeholders until the PM confirms them).
+ * UGC campaign facts for marketing copy, from the taxonomy and pricing constants. The brand sets the
+ * price per Yapp (from the $30 floor); tiers only decide who can pick a slot.
  */
 export function campaignFacts() {
-  const confirmed = followerTiers.filter((tier) => !tier.placeholder);
+  const example = priceGuidance(undefined, followerTiers[0].id);
   return {
     minVideos: CAMPAIGN_MIN_VIDEOS,
     step: CAMPAIGN_STEP,
-    /** Service fee on campaigns: charged with the budget when posted, held and refunded with it. */
-    feePct: Math.round(CAMPAIGN_FEE_RATE * 100),
-    customFeePct: Math.round(SERVICE_FEE_RATE * 100),
+    /** Yapp's fee on every transaction, taken from the creator's pay (never added for the brand). */
+    feePct: FEE_PCT,
     /** Creators are paid this many days after their post is verified. */
     releaseDays: CAMPAIGN_RELEASE_DAYS,
     /** Posts stay up this long from verification. */
     keepLiveDays: CAMPAIGN_KEEP_LIVE_DAYS,
     /** A campaign takes creators for this long unless the brand closes it. */
     openDays: CAMPAIGN_OPEN_DAYS,
-    fromPrice: confirmed[0]?.pricePerVideo ?? followerTiers[0].pricePerVideo,
+    /** The floor per Yapp (listed price) and what a creator earns at it ($30 → $24). */
+    fromPrice: PRICE_MIN_PER_YAPP,
+    fromNet: creatorNet(PRICE_MIN_PER_YAPP),
+    maxPrice: PRICE_MAX_PER_YAPP,
+    /** The usual range at the lowest tier with no category chosen (lib/pricing.ts). */
+    exampleRange: example,
     /** Lowest verified follower count a campaign accepts ("10K"). */
     floor: compact(followerTiers[0].min),
-    tiers: confirmed,
+    tiers: followerTiers,
   };
 }
 
 /** Fallback add-on prices when no creator in the store offers an add-on. */
 const addonFallback: Record<AddonId, number> = {
   "extra-revision": 40,
-  "raw-footage": 50,
   subtitles: 40,
-  "ad-rights-90": 90,
-  "ad-rights-365": 220,
   rush: 80,
   "extra-hooks": 60,
   "post-to-account": 250,

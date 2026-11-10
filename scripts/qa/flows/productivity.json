@@ -1,0 +1,89 @@
+{
+  "account": "nour",
+  "width": 1440,
+  "height": 1000,
+  "steps": [
+    { "go": "/productivity", "after": 5000 },
+    { "text": "How your Yapps are performing" },
+    { "notText": "As a creator" },
+    { "text": "Spend on Yapp" },
+    { "text": "$180" },
+    { "text": "Cost per video" },
+    { "text": "$140" },
+    { "text": "100%" },
+    { "text": "67%" },
+    { "text": "CAC · ROAS · CTR" },
+    { "text": "Connect an ad account" },
+    { "notText": "CAC $" },
+    { "text": "Needs your review" },
+    { "text": "24h" },
+    { "text": "$2,260 held" },
+    { "shot": "s2F-flow-nour" },
+
+    { "clickSel": ".y-pd-kpi-hit" },
+    { "text": "How it's worked out" },
+    { "text": "Nothing here comes from an ad account" },
+    { "key": "Escape" },
+
+    { "click": "Hana Youssef" },
+    { "text": "Orders with Hana" },
+    { "text": "Skit for Daftar's Egypt launch" },
+    { "click": "View profile", "after": 3000 },
+    { "text": "@hanaskits" },
+
+    { "go": "/productivity?range=12m", "after": 3500 },
+    { "text": "Last 12 months" },
+    { "text": "$480" },
+    { "go": "/billing", "after": 3500 },
+    { "text": "$480 lifetime" },
+
+    { "account": "layla" },
+    { "go": "/productivity", "after": 4000 },
+    { "text": "How your work is performing" },
+    { "text": "As a creator" },
+    { "text": "Earnings" },
+    { "text": "$208" },
+    { "text": "25%" },
+    { "text": "2 of 3 decided pitches won" },
+    { "text": "4.9 your rating" },
+    { "text": "$592 ready to withdraw" },
+    { "shot": "s2F-flow-layla" },
+
+    { "click": "As a brand", "after": 1500 },
+    { "text": "How your Yapps are performing" },
+    { "text": "Nothing ordered yet" },
+    { "text": "Start an order" },
+    { "click": "As a creator", "after": 1500 },
+    { "text": "How your work is performing" },
+
+    {
+      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Date range\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, '90d'); el.dispatchEvent(new Event('change', { bubbles: true })); return el.value; })()"
+    },
+    { "wait": 1500 },
+    { "text": "$592" },
+    { "text": "83%" },
+    { "clickSel": ".y-pd-kpi:nth-child(3) .y-pd-kpi-hit" },
+    { "text": "5 of 6 first versions on time" },
+    { "key": "Escape" },
+    { "text": "Notewren" },
+
+    { "click": "Daftar" },
+    { "text": "Orders with Daftar" },
+    { "text": "Repeat client" },
+    { "key": "Escape" },
+
+    {
+      "eval": "(() => { const make = URL.createObjectURL.bind(URL); URL.createObjectURL = (blob) => { blob.text().then((text) => { const pre = document.createElement('pre'); pre.textContent = 'QA CSV ' + text.split(/\\r?\\n/).join(' | '); document.body.appendChild(pre); }); return make(blob); }; return 'watching downloads'; })()"
+    },
+    { "click": "Export", "after": 1500 },
+    { "text": "Downloaded yapp-productivity-creator-90d-2026-11-04.csv" },
+    { "text": "QA CSV" },
+    { "text": "Period,Last 90 days" },
+    { "text": "Earnings,$592" },
+    { "text": "Brands you worked with" },
+    { "text": "Daftar,3,240.00" },
+
+    { "go": "/wallet", "after": 3500 },
+    { "text": "$592" }
+  ]
+}

@@ -1,0 +1,208 @@
+/* services: page styles for round 3, stage 2. Tokens and the shared kit live in app/globals.css.
+   The five service and audience pages (Site-wide 5.8.4), built on the Discover look: 96px between
+   sections (64 on phones), white cards with a radius of 28, a dark closing bar with a green glow. */
+
+@layer components {
+  .yapp .y-svc-hero {
+    display: grid;
+    gap: 20px;
+    align-items: center;
+    padding-top: 8px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-hero {
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+      gap: 48px;
+      padding-top: 24px;
+    }
+  }
+  .yapp .y-svc-hero-l {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .yapp .y-svc-h1 {
+    max-width: 14ch;
+    font-size: 36px;
+    line-height: 1.04;
+    letter-spacing: -0.033em;
+    text-wrap: balance;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-h1 {
+      font-size: 52px;
+      letter-spacing: -0.038em;
+    }
+  }
+  .yapp .y-svc-lead {
+    max-width: 52ch;
+  }
+  .yapp .y-svc-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .yapp .y-svc-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-facts {
+      padding: 28px;
+    }
+  }
+  .yapp .y-svc-facts .y-cardhead {
+    margin-bottom: 0;
+  }
+  .yapp .y-svc-facts-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .yapp .y-svc-fact {
+    display: flex;
+    min-width: 0;
+    flex-direction: column-reverse;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 16px;
+    border-radius: var(--y-r-tile);
+    background: var(--y-canvas);
+  }
+
+  .yapp .y-svc-sec {
+    margin-top: 64px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-sec {
+      margin-top: 96px;
+    }
+  }
+
+  .yapp .y-svc-proof {
+    display: grid;
+    gap: 12px;
+  }
+  @media (min-width: 768px) {
+    .yapp .y-svc-proof {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+  .yapp .y-svc-review {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 16px;
+    padding: 24px;
+    border-radius: var(--y-r-block);
+    background: var(--y-paper);
+    box-shadow: var(--y-shadow-card);
+  }
+  .yapp .y-svc-review blockquote {
+    flex: 1;
+    margin: 0;
+  }
+  .yapp .y-svc-review-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-top: 16px;
+    border-top: 1px solid var(--y-line);
+  }
+
+  .yapp .y-svc-included {
+    display: grid;
+    gap: 12px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-included {
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+  .yapp .y-svc-card {
+    padding: 24px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-card {
+      padding: 32px;
+    }
+  }
+  .yapp .y-svc-card .y-svc-checks {
+    gap: 14px;
+  }
+  .yapp .y-svc-price {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .yapp .y-svc-faq {
+    padding-block: 8px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-faq {
+      padding-block: 12px;
+    }
+  }
+
+  /* Discover 4.10: a dark bar with a soft green glow at the top end. */
+  .yapp .y-svc-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    overflow: hidden;
+    padding: 30px 24px;
+  }
+  .yapp .y-svc-cta::before {
+    content: "";
+    position: absolute;
+    top: -160px;
+    right: -80px;
+    width: 420px;
+    height: 420px;
+    border-radius: 50%;
+    background: var(--y-neon);
+    opacity: 0.33;
+    filter: blur(130px);
+    pointer-events: none;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-svc-cta {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      padding: 46px;
+      border-radius: 36px;
+    }
+  }
+  .yapp .y-svc-cta-sub {
+    margin-top: 8px;
+    color: var(--b-fg-2);
+  }
+}
+
+@layer components {
+  /* "What's included" reads as body text here, not the job page's muted lines. */
+  .yapp .y-svc-card .y-checks > li {
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--y-ink);
+  }
+  @media (max-width: 767.98px) {
+    .yapp .y-svc-review-foot {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+    .yapp .y-svc-review-foot > span:last-child {
+      flex-direction: row-reverse;
+      text-align: start;
+    }
+  }
+}

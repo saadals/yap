@@ -1,6 +1,6 @@
 "use client";
 
-import { NewOrderPage } from "@/components/requests/new-order";
+import { NewOrderPage } from "@/components/new-order";
 
 export default function Page() {
   return <NewOrderPage />;

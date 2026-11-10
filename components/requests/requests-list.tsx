@@ -14,13 +14,13 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { JobCardSkeleton, Skeleton } from "@/components/ui/skeleton";
 import { DAY, NOW } from "@/lib/clock";
-import { plural, timeOf } from "@/lib/format";
+import { plural, timeAgoInline } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { campaignAttention, isCampaign, me, pitchesForRequest, requestsForBusiness } from "@/lib/selectors";
 import { useDemo, useHydrated, type DemoState } from "@/lib/store";
 import type { ContentRequest } from "@/lib/types";
 
-import { STEPS } from "./shared";
+import { STEP_LABELS, kindName, untitled } from "@/components/new-order/model";
 
 type Tab = "open" | "drafts" | "hired" | "closed" | "all";
 const TABS: { id: Tab; label: string; match: (r: ContentRequest) => boolean }[] = [
@@ -33,7 +33,7 @@ const TABS: { id: Tab; label: string; match: (r: ContentRequest) => boolean }[] 
 ];
 const isTab = (value: string | null): value is Tab => TABS.some((t) => t.id === value);
 
-/** /orders: everything the signed-in account ordered (custom requests and UGC campaigns). */
+/** /orders: everything the signed-in account ordered (custom orders and UGC campaigns). */
 export function OrdersListPage() {
   const s = useDemo();
   const hydrated = useHydrated();
@@ -47,7 +47,7 @@ export function OrdersListPage() {
       toReview ? `${plural(toReview, "campaign video")} to review` : null,
     ]
       .filter(Boolean)
-      .join(" · ") || "Custom requests and UGC campaigns you've placed.";
+      .join(" · ") || "Custom orders and UGC campaigns you've placed.";
   return (
     <AppShell>
       <Page>
@@ -84,7 +84,7 @@ function ListSkeleton() {
   );
 }
 
-/** Pitches that arrived on published custom requests in the last day. */
+/** Pitches that arrived on published custom orders in the last day. */
 function newPitchCount(s: DemoState) {
   const since = NOW - DAY;
   return requestsForBusiness(s)
@@ -105,10 +105,10 @@ function RequestsList() {
   const requests = requestsForBusiness(s);
   const tabParam = params.get("tab");
   const tab: Tab = isTab(tabParam) ? tabParam : "open";
-  const unfinished = me.draft(s);
-  // The wizard's autosaved request counts as a draft too.
+  // The new-order form's autosaved drafts (one per kind) count as drafts too.
+  const unfinished = me.orderDrafts(s);
   const count = (t: (typeof TABS)[number]) =>
-    requests.filter(t.match).length + (t.id === "drafts" && unfinished ? 1 : 0);
+    requests.filter(t.match).length + (t.id === "drafts" ? unfinished.length : 0);
   const active = TABS.find((t) => t.id === tab)!;
   // Quiet chips: tabs with nothing in them stay out of the way (unless selected).
   const shownTabs = TABS.filter((t) => t.id === "open" || t.id === "all" || t.id === tab || count(t) > 0);
@@ -158,29 +158,32 @@ function RequestsList() {
         </label>
       </div>
 
-      {tab === "drafts" && unfinished && !q ? (
-        <Block tone="mist" pad="md" className="y-hoverable relative flex flex-wrap items-center gap-4">
-          <span className="y-round flex-none" data-tone-btn="contrast" aria-hidden>
-            <FilePen size={20} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="y-head">
-              <Link
-                href={paths.newOrder({ type: "custom" })}
-                className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']"
-              >
-                {unfinished.title || "Unfinished request"}
-              </Link>
-            </h2>
-            <p className="y-small y-fg-2">
-              Custom request · step {unfinished.step + 1} of {STEPS.length} · saved {timeOf(unfinished.savedAt)}
-            </p>
-          </div>
-          <span className="y-pill relative z-[3]" data-variant="contrast" data-size="sm" aria-hidden>
-            Continue
-          </span>
-        </Block>
-      ) : null}
+      {tab === "drafts" && unfinished.length && !q
+        ? unfinished.map((draft) => (
+            <Block key={draft.kind} tone="paper" pad="md" className="y-hoverable relative flex flex-wrap items-center gap-4">
+              <span className="y-round flex-none" data-tone-btn="soft" aria-hidden>
+                <FilePen size={20} />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h2 className="y-head">
+                  <Link
+                    href={paths.newOrder({ draft: draft.kind })}
+                    className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']"
+                  >
+                    {draft.title || untitled(draft.kind)}
+                  </Link>
+                </h2>
+                <p className="y-small y-fg-2">
+                  {kindName(draft.kind)} · Draft, not posted · step {(draft.step ?? 0) + 1} of {STEP_LABELS.length} · saved{" "}
+                  {timeAgoInline(draft.savedAt)}
+                </p>
+              </div>
+              <span className="y-pill relative z-[3]" data-variant="contrast" data-size="sm" aria-hidden>
+                Continue
+              </span>
+            </Block>
+          ))
+        : null}
 
       <p className="sr-only" aria-live="polite">
         {plural(visible.length, "order")} shown
@@ -215,7 +218,7 @@ function RequestsList() {
             }
           />
         </Block>
-      ) : tab === "drafts" && unfinished ? null : (
+      ) : tab === "drafts" && unfinished.length ? null : (
         <Block tone="paper" pad="md">
           <TabEmpty tab={tab} onAll={() => setTab("all")} hasAny={requests.length > 0} />
         </Block>
@@ -245,7 +248,7 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
     return (
       <EmptyState
         title="No drafts"
-        body="Requests you save without publishing land here, so you can finish them later."
+        body="Orders you save without publishing land here, so you can finish them later."
         shape="dome"
         tint="violet"
         face="calm"
@@ -256,7 +259,7 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
     return (
       <EmptyState
         title="Nobody hired yet"
-        body="When you hire from a pitch, the request moves here and the work shows up in Work."
+        body="When you hire from a pitch, the order moves here and the work shows up in Work."
         shape="tower"
         tint="sun"
         face="focus"
@@ -271,7 +274,7 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
     return (
       <EmptyState
         title="Nothing closed"
-        body="Close an order when you've found who you need. You can reopen a request any time."
+        body="Close an order when you've found who you need. You can reopen one any time."
         shape="ball"
         tint="sea"
         face="sleepy"
@@ -287,7 +290,7 @@ function TabEmpty({ tab, onAll, hasAny }: { tab: Tab; onAll: () => void; hasAny:
   return (
     <EmptyState
       title="Place your first order"
-      body="Tell creators what you need once. Pick a UGC campaign for many videos at a fixed price, or a custom request to compare pitches."
+      body="Tell creators what you need once. Pick a UGC campaign for many videos at a fixed price, or a custom order to compare pitches."
       shape="bean"
       tint="coral"
       face="smile"

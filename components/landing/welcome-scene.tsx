@@ -1,12 +1,11 @@
 "use client";
 
-import { Plus, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { SignInPanel } from "@/components/auth/sign-in-panel";
-import { primaryNav } from "@/components/shell/nav";
+import { NavLinks } from "@/components/shell/site-header";
 import { Brand } from "@/components/ui/brand";
 import { useMediaQuery, useReducedMotion } from "@/lib/hooks";
 import { paths, type SignInIntent } from "@/lib/paths";
@@ -25,6 +24,8 @@ const BURST_MS_REDUCED = 140;
 const PREVIEW_EXIT_MS = 200;
 
 type Preview = { creatorId: string; openedAt: number; open: boolean };
+
+/** The signed-out header's links: the same list the site header shows a visitor. */
 
 const eligibleCreators = (s: DemoState): Creator[] =>
   s.creators.filter((creator) => portfolio(s, creator).length > 0);
@@ -48,8 +49,11 @@ function highlights(s: DemoState, creator: Creator): Video[] {
  */
 export function WelcomeScene({
   initialPanel,
+  onLeave,
 }: {
   initialPanel?: { intent: SignInIntent | null; next: string | null };
+  /** "/" only: a sign-in is about to leave for `destination` (see HomeRoute). */
+  onLeave?: (destination: string) => void;
 }) {
   const s = useDemo();
   const router = useRouter();
@@ -73,7 +77,8 @@ export function WelcomeScene({
   useEffect(() => {
     if (!hydrated || checkedSession.current) return;
     checkedSession.current = true;
-    if (account) router.replace(paths.home);
+    // Signed in on arrival (/signin, /signup): "/" takes you home. On "/" HomeRoute never shows this.
+    if (account) router.replace(paths.landing);
     else rootRef.current?.setAttribute("data-settled", "");
   }, [hydrated, account, router]);
 
@@ -155,26 +160,15 @@ export function WelcomeScene({
         <div className="y-welcome-nav y-glass hidden lg:flex">
           <div className="flex items-center gap-10">
             <Brand href={paths.landing} />
-            <nav aria-label="Main" className="flex items-center gap-1">
-              {primaryNav.public.map((link) => (
-                <Link key={link.href} href={link.href} className="y-welcome-link">
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
+            <NavLinks session="out" />
           </div>
-          <div className="flex items-center gap-2.5">
-            <button type="button" className="y-welcome-order" onClick={() => openPanel("ask")}>
-              <Plus size={16} aria-hidden />
-              New order
+          {/* Signed-out nav (Site-wide 5.4.4): Sign in and Get started open the panel in place. */}
+          <div className="flex items-center gap-2">
+            <button type="button" className="y-welcome-signin" onClick={() => openPanel(null)}>
+              Sign in
             </button>
-            <button
-              type="button"
-              className="y-welcome-circle y-glass"
-              aria-label="Sign in"
-              onClick={() => openPanel(null)}
-            >
-              <UserRound size={22} aria-hidden />
+            <button type="button" className="y-welcome-order" onClick={() => openPanel(null)}>
+              Get started
             </button>
           </div>
         </div>
@@ -244,6 +238,7 @@ export function WelcomeScene({
         intent={panel.intent}
         next={initialPanel?.next ?? null}
         onClose={closePanel}
+        onLeave={onLeave}
       />
     </div>
   );

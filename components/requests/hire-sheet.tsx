@@ -217,7 +217,7 @@ export function HireSheet({
         <PaymentMethodPicker value={methodId} onChange={setMethodId} />
 
         <div className="y-tile p-4">
-          <PriceSummary price={pitch.price} addons={chosen} />
+          <PriceSummary price={pitch.price} addons={chosen} usage={request.brief.usage} />
         </div>
 
         <ProtectedNote />

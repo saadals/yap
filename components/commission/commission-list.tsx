@@ -223,8 +223,8 @@ function emptyCopy(side: Role, filter: Filter, counts: Record<Filter, number>) {
         title: side === "business" ? "No commissions in progress" : "Nothing in production",
         body:
           side === "business"
-            ? "Commission a creator from their profile or hire from a request's pitches. Payment is held until you approve."
-            : "Take a campaign slot, pitch on a request or accept a direct offer. Your work shows up here.",
+            ? "Commission a creator from their profile or hire from a custom order's pitches. Payment is held until you approve."
+            : "Pick a campaign slot, pitch on a custom order or accept a direct offer. Your work shows up here.",
         action: find,
       };
     case "completed":
@@ -256,7 +256,7 @@ function emptyCopy(side: Role, filter: Filter, counts: Record<Filter, number>) {
         body:
           side === "business"
             ? "Find a creator who speaks your audience's language and send an offer. You only pay when you approve."
-            : "Once you take a slot, win a pitch or accept an offer, it lives here from brief to payment.",
+            : "Once you pick a slot, win a pitch or accept an offer, it lives here from brief to payment.",
         action: fallback,
       };
   }

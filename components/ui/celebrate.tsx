@@ -1,26 +1,8 @@
-"use client";
-
-import { Cast, successCast } from "./character";
-
-/** Peak-end moment: the cast pops in once with a short neon burst. Static under reduced motion. */
-export function Celebrate({ className = "" }: { className?: string }) {
-  return (
-    <div className={`relative ${className}`} aria-hidden>
-      <svg viewBox="0 0 240 150" className="absolute inset-0 h-full w-full" overflow="visible">
-        <g className="y-burst" stroke="var(--y-ink)" strokeWidth="5" strokeLinecap="round">
-          <line x1="118" y1="10" x2="118" y2="-6" />
-          <line x1="80" y1="22" x2="70" y2="10" />
-          <line x1="156" y1="22" x2="166" y2="10" />
-          <line x1="52" y1="50" x2="38" y2="44" />
-          <line x1="208" y1="62" x2="222" y2="56" />
-        </g>
-      </svg>
-      <Cast
-        members={successCast}
-        viewBox="-10 -10 240 150"
-        animate
-        className="relative h-full w-full"
-      />
-    </div>
-  );
-}
+/**
+ * Placeholder for the confirmation artwork. The blob characters are out of confirmation screens
+ * (round 3 answers, item 15) and the abstract illustrations haven't been supplied, so this renders
+ * nothing: the title becomes the first thing in the confirmation and the layout closes up around
+ * it. New confirmations use `ConfirmModal`, which has no illustration slot. When the artwork
+ * arrives, draw it here and every existing confirmation picks it up.
+ */
+export const Celebrate: (props: { className?: string }) => null = () => null;

@@ -17,7 +17,7 @@ import { usePrefs } from "@/lib/prefs";
 import { commissionById, creatorByHandle, me, videoById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { accountOwning, actions, useDemo, useHydrated } from "@/lib/store";
-import { addonById, formatById, languageById, platformById } from "@/lib/taxonomy";
+import { addonById, formatById, languageById, platformById, usageById } from "@/lib/taxonomy";
 import type { Commission, Creator, Video } from "@/lib/types";
 
 import { CreatorNotFound } from "../profile";
@@ -238,9 +238,10 @@ export function Checkout({
         </span>
       </span>
     ),
-    addons: x.chosen.length
-      ? x.chosen.map((a) => `${addonById[a.id].name} (+${money(a.price)})`).join(" · ")
-      : "No add-ons",
+    addons: [
+      usageById[d.usage].name,
+      x.chosen.length ? x.chosen.map((a) => `${addonById[a.id].name} (+${money(a.price)})`).join(" · ") : "No add-ons",
+    ].join(" · "),
     timing: `Due ${weekdayDate(x.dueDate)} · ${plural(x.dueDays, "day")} from today`,
     message: <span className="y-clamp-2">{x.message}</span>,
     payment: (() => {
@@ -253,7 +254,7 @@ export function Checkout({
     { id: "package", title: "Package", body: <PackageEditor {...editor} /> },
     { id: "product", title: "Product", body: <ProductEditor {...editor} /> },
     { id: "brief", title: "Brief", body: <BriefEditor {...editor} /> },
-    { id: "addons", title: "Add-ons", body: <AddonsEditor {...editor} /> },
+    { id: "addons", title: "Usage and add-ons", body: <AddonsEditor {...editor} /> },
     { id: "timing", title: "Timing", body: <TimingEditor {...editor} /> },
     { id: "message", title: "Message", body: <MessageEditor {...editor} /> },
     { id: "payment", title: "Payment", body: <PaymentEditor {...editor} /> },
@@ -456,11 +457,16 @@ function OrderSummary({
           <dt className="y-small y-fg-2">Revisions</dt>
           <dd className="y-small text-end font-semibold">{x.revisions}</dd>
         </div>
+        <div className={row}>
+          <dt className="y-small y-fg-2">Usage</dt>
+          <dd className="y-small text-end font-semibold">{usageById[d.usage].name}</dd>
+        </div>
       </dl>
       <PriceSummary
         price={x.pkg.price}
         priceLabel={`${tierName[x.pkg.tier]} package`}
         addons={x.addonPrices}
+        showRights={false}
         className="border-t border-(--b-line) pt-4"
       />
       {action}
@@ -523,8 +529,8 @@ function Success({
         {repeat && x.learnings.length
           ? `Your brief went with ${plural(x.learnings.length, "carried-forward learning")}, so ${creator.firstName} starts where you left off. `
           : ""}
-        You&apos;re charged when {creator.firstName} accepts, service fee included, and it&apos;s held until you
-        approve the work.
+        You&apos;re charged when {creator.firstName} accepts, nothing on top of the price, and it&apos;s held
+        until you approve the work.
       </p>
       {owner ? (
         <p className="y-micro y-fg-3 max-w-[52ch]">

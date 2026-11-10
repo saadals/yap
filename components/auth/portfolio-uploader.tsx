@@ -41,6 +41,7 @@ const sceneFor: Record<FormatId, Scene> = {
   "talking-head": "selfie",
   voiceover: "screen",
   "hook-pack": "selfie",
+  "ad-copy": "desk",
 };
 
 function sizeLabel(bytes: number) {

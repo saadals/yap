@@ -1,0 +1,192 @@
+/* Studio work (Studio Today, Find work, the opportunity page). Tokens only, so dark mode works. */
+
+@layer components {
+  /* ------------------------------------------------------------ filter selects (pill-shaped) */
+  .yapp .sw-select-wrap {
+    position: relative;
+    display: inline-flex;
+    min-width: 0;
+  }
+  .yapp .sw-select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    min-height: 36px;
+    padding-block: 0;
+    padding-inline: 14px 34px;
+    border-radius: 999px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow: inset 0 0 0 1px var(--y-line-strong);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 36px;
+    cursor: pointer;
+    text-overflow: ellipsis;
+    transition:
+      background-color var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .sw-select:hover {
+    box-shadow: inset 0 0 0 1px var(--y-ink-2);
+  }
+  .yapp .sw-select:focus-visible {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+  }
+  .yapp .sw-select[data-set="true"] {
+    background: var(--y-ink);
+    color: var(--y-paper);
+    box-shadow: none;
+  }
+  .yapp .sw-select-wrap > svg {
+    position: absolute;
+    inset-inline-end: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--y-ink-2);
+  }
+  .yapp .sw-select-wrap:has(.sw-select[data-set="true"]) > svg {
+    color: var(--y-paper);
+  }
+  @media (pointer: coarse) {
+    .yapp .sw-select {
+      min-height: 44px;
+      line-height: 44px;
+    }
+  }
+
+  /* ------------------------------------------------------------------- work rows */
+  /* A row whose title is a stretched link, so secondary buttons (Not interested) can sit on top. */
+  .yapp .sw-workrow {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    padding: 16px 20px;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .sw-workrow + .sw-workrow {
+    border-top: 1px solid var(--b-line, var(--y-line));
+  }
+  .yapp .sw-workrow:hover {
+    background: rgb(29 29 31 / 0.025);
+  }
+  html.dark .yapp .sw-workrow:hover {
+    background: rgb(255 255 255 / 0.035);
+  }
+  .yapp .sw-workrow:first-child {
+    border-start-start-radius: inherit;
+    border-start-end-radius: inherit;
+  }
+  .yapp .sw-workrow:last-child {
+    border-end-start-radius: inherit;
+    border-end-end-radius: inherit;
+  }
+  .yapp .sw-stretch::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+  }
+  .yapp .sw-stretch:focus-visible {
+    outline: none;
+  }
+  .yapp .sw-workrow:has(.sw-stretch:focus-visible) {
+    outline: 2px solid var(--y-ink);
+    outline-offset: -2px;
+  }
+  .yapp .sw-above {
+    position: relative;
+    z-index: 1;
+  }
+  @media (max-width: 767px) {
+    .yapp .sw-workrow {
+      padding: 14px 16px;
+      gap: 12px;
+    }
+  }
+
+  /* --------------------------------------------- phone action bar (above the tab bar) */
+  .yapp .sw-actionbar {
+    position: fixed;
+    inset-inline: 12px;
+    bottom: calc(env(safe-area-inset-bottom) + 10px + var(--y-bar-h) + 10px);
+    z-index: 45;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 8px 8px 16px;
+    border-radius: 22px;
+    max-width: 480px;
+    margin-inline: auto;
+  }
+  @media (min-width: 1024px) {
+    .yapp .sw-actionbar {
+      display: none;
+    }
+  }
+  /* Room under the page for the bar, on top of the tab bar's own padding. */
+  .yapp .sw-has-bar {
+    padding-bottom: 76px;
+  }
+  @media (min-width: 1024px) {
+    .yapp .sw-has-bar {
+      padding-bottom: 0;
+    }
+  }
+
+  /* ---------------------------------------------------------------- sample picker */
+  .yapp .sw-sample {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 6px;
+    border-radius: var(--y-r-tile);
+    background: var(--b-chip, var(--y-mist));
+    cursor: pointer;
+    transition: box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .sw-sample[data-on="true"] {
+    box-shadow: inset 0 0 0 2px var(--y-ink);
+  }
+  .yapp .sw-sample[data-off="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .yapp .sw-sample:has(input:focus-visible) {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+  }
+
+  /* ---------------------------------------------------------------- small menu */
+  .yapp .sw-menu {
+    position: absolute;
+    inset-inline-end: 0;
+    top: calc(100% + 6px);
+    z-index: 30;
+    min-width: 220px;
+    padding: 6px;
+    border-radius: 16px;
+    background: var(--y-paper);
+    box-shadow: var(--y-shadow-float, var(--y-shadow-card));
+  }
+  .yapp .sw-menu > button {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 10px;
+    min-height: 40px;
+    padding-inline: 12px;
+    border-radius: 10px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: start;
+  }
+  .yapp .sw-menu > button:hover,
+  .yapp .sw-menu > button:focus-visible {
+    background: var(--y-mist);
+    outline: none;
+  }
+}

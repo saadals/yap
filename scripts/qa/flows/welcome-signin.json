@@ -88,15 +88,32 @@
       "wait": 2500
     },
     {
-      "eval": "(() => { if (!/\\/home\\/?$/.test(location.pathname)) throw new Error('expected the feed, at ' + location.pathname); return true; })()"
+      "path": "/home"
     },
     {
-      "go": "/settings#account",
+      "go": "/profile",
       "after": 3000
+    },
+    {
+      "click": "Account",
+      "after": 1200
+    },
+    {
+      "click": "Log out",
+      "after": 900
+    },
+    {
+      "text": "Log out of Yapp?"
+    },
+    {
+      "notText": "forget"
     },
     {
       "click": "Log out",
       "after": 2500
+    },
+    {
+      "path": "/"
     },
     {
       "text": "Ask for Yapps"
@@ -122,14 +139,138 @@
       "after": 2500
     },
     {
-      "eval": "(() => { if (!/\\/home\\/?$/.test(location.pathname)) throw new Error('expected the feed, at ' + location.pathname); return true; })()"
+      "path": "/home"
     },
     {
       "go": "/",
       "after": 3000
     },
     {
-      "eval": "(() => { if (!/\\/home\\/?$/.test(location.pathname)) throw new Error('expected the feed, at ' + location.pathname); return true; })()"
+      "path": "/home"
+    },
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 900,
+        "mobile": false
+      }
+    },
+    {
+      "go": "/",
+      "after": 5000
+    },
+    {
+      "path": "/"
+    },
+    {
+      "eval": "document.querySelector('.y-hdr-links a[aria-current=page]')?.textContent",
+      "equals": "Discover"
+    },
+    {
+      "clickSel": ".y-acct-dd .y-dd-trigger",
+      "after": 800
+    },
+    {
+      "click": "Log out",
+      "after": 1000
+    },
+    {
+      "click": "Log out",
+      "after": 3000
+    },
+    {
+      "path": "/"
+    },
+    {
+      "text": "Ask for Yapps"
+    },
+    {
+      "eval": "(() => { window.__sawShell = false; new MutationObserver(() => { if (/^(\\/yap)?\\/?$/.test(location.pathname) && document.querySelector('.y-hdr')) window.__sawShell = true; }).observe(document.body, { subtree: true, childList: true }); return true; })()"
+    },
+    {
+      "click": "Ask for Yapps",
+      "after": 1500
+    },
+    {
+      "text": "Continuing as: Ask for Yapps"
+    },
+    {
+      "click": "Nour Haddad",
+      "after": 4500
+    },
+    {
+      "path": "/orders/new"
+    },
+    {
+      "eval": "window.__sawShell",
+      "equals": false
+    },
+    {
+      "clickSel": ".y-acct-dd .y-dd-trigger",
+      "after": 800
+    },
+    {
+      "click": "Log out",
+      "after": 1000
+    },
+    {
+      "click": "Log out",
+      "after": 3000
+    },
+    {
+      "eval": "(() => { window.__sawShell = false; new MutationObserver(() => { if (/^(\\/yap)?\\/?$/.test(location.pathname) && document.querySelector('.y-hdr')) window.__sawShell = true; }).observe(document.body, { subtree: true, childList: true }); return true; })()"
+    },
+    {
+      "click": "Make Yapps",
+      "after": 1500
+    },
+    {
+      "text": "Continuing as: Make Yapps"
+    },
+    {
+      "click": "Layla Mansour",
+      "after": 4500
+    },
+    {
+      "path": "/work"
+    },
+    {
+      "eval": "location.search",
+      "equals": "?tab=find"
+    },
+    {
+      "eval": "window.__sawShell",
+      "equals": false
+    },
+    {
+      "clickSel": ".y-acct-dd .y-dd-trigger",
+      "after": 800
+    },
+    {
+      "click": "Log out",
+      "after": 1000
+    },
+    {
+      "click": "Log out",
+      "after": 3000
+    },
+    {
+      "clickSel": ".y-welcome-signin",
+      "after": 1500
+    },
+    {
+      "click": "Nour Haddad",
+      "after": 4500
+    },
+    {
+      "path": "/"
+    },
+    {
+      "eval": "document.querySelector('.y-hdr-links a[aria-current=page]')?.textContent",
+      "equals": "Discover"
+    },
+    {
+      "shot": "welcome-signin-desktop-home"
     }
   ]
 }

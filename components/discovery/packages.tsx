@@ -105,8 +105,8 @@ export function PackagesBlock({ creator, showCta }: { creator: Creator; showCta:
       <p className="y-small y-fg-2 flex items-start gap-2">
         <ShieldCheck size={18} aria-hidden className="mt-0.5 flex-none" />
         <span>
-          <span className="font-semibold text-(--b-fg)">Organic use forever included</span> on your
-          own accounts · Paid ads usage available as an add-on
+          <span className="font-semibold text-(--b-fg)">Ad usage rights included</span> · you choose the term
+          when you order · raw footage included
         </span>
       </p>
 

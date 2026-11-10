@@ -13,6 +13,8 @@ const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // No dev badge: it sits over the phone tab bar's Home tab and ends up in QA screenshots.
+  devIndicators: false,
   ...(pages
     ? {
         output: "export",

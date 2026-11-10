@@ -141,6 +141,7 @@ export function angleSuggestions(request: ContentRequest, product?: Product): st
     "talking-head": `Straight to camera: why ${feature} matters, and how to do it in under a minute`,
     voiceover: `A short story told over ${name} footage, with the product as the turning point`,
     "hook-pack": `Three openings to test (the pain, the result, the surprise) on one shared demo`,
+    "ad-copy": `Headlines and primary text in the words your customers use, with character counts for every line`,
   };
 
   return [
@@ -193,8 +194,9 @@ export function pitchTemplate(input: {
 
 /** Rough reply expectation from the business's track record (shown after sending). */
 export function replyWindow(business?: Business): string {
-  if (!business?.reliability) return "within 2 days";
-  return business.reliability.reviewHours <= 24 ? "within a day" : "within 2 days";
+  const hours = business?.reliability?.reviewHours;
+  if (hours === null || hours === undefined) return "within 2 days";
+  return hours <= 24 ? "within a day" : "within 2 days";
 }
 
 export function pitchNextStep(status: PitchStatus, businessName: string): string {
@@ -206,12 +208,12 @@ export function pitchNextStep(status: PitchStatus, businessName: string): string
     case "shortlisted":
       return `You're on ${businessName}'s shortlist. Keep an eye on messages: they may ask a question before hiring.`;
     case "hired":
-      return "You're hired and payment is secured. Head to the commission to get started.";
+      return "You're hired and payment is held. Head to the commission to get started.";
     case "declined":
       return `${businessName} went with another creator this time. Your pitch stays private.`;
     case "withdrawn":
     default:
-      return "You withdrew this pitch. You can pitch again while the request is open.";
+      return "You withdrew this pitch. You can pitch again while the order is open.";
   }
 }
 

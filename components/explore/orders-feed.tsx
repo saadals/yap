@@ -42,9 +42,9 @@ const sortOptions: { value: Sort; label: string; needsProfile?: boolean }[] = [
 ];
 
 /**
- * Explore → Orders: open UGC campaigns (take a slot) and custom requests (pitch), as quiet cards.
+ * Explore → Orders: open UGC campaigns (pick a slot) and custom orders (pitch), as quiet cards.
  * Campaigns the viewer can take come first; the rest stay visible with one line on who they're
- * for. Format, language and budget filters narrow custom requests.
+ * for. Format, language and budget filters narrow custom orders.
  */
 export function OrdersFeed() {
   const hydrated = useHydrated();
@@ -181,7 +181,7 @@ function Feed() {
   const views: { id: View; label: string; count: number }[] = [
     { id: "all", label: "All", count: visibleCampaigns + visibleRequests },
     { id: "campaigns", label: "Campaigns", count: visibleCampaigns },
-    { id: "requests", label: "Requests", count: visibleRequests },
+    { id: "requests", label: "Custom orders", count: visibleRequests },
     ...(hiddenCount || view === "hidden" ? [{ id: "hidden" as const, label: "Hidden", count: hiddenCount }] : []),
   ];
   const total = campaigns.length + requests.length;
@@ -218,7 +218,7 @@ function Feed() {
       {!creator ? (
         <Block tone="paper" pad="sm" className="flex flex-wrap items-center gap-3 !py-3 !ps-5">
           <UserRound size={18} aria-hidden className="flex-none" />
-          <p className="y-small min-w-0 flex-1 font-medium">Set up a creator profile to pitch or take slots</p>
+          <p className="y-small min-w-0 flex-1 font-medium">Create a creator profile to take work</p>
           <PillButton size="sm" variant="contrast" onClick={() => setSetupOpen(true)}>
             Set up
           </PillButton>
@@ -255,7 +255,7 @@ function Feed() {
           {showRequests ? (
             <div className="flex gap-2">
               <label className="flex-1 sm:w-44 sm:flex-none">
-                <span className="sr-only">Sort requests by</span>
+                <span className="sr-only">Sort custom orders by</span>
                 <select className="y-input" value={activeSort} onChange={(e) => setSort(e.target.value as Sort)}>
                   {sortOptions
                     .filter((o) => !o.needsProfile || creator)
@@ -285,7 +285,7 @@ function Feed() {
           ? "Loading orders…"
           : [
               showCampaigns ? plural(campaigns.length, "campaign") : null,
-              showRequests ? plural(requests.length, "request") : null,
+              showRequests ? plural(requests.length, "custom order") : null,
             ]
               .filter(Boolean)
               .join(" · ")}
@@ -337,8 +337,8 @@ function Feed() {
           ) : null}
 
           {requests.length ? (
-            <section className="flex flex-col gap-2" aria-label="Custom requests">
-              {labelled ? <SectionLabel>Custom requests</SectionLabel> : null}
+            <section className="flex flex-col gap-2" aria-label="Custom orders">
+              {labelled ? <SectionLabel>Custom orders</SectionLabel> : null}
               <ul className="grid gap-2 md:grid-cols-2">
                 {requests.map((o) => (
                   <li key={o.request.id} className="relative">
@@ -365,15 +365,15 @@ function Feed() {
       <Sheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="Filter requests"
-        description="Campaigns aren't affected: they're priced by follower tier."
+        title="Filter custom orders"
+        description="Campaigns aren't affected: each shows its own price per Yapp and what you earn."
         footer={
           <div className="flex gap-2">
             <PillButton variant="ghost" onClick={clearFilters} disabled={!requestFilterCount}>
               Clear all
             </PillButton>
             <PillButton variant="contrast" className="flex-1" onClick={() => setSheetOpen(false)}>
-              Show {plural(requests.length, "request")}
+              Show {plural(requests.length, "custom order")}
             </PillButton>
           </div>
         }
@@ -391,7 +391,7 @@ function Feed() {
       {setupOpen ? (
         <CreatorSetupSheet
           open
-          reason="to pitch on requests and take campaign slots"
+          reason="to pitch on custom orders and pick campaign slots"
           onClose={() => setSetupOpen(false)}
           onDone={() => setSetupOpen(false)}
         />
@@ -470,8 +470,8 @@ function FeedEmpty({
     case "requests":
       return (
         <EmptyState
-          title="No open requests right now"
-          body="New requests are posted every day. Turn on match alerts in settings and we'll tell you first."
+          title="No open custom orders right now"
+          body="New custom orders are posted every day. Turn on match alerts in settings and we'll tell you first."
           shape="tower"
           tint="sun"
           action={
@@ -486,7 +486,7 @@ function FeedEmpty({
       return (
         <EmptyState
           title="No open orders right now"
-          body="New campaigns and requests are posted every day. Turn on match alerts in settings and we'll tell you first."
+          body="New campaigns and custom orders are posted every day. Turn on match alerts in settings and we'll tell you first."
           shape="tower"
           tint="sun"
           action={

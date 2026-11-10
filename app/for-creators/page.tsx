@@ -20,25 +20,24 @@ import { PublicShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { Cast, duoCast } from "@/components/ui/character";
 import { PillButton } from "@/components/ui/pill-button";
-import { money } from "@/lib/format";
+import { creatorNet, money, moneyExact } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { creatorById, featuredVideo, me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { AUTO_APPROVE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
+import { AUTO_APPROVE_DAYS, FEE_PCT } from "@/lib/taxonomy";
 
 /** Creator whose work fronts the hero (an everyday presenter, to make the point). */
 const HERO_CREATOR = "cr-hana";
-const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
 const CAMPAIGN = campaignFacts();
 
 const faq: FaqItem[] = [
   {
     q: "Do I need a lot of followers?",
-    a: `Not for custom orders. Buyers order videos for their own accounts and ads, so they look at your portfolio, your reviews and how reliably you deliver. UGC campaigns are different: they pay a fixed price per video by follower tier, starting at ${CAMPAIGN.floor} verified followers on the platform you'll post to.`,
+    a: `Not for custom orders. Buyers order videos for their own accounts and ads, so they look at your portfolio, your reviews and how reliably you deliver. UGC campaigns are different: the brand sets one price per video and a follower tier, starting at ${CAMPAIGN.floor} verified followers on the platform you'll post to.`,
   },
   {
     q: "What's a UGC campaign?",
-    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at a fixed price per video (from ${money(CAMPAIGN.fromPrice)}). Slots go first come, first served. Take one, upload a review copy within the days the brand set, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
+    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at one price per video it sets (from ${money(CAMPAIGN.fromPrice)}, so you earn at least ${money(CAMPAIGN.fromNet)}). You see the price and what you earn before you pick a slot. Slots go first come, first served. Pick one, upload a review copy within the days the brand set, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
   },
   {
     q: "How do you check my followers?",
@@ -50,14 +49,14 @@ const faq: FaqItem[] = [
   },
   {
     q: "What does Yapp charge creators?",
-    a: `Nothing. You keep 100% of your price and your add-ons, on custom orders and campaigns alike. The buyer pays Yapp's ${FEE_PCT}% service fee on top.`,
+    a: `Yapp keeps ${FEE_PCT}% of every order, campaign slot, add-on and paid extra revision. It comes out of what you're paid: on a $140 video you earn $112. The buyer pays the listed price and nothing on top. You always see what you earn beside the price, before you pitch or pick a slot.`,
   },
   {
     q: "When do I get paid?",
     a: (
       <>
         <p>
-          On custom orders, the buyer&apos;s payment is secured when the work starts, before you film
+          On custom orders, the buyer&apos;s payment is held when the work starts, before you film
           anything. It&apos;s released to your wallet the moment they approve your video, or
           automatically {AUTO_APPROVE_DAYS} days after you deliver if they don&apos;t respond.
         </p>
@@ -83,7 +82,7 @@ const faq: FaqItem[] = [
   },
   {
     q: "Who owns the videos I make?",
-    a: "The buyer can use the final video on their own accounts forever. Running it as a paid ad is a separate add-on that you price, for 90 days or 12 months. You can show the work in your Yapp portfolio unless the buyer asks you to keep it private.",
+    a: "The buyer picks how they'll use the video on every order: paid ads for 12 months, paid ads for 6 months, organic only, or paid ads with no end date. It's part of your price, with no separate rights fee, and you see it before you pitch or pick a slot. The raw footage goes with the approved video. You can show the work in your Yapp portfolio unless the buyer asks you to keep it private.",
   },
   {
     q: "Can I also post the video on my own account?",
@@ -197,7 +196,7 @@ function Hero() {
                 <Wallet size={20} />
               </IconTile>
             }
-            title={`${money(basic.price)} released to ${creator.firstName}`}
+            title={`${moneyExact(creatorNet(basic.price))} released to ${creator.firstName}`}
             sub="Approved by the buyer · Paid to bank"
           />
         ) : null}
@@ -212,7 +211,7 @@ const creatorSteps = [
     body: "Your best videos, the languages you speak, the formats you make, and your own prices.",
   },
   {
-    title: "Pitch, accept or take a slot",
+    title: "Pitch, accept or pick a slot",
     body: `Pitch on custom orders, accept direct orders, or take a UGC campaign slot if you have ${CAMPAIGN.floor}+ followers.`,
   },
   {
@@ -253,7 +252,7 @@ function HowItWorksForCreators() {
 }
 
 const payoutFlow = [
-  { title: "Secured", body: "The buyer pays before you film." },
+  { title: "Held", body: "The buyer pays before you film." },
   { title: "Released", body: `When they approve, or ${AUTO_APPROVE_DAYS} days after you deliver.` },
   { title: "Withdrawn", body: `From ${money(MARKETING.minimumPayout)}, to a bank or a wallet.` },
   { title: "In your account", body: `Usually within ${MARKETING.payoutTime}.` },
@@ -266,10 +265,10 @@ function Payouts() {
         id="payouts-title"
         title={
           <>
-            You keep <span className="y-strong">100% of your price</span>
+            You earn <span className="y-strong">{100 - FEE_PCT}% of every price</span>
           </>
         }
-        sub={`Buyers pay Yapp's ${FEE_PCT}% fee on top. Campaign pay is released ${CAMPAIGN.releaseDays} days after we verify your post, as long as it's still up.`}
+        sub={`Yapp's ${FEE_PCT}% fee comes out of what you're paid, and you see your earnings beside every price. Campaign pay is released ${CAMPAIGN.releaseDays} days after we verify your post, as long as it's still up.`}
       />
       <div className="flex flex-col gap-2">
         <Block tone="paper" pad="lg">

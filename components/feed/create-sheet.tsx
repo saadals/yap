@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Video } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -52,10 +52,10 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
 
   const makeBody = (
     <OptionBody
-      icon={<Video size={20} aria-hidden />}
+      icon={<Search size={20} aria-hidden />}
       neon
-      title="Make a Yapp"
-      body="Film or upload a video for an order you took"
+      title="Find work"
+      body="UGC campaigns to pick and custom orders to pitch on"
     />
   );
 
@@ -71,7 +71,7 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
             />
           </Link>
           {makes ? (
-            <Link href={paths.work("making")} className="y-create-option" onClick={onClose}>
+            <Link href={paths.findWork()} className="y-create-option" onClick={onClose}>
               {makeBody}
             </Link>
           ) : (
@@ -93,9 +93,9 @@ export function CreateSheet({ open, onClose }: { open: boolean; onClose: () => v
         onClose={() => setSetupOpen(false)}
         onDone={() => {
           setSetupOpen(false);
-          router.push(paths.work("making"));
+          router.push(paths.findWork());
         }}
-        reason="to make Yapps"
+        reason="to take work"
       />
     </>
   );

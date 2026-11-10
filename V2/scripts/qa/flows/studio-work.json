@@ -1,0 +1,368 @@
+{
+  "account": "layla",
+  "steps": [
+    {
+      "go": "/studio",
+      "after": 4000
+    },
+    {
+      "text": "Good morning, Layla"
+    },
+    {
+      "text": "Needs you"
+    },
+    {
+      "text": "Review the offer"
+    },
+    {
+      "text": "Available to withdraw"
+    },
+    {
+      "text": "Work that fits you"
+    },
+    {
+      "shot": "studio-work-today",
+      "full": true
+    },
+    {
+      "go": "/studio/work",
+      "after": 3000
+    },
+    {
+      "text": "Find work"
+    },
+    {
+      "text": "Show us your first invoice on WhatsApp"
+    },
+    {
+      "click": "Campaigns"
+    },
+    {
+      "text": "You qualify: 18.4K verified followers on TikTok"
+    },
+    {
+      "text": "Needs 20K–50K verified followers on Instagram"
+    },
+    {
+      "notText": "Skit: 'Is this still available?'"
+    },
+    {
+      "click": "All"
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Format\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, 'app-demo'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
+    },
+    {
+      "wait": 900
+    },
+    {
+      "eval": "location.search"
+    },
+    {
+      "text": "App demo: plan 30 drops in one tap"
+    },
+    {
+      "notText": "Skit: 'Is this still available?'"
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Minimum pay\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, '300'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
+    },
+    {
+      "wait": 900
+    },
+    {
+      "text": "Influencer videos: winter weekends with friends"
+    },
+    {
+      "notText": "App demo: plan 30 drops in one tap"
+    },
+    {
+      "shot": "studio-work-find-filtered"
+    },
+    {
+      "click": "Clear"
+    },
+    {
+      "click": "Not interested in “Skit"
+    },
+    {
+      "notText": "Skit: 'Is this still available?'"
+    },
+    {
+      "text": "Show hidden (1)"
+    },
+    {
+      "click": "Show hidden (1)"
+    },
+    {
+      "text": "Skit: 'Is this still available?'"
+    },
+    {
+      "shot": "studio-work-find",
+      "full": true
+    },
+    {
+      "go": "/orders/r-101",
+      "after": 3000
+    },
+    {
+      "text": "App demo: 'I stopped chasing payments'"
+    },
+    {
+      "text": "Your fit"
+    },
+    {
+      "text": "1 app demo in your portfolio"
+    },
+    {
+      "text": "Reviews in about 9h"
+    },
+    {
+      "click": "Pitch"
+    },
+    {
+      "text": "Pitch to Daftar"
+    },
+    {
+      "text": "How Daftar sees it"
+    },
+    {
+      "click": "Open on the moment everyone knows"
+    },
+    {
+      "type": {
+        "sel": "[data-pitch-field=\"message\"] textarea",
+        "text": "Hi Daftar team, I'm Layla. Your best performer so far was my 'I stopped chasing payments' video, so this time I'd film a shop owner at a real counter and a home baker, both in English, with the WhatsApp send in the first five seconds."
+      }
+    },
+    {
+      "text": "You keep 100%"
+    },
+    {
+      "shot": "studio-work-composer"
+    },
+    {
+      "click": "Send pitch"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "text": "Your pitch"
+    },
+    {
+      "text": "Sent. Daftar usually replies within a day"
+    },
+    {
+      "text": "Edit pitch"
+    },
+    {
+      "text": "Withdraw"
+    },
+    {
+      "shot": "studio-work-pitched",
+      "full": true
+    },
+    {
+      "click": "Edit pitch"
+    },
+    {
+      "text": "Edit your pitch"
+    },
+    {
+      "click": "Save changes"
+    },
+    {
+      "text": "Pitch updated. Daftar sees the new version."
+    },
+    {
+      "click": "Message Daftar"
+    },
+    {
+      "text": "Ask Daftar a question"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] textarea",
+        "text": "Is it fine to film the home baker in a real kitchen rather than at a counter?"
+      }
+    },
+    {
+      "click": "Send question"
+    },
+    {
+      "text": "Sent to Daftar"
+    },
+    {
+      "click": "Back to the brief"
+    },
+    {
+      "text": "Open the conversation"
+    },
+    {
+      "go": "/orders/r-102",
+      "after": 2500
+    },
+    {
+      "click": "More actions"
+    },
+    {
+      "click": "Not interested"
+    },
+    {
+      "text": "Hidden from Find work"
+    },
+    {
+      "text": "Show again"
+    },
+    {
+      "go": "/orders/r-205",
+      "after": 2500
+    },
+    {
+      "text": "Your pitch"
+    },
+    {
+      "click": "Withdraw"
+    },
+    {
+      "text": "Withdraw this pitch?"
+    },
+    {
+      "click": "Withdraw pitch"
+    },
+    {
+      "text": "Pitch withdrawn"
+    },
+    {
+      "text": "Pitch"
+    },
+    {
+      "go": "/studio/work",
+      "after": 2500
+    },
+    {
+      "text": "Pitched"
+    },
+    {
+      "go": "/orders/r-150",
+      "after": 3000
+    },
+    {
+      "text": "Show us your first invoice on WhatsApp"
+    },
+    {
+      "text": "You qualify: 18.4K verified followers on TikTok"
+    },
+    {
+      "text": "3 of 10 slots left"
+    },
+    {
+      "click": "Take a slot"
+    },
+    {
+      "text": "Upload your review copy within 5 days, by Mon, Nov 9"
+    },
+    {
+      "shot": "studio-work-take-sheet"
+    },
+    {
+      "click": "I'll post with the tag"
+    },
+    {
+      "click": "Take the slot"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "text": "Slot 8 is yours"
+    },
+    {
+      "click": "Open the job"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Show us your first invoice on WhatsApp"
+    },
+    {
+      "shot": "studio-work-job"
+    },
+    {
+      "go": "/orders/r-150",
+      "after": 2500
+    },
+    {
+      "text": "Your Yapp · due Nov 9"
+    },
+    {
+      "text": "You have slot 8."
+    },
+    {
+      "go": "/studio/work?kind=campaign",
+      "after": 2500
+    },
+    {
+      "text": "Your slot · due Nov 9"
+    },
+    {
+      "go": "/orders/r-252",
+      "after": 3000
+    },
+    {
+      "text": "Your verified followers are below this tier"
+    },
+    {
+      "notText": "Take a slot"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/studio",
+      "after": 3500
+    },
+    {
+      "text": "Make videos for tech brands, from this account"
+    },
+    {
+      "text": "You keep 100% of your price"
+    },
+    {
+      "text": "are open right now"
+    },
+    {
+      "shot": "studio-work-welcome"
+    },
+    {
+      "click": "Set up your creator profile"
+    },
+    {
+      "text": "Create my creator profile"
+    },
+    {
+      "click": "App demo"
+    },
+    {
+      "click": "Create my creator profile"
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "text": "Good morning, Nour"
+    },
+    {
+      "text": "Work that fits you"
+    },
+    {
+      "shot": "studio-work-nour-today",
+      "full": true
+    }
+  ]
+}

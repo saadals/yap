@@ -23,9 +23,7 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { money } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { useDemo } from "@/lib/store";
-import { AUTO_APPROVE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
-
-const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
+import { AUTO_APPROVE_DAYS, FEE_PCT, usageOptions } from "@/lib/taxonomy";
 
 const sections: SectionLink[] = [
   { id: "business", label: "Steps" },
@@ -117,15 +115,15 @@ function campaignSteps(facts: ReturnType<typeof campaignFacts>) {
       body: "Your product, talking points, what to avoid, and the brand account to tag.",
     },
     {
-      title: "Pick videos and a tier",
-      body: `${facts.minVideos} or more videos, in steps of ${facts.step}. The follower tier sets one fixed price per video.`,
+      title: "Pick videos, a tier and a price",
+      body: `${facts.minVideos} or more videos, in steps of ${facts.step}. The follower tier decides who can pick a slot; you set one price per video, from ${money(facts.fromPrice)}.`,
     },
     {
       title: "Hold the budget",
-      body: `Videos × price, plus the ${facts.feePct}% service fee, held up front. It stays open for ${facts.openDays} days.`,
+      body: `Videos × price, nothing on top, held when you post. It stays open for ${facts.openDays} days.`,
     },
     {
-      title: "Creators take slots",
+      title: "Creators pick slots",
       body: "First come, first served, and every video comes from a different creator.",
     },
     {
@@ -213,7 +211,7 @@ function Pricing() {
             Clear prices. <span className="y-strong">You see every dollar.</span>
           </>
         }
-        sub={`No subscription, and posting is free. Every order is the creator's price plus a ${FEE_PCT}% fee, charged when you hire or post a campaign and held until the work is released. A refund returns the fee too.`}
+        sub={`No subscription, and posting is free. You pay the price you agree, nothing on top: it's charged when you hire or post a campaign and held until the work is released, and a refund returns all of it. Yapp's ${FEE_PCT}% fee comes out of the creator's pay.`}
       />
       <div className="flex flex-col gap-2">
         <FeeCalculator />
@@ -223,30 +221,36 @@ function Pricing() {
   );
 }
 
-/** UGC campaign prices: one quiet block with the confirmed tiers. */
+/** UGC campaign prices: one quiet block. Tiers decide who can pick a slot; the brand sets the price. */
 function CampaignPrices() {
   const facts = campaignFacts();
+  const example = facts.minVideos * facts.exampleRange.low;
   return (
     <Block tone="paper" pad="lg" className="grid gap-6 lg:grid-cols-12 lg:items-center">
       <div className="flex flex-col gap-2 lg:col-span-5">
         <h3 className="y-display y-title">UGC campaigns</h3>
         <p className="y-small y-fg-2 max-w-[44ch]">
-          A fixed price per video set by the creator&apos;s verified followers. {facts.minVideos} videos
-          minimum, in steps of {facts.step}. The total and the {facts.feePct}% fee are held up front; slots
-          nobody takes are refunded with their fee.
+          You set one price per video, from {money(facts.fromPrice)}; we show the usual range for your category
+          and tier as you go. The follower tier only decides who can pick a slot. {facts.minVideos} videos
+          minimum, in steps of {facts.step}. The full amount is held when you post, and unpicked slots are refunded
+          when the campaign closes.
         </p>
       </div>
       <ul className="flex flex-col divide-y divide-(--b-line) lg:col-span-7">
-        {facts.tiers.map((tier) => (
-          <li key={tier.id} className="flex items-baseline justify-between gap-4 py-3 first:pt-0 last:pb-0">
-            <span className="y-small">{tier.label} followers</span>
-            <span className="y-num y-head">{money(tier.pricePerVideo)} per video</span>
-          </li>
-        ))}
+        <li className="flex items-baseline justify-between gap-4 py-3 first:pt-0">
+          <span className="y-small">Lowest price per video</span>
+          <span className="y-num y-head">{money(facts.fromPrice)}</span>
+        </li>
+        <li className="flex items-baseline justify-between gap-4 py-3">
+          <span className="y-small">Usual at {facts.tiers[0].label} followers</span>
+          <span className="y-num y-head">
+            {money(facts.exampleRange.low)}–{money(facts.exampleRange.high)}
+          </span>
+        </li>
         <li className="y-small y-fg-2 flex items-baseline justify-between gap-4 py-3 last:pb-0">
           <span>Example: {facts.minVideos} videos</span>
           <span className="y-num">
-            {money(facts.minVideos * facts.fromPrice * (1 + facts.feePct / 100))} with the fee, held until each creator is paid
+            {facts.minVideos} × {money(facts.exampleRange.low)} = {money(example)}, nothing on top
           </span>
         </li>
       </ul>
@@ -330,14 +334,14 @@ function FaqSection() {
       a: (
         <>
           <p>
-            You own the final files and can use them on your own accounts, website and app,
-            forever. Running a video as a paid ad needs the paid-ads usage add-on: typically about{" "}
-            {money(typical["ad-rights-90"])} for 90 days or {money(typical["ad-rights-365"])} for
-            12 months.
+            You pick how you&apos;ll use the videos on every order, and it&apos;s part of the price, with
+            no separate rights fee:{" "}
+            {usageOptions.map((option) => option.name.toLowerCase()).join(", ").replace(/, ([^,]*)$/, " or $1")}.
+            Every option covers your own accounts, website and app.
           </p>
           <p>
-            Raw footage is an add-on too. Creators can show finished work in their portfolio
-            unless your brief asks them to keep it private.
+            Raw footage comes with every approved video. Creators can show finished work in their
+            portfolio unless your brief asks them to keep it private.
           </p>
         </>
       ),
@@ -356,7 +360,7 @@ function FaqSection() {
     },
     {
       q: "What's a UGC campaign?",
-      a: `An order for ${campaign.minVideos} or more videos, in steps of ${campaign.step}. You choose a follower tier, which sets one fixed price per video (from ${money(campaign.fromPrice)}), and how many days creators have to upload. The total plus the ${campaign.feePct}% service fee is held up front. Creators take slots first come, first served, for ${campaign.openDays} days, and every video comes from a different creator. You review each one, then the creator posts it on their own account, tagging you, with the paid-partnership label. They're paid ${campaign.releaseDays} days after we verify the post, and keep it up for ${campaign.keepLiveDays} days.`,
+      a: `An order for ${campaign.minVideos} or more videos, in steps of ${campaign.step}. You choose a follower tier, which decides who can pick a slot, one price per video (from ${money(campaign.fromPrice)}), and how many days creators have to upload. The total is held when you post, nothing on top. Creators pick slots first come, first served, for ${campaign.openDays} days, and every video comes from a different creator. You review each one, then the creator posts it on their own account, tagging you, with the paid-partnership label. They're paid ${campaign.releaseDays} days after we verify the post, and keep it up for ${campaign.keepLiveDays} days.`,
     },
     {
       q: "Can creators post the video on their own accounts?",
@@ -380,7 +384,7 @@ function FaqSection() {
     },
     {
       q: "Do you provide invoices? What about tax?",
-      a: "Every payment creates an invoice in Billing with your company details. Prices are in US dollars. Where sales tax, GST/HST or VAT applies to Yapp's service fee, it's shown separately on the invoice.",
+      a: "Every payment creates an invoice in Billing with your company details. Prices are in US dollars, and the price you agree is what you pay: Yapp's fee comes out of the creator's side, not yours.",
     },
   ];
   return (
@@ -417,7 +421,8 @@ function Creators() {
             Making videos too?
           </h2>
           <p className="y-body y-fg-2 max-w-[56ch]">
-            Same account. Creators keep 100% of their price, with payment secured before they film.
+            Same account. Creators earn their price less the {FEE_PCT}% Yapp fee, with payment held before they
+            film.
           </p>
         </div>
         <PillButton href={paths.forCreators} variant="contrast" arrow className="w-fit flex-none">

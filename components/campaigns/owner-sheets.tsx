@@ -1,6 +1,6 @@
 "use client";
 
-import { Ban, Check } from "lucide-react";
+import { AlertCircle, Ban, Check } from "lucide-react";
 import { useState } from "react";
 
 import { paymentLabel } from "@/components/domain/money";
@@ -8,14 +8,15 @@ import { TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { money, plural } from "@/lib/format";
-import { campaignProgress, openSlotCount, withCampaignFee } from "@/lib/selectors";
+import { money, moneyExact, plural, priceLimitError } from "@/lib/format";
+import { GUIDANCE_NOTE, priceGuidance } from "@/lib/pricing";
+import { campaignProgress, openSlotCount, productById } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { CAMPAIGN_FEE_RATE, followerTiers, tierById } from "@/lib/taxonomy";
+import { PRICE_MAX_PER_YAPP, followerTiers, tierById } from "@/lib/taxonomy";
 import type { CampaignTerms, Commission, ContentRequest, Creator, FollowerTierId } from "@/lib/types";
 
 import { ChoiceTile, GroupError, ListEditor } from "./parts";
-import { perYapp } from "./shared";
+import { CAMPAIGN_FEE_PCT, perYapp, slotNet } from "./shared";
 
 export type CampaignRequest = ContentRequest & { campaign: CampaignTerms };
 
@@ -78,12 +79,12 @@ export function RemoveCreatorSheet({
       <div className="flex flex-col gap-3">
         <p className="y-body">
           {closed
-            ? `The campaign is closed, so the slot doesn't reopen. Its ${money(commission.price)} is refunded to your card with its fee.`
+            ? `The campaign is closed, so the slot doesn't reopen. Its ${money(commission.price)} is refunded to your card in full.`
             : "The slot reopens for other creators automatically, first come first served. You don't need to do anything else."}
         </p>
         <p className="y-small y-fg-2">
-          {closed ? "" : `The ${money(commission.price)} for this slot stays held with its fee. `}
-          {creator.firstName} can&apos;t take a slot on this campaign again.
+          {closed ? "" : `The ${money(commission.price)} for this slot stays held. `}
+          {creator.firstName} can&apos;t pick a slot on this campaign again.
         </p>
       </div>
     </Sheet>
@@ -100,37 +101,18 @@ export function ChangeTierSheet({ request, onClose }: { request: CampaignRequest
   const terms = request.campaign;
   const current = tierById[terms.tierId];
   const [tierId, setTierId] = useState<FollowerTierId | null>(null);
-  const open = openSlotCount(s, request);
-  const card = useCardLabel(terms.paymentMethodId);
   const next = tierId ? tierById[tierId] : undefined;
-  // The card difference for the open slots, with their share of the service fee.
-  const subtotal = next ? (next.pricePerVideo - terms.pricePerVideo) * open : 0;
-  const diff = Math.sign(subtotal) * withCampaignFee(Math.abs(subtotal)).total;
-
-  const confirmLabel = !next
-    ? "Pick a tier"
-    : diff > 0
-      ? `Hold ${money(diff)} more and change`
-      : diff < 0
-        ? `Change and refund ${money(-diff)}`
-        : "Change tier";
+  const niche = productById(s, request.brief.productId)?.niche;
+  const range = next ? priceGuidance(niche, next.id) : undefined;
 
   const confirm = () => {
     if (!tierId) return;
     const result = actions.changeCampaignTier(request.id, tierId);
-    if (!result.ok) {
-      toast({ message: "The tier can only be changed once.", tone: "info" });
-      onClose();
-      return;
-    }
-    toast({
-      message:
-        result.diff > 0
-          ? `Tier changed. ${money(result.diff)} more is held.`
-          : result.diff < 0
-            ? `Tier changed. ${money(-result.diff)} is on its way back to your card.`
-            : "Tier changed.",
-    });
+    toast(
+      result.ok
+        ? { message: `Tier changed to ${tierById[tierId].label}. The price stays ${perYapp(terms.pricePerVideo)}.` }
+        : { message: "The tier can only be changed once.", tone: "info" },
+    );
     onClose();
   };
 
@@ -140,11 +122,11 @@ export function ChangeTierSheet({ request, onClose }: { request: CampaignRequest
       onClose={onClose}
       width="md"
       title="Change follower tier"
-      description={`Now ${current.label} at ${perYapp(terms.pricePerVideo)}. You can change it once.`}
+      description={`Now ${current.label}. The tier decides who can pick a slot. You can change it once.`}
       footer={
         <div className="flex gap-2">
           <PillButton variant="contrast" size="lg" className="flex-1" disabled={!next} onClick={confirm}>
-            {confirmLabel}
+            {next ? "Change tier" : "Pick a tier"}
           </PillButton>
           <PillButton variant="ghost" size="lg" onClick={onClose}>
             Cancel
@@ -162,34 +144,131 @@ export function ChangeTierSheet({ request, onClose }: { request: CampaignRequest
                 name="new-tier"
                 checked={tierId === tier.id}
                 onChange={() => setTierId(tier.id)}
-                label={`${tier.label}, ${perYapp(tier.pricePerVideo)}${tier.placeholder ? ", price to be confirmed" : ""}`}
+                label={`${tier.label} verified real followers`}
               >
                 <span className="y-head">{tier.label}</span>
-                <span className="y-small y-num">{perYapp(tier.pricePerVideo)}</span>
-                {tier.placeholder ? <span className="y-chip mt-1 w-fit !bg-(--b-bg)">Price to be confirmed</span> : null}
+                <span className="y-micro y-fg-2">verified real followers</span>
               </ChoiceTile>
             ))}
         </div>
 
-        {next ? (
+        {next && range ? (
           <div className="y-tile flex flex-col gap-2 p-4" aria-live="polite">
-            {open ? (
-              <>
-                <p className="y-small">
-                  New price for the {plural(open, "open slot")}:{" "}
-                  <span className="font-semibold">{perYapp(next.pricePerVideo)}</span>
-                </p>
-                <p className="y-head y-num">
-                  {diff > 0 ? `Hold ${money(diff)} more on ${card}` : diff < 0 ? `${money(-diff)} back to your card` : "No change to what's held"}
-                </p>
-                {diff !== 0 ? <p className="y-micro y-fg-2">Includes the {Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee.</p> : null}
-              </>
-            ) : (
-              <p className="y-small">
-                No slots are open right now, so nothing changes today. A slot that reopens uses the new price.
-              </p>
-            )}
-            <p className="y-micro y-fg-2">Slots already taken keep their price and their creator.</p>
+            <p className="y-small">
+              No money moves: every slot keeps {perYapp(terms.pricePerVideo)}, and what&apos;s held stays the same.
+            </p>
+            <p className="y-micro y-fg-2">
+              Usual at {next.label}: {money(range.low)}–{money(range.high)} per Yapp. You can raise the price for open
+              slots from More.
+            </p>
+          </div>
+        ) : null}
+      </div>
+    </Sheet>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/* Raise the price (open slots only; never lower)                              */
+/* -------------------------------------------------------------------------- */
+
+export function RaisePriceSheet({ request, onClose }: { request: CampaignRequest; onClose: () => void }) {
+  const s = useDemo();
+  const toast = useToast();
+  const terms = request.campaign;
+  const open = openSlotCount(s, request);
+  const card = useCardLabel(terms.paymentMethodId);
+  const niche = productById(s, request.brief.productId)?.niche;
+  const range = priceGuidance(niche, terms.tierId);
+  const [text, setText] = useState(String(Math.max(terms.pricePerVideo + 5, range.low)));
+  const [attempted, setAttempted] = useState(false);
+  const price = Math.round(Number(text));
+  const error =
+    text.trim() === "" || !Number.isFinite(price)
+      ? "Enter the new price per Yapp."
+      : price <= terms.pricePerVideo
+        ? `Prices can only go up. Enter more than ${money(terms.pricePerVideo)}.`
+        : priceLimitError(price);
+  const topUp = error ? 0 : (price - terms.pricePerVideo) * open;
+  const below = !error && price < range.low;
+
+  const confirm = () => {
+    if (error) {
+      setAttempted(true);
+      return;
+    }
+    const result = actions.raiseCampaignPrice(request.id, price);
+    toast(
+      result.ok
+        ? {
+            message: result.topUp
+              ? `Price raised to ${perYapp(price)}. ${money(result.topUp)} more is held.`
+              : `Price raised to ${perYapp(price)}.`,
+          }
+        : { message: "That price can't be set.", tone: "info" },
+    );
+    onClose();
+  };
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      width="md"
+      title="Raise the price"
+      description={`Now ${perYapp(terms.pricePerVideo)}. Prices can go up for open slots, never down.`}
+      footer={
+        <div className="flex gap-2">
+          <PillButton variant="contrast" size="lg" className="flex-1" onClick={confirm}>
+            {topUp > 0 ? `Hold ${money(topUp)} more and raise` : "Raise price"}
+          </PillButton>
+          <PillButton variant="ghost" size="lg" onClick={onClose}>
+            Cancel
+          </PillButton>
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-4">
+        <TextField
+          label="New price per Yapp (USD)"
+          required
+          type="number"
+          inputMode="numeric"
+          min={terms.pricePerVideo + 1}
+          max={PRICE_MAX_PER_YAPP}
+          step={5}
+          className="max-w-xs"
+          value={text}
+          error={attempted ? error : undefined}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <div className="flex flex-col gap-2 px-1" aria-live="polite">
+          <p className="y-small">
+            Usual at {tierById[terms.tierId].label}:{" "}
+            <span className="y-num font-semibold">
+              {money(range.low)}–{money(range.high)}
+            </span>{" "}
+            per Yapp
+          </p>
+          {below ? (
+            <p className="y-small inline-flex items-center gap-1.5 font-medium text-(--y-danger)">
+              <AlertCircle size={16} aria-hidden className="flex-none" />
+              Still below the usual range.
+            </p>
+          ) : null}
+          <p className="y-micro y-fg-2">{GUIDANCE_NOTE}</p>
+        </div>
+        {!error ? (
+          <div className="y-tile flex flex-col gap-2 p-4">
+            <p className="y-head y-num">
+              {open
+                ? `${plural(open, "open slot")} × ${money(price - terms.pricePerVideo)}: hold ${money(topUp)} more on ${card}`
+                : "No slots are open right now, so nothing more is held today"}
+            </p>
+            <p className="y-micro y-fg-2">
+              Slots already taken keep their price. A slot that reopens later is paid at the new price. Each creator
+              receives {moneyExact(slotNet(price))} after the {CAMPAIGN_FEE_PCT}% Yapp fee.
+            </p>
           </div>
         ) : null}
       </div>
@@ -206,8 +285,8 @@ export function CloseCampaignSheet({ request, onClose }: { request: CampaignRequ
   const toast = useToast();
   const open = openSlotCount(s, request);
   const progress = campaignProgress(s, request);
-  // Unpicked slots come back in full, with their share of the service fee.
-  const refund = withCampaignFee(open * request.campaign.pricePerVideo).total;
+  // Unpicked slots come back in full: the price paid for each.
+  const refund = open * request.campaign.pricePerVideo;
   const inWork = progress.taken - progress.approved;
   return (
     <Sheet
@@ -216,7 +295,7 @@ export function CloseCampaignSheet({ request, onClose }: { request: CampaignRequ
       side="center"
       width="sm"
       title="Close this campaign?"
-      description="New creators can't take a slot after this."
+      description="New creators can't pick a slot after this."
       footer={
         <div className="flex gap-2">
           <PillButton
@@ -244,8 +323,8 @@ export function CloseCampaignSheet({ request, onClose }: { request: CampaignRequ
         <li className="y-body flex gap-2">
           <Check size={18} aria-hidden className="mt-1 flex-none" />
           {open
-            ? `The ${plural(open, "open slot")} ${open === 1 ? "is" : "are"} refunded with ${open === 1 ? "its" : "their"} fee: ${money(refund)} back to your card.`
-            : "There are no open slots to refund."}
+            ? `The ${plural(open, "unpicked slot")} ${open === 1 ? "is" : "are"} refunded in full: ${money(refund)} back to your card.`
+            : "There are no unpicked slots to refund."}
         </li>
         <li className="y-body flex gap-2">
           <Check size={18} aria-hidden className="mt-1 flex-none" />

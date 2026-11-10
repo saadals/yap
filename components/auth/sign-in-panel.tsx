@@ -37,6 +37,8 @@ export type SignInPanelProps = {
   /** A page to return to after signing in (`?next=`). Wins over the intent's destination. */
   next?: string | null;
   onClose: () => void;
+  /** Told where a sign-in is about to go, just before the session starts (HomeRoute on "/"). */
+  onLeave?: (destination: string) => void;
 };
 
 const subscribeNoop = () => () => {};
@@ -89,7 +91,7 @@ export function SignInPanel(props: SignInPanelProps) {
   return createPortal(<Panel {...props} />, host);
 }
 
-function Panel({ intent, next, onClose }: SignInPanelProps) {
+function Panel({ intent, next, onClose, onLeave }: SignInPanelProps) {
   const router = useRouter();
   const toast = useToast();
   const s = useDemo();
@@ -170,20 +172,27 @@ function Panel({ intent, next, onClose }: SignInPanelProps) {
     };
   }, []);
 
-  /** Starts the session and leaves for the page this sign-in was heading to. */
+  /**
+   * Starts the session and leaves for the page this sign-in was heading to. Desktop: "Ask for
+   * Yapps" opens New order, "Make Yapps" Find work, anything else "/" (Discover, or Work for an
+   * account that only makes videos). Phones: the feed.
+   */
   const finish = (row: SavedAccount) => {
+    const desktop = window.matchMedia("(min-width: 1024px)").matches;
+    const destination = next
+      ? safeNext(next)
+      : !desktop
+        ? paths.home
+        : intent === "ask"
+          ? paths.newOrder()
+          : intent === "make"
+            ? paths.findWork()
+            : paths.landing;
+    onLeave?.(destination);
     signIn(row.accountId);
     savedAccounts.remember(row);
     setState("leaving");
     toast({ message: `Signed in as ${personFor(s, row.accountId)}` });
-    const desktop = window.matchMedia("(min-width: 1024px)").matches;
-    const destination = next
-      ? safeNext(next)
-      : desktop && intent === "ask"
-        ? paths.newOrder()
-        : desktop && intent === "make"
-          ? paths.explore("orders")
-          : paths.home;
     router.replace(destination);
   };
 

@@ -1,0 +1,131 @@
+{
+  "account": "layla",
+  "width": 390,
+  "height": 844,
+  "mobile": true,
+  "steps": [
+    {
+      "go": "/work",
+      "after": 4500
+    },
+    {
+      "text": "Find work · every open UGC campaign and custom order"
+    },
+    {
+      "eval": "document.documentElement.scrollWidth <= innerWidth",
+      "equals": true
+    },
+    {
+      "eval": "getComputedStyle(document.querySelector('.y-wnav')).display === 'none'",
+      "equals": true
+    },
+    {
+      "shot": "s2c-fwp-start"
+    },
+    {
+      "click": "Filters",
+      "after": 900
+    },
+    {
+      "text": "Counts show what's open with your other filters."
+    },
+    {
+      "click": "Fintech",
+      "after": 700
+    },
+    {
+      "shot": "s2c-fwp-sheet"
+    },
+    {
+      "click": "Show",
+      "after": 900
+    },
+    {
+      "notText": "Counts show what's open with your other filters."
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('cat') === 'fintech'",
+      "equals": true
+    },
+    {
+      "eval": "!!document.querySelector('.y-ac[aria-label=\"Remove Fintech\"]')",
+      "equals": true
+    },
+    {
+      "click": "UGC campaigns",
+      "after": 900
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('type') === 'campaign'",
+      "equals": true
+    },
+    {
+      "shot": "s2c-fwp-filtered"
+    },
+    {
+      "click": "Show us your first invoice on WhatsApp",
+      "after": 5000
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "eval": "document.documentElement.scrollWidth <= innerWidth",
+      "equals": true
+    },
+    {
+      "eval": "getComputedStyle(document.querySelector('.y-stickybar')).display !== 'none'",
+      "equals": true
+    },
+    {
+      "shot": "s2c-fwp-job"
+    },
+    {
+      "clickSel": ".y-stickybar .y-action",
+      "after": 900
+    },
+    {
+      "text": "Pick a Yapp from Daftar?"
+    },
+    {
+      "shot": "s2c-fwp-pick-modal"
+    },
+    {
+      "click": "Pick now",
+      "after": 1500
+    },
+    {
+      "text": "The slot is yours"
+    },
+    {
+      "click": "Keep browsing",
+      "after": 800
+    },
+    {
+      "text": "You picked a slot"
+    },
+    {
+      "click": "Find work",
+      "after": 4000
+    },
+    {
+      "eval": "new URLSearchParams(location.search).get('cat') === 'fintech'",
+      "equals": true
+    },
+    {
+      "go": "/work?tab=making",
+      "after": 3500
+    },
+    {
+      "eval": "document.querySelector('.y-ocard-t')?.textContent.includes('Show us your first invoice on WhatsApp')",
+      "equals": true
+    },
+    {
+      "eval": "document.documentElement.scrollWidth <= innerWidth",
+      "equals": true
+    },
+    {
+      "shot": "s2c-fwp-making"
+    }
+  ]
+}

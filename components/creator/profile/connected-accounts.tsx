@@ -85,8 +85,8 @@ export function ConnectedAccounts({ creator }: { creator: Creator }) {
         </ul>
       ) : (
         <p className="y-small y-fg-2 max-w-[56ch]">
-          Custom orders hire on your portfolio, so this is optional. UGC campaigns pay a fixed price
-          per video by follower tier, and check your followers on the platform they post to.
+          Custom orders hire on your portfolio, so this is optional. UGC campaigns are open by follower
+          tier, at a price per video the brand sets, and check your followers on the platform they post to.
         </p>
       )}
 

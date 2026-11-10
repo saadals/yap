@@ -6,7 +6,7 @@ import { PitchBadge } from "@/components/domain/status-badge";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { PillButton } from "@/components/ui/pill-button";
 import { at } from "@/lib/clock";
-import { money, plural, quoted, weekdayDate } from "@/lib/format";
+import { creatorNet, money, moneyExact, plural, quoted, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { useDemo } from "@/lib/store";
 import { videoById } from "@/lib/selectors";
@@ -47,7 +47,7 @@ export function MyPitchPanel({
         <div className="flex flex-col gap-1">
           <p className="y-micro y-fg-2">Your pitch</p>
           <h2 className="y-display y-title">
-            {money(pitch.price)} · {plural(pitch.deliveryDays, "day")}
+            {money(pitch.price)} · you earn {moneyExact(creatorNet(pitch.price))} · {plural(pitch.deliveryDays, "day")}
           </h2>
         </div>
         <PitchBadge status={pitch.status} />
@@ -121,7 +121,7 @@ export function MyPitchPanel({
           />
         ) : null}
         {pitch.status === "declined" || closedForOthers ? (
-          <PillButton href={paths.explore("orders")} variant="outline" icon={<Search size={16} aria-hidden />}>
+          <PillButton href={paths.findWork()} variant="outline" icon={<Search size={16} aria-hidden />}>
             Find similar orders
           </PillButton>
         ) : null}

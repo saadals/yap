@@ -188,7 +188,7 @@ export function EditRequestSheet({ request, onClose }: { request: ContentRequest
       dueDate: at(days, "18:00"),
       visibility,
     });
-    toast({ message: "Request updated. Creators see the changes right away." });
+    toast({ message: "Order updated. Creators see the changes right away." });
     onClose();
   };
 
@@ -196,7 +196,7 @@ export function EditRequestSheet({ request, onClose }: { request: ContentRequest
     <Sheet
       open
       onClose={onClose}
-      title="Edit request"
+      title="Edit order"
       description="Change the essentials. The brief itself stays as creators pitched on it."
       width="md"
       footer={
@@ -300,7 +300,7 @@ export function CloseRequestSheet({
       onClose={onClose}
       side="center"
       width="sm"
-      title="Close this request?"
+      title="Close this custom order?"
       description="Creators can't pitch any more and it leaves their feeds."
       footer={
         <div className="flex gap-2">
@@ -311,7 +311,7 @@ export function CloseRequestSheet({
             onClick={() => {
               actions.closeRequest(request.id);
               toast({
-                message: "Request closed",
+                message: "Order closed",
                 action: { label: "Undo", onClick: () => actions.reopenRequest(request.id) },
               });
               onClose();
@@ -426,7 +426,7 @@ export function MessageSheet({
       <div className="flex flex-col gap-4">
         {existing ? (
           <div className="y-tile flex flex-col gap-2 p-4">
-            <p className="y-micro y-fg-2">You&apos;ve talked about this request</p>
+            <p className="y-micro y-fg-2">You&apos;ve talked about this order</p>
             {last.map((m) => (
               <p key={m.id} className="y-small">
                 <span className="font-semibold">{m.from === "business" ? "You" : m.from === "creator" ? creator.firstName : "Yapp"}: </span>

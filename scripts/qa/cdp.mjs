@@ -7,8 +7,10 @@
 // Flow file: { width?, height?, mobile?, theme?: "dark" | "light", account?: "nour" | "layla",
 //   steps: [ {go: "/path", after?: ms}, {wait: ms}, {click: "visible text"}, {clickSel: "css"},
 //            {type: {sel, text}}, {text: "must appear"}, {notText: "must not appear"},
-//            {eval: "js expression"}, {shot: "name", full?},
+//            {eval: "js expression", equals?: value}, {shot: "name", full?},
 //            {account: "nour" | "layla"}   // switch the signed-in demo account (reloads the page)
+//            {viewport: {width, height?, mobile?}}   // resize; the next `go` loads at that size
+//            {path: "/home"}               // assert the current address (base path and trailing "/" ignored)
 //            {key: "ArrowDown"}            // keyboard (ArrowUp/Down/Left/Right, Enter, Escape)
 //            {swipe: "left" | "right" | "up" | "down", sel?: "css", span?, dt?}   // touch swipe (mobile flows)
 //          ] }
@@ -113,9 +115,9 @@ await send("Network.enable");
 await send("Storage.clearDataForOrigin", { origin: new URL(BASE).origin, storageTypes: "all" });
 await send("Network.clearBrowserCookies");
 
-const width = script.width ?? 1440;
-const height = script.height ?? 1000;
-const mobile = !!script.mobile;
+let width = script.width ?? 1440;
+let height = script.height ?? 1000;
+let mobile = !!script.mobile;
 const metrics = (h) =>
   send("Emulation.setDeviceMetricsOverride", {
     width,
@@ -128,6 +130,10 @@ if (script.theme) await send("Network.setCookie", { name: "yapp_theme", value: s
 const account = script.account ?? { business: "nour", creator: "layla" }[script.role];
 if (account) await send("Network.setCookie", { name: "yapp_account", value: account, url: BASE });
 if (mobile) await send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+// `reducedMotion: true` on a flow emulates the "reduce motion" system setting.
+if (script.reducedMotion) {
+  await send("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
+}
 
 const clickByText = (want) => `(() => {
   const want = ${JSON.stringify(want)};
@@ -153,6 +159,14 @@ for (const step of script.steps) {
     await sleep(step.after ?? 2500);
   } else if (step.wait) {
     await sleep(step.wait);
+  } else if (step.viewport) {
+    // Resize mid-flow: {viewport: {width, height?, mobile?}}; the next `go` loads at that size.
+    width = step.viewport.width ?? width;
+    height = step.viewport.height ?? height;
+    mobile = step.viewport.mobile ?? mobile;
+    await metrics(height);
+    await send("Emulation.setTouchEmulationEnabled", { enabled: mobile, maxTouchPoints: mobile ? 5 : 1 });
+    await sleep(step.after ?? 300);
   } else if (step.click) {
     if (!(await evaluate(clickByText(step.click)))) errors.push(`click target not found: ${step.click}`);
     await sleep(step.after ?? 900);
@@ -215,6 +229,14 @@ for (const step of script.steps) {
       await send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
     }
     await sleep(step.after ?? 1200);
+  } else if (step.path) {
+    // The page's address, without the base path and trailing slash: {path: "/home"}.
+    const base = new URL(BASE).pathname.replace(/\/$/, "");
+    const at = await evaluate("location.pathname");
+    const here = (at.startsWith(base) ? at.slice(base.length) : at).replace(/(.)\/$/, "$1") || "/";
+    const ok = here === step.path;
+    console.log(`${ok ? "ok  " : "MISS"} at ${here}${ok ? "" : ` (expected ${step.path})`}`);
+    if (!ok) errors.push(`expected to be at ${step.path}, was at ${here}`);
   } else if (step.notText) {
     const has = await evaluate(
       `document.body.innerText.replace(/\\s+/g, " ").includes(${JSON.stringify(step.notText.replace(/\s+/g, " "))})`,
@@ -222,7 +244,11 @@ for (const step of script.steps) {
     console.log(`${has ? "MISS" : "ok  "} not "${step.notText}"`);
     if (has) errors.push(`unexpected text: ${step.notText}`);
   } else if (step.eval) {
-    console.log(`eval: ${JSON.stringify(await evaluate(step.eval))}`);
+    const value = await evaluate(step.eval);
+    console.log(`eval: ${JSON.stringify(value)}`);
+    // Optional assertion: {eval: "…", equals: <value>}.
+    if ("equals" in step && JSON.stringify(value) !== JSON.stringify(step.equals))
+      errors.push(`eval ${step.eval} gave ${JSON.stringify(value)}, expected ${JSON.stringify(step.equals)}`);
   } else if (step.text) {
     // Whitespace-insensitive: "7 of 10" matches text split across elements ("7\nof 10").
     const has = await evaluate(

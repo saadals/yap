@@ -8,7 +8,7 @@ import { at } from "@/lib/clock";
 import { daysFromNow, lengthLabel, plural, priceBreakdown, weekdayDate } from "@/lib/format";
 import { isPersonal, me, productById } from "@/lib/selectors";
 import type { DemoState, OfferInput } from "@/lib/store";
-import { DEFAULT_LANGUAGE, formatById, languageById } from "@/lib/taxonomy";
+import { DEFAULT_LANGUAGE, DEFAULT_USAGE, formatById, languageById } from "@/lib/taxonomy";
 import type {
   AddonId,
   Aspect,
@@ -21,6 +21,7 @@ import type {
   PlatformId,
   Product,
   Reference,
+  UsageOptionId,
   Video,
 } from "@/lib/types";
 
@@ -47,6 +48,8 @@ export type Draft = {
   references: Reference[];
   onCamera: boolean;
   notes: string;
+  /** How the buyer may use the videos (included in the package price). */
+  usage: UsageOptionId;
   addons: AddonId[];
   /** Extra days on top of the earliest possible due date. */
   slack: number;
@@ -165,6 +168,7 @@ export function initDraft(
       references: withVideo([...brief.references]),
       onCamera: brief.onCamera,
       notes: brief.notes ?? "",
+      usage: brief.usage ?? DEFAULT_USAGE,
       addons: repeat.addons.map((a) => a.id).filter((id) => creator.addons.some((x) => x.id === id)),
       slack: 0,
       message: null,
@@ -191,6 +195,7 @@ export function initDraft(
     goal: "",
     references: withVideo([]),
     onCamera: !formatById[format].voiceOnly,
+    usage: DEFAULT_USAGE,
     addons: [],
     slack: 0,
     message: null,
@@ -372,6 +377,7 @@ export function toOffer(creator: Creator, d: Draft, x: Derived, repeat?: Commiss
     avoid: d.avoid,
     references: d.references,
     onCamera: d.onCamera,
+    usage: d.usage,
     addons: d.addons,
     notes: d.notes.trim() || undefined,
   };

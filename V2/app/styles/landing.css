@@ -1,0 +1,80 @@
+/* The V2 landing page and marketing pages (public-account area).
+   V1's bubble field lived here; V2 dropped it. Its `.y-bubble` rule also hid V2's count bubble
+   (`.y-bubble` in the V2 refresh), so removing it brings the nav and tab counts back. */
+
+/* Signed in on arrival: the landing hides before paint while the client redirects to Home.
+   `data-settled` marks a visitor who is signed out, so the page shows as soon as that's known. */
+html.y-session body:has(.y-landing:not([data-settled])) {
+  visibility: hidden;
+}
+
+@keyframes y-wall-drift {
+  to {
+    transform: translateY(calc(-50% - 6px));
+  }
+}
+
+@layer components {
+  /* ----------------------------------------------------------- sample card */
+  .yapp .y-vcard {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    border-radius: 18px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow: var(--y-shadow-card);
+    transition:
+      box-shadow var(--y-dur-2) var(--y-ease),
+      transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-vcard .y-thumb {
+    border-radius: 13px;
+  }
+  .yapp .y-vcard:hover {
+    box-shadow: var(--y-shadow-card-hover);
+    transform: translateY(-2px);
+  }
+  .yapp .y-vcard:focus-visible {
+    outline: 2.5px solid var(--y-ink);
+    outline-offset: 3px;
+  }
+
+  /* ---------------------------------------------------- hero video wall */
+  /* Three columns drifting, the middle one the other way; each track holds its cards twice and moves by
+     half its height (plus half a gap), so the loop has no seam. */
+  .yapp .y-wall {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    height: min(640px, calc(100dvh - 140px));
+    min-height: 520px;
+    overflow: hidden;
+    padding-inline: 8px;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+    mask-image: linear-gradient(to bottom, transparent, #000 9%, #000 91%, transparent);
+  }
+  .yapp .y-wall-track {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-block: 6px;
+    animation: y-wall-drift 70s linear infinite;
+  }
+  .yapp .y-wall-col[data-col="1"] .y-wall-track {
+    animation-direction: reverse;
+    animation-duration: 80s;
+  }
+  .yapp .y-wall:hover .y-wall-track,
+  .yapp .y-wall:focus-within .y-wall-track {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .yapp .y-wall-track {
+      animation: none;
+    }
+    .yapp .y-wall-col[data-col="1"] .y-wall-track {
+      transform: translateY(-80px);
+    }
+  }
+}

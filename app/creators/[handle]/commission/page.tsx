@@ -13,7 +13,7 @@ export default function CommissionPage() {
   const params = useParams<{ handle: string }>();
   const handle = normalizeHandle(params.handle);
   return (
-    <PublicShell footer={false} bottomBar={false}>
+    <PublicShell footer="none" bottomBar={false}>
       <Page>
         <Suspense fallback={<CheckoutSkeleton />}>
           <CommissionRoute handle={handle} />

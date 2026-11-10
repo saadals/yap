@@ -1,0 +1,39 @@
+/* Job page (/jobs/[id]): the desktop sticky strip, the phone action bar and the rail offset. */
+
+.yapp .job-strip {
+  top: var(--y-header-h);
+  background: var(--y-glass-strong);
+  -webkit-backdrop-filter: var(--y-glass-blur);
+  backdrop-filter: var(--y-glass-blur);
+  border-bottom: 1px solid var(--y-line);
+  box-shadow: 0 8px 24px -18px rgb(20 20 40 / 0.25);
+  animation: job-strip-in var(--y-dur-2, 200ms) var(--y-ease, ease) both;
+}
+html.dark .yapp .job-strip {
+  background: rgb(11 11 12 / 0.82);
+}
+@keyframes job-strip-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Above the phone tab bar (which floats 10px over the safe area). */
+.yapp .job-bar {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--y-bar-h) + 8px);
+}
+
+@media (min-width: 1024px) {
+  /* Clear the sticky strip too. */
+  .yapp .job-rail {
+    position: sticky;
+    top: calc(var(--y-header-h) + 72px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yapp .job-strip {
+    animation: none;
+  }
+}

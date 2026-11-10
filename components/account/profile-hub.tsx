@@ -1,12 +1,13 @@
 "use client";
 
-import { Building2, ChevronRight, ExternalLink, Link2, Pencil, UserCog, Video } from "lucide-react";
+import { Building2, ChevronRight, Ellipsis, ExternalLink, Link2, Pencil, UserCog, Video } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
+import { ProductivityChip } from "@/components/shell/account-menu";
 import { AccountSheet } from "@/components/shell/account-sheet";
-import { accountNav, type NavItem } from "@/components/shell/nav";
+import { accountNav, productivityIcon, type NavItem } from "@/components/shell/nav";
 import { Block } from "@/components/ui/block";
 import { Chip } from "@/components/ui/chip";
 import { FaceAvatar } from "@/components/ui/face-avatar";
@@ -25,8 +26,9 @@ import { socialsSummary } from "./social";
  * - Identity: face, name, @handle or email, Business or Personal account.
  * - With a creator profile: View public profile, Edit profile, and connected accounts in one line.
  * - Without one: one slim "Make videos on Yapp too" block that opens the setup sheet.
- * - A calm list of account destinations (Wallet, Billing, Products, Saved, Business account, Settings),
- *   ending with the account sheet (log out, switch account and the demo controls).
+ * - A calm list of account destinations (Productivity, Wallet, Billing, Products, Saved, Business
+ *   account, Settings, and More on phones), ending with the account sheet (log out, switch account
+ *   and the demo controls).
  */
 export function ProfileHub() {
   const hydrated = useHydrated();
@@ -65,7 +67,8 @@ function Hub() {
   const [accountOpen, setAccountOpen] = useState(false);
   const connected = socialsSummary(creator?.socials);
 
-  const destinations: (NavItem & { detail?: string })[] = [
+  const destinations: (NavItem & { detail?: string; chip?: boolean; phoneOnly?: boolean })[] = [
+    { href: paths.productivity, label: "Productivity", icon: productivityIcon, chip: true },
     ...accountNav.filter((item) => item.href !== paths.settings()),
     {
       href: paths.settings("business"),
@@ -74,6 +77,8 @@ function Hub() {
       detail: isBusiness ? business.name : "Upgrade",
     },
     ...accountNav.filter((item) => item.href === paths.settings()),
+    // Phones only: on desktop the footer holds what the More page lists.
+    { href: paths.more, label: "More", icon: <Ellipsis size={20} aria-hidden />, phoneOnly: true },
   ];
 
   return (
@@ -150,13 +155,14 @@ function Hub() {
         <Block as="nav" tone="paper" pad="sm" aria-label="Your account">
           <ul className="flex flex-col">
             {destinations.map((item) => (
-              <li key={item.href}>
+              <li key={item.href} className={item.phoneOnly ? "lg:hidden" : undefined}>
                 <Link
                   href={item.href}
                   className="flex min-h-14 items-center gap-3 rounded-full px-3 font-medium hover:bg-(--b-chip)"
                 >
                   {item.icon}
                   <span className="flex-1">{item.label}</span>
+                  {item.chip ? <ProductivityChip /> : null}
                   {item.detail ? <span className="y-small y-fg-2">{item.detail}</span> : null}
                   <ChevronRight size={18} aria-hidden className="y-fg-3 y-flip" />
                 </Link>

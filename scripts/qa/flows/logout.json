@@ -1,0 +1,175 @@
+{
+  "width": 1440,
+  "height": 900,
+  "account": "nour",
+  "steps": [
+    {
+      "go": "/work",
+      "after": 4500
+    },
+    {
+      "clickSel": ".y-acct-dd .y-dd-trigger",
+      "after": 800
+    },
+    {
+      "text": "Productivity"
+    },
+    {
+      "text": "Switch account (demo)"
+    },
+    {
+      "text": "Skip 7 days (demo)"
+    },
+    {
+      "text": "Reset demo data"
+    },
+    {
+      "notText": "forget"
+    },
+    {
+      "eval": "[...document.querySelectorAll('.y-acct-dd .y-dd-row')].map((row) => row.querySelector('.y-dd-grow')?.firstChild?.textContent ?? row.textContent).map((t) => t.trim())",
+      "equals": [
+        "Productivity",
+        "Wallet",
+        "Billing & receipts",
+        "Products",
+        "Saved creators",
+        "Settings",
+        "Switch account (demo)",
+        "Skip 7 days (demo)",
+        "Reset demo data",
+        "Log out"
+      ]
+    },
+    {
+      "eval": "getComputedStyle([...document.querySelectorAll('.y-acct-dd .y-dd-row')].pop()).color",
+      "equals": "rgb(180, 35, 24)"
+    },
+    {
+      "click": "Log out",
+      "after": 1000
+    },
+    {
+      "text": "Log out of Yapp?"
+    },
+    {
+      "text": "Nour stays saved on this device"
+    },
+    {
+      "click": "Cancel",
+      "after": 1000
+    },
+    {
+      "notText": "Log out of Yapp?"
+    },
+    {
+      "path": "/work"
+    },
+    {
+      "text": "New order"
+    },
+    {
+      "clickSel": ".y-acct-dd .y-dd-trigger",
+      "after": 800
+    },
+    {
+      "click": "Log out",
+      "after": 1000
+    },
+    {
+      "click": "Log out",
+      "after": 3500
+    },
+    {
+      "path": "/"
+    },
+    {
+      "text": "Ask for Yapps"
+    },
+    {
+      "go": "/work",
+      "after": 3500
+    },
+    {
+      "path": "/"
+    },
+    {
+      "clickSel": ".y-welcome-signin",
+      "after": 1500
+    },
+    {
+      "text": "Saved accounts"
+    },
+    {
+      "text": "Nour Haddad"
+    },
+    {
+      "text": "Layla Mansour"
+    },
+    {
+      "shot": "s2a-logout-saved"
+    },
+    {
+      "clickSel": "button[aria-label=\"Remove Nour Haddad from this device\"]",
+      "after": 800
+    },
+    {
+      "notText": "Nour Haddad"
+    },
+    {
+      "text": "Layla Mansour"
+    },
+    {
+      "go": "/signin",
+      "after": 4000
+    },
+    {
+      "notText": "Nour Haddad"
+    },
+    {
+      "text": "Layla Mansour"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844,
+        "mobile": true
+      }
+    },
+    {
+      "click": "Layla Mansour",
+      "after": 4500
+    },
+    {
+      "path": "/home"
+    },
+    {
+      "go": "/profile",
+      "after": 3500
+    },
+    {
+      "click": "Account",
+      "after": 1200
+    },
+    {
+      "text": "More"
+    },
+    {
+      "click": "Log out",
+      "after": 1000
+    },
+    {
+      "text": "Log out of Yapp?"
+    },
+    {
+      "click": "Log out",
+      "after": 3500
+    },
+    {
+      "path": "/"
+    },
+    {
+      "text": "Make Yapps"
+    }
+  ]
+}

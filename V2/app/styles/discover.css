@@ -1,0 +1,25 @@
+/* Discover (components/discover): compact filter chips and the sort select at product scale. */
+
+@layer components {
+  /* Filter chips and the format row: 38px on desktop (product scale), 44px on touch. */
+  .yapp .y-filter.y-dsc-chip {
+    min-height: 38px;
+    padding-inline: 14px;
+    gap: 7px;
+    font-size: 0.8125rem;
+  }
+  .yapp .y-dsc-select {
+    min-height: 38px;
+    width: auto;
+    padding-block: 0;
+    padding-inline-end: 34px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+  }
+  @media (pointer: coarse) {
+    .yapp .y-filter.y-dsc-chip,
+    .yapp .y-dsc-select {
+      min-height: 44px;
+    }
+  }
+}

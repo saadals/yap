@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { ConfirmModal } from "@/components/ui/confirm-modal";
 import { FilterChip } from "@/components/ui/chip";
 import { FieldShell, TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
@@ -26,7 +27,6 @@ import { addDays, at, atLocal, localDay } from "@/lib/clock";
 import { longDate, money } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
-import { savedAccounts, useSavedAccounts } from "@/lib/saved-accounts";
 import { cityLabel, me, opportunities } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { formats, languages } from "@/lib/taxonomy";
@@ -358,7 +358,6 @@ export function AccountControls() {
   const router = useRouter();
   const toast = useToast();
   const { signOut } = usePrefs();
-  const saved = useSavedAccounts();
   const account = me.account(s);
   const creator = me.creator(s);
   const business = me.business(s);
@@ -366,6 +365,7 @@ export function AccountControls() {
   const [devices, setDevices] = useState(seedDevices);
   const [password, setPassword] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const signOutDevice = (device: Device) => {
     setDevices((list) => list.filter((d) => d.id !== device.id));
@@ -388,11 +388,7 @@ export function AccountControls() {
         <PillButton
           variant="soft"
           icon={<LogOut size={18} aria-hidden className="y-flip" />}
-          onClick={() => {
-            signOut();
-            toast({ message: "Logged out", tone: "info" });
-            router.push(paths.landing);
-          }}
+          onClick={() => setLoggingOut(true)}
         >
           Log out
         </PillButton>
@@ -447,35 +443,6 @@ export function AccountControls() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--b-line) pt-5">
         <div className="min-w-0">
-          <h3 className="y-head">Saved accounts</h3>
-          <p className="y-micro y-fg-2">
-            {saved.length
-              ? "One-tap sign in on this device, after you log out."
-              : "No accounts are saved on this device."}
-          </p>
-        </div>
-        <PillButton
-          variant="ghost"
-          size="sm"
-          disabled={saved.length === 0}
-          onClick={() => {
-            const before = saved;
-            savedAccounts.clear();
-            toast({
-              message: "Saved accounts removed from this device",
-              action: {
-                label: "Undo",
-                onClick: () => [...before].reverse().forEach((row) => savedAccounts.remember(row)),
-              },
-            });
-          }}
-        >
-          Remove saved accounts from this device
-        </PillButton>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-(--b-line) pt-5">
-        <div className="min-w-0">
           <h3 className="y-head">Delete account</h3>
           <p className="y-micro y-fg-2">Finish active orders and work first. Anything held is refunded or paid out.</p>
         </div>
@@ -489,6 +456,26 @@ export function AccountControls() {
         the account menu; Reset demo data there restores the original data. Nothing here moves real money.
       </p>
 
+      <ConfirmModal
+        open={loggingOut}
+        onClose={() => setLoggingOut(false)}
+        title="Log out of Yapp?"
+        primary={{
+          label: "Log out",
+          onClick: () => {
+            setLoggingOut(false);
+            signOut();
+            toast({ message: "Logged out", tone: "info" });
+            router.push(paths.landing);
+          },
+        }}
+        link={{ label: "Stay signed in" }}
+      >
+        <p>
+          {account.name} stays in this device&apos;s saved accounts, so you can sign back in with one tap. To take it
+          off this device, remove it on the sign-in screen.
+        </p>
+      </ConfirmModal>
       <PasswordSheet open={password} onClose={() => setPassword(false)} />
       <ConfirmSheet
         open={deleting}

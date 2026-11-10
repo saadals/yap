@@ -1,12 +1,51 @@
 {
   "account": "nour",
   "steps": [
-    { "go": "/messages?thread=t-201", "after": 3500 },
-    { "type": { "sel": "main textarea", "text": "Easier to sort this by text: 415-555-0123 or nour.h@gmail.com" } },
-    { "text": "hidden when you send" },
-    { "click": "Send message", "after": 1500 },
-    { "text": "[contact hidden]" },
-    { "notText": "415-555-0123" },
-    { "notText": "nour.h@gmail.com" }
+    {
+      "go": "/messages?thread=t-201",
+      "after": 3500
+    },
+    {
+      "type": {
+        "sel": "main textarea",
+        "text": "Easier to sort this by text: 415-555-0123 or nour.h@gmail.com"
+      }
+    },
+    {
+      "text": "hidden when you send"
+    },
+    {
+      "click": "Send message",
+      "after": 1500
+    },
+    {
+      "text": "[contact hidden]"
+    },
+    {
+      "notText": "415-555-0123"
+    },
+    {
+      "notText": "nour.h@gmail.com"
+    },
+    {
+      "go": "/work/c-201",
+      "after": 3500
+    },
+    {
+      "type": {
+        "sel": "#deliveries form.y-ord-composer textarea",
+        "text": "Call me on 415-555-0123 about the end card"
+      }
+    },
+    {
+      "clickSel": "#deliveries form.y-ord-composer button[type=submit]",
+      "after": 1200
+    },
+    {
+      "text": "[contact hidden]"
+    },
+    {
+      "notText": "415-555-0123"
+    }
   ]
 }

@@ -9,6 +9,12 @@
       "text": "7 of 10"
     },
     {
+      "text": "$1,200"
+    },
+    {
+      "notText": "service fee"
+    },
+    {
       "text": "Review 1 copy"
     },
     {
@@ -57,18 +63,27 @@
       "after": 1000
     },
     {
+      "notText": "Hold $"
+    },
+    {
       "click": "20K–50K",
       "after": 500
     },
     {
-      "click": "Hold $44 more and change",
+      "text": "No money moves"
+    },
+    {
+      "click": "Change tier",
       "after": 1800
     },
     {
-      "text": "$40 per Yapp"
+      "text": "$120 per Yapp"
     },
     {
-      "text": "$374"
+      "text": "20K–50K"
+    },
+    {
+      "text": "$1,200"
     },
     {
       "click": "More",
@@ -78,10 +93,36 @@
       "text": "Tier already changed"
     },
     {
-      "key": "Escape"
+      "click": "Raise price",
+      "after": 1000
     },
     {
-      "shot": "r3rules-owner-after-tier",
+      "text": "Usual at 20K–50K"
+    },
+    {
+      "text": "$160–$210"
+    },
+    {
+      "text": "4 open slots × $40: hold $160 more"
+    },
+    {
+      "text": "Each creator receives $128 after the 20% Yapp fee"
+    },
+    {
+      "shot": "s2a-owner-raise-price"
+    },
+    {
+      "click": "Hold $160 more and raise",
+      "after": 1800
+    },
+    {
+      "text": "$160 per Yapp"
+    },
+    {
+      "text": "$1,360"
+    },
+    {
+      "shot": "s2a-owner-after-raise",
       "full": true
     },
     {
@@ -93,66 +134,173 @@
       "after": 1000
     },
     {
-      "text": "refunded with their fee: $176 back to your card"
+      "text": "The 4 unpicked slots are refunded in full: $640 back to your card"
     },
     {
       "click": "Close campaign",
       "after": 1800
     },
     {
-      "text": "Closed. Open slots were refunded with their fee"
+      "text": "Closed. Unpicked slots were refunded"
     },
     {
-      "text": "$198"
+      "text": "$720"
     },
     {
-      "shot": "r3rules-owner-closed",
+      "text": "$640"
+    },
+    {
+      "eval": "(() => { const d = [...document.querySelectorAll('details')].find((x) => (x.querySelector('summary')?.innerText || '').includes('See all money movements')); if (!d) return false; d.open = true; return true; })()",
+      "after": 600
+    },
+    {
+      "text": "10 Yapps × $120"
+    },
+    {
+      "text": "Price raised to $160 per Yapp: 4 open slots × $40"
+    },
+    {
+      "text": "Closed with 4 unpicked slots: 4 × $160 refunded"
+    },
+    {
+      "shot": "s2a-owner-closed",
       "full": true
+    },
+    {
+      "go": "/billing",
+      "after": 3000
+    },
+    {
+      "text": "Price raise top-up"
+    },
+    {
+      "notText": "Service fee"
     },
     {
       "go": "/orders/new?type=campaign&product=p-daftar-invoices",
       "after": 3500
     },
     {
+      "text": "Size and price"
+    },
+    {
+      "text": "In line with the usual $115–$150 for Fintech at 10K–20K."
+    },
+    {
+      "text": "Each creator receives $92 after the 20% Yapp fee"
+    },
+    {
+      "notText": "Price to be confirmed"
+    },
+    {
       "type": {
-        "sel": "input[placeholder^='e.g. Show us']",
-        "text": "Film the reminder that got you paid"
+        "sel": "#nwf-price",
+        "text": "100"
+      }
+    },
+    {
+      "text": "Below the usual $115–$150 for Fintech at 10K–20K"
+    },
+    {
+      "shot": "s2e-wizard-price-below",
+      "full": true
+    },
+    {
+      "click": "Use $115",
+      "after": 500
+    },
+    {
+      "notText": "Below the usual"
+    },
+    {
+      "text": "Total · 10 Yapps × $115 = $1,150"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "The basics"
+    },
+    {
+      "click": "Testimonial",
+      "after": 400
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "type": {
+        "sel": "#nwf-hook",
+        "text": "Open on the payment reminder landing in WhatsApp"
+      }
+    },
+    {
+      "type": {
+        "sel": "#nwf-mustShow",
+        "text": "The reminder that got you paid"
       }
     },
     {
       "click": "Continue",
-      "after": 900
+      "after": 1000
     },
     {
-      "text": "Each video comes from a different creator"
+      "text": "Deadline and rights"
+    },
+    {
+      "text": "Paid ads · 12 months"
     },
     {
       "click": "Continue",
-      "after": 900
+      "after": 1000
     },
     {
-      "click": "Continue",
-      "after": 900
+      "text": "Check and post"
     },
     {
-      "text": "Service fee (10%)"
+      "text": "10 × $115"
     },
     {
-      "click": "Hold $330 and publish",
+      "notText": "Service fee"
+    },
+    {
+      "type": {
+        "sel": "#nwf-title",
+        "text": "Film the reminder that got you paid"
+      }
+    },
+    {
+      "text": "$1,150 is held when I post"
+    },
+    {
+      "click": "The brief is accurate",
+      "after": 300
+    },
+    {
+      "shot": "s2e-wizard-post",
+      "full": true
+    },
+    {
+      "click": "Post order",
       "after": 3000
     },
     {
-      "text": "10 slots open"
+      "text": "Daftar Invoices is live"
     },
     {
-      "text": "$330 is held, fee included"
-    },
-    {
-      "click": "View campaign",
+      "click": "Open the order",
       "after": 3500
     },
     {
       "text": "Film the reminder that got you paid"
+    },
+    {
+      "text": "$1,150"
     },
     {
       "wait": 32000

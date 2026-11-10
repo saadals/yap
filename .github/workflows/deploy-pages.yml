@@ -48,6 +48,24 @@ jobs:
           fi
           echo "Exported $(find out -name index.html | wc -l) pages"
 
+      # V2 (V2/, see V2/CLAUDE.md) is a second app served beside V1 at <base>/V2/. It has no
+      # node_modules of its own: packages resolve from the root install above.
+      - name: Build V2 static export
+        working-directory: V2
+        run: npm run build:pages
+        env:
+          NEXT_PUBLIC_BASE_PATH: ${{ steps.pages.outputs.base_path }}/V2
+
+      - name: Put V2 inside the site
+        run: |
+          if [ ! -f V2/out/index.html ]; then
+            echo "::error::No V2/out/index.html. V2's build didn't run as a static export — check V2/next.config.ts."
+            exit 1
+          fi
+          rm -rf out/V2
+          cp -R V2/out out/V2
+          echo "V2: exported $(find out/V2 -name index.html | wc -l) pages"
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: out

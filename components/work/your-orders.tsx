@@ -1,18 +1,19 @@
 "use client";
 
-import { ChevronRight, Megaphone } from "lucide-react";
+import { ChevronRight, FilePen, Megaphone } from "lucide-react";
 import Link from "next/link";
 
 import { Block } from "@/components/ui/block";
+import { CardHead } from "@/components/ui/page";
+import { NOW, HOUR } from "@/lib/clock";
 import { daysFromNow, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { campaignProgress, isCampaign, pitchesForRequest, requestsForBusiness } from "@/lib/selectors";
+import { campaignProgress, isAdCopy, isCampaign, me, pitchesForRequest, requestsForBusiness } from "@/lib/selectors";
 import { type DemoState, useDemo } from "@/lib/store";
 import { formatById } from "@/lib/taxonomy";
 import type { ContentRequest } from "@/lib/types";
 
 import { agoLower } from "./needs-you";
-import { BlockHeader, rowClass, stretched } from "./rows";
 
 /** Pitches sent today or yesterday (demo clock). */
 const recentPitches = (s: DemoState, requestId: string) =>
@@ -20,75 +21,100 @@ const recentPitches = (s: DemoState, requestId: string) =>
 
 /** How much attention an open order wants, for ordering the rows (review copies, then new pitches). */
 function attention(s: DemoState, request: ContentRequest) {
+  if (Date.parse(request.postedAt) > NOW - HOUR) return 1000;
   if (isCampaign(request)) return campaignProgress(s, request).review * 10;
   return recentPitches(s, request.id).length;
 }
 
-function OrderRow({ request }: { request: ContentRequest }) {
-  const s = useDemo();
-  const campaign = isCampaign(request);
-  const draft = request.status === "draft";
-  const FormatIcon = campaign ? Megaphone : formatById[request.brief.format].icon;
-  const href = draft && !campaign ? paths.newOrder({ draft: request.id }) : paths.order(request.id);
+type Row = { key: string; icon: React.ReactNode; title: string; meta: string; highlight?: string; href: string };
 
+function requestRow(s: DemoState, request: ContentRequest): Row {
+  const campaign = isCampaign(request);
+  const Icon = campaign ? Megaphone : formatById[request.brief.format].icon;
+  if (request.status === "draft") {
+    return {
+      key: request.id,
+      icon: <FilePen size={18} strokeWidth={1.75} />,
+      title: request.title,
+      meta: `Draft, not posted · saved ${agoLower(request.postedAt)}`,
+      href: paths.newOrder({ draft: request.id }),
+    };
+  }
   let meta: string;
-  let highlight = "";
-  if (draft) {
-    meta = `Draft, not posted · saved ${agoLower(request.postedAt)}`;
-  } else if (campaign) {
+  let highlight: string | undefined;
+  if (campaign) {
     const progress = campaignProgress(s, request);
-    meta = `Campaign · ${progress.open} of ${progress.total} open`;
+    meta = `UGC campaign · ${progress.open} of ${progress.total} open`;
     if (progress.review) highlight = `${progress.review} to review`;
   } else {
     const pitches = pitchesForRequest(s, request.id).length;
-    meta = pitches ? plural(pitches, "pitch", "pitches") : "No pitches yet";
+    meta = `${isAdCopy(request) ? "Ad copy · " : ""}${pitches ? plural(pitches, "pitch", "pitches") : "No pitches yet"}`;
     const recent = recentPitches(s, request.id).length;
     if (recent) highlight = `${recent} new`;
   }
-
-  return (
-    <li className={rowClass}>
-      <span className="y-round flex-none" data-tone-btn="soft" data-size="sm" aria-hidden>
-        <FormatIcon size={18} />
-      </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <h3 className="y-body truncate font-semibold">
-          <Link href={href} className={stretched}>
-            {request.title}
-          </Link>
-        </h3>
-        <p className="y-micro y-fg-2 truncate">
-          {meta}
-          {highlight ? <span className="font-semibold text-(--b-fg)"> · {highlight}</span> : null}
-        </p>
-      </div>
-      <ChevronRight size={18} aria-hidden className="y-flip y-fg-3 flex-none" />
-    </li>
-  );
+  if (Date.parse(request.postedAt) > NOW - HOUR) highlight = "just posted";
+  return {
+    key: request.id,
+    icon: <Icon size={18} strokeWidth={1.75} />,
+    title: request.title,
+    meta,
+    highlight,
+    href: paths.order(request.id),
+  };
 }
 
-/** Open orders (campaigns and custom requests) and drafts to finish, as up to three quiet rows. */
-export function YourOrders({ className = "", limit = 3 }: { className?: string; limit?: number }) {
+/**
+ * Ordered's "Your orders" (Work spec 6.4.4): posted UGC campaigns and custom orders, then drafts
+ * (the new wizard's, one per kind, and older saved requests), as quiet rows. Each posted row opens
+ * the owner's screen for that order (round 3 answers, item 33).
+ */
+export function YourOrders({ className = "", limit = 4 }: { className?: string; limit?: number }) {
   const s = useDemo();
   const requests = requestsForBusiness(s);
-  const open = requests
-    .filter((r) => r.status === "open")
-    .sort((a, b) => attention(s, b) - attention(s, a));
-  const drafts = requests.filter((r) => r.status === "draft");
-  const shown = [...open, ...drafts].slice(0, limit);
+  const open = requests.filter((r) => r.status === "open").sort((a, b) => attention(s, b) - attention(s, a));
+  const wizardDrafts: Row[] = me.orderDrafts(s).map((draft) => ({
+    key: `draft-${draft.kind}`,
+    icon: <FilePen size={18} strokeWidth={1.75} />,
+    title: draft.title ?? (draft.kind === "campaign" ? "Untitled UGC campaign" : "Untitled custom order"),
+    meta: `Draft, not posted · saved ${agoLower(draft.savedAt)}`,
+    href: paths.newOrder({ draft: draft.kind }),
+  }));
+  const oldDrafts = requests.filter((r) => r.status === "draft").map((r) => requestRow(s, r));
+  const rows = [...open.map((r) => requestRow(s, r)), ...wizardDrafts, ...oldDrafts];
+  const shown = rows.slice(0, limit);
 
   return (
-    <Block as="section" aria-labelledby="orders-title" tone="paper" pad="md" className={`flex flex-col gap-3 ${className}`}>
-      <BlockHeader id="orders-title" title="Your orders" count={open.length} href={paths.orders()} linkLabel="All orders" />
+    <Block as="section" aria-labelledby="orders-title" tone="paper" pad="none" className={`y-side-card ${className}`}>
+      <CardHead
+        id="orders-title"
+        as="h2"
+        title="Your orders"
+        count={open.length || undefined}
+        aside={<Link href={paths.orders()}>All orders</Link>}
+      />
       {shown.length ? (
         <ul className="flex flex-col">
-          {shown.map((request) => (
-            <OrderRow key={request.id} request={request} />
+          {shown.map((row) => (
+            <li key={row.key} className="y-orow">
+              <span className="y-orow-ic" aria-hidden>
+                {row.icon}
+              </span>
+              <span className="min-w-0">
+                <Link href={row.href} className="y-orow-link">
+                  {row.title}
+                </Link>
+                <small>
+                  {row.meta}
+                  {row.highlight ? <em> · {row.highlight}</em> : null}
+                </small>
+              </span>
+              <ChevronRight size={16} aria-hidden className="y-flip y-fg-3" />
+            </li>
           ))}
         </ul>
       ) : (
         <p className="y-small y-fg-2">
-          Nothing open. A campaign brings in many creators at a fixed price; a custom request gets you pitches.
+          Nothing open. A UGC campaign brings in many creators at one price; a custom order gets you pitches.
         </p>
       )}
     </Block>

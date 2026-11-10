@@ -25,7 +25,7 @@ import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { AvatarStack, FaceAvatar } from "@/components/ui/face-avatar";
-import { Page, PageHeader } from "@/components/ui/page";
+import { BackPill, Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Sheet } from "@/components/ui/sheet";
@@ -75,13 +75,13 @@ type Tab = RequestTab;
 type Filter = "all" | "new" | "shortlisted" | "declined";
 
 /**
- * The owner's view of a custom request: pitches (list or compare), the brief, invited creators,
+ * The owner's view of a custom order: pitches (list or compare), the brief, invited creators,
  * and hiring. Rendered by the order page when the signed-in account placed the request.
  * - `initialTab`: the section to open on (`?tab=`); "invited" also opens the invite sheet.
  * - `openPitchId`: a pitch to open straight away (`?pitch=`, e.g. from a notification).
  */
 export function RequestView(props: { request: ContentRequest; initialTab?: RequestTab; openPitchId?: string }) {
-  // Campaigns take slots, not pitches: they have their own page body.
+  // Campaigns take picks, not pitches: they have their own page body.
   if (isCampaign(props.request)) {
     return (
       <Page>
@@ -228,7 +228,7 @@ function OwnerRequestView({
     actions.publishDraft(request.id);
     invites.forEach((id) => actions.inviteToRequest(request.id, id));
     setTab("pitches");
-    toast({ message: "Your request is live. Most requests get their first pitch within 3 hours." });
+    toast({ message: "Your custom order is live. Most get their first pitch within 3 hours." });
   };
   const copyLink = async () => {
     const url = absoluteUrl(paths.order(request.id));
@@ -264,7 +264,7 @@ function OwnerRequestView({
     ? []
     : [
         ...(request.status !== "hired"
-          ? [{ label: "Edit request", icon: <Pencil size={18} aria-hidden />, onClick: () => setSheet("edit") }]
+          ? [{ label: "Edit order", icon: <Pencil size={18} aria-hidden />, onClick: () => setSheet("edit") }]
           : []),
         {
           label: "Copy link for creators",
@@ -275,15 +275,15 @@ function OwnerRequestView({
           },
         },
         ...(request.status === "open"
-          ? [{ label: "Close request", icon: <Ban size={18} aria-hidden />, onClick: () => setSheet("close") }]
+          ? [{ label: "Close order", icon: <Ban size={18} aria-hidden />, onClick: () => setSheet("close") }]
           : []),
       ];
 
   return (
     <Page>
       <div className="flex flex-col gap-2">
+        <BackPill href={paths.work("ordered")} label="Work" className="!mb-0 w-fit" />
         <PageHeader
-          back={{ href: paths.orders(), label: "All orders" }}
           title={<span className="block max-w-[24ch]">{request.title}</span>}
           description={meta}
           className="!pb-3"
@@ -312,7 +312,7 @@ function OwnerRequestView({
         {isDraft ? (
           <Block tone="night" pad="md" className="flex flex-col gap-4 md:flex-row md:items-center">
             <div className="min-w-0 flex-1">
-              <h2 className="y-head">This request is a draft</h2>
+              <h2 className="y-head">This custom order is a draft</h2>
               <p className="y-small y-fg-2">
                 {briefComplete(request)
                   ? "Creators can't see it yet. Publish when you're happy with the brief."
@@ -370,7 +370,7 @@ function OwnerRequestView({
           <Block tone="mist" pad="md" className="flex flex-wrap items-center gap-3">
             <Ban size={20} aria-hidden />
             <p className="y-small min-w-0 flex-1">
-              <span className="font-semibold">This request is closed.</span> Reopen it to hire from these pitches.
+              <span className="font-semibold">This custom order is closed.</span> Reopen it to hire from these pitches.
             </p>
             <PillButton
               variant="contrast"
@@ -388,7 +388,7 @@ function OwnerRequestView({
         {/* Sections */}
         <div className="pt-6 pb-1">
           <SegmentedToggle
-            label="Request sections"
+            label="Order sections"
             size="md"
             className="bg-(--y-paper)"
             value={tab}
@@ -406,7 +406,7 @@ function OwnerRequestView({
             <Block tone="paper" pad="md">
               <EmptyState
                 title="No pitches yet"
-                body="Publish your request and creators who fit will start pitching with an angle, a price and samples."
+                body="Publish your custom order and creators who fit will start pitching with an angle, a price and samples."
                 shape="pill"
                 tint="mint"
                 face="calm"
@@ -418,8 +418,8 @@ function OwnerRequestView({
                 title={request.status === "open" ? "Waiting for the first pitch" : "No pitches came in"}
                 body={
                   request.status === "open"
-                    ? "Most requests get their first pitch within 3 hours. Invite a few creators who fit to hear back sooner."
-                    : "Reopen the request or invite creators directly to get pitches."
+                    ? "Most custom orders get their first pitch within 3 hours. Invite a few creators who fit to hear back sooner."
+                    : "Reopen the order or invite creators directly to get pitches."
                 }
                 shape="ball"
                 tint="sea"
@@ -716,7 +716,7 @@ function OwnerRequestView({
                 title="You haven't invited anyone"
                 body={
                   request.visibility === "invite"
-                    ? "This request is invite only, so nobody can pitch until you invite someone."
+                    ? "This custom order is invite only, so nobody can pitch until you invite someone."
                     : "Everyone who fits can already pitch. Invite a few favourites so they see it first."
                 }
                 shape="bean"

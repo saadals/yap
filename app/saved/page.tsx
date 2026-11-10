@@ -246,9 +246,9 @@ function SavedActions({ creator, own, onInvite }: { creator: Creator; own: boole
         className="flex-1"
         icon={<MailPlus size={16} aria-hidden />}
         onClick={onInvite}
-        aria-label={`Invite ${creator.firstName} to a request`}
+        aria-label={`Invite ${creator.firstName} to a custom order`}
       >
-        Invite to a request
+        Invite to a custom order
       </PillButton>
       <RowMenu
         label={`More for ${creator.firstName}`}

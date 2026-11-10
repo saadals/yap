@@ -4,7 +4,7 @@ import { ArrowRight, Repeat2 } from "lucide-react";
 import Link from "next/link";
 
 import { FaceAvatar } from "@/components/ui/face-avatar";
-import { dueLabel, money, shortDate, weekdayDate } from "@/lib/format";
+import { dueLabel, money, moneyExact, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, commissionTotals, creatorById, needsAction } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
@@ -87,9 +87,16 @@ export function CommissionCard({
             </Link>
           </h3>
         </div>
-        <span className="y-display y-num flex-none text-[20px] font-semibold tracking-[-0.02em]">
-          {money(campaign ? commission.price : role === "business" ? totals.total : totals.creatorEarns)}
-        </span>
+        {role === "business" ? (
+          <span className="y-display y-num flex-none text-[20px] font-semibold tracking-[-0.02em]">
+            {money(totals.total)}
+          </span>
+        ) : (
+          <span className="flex flex-none flex-col items-end">
+            <span className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">{money(totals.total)}</span>
+            <span className="y-micro y-fg-2 y-num">you earn {moneyExact(totals.creatorEarns)}</span>
+          </span>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">

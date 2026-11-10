@@ -3,25 +3,49 @@
   "steps": [
     {
       "go": "/orders/r-150",
-      "after": 3500
+      "after": 5000
     },
     {
-      "text": "Only 3 Yapps left"
+      "text": "3 of 10"
     },
     {
-      "click": "Take a slot",
+      "text": "You earn $96 after the 20% Yapp fee"
+    },
+    {
+      "text": "Paid ads \u00b7 12 months, included in the price"
+    },
+    {
+      "text": "Upload within 5 days of picking \u00b7 set by Daftar"
+    },
+    {
+      "shot": "s2c-creator-job-page"
+    },
+    {
+      "click": "Pick now",
       "after": 1000
     },
     {
-      "text": "Within 5 days of taking a slot, set by Daftar"
+      "text": "Pick a Yapp from Daftar?"
     },
     {
-      "click": "I'll post with the tag and the paid partnership label",
-      "after": 400
+      "text": "earn $96 after the 20% Yapp fee"
     },
     {
-      "click": "Take a slot",
-      "after": 3500
+      "text": "upload within 5 days"
+    },
+    {
+      "shot": "s2c-creator-pick-modal"
+    },
+    {
+      "click": "Pick now",
+      "after": 1500
+    },
+    {
+      "text": "The slot is yours"
+    },
+    {
+      "click": "Go to the order",
+      "after": 4000
     },
     {
       "text": "Slot 8 of"
@@ -30,8 +54,20 @@
       "text": "Upload by"
     },
     {
-      "click": "Upload your review copy",
+      "text": "Deadline set by Daftar"
+    },
+    {
+      "text": "$96"
+    },
+    {
+      "text": "Reserved for you"
+    },
+    {
+      "click": "Upload version 1",
       "after": 1200
+    },
+    {
+      "text": "Daftar sees a watermarked, low-quality copy until they approve"
     },
     {
       "click": "No file handy? Use a sample",
@@ -41,11 +77,18 @@
       "eval": "(() => { document.querySelectorAll('[role=dialog] input[type=checkbox]').forEach((b) => { if (!b.checked) b.click() }); return true })()"
     },
     {
-      "click": "Send your review copy for review",
+      "click": "Send version 1",
       "after": 2500
     },
     {
-      "text": "Waiting for Daftar's review"
+      "text": "Version 1 is with Daftar"
+    },
+    {
+      "click": "Done",
+      "after": 800
+    },
+    {
+      "text": "They watch the watermarked copy and comment, or approve"
     },
     {
       "notText": "138K views"
@@ -55,6 +98,9 @@
       "after": 3500
     },
     {
+      "text": "Ready to review"
+    },
+    {
       "text": "Reject"
     },
     {
@@ -62,12 +108,22 @@
       "after": 1000
     },
     {
+      "text": "Approve and move to posting"
+    },
+    {
       "click": "5 stars, Excellent",
       "after": 300
     },
     {
-      "click": "Approve video",
+      "click": "Approve and move to posting",
       "after": 2000
+    },
+    {
+      "text": "Approved \u00b7 Layla posts it next"
+    },
+    {
+      "click": "Done",
+      "after": 800
     },
     {
       "text": "Full-quality file unlocked"
@@ -77,20 +133,45 @@
       "after": 3500
     },
     {
-      "text": "Post it to unlock $30"
+      "text": "Now post it on your TikTok"
+    },
+    {
+      "click": "Add post link",
+      "after": 1000
     },
     {
       "type": {
-        "sel": "main input[type=url]",
+        "sel": "[role=dialog] input[type=url]",
+        "text": "https://www.instagram.com/reel/C123456/"
+      }
+    },
+    {
+      "text": "That isn't a TikTok link"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[type=url]",
         "text": "https://www.tiktok.com/@laylatalks/video/7301234567"
       }
     },
     {
-      "click": "Submit post",
+      "text": "Looks like a TikTok link"
+    },
+    {
+      "eval": "(() => { document.querySelectorAll('[role=dialog] input[type=checkbox]').forEach((b) => { if (!b.checked) b.click() }); return true })()"
+    },
+    {
+      "shot": "s2d-post-link-sheet"
+    },
+    {
+      "click": "Verify post",
       "after": 6500
     },
     {
-      "text": "Verified"
+      "text": "Your post is live"
+    },
+    {
+      "text": "Verified \u00b7 tag and label found"
     },
     {
       "go": "/wallet",
@@ -100,7 +181,10 @@
       "text": "Pending"
     },
     {
-      "text": "Daftar · released Wed"
+      "text": "Daftar \u00b7 released Wed"
+    },
+    {
+      "text": "$120 less the fee"
     },
     {
       "shot": "r3rules-creator-wallet-pending",
@@ -122,7 +206,7 @@
       "after": 3000
     },
     {
-      "text": "$770"
+      "text": "$688"
     },
     {
       "text": "Show us your first invoice on WhatsApp"

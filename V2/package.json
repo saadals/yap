@@ -1,0 +1,16 @@
+{
+  "name": "yapp-v2",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Yapp prototype, version 2. Uses the repo root's node_modules (run `npm install` at the root).",
+  "scripts": {
+    "dev": "next dev -p 3200",
+    "build": "next build",
+    "build:pages": "GITHUB_PAGES=true next build",
+    "start": "next start -p 3201",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "qa:sweep": "scripts/qa/sweep.sh",
+    "qa:flow": "node scripts/qa/cdp.mjs"
+  }
+}

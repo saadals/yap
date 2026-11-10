@@ -22,9 +22,7 @@ import {
   creatorById,
 } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
-import { CAMPAIGN_RELEASE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
-
-const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
+import { CAMPAIGN_RELEASE_DAYS, FEE_PCT } from "@/lib/taxonomy";
 
 export default function BillingPage() {
   return (
@@ -53,7 +51,7 @@ function Billing() {
     <Page>
       <PageHeader
         title="Billing & receipts"
-        description={`You're charged when you hire or post a campaign, with Yapp's ${FEE_PCT}% service fee. Both are held until the work is released, and a refund returns the fee too.`}
+        description={`You pay the price you agreed, nothing on top. It's charged when you hire or post a campaign and held until the work is released; a refund returns all of it. Yapp's ${FEE_PCT}% fee comes out of the creator's pay.`}
       />
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12">
@@ -84,7 +82,7 @@ function Billing() {
                 ) : null}
                 <p className="y-small y-fg-2 max-w-[56ch]">
                   {spend.held > 0
-                    ? `Orders are released when you approve${held.length ? ` (${plural(held.length, "order")} in progress)` : ""}; campaign slots ${CAMPAIGN_RELEASE_DAYS} days after the creator's post is verified. Full refund, fee included, if work isn't delivered.`
+                    ? `Orders are released when you approve${held.length ? ` (${plural(held.length, "order")} in progress)` : ""}; campaign slots ${CAMPAIGN_RELEASE_DAYS} days after the creator's post is verified. Full refund if work isn't delivered.`
                     : "Nothing is held right now. Payment is charged and held when you hire, and released when you approve."}
                   {offers.length
                     ? ` ${money(spend.authorized)} more is authorized for ${plural(offers.length, "offer")} awaiting acceptance.`
@@ -98,7 +96,7 @@ function Billing() {
             <div className="flex flex-col gap-3 border-t border-(--b-line) pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="y-small">
                 <span className="font-semibold">{reviewCreator?.firstName ?? "A creator"} delivered.</span>{" "}
-                Approve to release {money(commissionTotals(toReview).creatorEarns)}.
+                Approve to release the {money(commissionTotals(toReview).total)} payment.
               </p>
               <PillButton href={paths.commission(toReview.id)} variant="neon" arrow className="flex-none">
                 Review delivery

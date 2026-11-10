@@ -270,22 +270,27 @@ export function VideoPlayer({
           >
             <span style={{ width: `${(t / duration) * 100}%` }} className="!transition-none" />
           </div>
-          {comments.map((comment) => (
-            <button
-              key={comment.id}
-              type="button"
-              aria-label={`Note at ${clock(comment.atSec)}: ${comment.text}`}
-              title={`${clock(comment.atSec)} · ${comment.text}`}
-              onClick={() => {
-                seekTo(comment.atSec);
-                onMarkerClick?.(comment);
-              }}
-              className={`absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-(--b-bg,var(--y-paper)) transition-transform hover:scale-125 ${
-                comment.resolved ? "bg-(--b-line)" : "bg-(--y-warning)"
-              } ${activeCommentId === comment.id ? "scale-125 !bg-(--y-ink)" : ""}`}
-              style={{ left: `${(comment.atSec / duration) * 100}%` }}
-            />
-          ))}
+          {/* Pins for timestamped comments only (general ones have no place on the timeline). */}
+          {comments.flatMap((comment) => {
+            const atSec = comment.atSec;
+            if (atSec === null || comment.deletedAt) return [];
+            return [
+              <button
+                key={comment.id}
+                type="button"
+                aria-label={`Comment at ${clock(atSec)}: ${comment.text}`}
+                title={`${clock(atSec)} · ${comment.text}`}
+                onClick={() => {
+                  seekTo(atSec);
+                  onMarkerClick?.(comment);
+                }}
+                className={`absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-(--b-bg,var(--y-paper)) transition-transform hover:scale-125 ${
+                  comment.resolved ? "bg-(--b-line)" : "bg-(--y-warning)"
+                } ${activeCommentId === comment.id ? "scale-125 !bg-(--y-ink)" : ""}`}
+                style={{ left: `${(atSec / duration) * 100}%` }}
+              />,
+            ];
+          })}
         </div>
         <button
           type="button"

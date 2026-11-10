@@ -4,40 +4,7 @@ import { AlertCircle, ChevronDown, MoreHorizontal, Plus, X } from "lucide-react"
 import Link from "next/link";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Block, type BlockTone } from "@/components/ui/block";
 import { PillButton } from "@/components/ui/pill-button";
-
-/** One question per block: a calm title, an optional hint, then the answer controls. */
-export function Question({
-  id,
-  title,
-  hint,
-  tone = "paper",
-  optional = false,
-  children,
-  className = "",
-}: {
-  id: string;
-  title: string;
-  hint?: React.ReactNode;
-  tone?: BlockTone;
-  optional?: boolean;
-  children: React.ReactNode;
-  className?: string;
-}) {
-  return (
-    <Block as="section" aria-labelledby={id} tone={tone} pad="md" className={`flex flex-col gap-4 ${className}`}>
-      <div className="flex min-w-0 flex-col gap-1">
-        <h2 id={id} className="y-head">
-          {title}
-          {optional ? <span className="y-small y-fg-3 ms-2 font-medium">Optional</span> : null}
-        </h2>
-        {hint ? <p className="y-small y-fg-2 max-w-[60ch]">{hint}</p> : null}
-      </div>
-      {children}
-    </Block>
-  );
-}
 
 /** Inline error for groups (radio cards, lists) where there is no single input to mark. */
 export function GroupError({ id, message }: { id?: string; message?: string }) {

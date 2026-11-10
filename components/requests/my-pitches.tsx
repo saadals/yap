@@ -16,7 +16,7 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HOUR } from "@/lib/clock";
-import { money, plural, timeAgoInline } from "@/lib/format";
+import { creatorNet, money, moneyExact, plural, timeAgoInline } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, me, pitchesForCreator, productById, requestById } from "@/lib/selectors";
 import { type DemoState, useDemo, useHydrated } from "@/lib/store";
@@ -101,7 +101,7 @@ function Pitches() {
         <Block tone="paper" pad="md">
           <EmptyState
             title="Pitch on orders that fit you"
-            body="Set up a creator profile and you can pitch on custom requests and take slots in UGC campaigns, right from this account."
+            body="Set up a creator profile and you can pitch on custom orders and pick slots in UGC campaigns, right from this account."
             shape="bean"
             tint="mint"
             face="smile"
@@ -150,7 +150,7 @@ function Pitches() {
         title="My pitches"
         description={stats}
         actions={
-          <PillButton href={paths.explore("orders")} variant="neon" arrow>
+          <PillButton href={paths.findWork()} variant="neon" arrow>
             Find orders
           </PillButton>
         }
@@ -198,7 +198,7 @@ function Pitches() {
                     Show all pitches
                   </PillButton>
                 ) : (
-                  <PillButton href={paths.explore("orders")} variant="contrast" arrow>
+                  <PillButton href={paths.findWork()} variant="contrast" arrow>
                     Browse orders
                   </PillButton>
                 )
@@ -252,7 +252,8 @@ function PitchRow({ pitch }: { pitch: Pitch }) {
             )}
           </h2>
           <p className="y-small y-fg-2">
-            <span className="y-num font-semibold text-(--b-fg)">{money(pitch.price)}</span> ·{" "}
+            <span className="y-num font-semibold text-(--b-fg)">{money(pitch.price)}</span>
+            <span className="y-num"> · you earn {moneyExact(creatorNet(pitch.price))}</span> ·{" "}
             {plural(pitch.deliveryDays, "day")} · Sent {timeAgoInline(pitch.sentAt)}
           </p>
           <p className="y-small mt-1 max-w-[62ch]">

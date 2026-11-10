@@ -17,11 +17,12 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
-import { dueLabel, lengthLabel, moneyRange, plural } from "@/lib/format";
+import { dueLabel, lengthLabel, moneyRange, netRange, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
   businessById,
   fit,
+  isAdCopy,
   me,
   myPitchFor,
   pitchesForRequest,
@@ -35,12 +36,12 @@ function BackLink() {
   return (
     <div className="mb-2 flex items-center gap-2">
       <PillButton
-        href={paths.explore("orders")}
+        href={paths.findWork()}
         variant="ghost"
         size="sm"
         icon={<ArrowLeft size={18} aria-hidden className="y-flip" />}
       >
-        Discover orders
+        Find work
       </PillButton>
     </div>
   );
@@ -59,7 +60,7 @@ function Unavailable({ title, body }: { title: string; body: string }) {
           tint="sun"
           face="calm"
           action={
-            <PillButton href={paths.explore("orders")} variant="contrast" arrow>
+            <PillButton href={paths.findWork()} variant="contrast" arrow>
               Browse open orders
             </PillButton>
           }
@@ -75,7 +76,7 @@ const scrollTo = (id: string) =>
   );
 
 /**
- * Someone else's custom request, as anyone other than its owner sees it: the brief, how well they
+ * Someone else's custom order, as anyone other than its owner sees it: the brief, how well they
  * fit, and their pitch (write, edit, or follow it). Accounts without a creator profile set one up
  * first, then carry on to the composer. The owner never gets here (the order page shows them the
  * pitches instead), so nobody can pitch on their own request.
@@ -97,7 +98,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
     return (
       <Unavailable
         title="This order is a UGC campaign"
-        body="Campaigns don't take pitches: creators who fit take a slot. Open it from Discover to see the details."
+        body="Campaigns don't take pitches: creators who fit pick a slot. Open it from Find work to see the details."
       />
     );
   }
@@ -105,7 +106,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
     return (
       <Unavailable
         title="This order isn't published yet"
-        body="The business is still writing it. It shows up in Discover once it's open for pitches."
+        body="The business is still writing it. It shows up in Find work once it's open for pitches."
       />
     );
   }
@@ -132,7 +133,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
   const hide = () => {
     actions.hideRequest(request.id);
     toast({
-      message: "Hidden from your feed and Discover.",
+      message: "Hidden from your feed and Find work.",
       action: { label: "Undo", onClick: () => actions.unhideRequest(request.id) },
     });
   };
@@ -200,10 +201,13 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
                 <span className="y-num font-semibold text-(--b-fg)">
                   {moneyRange(request.budget.min, request.budget.max)}
                 </span>
+                <span className="y-num"> · you earn {netRange(request.budget.min, request.budget.max)}</span>
                 {" · "}
                 <span className={due.urgency === "late" ? "text-(--y-danger)" : ""}>{due.text}</span>
                 {" · "}
-                {plural(request.brief.videoCount, "video")} · {lengthLabel(request.brief.durationSec)}
+                {isAdCopy(request)
+                  ? "Ad copy writing"
+                  : `${plural(request.brief.videoCount, "video")} · ${lengthLabel(request.brief.durationSec)}`}
               </p>
             </div>
             {business ? (
@@ -239,7 +243,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
                 <PillButton href={paths.pitches} variant="contrast" arrow>
                   See my pitches
                 </PillButton>
-                <PillButton href={paths.explore("orders")} variant="outline">
+                <PillButton href={paths.findWork()} variant="outline">
                   Find more orders
                 </PillButton>
               </div>
@@ -301,11 +305,11 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
                 }
                 body={
                   request.status === "hired"
-                    ? "This one's taken, but similar orders come up every week. Discover is sorted by fit."
+                    ? "This one's taken, but similar orders come up every week. Find work puts the best fit first."
                     : `${businessName} stopped taking pitches on this order.`
                 }
                 action={
-                  <PillButton href={paths.explore("orders")} variant="contrast" arrow>
+                  <PillButton href={paths.findWork()} variant="contrast" arrow>
                     Browse open orders
                   </PillButton>
                 }

@@ -33,6 +33,20 @@ Good paths to walk through:
 Other creators reply to messages, accept offers and deliver versions on their own after a few
 seconds, so business flows can be tried without switching roles.
 
+## V2
+
+`V2/` is a second version of the demo with a redesigned experience: one account with two modes
+(Ordering and Studio), "Today" home pages, one Orders list, a Library of approved videos, one job
+page with a single timeline, and a landing page that explains. It reuses the same data and money
+rules. It has no `node_modules` of its own (run `npm install` here once):
+
+```bash
+cd V2 && npm run dev   # http://localhost:3200
+```
+
+The deploy workflow publishes it beside V1 at `https://saadals.github.io/yap/V2/`. See
+[V2/CLAUDE.md](V2/CLAUDE.md).
+
 ## Deploy to GitHub Pages
 
 The repo ships a workflow (`.github/workflows/deploy-pages.yml`) that builds a fully static

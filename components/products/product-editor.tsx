@@ -843,7 +843,7 @@ export function ProductEditor({
                     >
                       <span className="y-small font-semibold">{r.title}</span>
                       <span className="y-micro y-fg-2">
-                        {r.status === "draft" ? "Draft order" : isCampaign(r) ? "Live campaign" : "Open request"}
+                        {r.status === "draft" ? "Draft order" : isCampaign(r) ? "Live campaign" : "Open custom order"}
                       </span>
                     </Link>
                   </li>

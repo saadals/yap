@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "./styles/landing.css";
 @import "./styles/auth.css";
+@import "./styles/shell.css";
+@import "./styles/discover.css";
+@import "./styles/work.css";
+@import "./styles/order.css";
+@import "./styles/new-order.css";
+@import "./styles/productivity.css";
+@import "./styles/services.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -60,6 +67,14 @@ html.dark body {
   --y-green-text: #0a7a33;
   --y-green-line: #1fc75a;
   --y-green-tint: #d3fbe0;
+  /* Kit: the next-step box's wash, open campaign slots, the pale end of progress gradients. */
+  --y-green-wash: rgb(52 240 108 / 0.12);
+  --y-green-pale: #b9f8cc;
+  --y-slot-open: rgb(52 240 108 / 0.55);
+  /* Kit: stepper and track greys, the chart's dashed comparison line. */
+  --y-track: #e8e8ed;
+  --y-track-ring: #e2e2e7;
+  --y-chart-compare: #d1d1d6;
 
   /* Illustration palette: characters, avatars, reel covers. Never a page, card or button fill. */
   --y-lavender: #cfc8fa;
@@ -75,17 +90,18 @@ html.dark body {
   --y-c-blush: #f6a8d8;
   --y-face: #0e0e10;
 
-  /* Status. Text colours reach 4.5:1 on their own -soft fill, on white and on the canvas, so
-     small chip text stays legible: the package's #16a34a and #e5483b (3.3:1 and 3.9:1) become
-     the darker greens and reds below, and amber goes one step darker. The brand red stays for the
-     notification dot and urgent marks only (--y-red). --y-active-soft fills "moving" chips. */
+  /* Status (round 3 answers, item 51). Small chip text is green #0a7a33, red #b42318 and amber
+     #92400e: each keeps at least 4.5:1 on its own -soft fill over white and over the canvas
+     (5.1 / 5.7 / 6.4 on white). The package's #16a34a and #e5483b stay for icons, bars and text
+     at 18px and above only; the brand red is the notification dot and urgent marks (--y-red).
+     --y-active-soft fills "moving" chips. */
   --y-success: #0a7a33;
   --y-success-soft: rgb(52 240 108 / 0.14);
   --y-active-fg: #0b0b0c;
   --y-active-soft: rgb(52 240 108 / 0.2);
-  --y-warning: #a14a08;
+  --y-warning: #92400e;
   --y-warning-soft: rgb(245 158 11 / 0.14);
-  --y-danger: #c22a1e;
+  --y-danger: #b42318;
   --y-danger-soft: rgb(229 72 59 / 0.1);
   --y-red: #e5483b;
   --y-info: #1f55c9;
@@ -114,6 +130,10 @@ html.dark body {
   --y-shadow-sheet: 0 0 0 1px rgb(29 29 31 / 0.04), 0 24px 64px -12px rgb(11 11 12 / 0.3);
   --y-shadow-toast: 0 12px 32px -8px rgb(11 11 12 / 0.45);
   --y-shadow-glow: 0 10px 28px rgb(52 240 108 / 0.4);
+  /* Kit: the glass dropdown panel, and the centred confirmation modal. */
+  --y-shadow-panel: 0 24px 64px -16px rgb(20 20 40 / 0.18);
+  --y-shadow-modal:
+    0 0 0 1px rgb(29 29 31 / 0.04), inset 0 1px 0 #ffffff, 0 40px 80px -20px rgb(0 0 0 / 0.3);
   --y-scrim: rgb(11 11 12 / 0.42);
   --y-scrim-blur: blur(4px);
 
@@ -173,6 +193,7 @@ html.dark body {
   --y-glass-strong: rgb(255 255 255 / 0.78);
   --y-glass-border: rgb(255 255 255 / 0.7);
   --y-glass-border-clear: rgb(255 255 255 / 0.45);
+  --y-glass-panel: rgb(255 255 255 / 0.72);
   --y-glass-blur: blur(24px) saturate(180%);
   --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.9);
   /* Fixed dark gradient (the tab bar's active pill on video stays dark in both themes). */
@@ -180,8 +201,8 @@ html.dark body {
   --y-detail-card: rgb(255 255 255 / 0.82);
   --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.8);
 
-  /* page */
-  --y-gutter: 12px;
+  /* page: the side margin of every page (20px phones, 24px tablets, 72px from 1024px) */
+  --y-gutter: 20px;
   --y-bar-h: 56px;
 
   color-scheme: light;
@@ -265,6 +286,13 @@ html.dark .yapp {
 @media (min-width: 768px) {
   .yapp {
     --y-gutter: 24px;
+  }
+}
+/* Desktop: every page sits on the header's margins (72px sides, 1376px content at most), so page
+   edges line up with the nav on the restyled pages as they do on the redesigned ones (`.y-wide`). */
+@media (min-width: 1024px) {
+  .yapp {
+    --y-gutter: 72px;
   }
 }
 
@@ -584,6 +612,11 @@ html.dark .yapp {
   .yapp .y-pill[data-variant="neon"]:hover:not(:disabled) {
     background: var(--y-neon-press);
   }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-pill[data-variant="neon"]:hover:not(:disabled, [aria-disabled="true"]) {
+      box-shadow: var(--y-shadow-glow);
+    }
+  }
   /* Primary dark: a #2a2a2c → #0b0b0c gradient with white text (light on dark surfaces and in dark
      mode). On devices with hover it turns green with black text, lifts 1px and glows. */
   .yapp .y-pill[data-variant="contrast"] {
@@ -610,6 +643,7 @@ html.dark .yapp {
   .yapp .y-pill[data-variant="soft"] {
     background: var(--b-chip, var(--y-mist));
     color: var(--b-chip-fg, var(--y-ink));
+    font-weight: 500;
   }
   .yapp .y-pill[data-variant="soft"]:hover:not(:disabled) {
     box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
@@ -731,21 +765,34 @@ html.dark .yapp {
   }
 
   /* ------------------------------------------------------------ segmented */
-  /* A quiet track with the selected option as a dark pill (selection is black and white, never
-     green). */
+  /* A quiet track with the selected option as the dark primary pill (selection is black and white,
+     never green). md is the previews' 40px control (Work tabs, order tabs, Productivity), lg the
+     44px type bar. An option can carry a count; the selected option's count turns green. */
   .yapp .y-seg {
     display: inline-flex;
-    padding: 3px;
+    max-width: 100%;
+    padding: 4px;
     gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
     border-radius: 999px;
     background: var(--b-chip, var(--y-mist));
   }
+  .yapp .y-seg::-webkit-scrollbar {
+    display: none;
+  }
   .yapp .y-seg button {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     min-height: 34px;
     padding-inline: 14px;
     border-radius: 999px;
     font-size: 0.8125rem;
     font-weight: 500;
+    white-space: nowrap;
     color: var(--b-fg, var(--y-ink));
     transition:
       background-color var(--y-dur-2) var(--y-ease),
@@ -754,19 +801,60 @@ html.dark .yapp {
   .yapp[dir="rtl"] .y-seg button {
     font-size: 0.875rem;
   }
-  .yapp .y-seg[data-size="md"] button {
+  .yapp .y-seg:is([data-size="md"], [data-size="lg"]) button {
     min-height: 40px;
     padding-inline: 18px;
-    font-size: 0.875rem;
+    font-size: 0.9375rem;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-seg[data-size="lg"] button {
+    min-height: 44px;
   }
   .yapp .y-seg button[aria-checked="true"] {
-    background: var(--b-fg, var(--y-ink));
-    color: var(--b-bg, var(--y-paper));
+    background: var(--b-btn, var(--y-btn-primary));
+    color: var(--b-btn-fg, var(--y-btn-primary-fg));
     font-weight: 600;
-    box-shadow: 0 1px 3px rgb(11 11 12 / 0.16);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
   }
   .yapp .y-seg button[aria-checked="false"]:hover {
     background: var(--b-line, var(--y-line));
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-seg-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    padding-inline: 7px;
+    border-radius: 999px;
+    background: rgb(29 29 31 / 0.08);
+    color: var(--y-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-seg button[aria-checked="true"] .y-seg-count {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  /* Phones: the control fills its row and options share it evenly. */
+  @media (max-width: 767px) {
+    .yapp .y-seg[data-fill="true"] {
+      display: flex;
+    }
+    .yapp .y-seg[data-fill="true"] button {
+      flex: 1;
+      min-width: 0;
+      padding-inline: 6px;
+      gap: 5px;
+      font-size: 0.84375rem;
+    }
+    .yapp .y-seg[data-fill="true"] .y-seg-count {
+      min-width: 18px;
+      height: 18px;
+      padding-inline: 5px;
+      font-size: 0.6875rem;
+    }
   }
 
   /* ---------------------------------------------------------------- chips */
@@ -841,6 +929,38 @@ html.dark .yapp {
   .yapp .y-filter[aria-current="true"] .y-count {
     background: var(--b-bg, var(--y-paper));
     color: var(--b-fg, var(--y-ink));
+  }
+  /* The previews' small pressed pill (filters, platforms, deadlines): a quiet fill, black when
+     pressed. 32px on desktop, 44px under 1024px so it stays a full tap target. */
+  .yapp .y-filter[data-size="sm"] {
+    min-height: 32px;
+    padding-inline: 12px;
+    gap: 6px;
+    font-size: 0.8125rem;
+    background: var(--b-chip, var(--y-mist));
+    box-shadow: none;
+  }
+  .yapp .y-filter[data-size="sm"]:hover {
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-filter[data-size="sm"]:is([aria-pressed="true"], [aria-checked="true"], [aria-current="true"]) {
+    background: var(--b-fg, var(--y-ink));
+    color: var(--b-bg, var(--y-paper));
+    box-shadow: none;
+  }
+  .yapp .y-filter[data-size="sm"] .y-count {
+    min-width: 0;
+    height: auto;
+    padding: 0;
+    background: none;
+    color: inherit;
+    opacity: 0.6;
+  }
+  @media (max-width: 1023px) {
+    .yapp .y-filter[data-size="sm"] {
+      min-height: 44px;
+      padding-inline: 14px;
+    }
   }
 
   /* ---------------------------------------------------------------- badge */
@@ -1113,30 +1233,42 @@ html.dark .yapp {
     color: #0e0e10;
     font-weight: 600;
   }
+  /* Desktop nav link (Site-wide 5.4.4, the previews' nav): 16/500 muted; the current page is ink
+     600 with a 6px green dot under it (`aria-current`, or `.is-current` on the Services trigger). */
   .yapp .y-navlink {
+    position: relative;
     display: inline-flex;
     align-items: center;
+    gap: 6px;
     min-height: 40px;
     padding-inline: 14px;
     border-radius: 999px;
     font-weight: 500;
-    font-size: 0.9375rem;
+    font-size: 1rem;
     color: var(--y-ink-2);
+    white-space: nowrap;
     transition:
       background-color var(--y-dur-1) var(--y-ease),
       color var(--y-dur-1) var(--y-ease);
   }
   .yapp .y-navlink:hover {
     color: var(--y-ink);
-    background: var(--y-mist);
+    background: rgb(255 255 255 / 0.7);
   }
-  .yapp .y-navlink[aria-current="page"] {
+  .yapp .y-navlink:is([aria-current="page"], .is-current) {
     color: var(--y-ink);
-    background: var(--y-paper);
-    box-shadow:
-      0 0 0 1px var(--y-line),
-      0 2px 6px rgb(20 20 40 / 0.05);
     font-weight: 600;
+  }
+  .yapp .y-navlink:is([aria-current="page"], .is-current)::after {
+    content: "";
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    margin-left: -3px;
+    border-radius: 50%;
+    background: var(--y-neon);
   }
 
   /* ------------------------------------------------------------ skeleton */
@@ -2444,5 +2576,1553 @@ html[data-reel-tone="light"] .yapp {
   }
   .yapp .y-reel-count-short {
     display: inline;
+  }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Kit (round 3, stage 2): the shared pieces of the Discover and Work designs.  */
+/* Components in components/ui; one line each in DESIGN.md ("The kit").         */
+/* -------------------------------------------------------------------------- */
+
+@keyframes y-dd-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+}
+
+@layer components {
+  /* ------------------------------------------------------------- figures */
+  /* Big numbers are light (400) and tabular: prices, KPIs, money. */
+  .yapp :is(.y-fig-s, .y-fig-m, .y-fig-l, .y-fig-xl, .y-fig-xxl) {
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.05;
+  }
+  .yapp .y-fig-s {
+    font-size: 1.125rem;
+    letter-spacing: -0.01em;
+  }
+  .yapp .y-fig-m {
+    font-size: 1.625rem;
+    letter-spacing: -0.02em;
+  }
+  .yapp .y-fig-l {
+    font-size: 2.125rem;
+    letter-spacing: -0.03em;
+  }
+  .yapp .y-fig-xl {
+    font-size: 2.5rem;
+    letter-spacing: -0.025em;
+  }
+  .yapp .y-fig-xxl {
+    font-size: 2.75rem;
+    letter-spacing: -0.045em;
+  }
+  @media (min-width: 768px) {
+    .yapp .y-fig-xxl {
+      font-size: 3.25rem;
+      letter-spacing: -0.048em;
+    }
+  }
+  /* "per Yapp", "budget": the small unit after a figure. */
+  .yapp .y-fig-unit {
+    margin-inline-start: 4px;
+    font-size: 0.8125rem;
+    letter-spacing: 0;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+
+  /* -------------------------------------------------------- wide page */
+  /* Redesigned pages (Discover, Work, the job and order pages, New order, Productivity): 1520px,
+     72px sides from 1024px, 20px on phones. Restyled pages use `Page`, on the same sides (1376px at most). */
+  .yapp .y-wide {
+    width: 100%;
+    max-width: 1520px;
+    margin-inline: auto;
+    padding: 12px var(--y-gutter) 0;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-wide {
+      padding: 36px var(--y-gutter) 32px;
+    }
+  }
+
+  /* Touch: small controls grow to a 44px target on touch screens. `.y-hit` stretches the tap area
+     of a small link or icon without changing how it's drawn. */
+  @media (pointer: coarse) {
+    .yapp .y-pill[data-size="sm"],
+    .yapp .y-seg button {
+      min-height: 44px;
+    }
+  }
+  .yapp .y-hit {
+    position: relative;
+  }
+  .yapp .y-hit::after {
+    content: "";
+    position: absolute;
+    inset: 50% 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+  }
+
+  /* "← Work": the back pill above a detail page. 36px drawn, 44px to tap. */
+  .yapp .y-back {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    margin-bottom: 18px;
+    padding-inline: 10px 14px;
+    border-radius: 999px;
+    background: var(--y-mist);
+    color: var(--y-ink-2-mist);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-back:hover {
+    color: var(--y-ink);
+  }
+  .yapp .y-back::after {
+    content: "";
+    position: absolute;
+    inset: -4px 0;
+  }
+
+  /* Section head (eyebrow, H2, something on the end side) and card head (H3, count, link). */
+  .yapp .y-sechead {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 26px;
+  }
+  .yapp .y-sechead-l {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-sechead {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+  }
+  .yapp .y-cardhead {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+  .yapp .y-cardhead-t {
+    min-width: 0;
+    font-size: 1.125rem;
+    line-height: 1.3;
+    font-weight: 600;
+    letter-spacing: -0.017em;
+  }
+  .yapp .y-cardhead-n {
+    margin-inline-start: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--b-fg-2, var(--y-ink-2));
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-cardhead-a {
+    flex: none;
+    font-size: 0.84375rem;
+    font-weight: 500;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-cardhead-a :is(a, button) {
+    position: relative;
+  }
+  .yapp .y-cardhead-a :is(a, button)::after {
+    content: "";
+    position: absolute;
+    inset: -12px -6px;
+  }
+  .yapp a.y-cardhead-a:hover,
+  .yapp .y-cardhead-a a:hover {
+    color: var(--b-fg, var(--y-ink));
+  }
+
+  /* ---------------------------------------------------------- brand tile */
+  .yapp .y-brandtile {
+    display: inline-grid;
+    flex: none;
+    place-items: center;
+    color: #fff;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: -0.02em;
+    user-select: none;
+  }
+
+  /* --------------------------------------------------------------- tags */
+  /* 26px tags on cards: format, platform, "New" (quiet), type (green tint), job type (dark). */
+  .yapp .y-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    height: 26px;
+    padding-inline: 10px;
+    border-radius: 999px;
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
+    font-size: 0.78125rem;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .yapp .y-tag[data-look="green"] {
+    background: var(--y-active-soft);
+    color: var(--y-ink);
+  }
+  .yapp .y-tag[data-look="dark"] {
+    background: var(--y-night);
+    color: #fff;
+  }
+
+  /* Delta chip: up and good is green, bad is red; black on a green surface. */
+  .yapp .y-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--y-success-soft);
+    color: var(--y-success);
+    font-size: 0.78125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-delta[data-good="false"] {
+    background: var(--y-danger-soft);
+    color: var(--y-danger);
+  }
+  /* A figure with no better direction (a brand's spend): neither green nor red. */
+  .yapp .y-delta[data-good="neutral"] {
+    background: var(--y-canvas);
+    color: var(--y-ink-2);
+  }
+  .yapp [data-tone="neon"] .y-delta {
+    background: rgb(11 11 12 / 0.09);
+    color: var(--y-on-color);
+  }
+
+  /* "Sample": every sample figure carries it (answers, item 44), on phones too. */
+  .yapp .y-sample {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px dashed rgb(29 29 31 / 0.15);
+    background: rgb(255 255 255 / 0.7);
+    color: var(--y-ink-2);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+  .yapp .y-sample::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .yapp [data-tone="neon"] .y-sample {
+    border-color: rgb(11 11 12 / 0.25);
+    background: rgb(255 255 255 / 0.35);
+    color: rgb(11 11 12 / 0.72);
+  }
+
+  /* ------------------------------------------------------- slots, tracks */
+  /* One segment per campaign slot: taken is dark, open is green (Work spec 6.5.9). */
+  .yapp .y-slots {
+    display: flex;
+    gap: 4px;
+  }
+  .yapp .y-slots > span {
+    flex: 1;
+    min-width: 0;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--y-slot-open);
+  }
+  .yapp .y-slots > span[data-taken="true"] {
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 85%, transparent);
+  }
+  .yapp .y-slots[data-size="sm"] {
+    gap: 3px;
+  }
+  .yapp .y-slots[data-size="sm"] > span {
+    height: 5px;
+  }
+  .yapp .y-slots[data-size="lg"] > span {
+    height: 8px;
+    border-radius: 4px;
+  }
+  .yapp .y-slots[data-continuous="true"] {
+    gap: 2px;
+  }
+  .yapp [data-tone="neon"] .y-slots > span {
+    background: rgb(11 11 12 / 0.16);
+  }
+  .yapp [data-tone="neon"] .y-slots > span[data-taken="true"] {
+    background: var(--y-on-color);
+  }
+
+  /* Plain track with a fill (countdowns, demand bars). The fill grows once on first view. */
+  .yapp .y-track {
+    position: relative;
+    height: 6px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 8%, transparent);
+  }
+  .yapp .y-track[data-size="sm"] {
+    height: 4px;
+  }
+  .yapp .y-track[data-size="lg"] {
+    height: 8px;
+  }
+  .yapp .y-track > span {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--fill, 0%);
+    border-radius: 999px;
+    background: var(--y-green-line);
+    transition: width 1.3s var(--y-ease);
+  }
+  .yapp .y-track[data-seen="false"] > span {
+    width: 0;
+  }
+  .yapp .y-track[data-fill="ink"] > span {
+    background: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-track[data-fill="gradient"] > span {
+    background: linear-gradient(90deg, var(--y-green-pale), var(--y-neon));
+  }
+  .yapp [data-tone="neon"] .y-track:not([data-fill="ink"]) > span {
+    background: var(--y-on-color);
+  }
+
+  /* Stage bars: thin segments with labels under them (order page header, New order header). */
+  .yapp .y-stages {
+    display: grid;
+    grid-template-columns: repeat(var(--n, 5), minmax(0, 1fr));
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-stages > li {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 8px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.25;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-stages > li::before {
+    content: "";
+    height: 6px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 7%, transparent);
+  }
+  .yapp .y-stages > li[data-state="done"] {
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-stages > li[data-state="done"]::before {
+    background: var(--y-neon);
+  }
+  .yapp .y-stages > li[data-state="current"] {
+    color: var(--b-fg, var(--y-ink));
+    font-weight: 600;
+  }
+  .yapp .y-stages > li[data-state="current"]::before {
+    background: linear-gradient(
+      90deg,
+      var(--y-neon) 50%,
+      color-mix(in srgb, var(--b-fg, var(--y-ink)) 7%, transparent) 50%
+    );
+  }
+  .yapp[dir="rtl"] .y-stages > li[data-state="current"]::before {
+    background: linear-gradient(
+      270deg,
+      var(--y-neon) 50%,
+      color-mix(in srgb, var(--b-fg, var(--y-ink)) 7%, transparent) 50%
+    );
+  }
+  /* Phones: 10px labels that keep a few pixels from the next one ("In progress" wraps at 360
+     rather than touching "Delivered"; six labels fit at 360 too). */
+  @media (max-width: 767px) {
+    .yapp .y-stages {
+      gap: 4px;
+    }
+    .yapp .y-stages > li {
+      font-size: 0.625rem;
+    }
+    .yapp .y-stages > li > span {
+      padding-inline-end: 4px;
+    }
+  }
+
+  /* Numbered stepper with a track (Discover "How it works", service pages). */
+  .yapp .y-stepper {
+    padding: 34px 40px 30px;
+  }
+  .yapp .y-stepper-row {
+    position: relative;
+  }
+  .yapp .y-stepper-list {
+    position: relative;
+    display: grid;
+    grid-template-columns: repeat(var(--n, 4), minmax(0, 1fr));
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .yapp .y-stepper-track {
+    position: absolute;
+    top: 17.5px;
+    inset-inline: calc(100% / (2 * var(--n, 4)));
+    height: 3px;
+    overflow: hidden;
+    border-radius: 3px;
+    background: var(--y-track);
+  }
+  .yapp .y-stepper-track > span {
+    display: block;
+    width: var(--fill, 0%);
+    height: 100%;
+    border-radius: 3px;
+    background: var(--y-night);
+    transition: width 0.9s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+  .yapp .y-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding-inline: 14px;
+    text-align: center;
+  }
+  .yapp .y-step-c {
+    position: relative;
+    display: grid;
+    width: 38px;
+    height: 38px;
+    margin-bottom: 10px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--y-paper);
+    box-shadow: 0 0 0 2px var(--y-track-ring);
+    transition:
+      background-color 0.35s var(--y-ease),
+      box-shadow 0.35s var(--y-ease),
+      transform 0.35s var(--y-ease);
+  }
+  .yapp .y-step-c > b {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--y-ink-2);
+    font-variant-numeric: tabular-nums;
+    transition: opacity 0.3s var(--y-ease);
+  }
+  .yapp .y-step-c > svg {
+    position: absolute;
+    color: var(--y-neon);
+    opacity: 0;
+    transform: scale(0.6);
+    transition:
+      opacity 0.3s var(--y-ease),
+      transform 0.3s var(--y-ease);
+  }
+  .yapp .y-step-t {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--y-ink-2);
+    transition: color 0.3s var(--y-ease);
+  }
+  .yapp .y-step-time {
+    font-size: 0.78125rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-step-body {
+    max-width: 220px;
+    margin-top: 6px;
+    font-size: 0.78125rem;
+    line-height: 1.45;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-step[data-state="done"] .y-step-c {
+    background: var(--y-night);
+    box-shadow: 0 0 0 2px var(--y-night);
+  }
+  .yapp .y-step[data-state="done"] .y-step-c > b {
+    opacity: 0;
+  }
+  .yapp .y-step[data-state="done"] .y-step-c > svg {
+    opacity: 1;
+    transform: none;
+  }
+  .yapp .y-step:is([data-state="done"], [data-state="current"]) .y-step-t {
+    color: var(--y-ink);
+  }
+  .yapp .y-step[data-state="current"] .y-step-c {
+    box-shadow:
+      0 0 0 2px var(--y-night),
+      0 0 0 7px rgb(52 240 108 / 0.35);
+    transform: scale(1.06);
+  }
+  .yapp .y-step[data-state="current"] .y-step-c > b {
+    color: var(--y-ink);
+  }
+  .yapp .y-step[data-state="current"] .y-step-time {
+    color: var(--y-green-text);
+    font-weight: 500;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-stepper {
+      padding: 24px 20px;
+    }
+    .yapp .y-stepper-list {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+    .yapp .y-stepper-track {
+      display: none;
+    }
+    .yapp .y-step {
+      flex-direction: row;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 2px 12px;
+      padding: 0;
+      text-align: start;
+    }
+    .yapp .y-step-c {
+      margin: 0;
+    }
+    .yapp .y-step-t {
+      flex: 1;
+    }
+    .yapp .y-step-time,
+    .yapp .y-step-body {
+      width: 100%;
+      max-width: none;
+      padding-inline-start: 50px;
+    }
+    .yapp .y-step-body {
+      margin-top: 2px;
+    }
+  }
+
+  /* ---------------------------------------------------------------- data */
+  /* Definition list for briefs: two columns of term over detail, hairline above each pair. */
+  .yapp .y-dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+    margin: 0;
+  }
+  .yapp .y-dl[data-cols="1"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .yapp .y-dl > div {
+    min-width: 0;
+    padding-block: 12px;
+    border-top: 1px solid var(--b-line, var(--y-line));
+  }
+  .yapp .y-dl > div[data-wide="true"] {
+    grid-column: 1 / -1;
+  }
+  .yapp .y-dl dt {
+    font-size: 0.78125rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-dl dd {
+    margin: 2px 0 0;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    overflow-wrap: anywhere;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-dl {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  /* Label and value on one line (money details, summaries). */
+  .yapp .y-rows > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding-block: 10px;
+    border-top: 1px solid var(--b-line, var(--y-line));
+    font-size: 0.90625rem;
+  }
+  .yapp .y-rows > div:first-child {
+    border-top: 0;
+  }
+  .yapp .y-rows > div > :first-child {
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-rows > div > :last-child {
+    text-align: end;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-rows > div[data-look="total"] {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .yapp .y-rows > div[data-look="total"] > :first-child {
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-rows > div[data-look="danger"] > :last-child {
+    color: var(--y-danger);
+  }
+  .yapp .y-rows > div[data-look="success"] > :last-child {
+    color: var(--y-success);
+  }
+
+  /* Small stat box: a value over a label, in a quiet tile. */
+  .yapp .y-statgrid {
+    display: grid;
+    grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr));
+    gap: 8px;
+  }
+  .yapp .y-stat {
+    min-width: 0;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 4%, transparent);
+  }
+  .yapp .y-stat[data-size="md"] {
+    padding: 12px;
+    border-radius: 16px;
+  }
+  .yapp .y-stat-v {
+    display: block;
+    font-size: 1.125rem;
+    font-weight: 400;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-stat[data-size="md"] .y-stat-v {
+    font-size: 1.375rem;
+    letter-spacing: -0.036em;
+  }
+  .yapp .y-stat-k,
+  .yapp .y-stat-d {
+    display: block;
+    font-size: 0.71875rem;
+    line-height: 1.35;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-stat-d {
+    margin-top: 2px;
+    font-weight: 500;
+    color: var(--y-success);
+  }
+  .yapp .y-stat-d[data-good="false"] {
+    color: var(--y-danger);
+  }
+
+  /* Quiet inline note: an icon and one line in a tinted tile (money state, privacy notice). */
+  .yapp .y-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 4%, transparent);
+    color: var(--b-fg, var(--y-ink));
+    font-size: 0.84375rem;
+    line-height: 1.4;
+  }
+  .yapp .y-note[data-size="sm"] {
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 0.78125rem;
+    color: var(--y-ink-2-mist);
+  }
+  .yapp .y-note-ic {
+    display: flex;
+    flex: none;
+    color: var(--y-green-line);
+  }
+  .yapp .y-note[data-size="sm"] .y-note-ic {
+    color: inherit;
+  }
+
+  /* Checklist with green ticks: plain (CTA cards) or in a tinted circle (sheets). */
+  .yapp .y-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.875rem;
+    line-height: 1.45;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-checks > li {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .yapp .y-checks > li > .y-checks-ic {
+    display: grid;
+    flex: none;
+    height: 20px;
+    place-items: center;
+    color: var(--y-green-text);
+  }
+  .yapp .y-checks[data-look="circle"] {
+    gap: 10px;
+  }
+  .yapp .y-checks[data-look="circle"] > li {
+    gap: 10px;
+  }
+  .yapp .y-checks[data-look="circle"] > li > .y-checks-ic {
+    width: 20px;
+    border-radius: 50%;
+    background: rgb(52 240 108 / 0.2);
+  }
+
+  /* ------------------------------------------------------- KPI and charts */
+  .yapp .y-kpi {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    padding: 20px;
+  }
+  .yapp .y-kpi-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.8125rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-kpi-v {
+    display: block;
+    margin: 8px 0 6px;
+    font-size: 2.125rem;
+    font-weight: 400;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-kpi-empty {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 14px;
+    font-size: 0.875rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+
+  /* Smooth line or area chart (Discover spec 4.3.4). The line draws in once with a clip-path
+     (never stroke-dasharray on a non-scaling stroke); the dot and read-out are HTML over it. */
+  .yapp .y-chart {
+    --chart-line: var(--y-green-line);
+    --chart-compare: var(--y-chart-compare);
+    position: relative;
+    min-width: 0;
+  }
+  .yapp [data-tone="neon"] .y-chart {
+    --chart-line: var(--y-on-color);
+    --chart-compare: rgb(11 11 12 / 0.32);
+  }
+  .yapp .y-chart-plot {
+    position: relative;
+    height: var(--chart-h, 170px);
+    touch-action: pan-y;
+  }
+  .yapp .y-chart-plot > svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    clip-path: inset(-6px calc(100% + 6px) -6px -6px);
+    transition: clip-path 1.7s cubic-bezier(0.3, 0.7, 0.2, 1);
+  }
+  .yapp .y-chart[data-drawn="true"] .y-chart-plot > svg {
+    clip-path: inset(-6px -6px -6px -6px);
+  }
+  .yapp .y-chart-end,
+  .yapp .y-chart-dot {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--chart-line);
+    pointer-events: none;
+  }
+  .yapp .y-chart-end {
+    width: 7px;
+    height: 7px;
+    margin: -3.5px 0 0 -3.5px;
+    opacity: 0;
+    transition: opacity 0.4s var(--y-ease) 1.5s;
+  }
+  .yapp .y-chart[data-drawn="true"] .y-chart-end {
+    opacity: 1;
+  }
+  .yapp .y-chart-dot {
+    width: 11px;
+    height: 11px;
+    margin: -5.5px 0 0 -5.5px;
+    box-shadow:
+      0 0 0 3px #fff,
+      0 2px 8px rgb(0 0 0 / 0.15);
+  }
+  .yapp .y-chart-vl {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1.5px dashed rgb(29 29 31 / 0.25);
+    pointer-events: none;
+  }
+  .yapp .y-chart-tip {
+    position: absolute;
+    z-index: 1;
+    padding: 5px 9px;
+    border-radius: 9px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 6px 16px rgb(0 0 0 / 0.08);
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    transform: translate(-50%, -150%);
+    pointer-events: none;
+  }
+  .yapp .y-chart-tip span {
+    font-weight: 400;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-chart-axis {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 10px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: var(--b-fg-2, var(--y-ink-2));
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    font-size: 0.75rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-chart-legend i {
+    display: inline-block;
+    width: 14px;
+    height: 2px;
+    margin-inline-end: 6px;
+    border-radius: 2px;
+    background: var(--chart-line);
+    vertical-align: middle;
+  }
+  .yapp .y-chart-legend i[data-compare="true"] {
+    background: var(--chart-compare);
+  }
+
+  /* --------------------------------------------------------- next step */
+  .yapp .y-next {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 20px;
+    padding: 20px;
+    border-radius: 22px;
+    background: var(--y-green-wash);
+  }
+  .yapp .y-next[data-look="quiet"] {
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 4%, transparent);
+  }
+  .yapp .y-next-main {
+    flex: 1 1 300px;
+    min-width: 0;
+  }
+  .yapp .y-next-label {
+    margin-bottom: 4px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+  }
+  .yapp .y-next-text {
+    max-width: 52ch;
+    font-size: 0.90625rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-next-clock {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 8px;
+    font-size: 0.84375rem;
+    font-weight: 500;
+    color: var(--y-warning);
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-next-clock[data-look="danger"] {
+    color: var(--y-danger);
+  }
+  .yapp .y-next-clock[data-look="neutral"] {
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-next-clock[data-look="success"] {
+    color: var(--y-success);
+  }
+  .yapp .y-next .y-track {
+    max-width: 320px;
+    margin-top: 10px;
+  }
+  .yapp .y-next-actions {
+    display: flex;
+    flex: none;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  @media (max-width: 767px) {
+    .yapp .y-next {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .yapp .y-next-main {
+      flex: none;
+    }
+    .yapp .y-next[data-phone-actions="false"] .y-next-actions {
+      display: none;
+    }
+  }
+
+  /* ------------------------------------------------------ action pills */
+  /* Full-width action with a count pill and a round arrow: "Pick now" (green) and the dark
+     "Pitch now" on the job page. */
+  .yapp .y-action {
+    position: relative;
+    display: flex;
+    width: 100%;
+    min-height: 52px;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 20px 6px;
+    border-radius: 999px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    text-align: start;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      transform var(--y-dur-2) var(--y-ease),
+      box-shadow var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-action[data-look="neon"] {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  .yapp .y-action[data-look="dark"] {
+    background: var(--y-btn-dark);
+    color: #fff;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
+  }
+  .yapp .y-action[data-size="lg"] {
+    min-height: 56px;
+    font-size: 1rem;
+  }
+  .yapp .y-action-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .yapp .y-action-count {
+    flex: none;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: rgb(11 11 12 / 0.12);
+    font-size: 0.78125rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-action[data-look="dark"] .y-action-count {
+    background: rgb(255 255 255 / 0.16);
+  }
+  .yapp .y-action-count[data-urgent="true"],
+  .yapp .y-action[data-look="dark"] .y-action-count[data-urgent="true"] {
+    background: var(--y-danger);
+    color: #fff;
+  }
+  .yapp .y-action-arrow {
+    display: grid;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--y-night);
+    color: #fff;
+    transition: transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-action[data-size="lg"] .y-action-arrow {
+    width: 44px;
+    height: 44px;
+  }
+  .yapp .y-action[data-look="dark"] .y-action-arrow {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  .yapp .y-action:active:not(:disabled, [aria-disabled="true"]) {
+    transform: scale(0.98);
+  }
+  .yapp .y-action:is(:disabled, [aria-disabled="true"]) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .yapp .y-action[data-arrow="false"] {
+    justify-content: center;
+    padding-inline: 20px;
+  }
+  .yapp .y-action[data-arrow="false"] .y-action-label {
+    flex: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-action:hover:not(:disabled, [aria-disabled="true"]) {
+      transform: translateY(-1px);
+    }
+    .yapp .y-action[data-look="neon"]:hover:not(:disabled, [aria-disabled="true"]) {
+      box-shadow: var(--y-shadow-glow);
+    }
+    .yapp .y-action[data-look="dark"]:hover:not(:disabled, [aria-disabled="true"]) {
+      box-shadow: 0 14px 30px -10px rgb(0 0 0 / 0.4);
+    }
+    .yapp .y-action:hover:not(:disabled, [aria-disabled="true"]) .y-action-arrow {
+      transform: translateX(2px);
+    }
+  }
+  @media (max-width: 767px) {
+    .yapp .y-action {
+      padding-inline-start: 16px;
+      font-size: 0.875rem;
+    }
+    .yapp .y-action-count {
+      padding: 4px 8px;
+      font-size: 0.71875rem;
+    }
+  }
+
+  /* Round arrow (decorative; the link or button around it carries the label). */
+  .yapp .y-arrowc {
+    display: inline-grid;
+    flex: none;
+    width: var(--s, 40px);
+    height: var(--s, 40px);
+    place-items: center;
+    border-radius: 50%;
+    transition: transform var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-arrowc[data-look="dark"] {
+    background: var(--y-night);
+    color: var(--y-neon);
+  }
+  .yapp .y-arrowc[data-look="neon"] {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+    box-shadow: 0 8px 18px -6px rgb(52 240 108 / 0.8);
+  }
+  .yapp .y-arrowc[data-look="light"] {
+    background: rgb(255 255 255 / 0.9);
+    color: var(--y-ink);
+    box-shadow:
+      0 0 0 1px rgb(29 29 31 / 0.07),
+      0 4px 12px rgb(0 0 0 / 0.04);
+  }
+  .yapp :is(a, button):hover .y-arrowc {
+    transform: translateX(2px);
+  }
+  .yapp[dir="rtl"] :is(a, button):hover .y-arrowc {
+    transform: translateX(-2px);
+  }
+
+  /* Select as a pill (finder category, sort, date range). */
+  .yapp .y-selectpill {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .yapp .y-selectpill > select {
+    width: 100%;
+    min-width: 0;
+    height: 52px;
+    padding-inline: 22px 48px;
+    border: 0;
+    border-radius: 999px;
+    appearance: none;
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-fg, var(--y-ink));
+    font: inherit;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-selectpill[data-size="sm"] > select {
+    height: 44px;
+    padding-inline: 18px 40px;
+    font-size: 0.875rem;
+  }
+  .yapp .y-selectpill[data-size="lg"] > select {
+    height: 64px;
+    padding-inline: 24px 52px;
+    font-size: 1.0625rem;
+    font-weight: 500;
+  }
+  .yapp .y-selectpill > select:hover {
+    background: color-mix(in srgb, var(--b-fg, var(--y-ink)) 8%, transparent);
+  }
+  .yapp .y-selectpill > select:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 1px var(--y-green-text),
+      0 0 0 4px rgb(52 240 108 / 0.25);
+  }
+  .yapp .y-selectpill > svg {
+    position: absolute;
+    inset-inline-end: 18px;
+    pointer-events: none;
+  }
+  .yapp .y-selectpill[data-size="lg"] > svg {
+    inset-inline-end: 22px;
+  }
+
+  /* Sticky glass action bar on phones (job page, order page). Sits above the tab bar. */
+  .yapp .y-stickybar {
+    position: fixed;
+    z-index: 55;
+    inset-inline: 12px;
+    bottom: calc(env(safe-area-inset-bottom) + 80px);
+    display: flex;
+    max-width: 448px;
+    margin-inline: auto;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 999px;
+  }
+  .yapp .y-stickybar[data-above-tabbar="false"] {
+    bottom: calc(env(safe-area-inset-bottom) + 12px);
+  }
+  .yapp .y-stickybar > * {
+    flex: 1;
+    min-width: 0;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-stickybar {
+      display: none;
+    }
+  }
+
+  /* -------------------------------------------------------------- empty */
+  .yapp .y-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 16px;
+    text-align: center;
+  }
+  .yapp .y-empty-ic {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-empty-t {
+    max-width: 32ch;
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .yapp .y-empty-b {
+    max-width: 46ch;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-empty-a {
+    margin-top: 12px;
+  }
+
+  /* -------------------------------------------------- sheets and modals */
+  /* Side sheet (Work spec 6.10, Discover 4.12): glass head with a hairline, scroll body, sticky
+     glass foot. Phones: bottom sheet with a grabber. */
+  .yapp .y-sheet-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 20px 14px;
+  }
+  .yapp .y-sheet[data-side="end"] .y-sheet-head {
+    border-bottom: 1px solid var(--b-line, var(--y-line));
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+  .yapp .y-sheet-title {
+    font-size: 1.375rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.023em;
+  }
+  .yapp .y-sheet-desc {
+    margin-top: 4px;
+    font-size: 0.875rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-sheet-body {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 20px 24px;
+  }
+  .yapp .y-sheet[data-side="center"] .y-sheet-body {
+    padding-top: 4px;
+  }
+  .yapp .y-sheet-foot {
+    padding: 12px 20px calc(env(safe-area-inset-bottom) + 12px);
+    border-top: 1px solid var(--b-line, var(--y-line));
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: blur(20px);
+    backdrop-filter: blur(20px);
+  }
+  @media (min-width: 768px) {
+    .yapp .y-sheet-head {
+      padding: 24px 22px 16px 26px;
+    }
+    .yapp .y-sheet-body {
+      padding: 20px 26px 26px;
+    }
+    .yapp .y-sheet-foot {
+      padding: 16px 22px;
+    }
+  }
+  /* Two-segment progress for a two-step sheet (approve, then review). */
+  .yapp .y-sheet-steps {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+  }
+  .yapp .y-sheet-steps > span {
+    flex: 1;
+    height: 4px;
+    border-radius: 2px;
+    background: rgb(29 29 31 / 0.1);
+  }
+  .yapp .y-sheet-steps > span[data-on="true"] {
+    background: var(--y-neon);
+  }
+  /* Footer actions: a ghost pill, then the primary filling the rest. */
+  .yapp .y-sheet-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .yapp .y-sheet-actions > .y-pill {
+    min-height: 50px;
+  }
+  .yapp .y-sheet-actions > .y-pill:last-child {
+    flex: 1;
+  }
+
+  /* Centred confirmation modal (no illustration; round 3 answers, item 15). */
+  .yapp .y-confirm {
+    padding: 8px 20px calc(env(safe-area-inset-bottom) + 20px);
+    text-align: center;
+  }
+  @media (min-width: 768px) {
+    .yapp .y-confirm {
+      padding: 28px;
+    }
+  }
+  .yapp .y-confirm-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+    letter-spacing: -0.021em;
+    text-wrap: balance;
+    outline: none;
+  }
+  .yapp .y-confirm-body {
+    margin: 10px auto 22px;
+    max-width: 44ch;
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-confirm-body b,
+  .yapp .y-confirm-body strong {
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-confirm-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: -8px 0 18px;
+    text-align: start;
+  }
+  .yapp .y-confirm-primary {
+    width: 100%;
+  }
+  .yapp .y-confirm-primary.y-pill {
+    min-height: 50px;
+  }
+  .yapp .y-confirm-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    margin-top: 4px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-confirm-link:hover {
+    color: var(--b-fg, var(--y-ink));
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ------------------------------------------------------ dropdown panel */
+  /* Glass panel under a nav item (Services, the account menu). The ::before bridge covers the gap
+     to the trigger so the pointer can travel to the panel without closing it. */
+  .yapp .y-dd {
+    position: relative;
+    display: inline-flex;
+  }
+  .yapp .y-dd-chev {
+    transition: transform 0.2s var(--y-ease);
+  }
+  .yapp .y-dd-trigger[aria-expanded="true"] .y-dd-chev {
+    transform: rotate(180deg);
+  }
+  .yapp .y-navlink.y-dd-trigger {
+    gap: 6px;
+  }
+  .yapp .y-navlink.y-dd-trigger[aria-expanded="true"] {
+    background: rgb(255 255 255 / 0.7);
+    color: var(--y-ink);
+  }
+  .yapp .y-dd-panel {
+    position: absolute;
+    z-index: 60;
+    top: calc(100% + var(--dd-offset, 12px));
+    inset-inline-start: 0;
+    max-width: calc(100vw - 24px);
+    padding: 12px;
+    border: 1px solid var(--y-glass-border);
+    border-radius: 24px;
+    background: var(--y-glass-panel);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow: var(--y-shadow-panel);
+    color: var(--y-ink);
+    transform-origin: top left;
+    animation: y-dd-in 180ms var(--y-ease) both;
+  }
+  .yapp .y-dd-panel[data-align="end"] {
+    inset-inline-start: auto;
+    inset-inline-end: 0;
+    transform-origin: top right;
+  }
+  .yapp .y-dd-panel::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    height: calc(var(--dd-offset, 12px) + 2px);
+  }
+  .yapp .y-dd-cols {
+    display: grid;
+    gap: 8px;
+  }
+  .yapp .y-dd-col {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+  }
+  .yapp .y-dd-eyebrow {
+    padding: 12px 14px 6px;
+  }
+  .yapp .y-dd-item {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    color: var(--y-ink);
+    transition:
+      background-color 0.2s var(--y-ease),
+      box-shadow 0.2s var(--y-ease);
+  }
+  .yapp .y-dd-item:is(:hover, :focus-visible) {
+    background: rgb(255 255 255 / 0.85);
+    box-shadow: var(--y-shadow-card);
+  }
+  .yapp .y-dd-ic {
+    display: grid;
+    width: 36px;
+    height: 36px;
+    place-items: center;
+    border-radius: 12px;
+    background: var(--y-mist);
+    transition: background-color 0.2s var(--y-ease);
+  }
+  .yapp .y-dd-item:is(:hover, :focus-visible) .y-dd-ic {
+    background: var(--y-neon);
+    color: var(--y-on-color);
+  }
+  .yapp .y-dd-t {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+  }
+  .yapp .y-dd-d {
+    display: block;
+    overflow: hidden;
+    font-size: 0.84375rem;
+    color: var(--y-ink-2);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .yapp .y-dd-pop {
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: rgb(52 240 108 / 0.2);
+    color: var(--y-on-color);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .yapp .y-dd-row {
+    display: flex;
+    width: 100%;
+    min-height: 48px;
+    align-items: center;
+    gap: 12px;
+    padding-inline: 12px;
+    border-radius: 999px;
+    color: var(--y-ink);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    text-align: start;
+    cursor: pointer;
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-dd-row:is(:hover, :focus-visible) {
+    background: var(--y-mist);
+  }
+  .yapp .y-dd-row[data-look="danger"] {
+    color: var(--y-danger);
+  }
+  .yapp .y-dd-grow {
+    min-width: 0;
+    flex: 1;
+  }
+  .yapp .y-dd-sep {
+    height: 1px;
+    margin: 6px 8px;
+    background: var(--y-line);
+  }
+  .yapp .y-dd-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgb(255 255 255 / 0.85);
+    box-shadow: var(--y-shadow-card);
+  }
+  .yapp .y-dd-foot {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px 12px;
+    margin-top: 8px;
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: rgb(29 29 31 / 0.04);
+    font-size: 0.84375rem;
+    font-weight: 500;
+  }
+  .yapp .y-dd-foot a {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: -4px -8px;
+    padding: 4px 8px;
+    border-radius: 999px;
+  }
+  .yapp .y-dd-foot a > svg {
+    transition: transform 0.2s var(--y-ease);
+  }
+  .yapp .y-dd-foot a:hover > svg {
+    transform: translateX(2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .yapp .y-chart-plot > svg {
+    clip-path: none !important;
+  }
+  .yapp .y-chart-end {
+    opacity: 1 !important;
+    transition: none !important;
+  }
+  .yapp .y-dd-panel {
+    animation: none !important;
   }
 }

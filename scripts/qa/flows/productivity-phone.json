@@ -1,0 +1,34 @@
+{
+  "account": "layla",
+  "width": 390,
+  "height": 844,
+  "mobile": true,
+  "steps": [
+    { "go": "/productivity", "after": 5000 },
+    { "text": "How your work is performing" },
+    { "text": "As a creator" },
+    { "text": "$208" },
+    { "shot": "s2F-phone-top" },
+    {
+      "eval": "(() => { const ok = document.documentElement.scrollWidth <= innerWidth; document.body.insertAdjacentHTML('beforeend', ok ? '<p>QA fits the screen</p>' : '<p>QA overflows</p>'); return { scrollWidth: document.documentElement.scrollWidth, innerWidth }; })()"
+    },
+    { "text": "QA fits the screen" },
+
+    { "swipe": "left", "sel": ".y-pd-kpis", "span": 0.9, "dt": 8 },
+    {
+      "eval": "(() => { const strip = document.querySelector('.y-pd-kpis'); const moved = strip.scrollLeft > 0; document.body.insertAdjacentHTML('beforeend', moved ? '<p>QA strip scrolled</p>' : '<p>QA strip did not scroll</p>'); return strip.scrollLeft; })()"
+    },
+    { "text": "QA strip scrolled" },
+
+    { "clickSel": ".y-pd-rowcard" },
+    { "text": "Orders with Tablecrew" },
+    { "shot": "s2F-phone-sheet" },
+    { "key": "Escape" },
+
+    { "click": "As a brand", "after": 1500 },
+    { "text": "Nothing ordered yet" },
+    { "click": "As a creator", "after": 1500 },
+    { "text": "Brands you worked with" },
+    { "shot": "s2F-phone-full", "full": true }
+  ]
+}

@@ -1,0 +1,476 @@
+{
+  "account": "nour",
+  "width": 1440,
+  "height": 1000,
+  "steps": [
+    {
+      "go": "/orders/new",
+      "after": 5000
+    },
+    {
+      "text": "What do you need?"
+    },
+    {
+      "click": "Continue",
+      "after": 900
+    },
+    {
+      "text": "Choose UGC campaign or custom order."
+    },
+    {
+      "text": "Choose a category."
+    },
+    {
+      "text": "2 things to fix before you continue"
+    },
+    {
+      "eval": "(() => { if (document.activeElement?.id !== 'nwf-kind') throw new Error('first error not focused: ' + document.activeElement?.id); return true; })()"
+    },
+    {
+      "shot": "s2e-flow-refused",
+      "full": true
+    },
+    {
+      "click": "UGC campaign",
+      "after": 400
+    },
+    {
+      "notText": "Choose UGC campaign or custom order."
+    },
+    {
+      "eval": "(() => { const c = document.getElementById('nwf-category'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(c, 'fintech'); c.dispatchEvent(new Event('change', { bubbles: true })); return c.value; })()"
+    },
+    {
+      "wait": 400
+    },
+    {
+      "notText": "Choose a category."
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "Size and price"
+    },
+    {
+      "text": "In line with the usual $115–$150 for Fintech at 10K–20K."
+    },
+    {
+      "text": "Total · 10 Yapps × $115 = $1,150"
+    },
+    {
+      "type": {
+        "sel": "#nwf-price",
+        "text": "90"
+      }
+    },
+    {
+      "text": "Below the usual $115–$150 for Fintech at 10K–20K. Raise it so more creators pick your slots."
+    },
+    {
+      "text": "Use $115"
+    },
+    {
+      "click": "20",
+      "after": 400
+    },
+    {
+      "text": "Total · 20 Yapps × $90 = $1,800"
+    },
+    {
+      "text": "Each creator receives $72 after the 20% Yapp fee"
+    },
+    {
+      "eval": "(() => { const t = document.querySelector('.y-nw-sum-big').innerText.trim(); if (t !== '$1,800') throw new Error('summary says ' + t); return t; })()"
+    },
+    {
+      "shot": "s2e-flow-price-below",
+      "full": true
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "The basics"
+    },
+    {
+      "click": "Daftar Invoices",
+      "after": 400
+    },
+    {
+      "click": "App demo",
+      "after": 400
+    },
+    {
+      "text": "@daftar.app"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "click": "Continue",
+      "after": 900
+    },
+    {
+      "text": "Describe the hook in at least 10 characters."
+    },
+    {
+      "eval": "(() => { if (document.activeElement?.id !== 'nwf-hook') throw new Error('first error not focused: ' + document.activeElement?.id); return true; })()"
+    },
+    {
+      "type": {
+        "sel": "#nwf-hook",
+        "text": "Open on a shop owner"
+      }
+    },
+    {
+      "notText": "Describe the hook in at least 10 characters."
+    },
+    {
+      "type": {
+        "sel": "#nwf-mustShow",
+        "text": "The invoice landing in WhatsApp"
+      }
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "Deadline and rights"
+    },
+    {
+      "click": "7 days",
+      "after": 300
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "Check and post"
+    },
+    {
+      "text": "20 × $90"
+    },
+    {
+      "text": "Below the usual $115–$150. Fewer creators may pick it."
+    },
+    {
+      "text": "7 days · set by you"
+    },
+    {
+      "text": "$1,800 is held when I post"
+    },
+    {
+      "click": "Post order",
+      "after": 900
+    },
+    {
+      "text": "Confirm before posting."
+    },
+    {
+      "click": "The brief is accurate",
+      "after": 300
+    },
+    {
+      "click": "Post order",
+      "after": 2500
+    },
+    {
+      "text": "Daftar Invoices is live"
+    },
+    {
+      "text": "Creators can pick a slot now in Find work."
+    },
+    {
+      "shot": "s2e-flow-campaign-live"
+    },
+    {
+      "click": "Open the order",
+      "after": 3500
+    },
+    {
+      "text": "App demos for Daftar Invoices"
+    },
+    {
+      "text": "$1,800"
+    },
+    {
+      "go": "/billing",
+      "after": 3000
+    },
+    {
+      "text": "App demos for Daftar Invoices"
+    },
+    {
+      "text": "$1,800"
+    },
+    {
+      "go": "/orders/new?type=custom&product=p-daftar-invoices",
+      "after": 3500
+    },
+    {
+      "text": "Your budget"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "click": "Testimonial",
+      "after": 300
+    },
+    {
+      "click": "Invited creators only",
+      "after": 300
+    },
+    {
+      "click": "Continue",
+      "after": 900
+    },
+    {
+      "text": "Invite at least one creator, or let everyone who fits pitch."
+    },
+    {
+      "click": "Invite creators",
+      "after": 1000
+    },
+    {
+      "eval": "(() => { const box = [...document.querySelectorAll('[role=dialog] label')].find((l) => l.innerText.includes('Layla Mansour'))?.querySelector('input'); if (!box) throw new Error('Layla not offered'); box.click(); return true; })()"
+    },
+    {
+      "click": "Done",
+      "after": 700
+    },
+    {
+      "text": "Layla invited"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "The brief"
+    },
+    {
+      "text": "Learning"
+    },
+    {
+      "click": "Show the WhatsApp send moment within the first 5 seconds",
+      "after": 400
+    },
+    {
+      "eval": "(() => { const v = document.getElementById('nwf-mustShow').value; if (!v.includes('Show the WhatsApp send moment within the first 5 seconds')) throw new Error('learning not carried: ' + v); return true; })()"
+    },
+    {
+      "type": {
+        "sel": "#nwf-hook",
+        "text": "Open on a customer saying they will pay tomorrow"
+      }
+    },
+    {
+      "eval": "(() => { const i = document.getElementById('nwf-attachments'); const dt = new DataTransfer(); dt.items.add(new File([new Uint8Array(2048)], 'brand-guide.pdf', { type: 'application/pdf' })); dt.items.add(new File([new Uint8Array(11 * 1024 * 1024)], 'huge-deck.pdf', { type: 'application/pdf' })); dt.items.add(new File([new Uint8Array(1024)], 'notes.zip', { type: 'application/zip' })); i.files = dt.files; i.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "text": "brand-guide.pdf"
+    },
+    {
+      "text": "huge-deck.pdf is over 10 MB"
+    },
+    {
+      "text": "notes.zip: use PDF, DOC or TXT"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "Check and post"
+    },
+    {
+      "text": "Invited creators only · Layla"
+    },
+    {
+      "text": "Show the WhatsApp send moment within the first 5 seconds"
+    },
+    {
+      "text": "Nothing is charged until I hire a creator."
+    },
+    {
+      "click": "The brief is accurate",
+      "after": 300
+    },
+    {
+      "click": "Post order",
+      "after": 2500
+    },
+    {
+      "text": "The creators you invited can pitch now."
+    },
+    {
+      "eval": "(() => { const a = [...document.querySelectorAll('[role=dialog] a')].find((x) => x.innerText.includes('Open the order')); sessionStorage.setItem('qa-custom-order', a.href); return a.href; })()"
+    },
+    {
+      "go": "/orders/new?type=custom&product=p-daftar-stock",
+      "after": 3500
+    },
+    {
+      "type": {
+        "sel": "#nwf-budget",
+        "text": "450"
+      }
+    },
+    {
+      "wait": 1200
+    },
+    {
+      "go": "/orders/new?type=custom&product=p-daftar-stock",
+      "after": 3500
+    },
+    {
+      "text": "Restored your unfinished custom order"
+    },
+    {
+      "eval": "(() => { const v = document.getElementById('nwf-budget').value; if (v !== '450') throw new Error('budget not restored: ' + v); return v; })()"
+    },
+    {
+      "go": "/orders?tab=drafts",
+      "after": 3000
+    },
+    {
+      "text": "Draft, not posted"
+    },
+    {
+      "go": "/orders/new?draft=custom",
+      "after": 3500
+    },
+    {
+      "click": "Discard draft",
+      "after": 700
+    },
+    {
+      "text": "Draft discarded"
+    },
+    {
+      "go": "/orders/new?type=custom&product=p-daftar-invoices",
+      "after": 3500
+    },
+    {
+      "click": "Back",
+      "after": 700
+    },
+    {
+      "click": "Ad copy writing",
+      "after": 400
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "One writer delivers the copy"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "notText": "Format"
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "What to write"
+    },
+    {
+      "click": "Help me write this",
+      "after": 2200
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "click": "Continue",
+      "after": 1000
+    },
+    {
+      "text": "Ad copy writing"
+    },
+    {
+      "text": "5 headlines, up to 40 characters"
+    },
+    {
+      "click": "The brief is accurate",
+      "after": 300
+    },
+    {
+      "click": "Post order",
+      "after": 2500
+    },
+    {
+      "text": "Daftar Invoices is live"
+    },
+    {
+      "eval": "(() => { const a = [...document.querySelectorAll('[role=dialog] a')].find((x) => x.innerText.includes('Open the order')); sessionStorage.setItem('qa-copy-order', a.href); return a.href; })()"
+    },
+    {
+      "shot": "s2e-flow-adcopy-live"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "eval": "(() => { location.href = sessionStorage.getItem('qa-custom-order'); return true; })()"
+    },
+    {
+      "wait": 4000
+    },
+    {
+      "text": "Testimonial for Daftar Invoices"
+    },
+    {
+      "text": "Show the WhatsApp send moment within the first 5 seconds"
+    },
+    {
+      "shot": "s2e-flow-layla-custom",
+      "full": true
+    },
+    {
+      "eval": "(() => { location.href = sessionStorage.getItem('qa-copy-order'); return true; })()"
+    },
+    {
+      "wait": 4000
+    },
+    {
+      "text": "Ad copy for Daftar Invoices"
+    },
+    {
+      "go": "/work?tab=find&q=Daftar",
+      "after": 4000
+    },
+    {
+      "text": "App demos for Daftar Invoices"
+    },
+    {
+      "shot": "s2e-flow-layla-find",
+      "full": true
+    }
+  ]
+}

@@ -1,0 +1,520 @@
+/* shell: page styles for round 3, stage 2. Tokens and the shared kit live in app/globals.css.
+   The header, the phone tab bar, the footers, the account menu and the More and Alerts pages. */
+
+/* Public pages render both header versions in their static HTML; the pre-paint `y-session` class
+   (lib/site.ts) shows the one that fits until the client knows the session. */
+html:not(.y-session) .yapp .y-in-only,
+html.y-session .yapp .y-out-only {
+  display: none !important;
+}
+
+/* Phone-only pages (the feed, More) never show on desktop, even before the redirect to "/". */
+@media (min-width: 1024px) {
+  .yapp .y-phone-only {
+    display: none;
+  }
+}
+
+/* Room for the tab bar under a public page's content on phones. */
+@media (max-width: 1023.98px) {
+  .yapp [data-bar="on"],
+  html.y-session .yapp [data-bar="maybe"] {
+    padding-bottom: calc(var(--y-bar-h) + 24px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@layer components {
+  /* ------------------------------------------------------------------ header */
+  .yapp .y-hdr {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+  }
+  @media (min-width: 1024px) {
+    .yapp .y-hdr {
+      /* The 1520px container of the redesigned pages (72px sides): the bar lines up with their
+         cards. From 1024 to 1279px the links tighten so everything fits (about 856 of 880px). */
+      padding: 16px 72px 0;
+    }
+  }
+  .yapp .y-hdr-bar {
+    position: relative;
+    z-index: 0;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    max-width: 1376px;
+    height: 60px;
+    margin-inline: auto;
+    padding-inline: 20px 9px;
+    border-radius: 22px;
+  }
+  /* The bar's glass is a layer behind its content, not the bar itself: an element with a
+     backdrop filter stops the dropdowns inside it (Services, the account menu) from blurring the
+     page under them, so their glass would show the page through sharp. Same for the landing's nav. */
+  .yapp .y-hdr-bar::before,
+  .yapp .y-welcome-nav::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border: 1px solid var(--y-glass-border);
+    border-radius: inherit;
+    background: var(--y-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow: var(--y-glass-shadow);
+    pointer-events: none;
+  }
+  .yapp .y-welcome-nav.y-glass {
+    border-color: transparent;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  .yapp .y-hdr-links {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 4px;
+  }
+  .yapp .y-nav-count {
+    display: inline-grid;
+    min-width: 20px;
+    height: 20px;
+    place-items: center;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: var(--y-ink);
+    color: #fff;
+    font-size: 0.71875rem;
+    font-weight: 600;
+  }
+  .yapp .y-hdr-end {
+    display: flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .yapp .y-hdr-order[data-size="sm"] {
+    min-height: 42px;
+    padding-inline: 18px;
+    font-size: 0.9375rem;
+  }
+  .yapp .y-hdr-circle,
+  .yapp .y-hdr-avatar {
+    position: relative;
+    display: grid;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    place-items: center;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-hdr-circle {
+    border: 1px solid var(--y-glass-border);
+    background: rgb(255 255 255 / 0.55);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.05);
+    color: var(--y-ink);
+  }
+  .yapp .y-hdr-circle:hover {
+    background: var(--y-paper);
+  }
+  .yapp .y-hdr-avatar {
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .yapp .y-hdr-circle:active,
+  .yapp .y-hdr-avatar:active {
+    transform: scale(0.96);
+  }
+  .yapp .y-hdr-dot {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--y-red);
+    box-shadow: 0 0 0 2px #fff;
+  }
+  .yapp .y-hdr-avatar-logo {
+    position: absolute;
+    right: -4px;
+    bottom: -4px;
+    display: flex;
+    border-radius: 7px;
+    box-shadow: 0 0 0 2px #fff;
+  }
+  /* Tighter from 1024 to 1279px, so every link fits beside the logo and the buttons. */
+  @media (max-width: 1279.98px) {
+    .yapp .y-hdr-bar {
+      gap: 16px;
+    }
+    .yapp .y-hdr-links {
+      gap: 0;
+    }
+    .yapp .y-hdr .y-navlink {
+      padding-inline: 11px;
+      font-size: 0.9375rem;
+    }
+  }
+
+  /* Phones: a full-width glass bar under the safe area (the Work preview's `.phead`). */
+  .yapp .y-phead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-height: calc(56px + env(safe-area-inset-top, 0px));
+    padding: env(safe-area-inset-top, 0px) 8px 0 20px;
+    background: rgb(247 247 249 / 0.72);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    backdrop-filter: blur(20px) saturate(180%);
+  }
+  .yapp .y-phead-end {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+  .yapp .y-phead-btn {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 50%;
+    color: var(--y-ink);
+    transition: background-color var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-phead-btn:hover,
+  .yapp .y-phead-btn[aria-current="page"] {
+    background: var(--y-mist);
+  }
+
+  /* --------------------------------------------------------- phone tab bar */
+  .yapp .y-tabs-wrap {
+    position: fixed;
+    inset-inline: 10px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+    z-index: 50;
+  }
+  .yapp .y-tabs {
+    position: relative;
+    display: flex;
+    max-width: 448px;
+    height: var(--y-bar-h);
+    margin-inline: auto;
+    align-items: center;
+    justify-content: space-between;
+    padding-inline: 6px;
+    border: 1px solid var(--reel-glass-line);
+    border-radius: 999px;
+    background: var(--reel-glass);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    box-shadow:
+      0 10px 30px -8px rgb(0 0 0 / 0.18),
+      inset 0 1px 0 rgb(255 255 255 / 0.4);
+    color: var(--reel-ink);
+    transition:
+      color var(--y-dur-2) var(--y-ease),
+      background-color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-tabs::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 55%);
+  }
+  /* On light pages (no reel in view) the bar is the strong white glass. */
+  html:not([data-reel-tone]) .yapp .y-tabs {
+    border-color: var(--y-glass-border);
+    background: var(--y-glass-strong);
+  }
+  .yapp .y-tabs > li {
+    display: flex;
+  }
+  .yapp .y-tabs-item {
+    position: relative;
+    display: inline-flex;
+    height: 44px;
+    min-width: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 999px;
+    color: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: background-color var(--y-dur-2) var(--y-ease);
+  }
+  .yapp .y-tabs-item[aria-current="page"] {
+    padding-inline: 10px 13px;
+    background: var(--y-glossy-black);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
+    color: #fff;
+  }
+  .yapp .y-tabs-icon {
+    position: relative;
+    display: grid;
+    flex: none;
+    place-items: center;
+  }
+  .yapp .y-tabs-label {
+    animation: y-tab-label 220ms var(--y-ease);
+  }
+  .yapp .y-tabs-me {
+    display: inline-flex;
+    border-radius: 999px;
+    box-shadow: 0 0 0 1.5px #fff;
+  }
+  .yapp .y-tabs-dot {
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--y-red);
+    box-shadow: 0 0 0 1.5px #fff;
+  }
+  .yapp .y-tabs-count {
+    position: absolute;
+    top: -7px;
+    left: calc(100% - 9px);
+    display: grid;
+    min-width: 17px;
+    height: 17px;
+    place-items: center;
+    padding-inline: 4px;
+    border-radius: 999px;
+    background: var(--y-ink);
+    color: #fff;
+    font-size: 0.65625rem;
+    font-weight: 600;
+    line-height: 1;
+    box-shadow: 0 0 0 1.5px #fff;
+  }
+  /* Below 375px six tabs and a label don't fit: the active tab is its icon in the dark pill. */
+  @media (max-width: 374.98px) {
+    .yapp .y-tabs-item[aria-current="page"] {
+      padding-inline: 0;
+      width: 44px;
+    }
+    .yapp .y-tabs-label {
+      display: none;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .yapp .y-tabs-label {
+      animation: none;
+    }
+  }
+
+  /* ------------------------------------------------------------- footers */
+  /* The previews' dark footer (#141416), desktop only. */
+  .yapp .y-foot {
+    margin-top: 32px;
+    padding: 72px 72px 32px;
+    background: var(--y-footer);
+    color: rgb(255 255 255 / 0.92);
+  }
+  .yapp .y-foot-in {
+    max-width: 1376px;
+    margin-inline: auto;
+  }
+  .yapp .y-foot-top {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) repeat(5, minmax(0, 1fr));
+    gap: 48px;
+    padding-bottom: 48px;
+    border-bottom: 1px solid rgb(255 255 255 / 0.1);
+  }
+  @media (max-width: 1279.98px) {
+    .yapp .y-foot-top {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 40px 24px;
+    }
+    .yapp .y-foot-brand {
+      grid-column: 1 / -1;
+    }
+  }
+  .yapp .y-foot-brand p {
+    max-width: 300px;
+    margin-top: 16px;
+    font-size: 0.875rem;
+    line-height: 1.55;
+    color: rgb(255 255 255 / 0.6);
+  }
+  .yapp .y-foot-col h2 {
+    margin-bottom: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgb(255 255 255 / 0.62);
+  }
+  .yapp .y-foot-col a {
+    display: inline-block;
+    padding-block: 6px;
+    font-size: 0.90625rem;
+    color: #fff;
+    transition: color 0.18s var(--y-ease);
+  }
+  .yapp .y-foot-col a:hover,
+  .yapp .y-foot-col a:focus-visible {
+    color: var(--y-neon);
+  }
+  .yapp .y-foot-bot {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 24px;
+    padding-top: 24px;
+    font-size: 0.8125rem;
+    color: rgb(255 255 255 / 0.62);
+  }
+  .yapp .y-foot-bot > span:first-child {
+    color: rgb(255 255 255 / 0.75);
+  }
+  .yapp .y-foot-bot > span:nth-child(2) {
+    flex: 1;
+  }
+
+  /* Signed-in pages on desktop: one quiet row on the canvas. */
+  .yapp .y-foot-compact {
+    padding: 0 72px 28px;
+  }
+  .yapp .y-foot-compact-in {
+    display: flex;
+    max-width: 1376px;
+    align-items: center;
+    gap: 24px;
+    margin-inline: auto;
+    padding-top: 20px;
+    border-top: 1px solid var(--y-line);
+    font-size: 0.8125rem;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-foot-compact-logo {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+  .yapp .y-foot-compact-link {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    font-weight: 500;
+    color: var(--y-ink);
+  }
+  .yapp .y-foot-compact-link:hover {
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .yapp .y-foot-compact-copy {
+    margin-inline-start: auto;
+  }
+
+  /* ------------------------------------------------------- account menu */
+  .yapp .y-acct-sheet .y-dd-head {
+    background: var(--y-canvas);
+    box-shadow: none;
+  }
+  .yapp .y-acct-sheet .y-dd-row {
+    min-height: 52px;
+  }
+  /* Two-line demo rows breathe a little. */
+  .yapp :is(.y-acct-sheet, .y-acct-dd) .y-dd-row {
+    padding-block: 6px;
+  }
+
+  /* -------------------------------------------------------- More page */
+  .yapp .y-more {
+    display: flex;
+    max-width: 560px;
+    flex-direction: column;
+    gap: 28px;
+    margin-inline: auto;
+    padding: 16px 20px 24px;
+  }
+  .yapp .y-more-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .yapp .y-more-group > .y-eyebrow {
+    padding-inline: 4px;
+  }
+  .yapp .y-more-card {
+    overflow: hidden;
+    border-radius: var(--y-r-block);
+    background: var(--y-paper);
+    box-shadow: var(--y-shadow-card);
+  }
+  .yapp .y-more-row {
+    display: flex;
+    width: 100%;
+    min-height: 52px;
+    align-items: center;
+    gap: 12px;
+    padding: 0 18px;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--y-ink);
+    text-align: start;
+  }
+  .yapp .y-more-row + .y-more-row {
+    box-shadow: inset 0 1px 0 var(--y-line);
+  }
+  .yapp a.y-more-row:hover,
+  .yapp a.y-more-row:focus-visible {
+    background: rgb(29 29 31 / 0.03);
+  }
+  .yapp .y-more-row > svg:first-child {
+    flex: none;
+  }
+  .yapp .y-more-grow {
+    min-width: 0;
+    flex: 1;
+  }
+  .yapp .y-more-value {
+    flex: none;
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--y-ink-2);
+  }
+  .yapp .y-more-select {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 44px;
+    color: var(--y-ink-2);
+    font-size: 0.875rem;
+  }
+  .yapp .y-more-select select {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+  .yapp .y-more-select:focus-within {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+    border-radius: 8px;
+  }
+  .yapp .y-more-copy {
+    padding: 4px 4px 0;
+    font-size: 0.75rem;
+    color: var(--y-ink-2);
+    text-align: center;
+  }
+}

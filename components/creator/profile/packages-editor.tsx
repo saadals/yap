@@ -7,9 +7,9 @@ import { TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useToast } from "@/components/ui/toast";
-import { money, priceLimitError, priceLimits } from "@/lib/format";
+import { creatorNet, money, moneyExact, priceLimitError, priceLimits } from "@/lib/format";
 import { actions } from "@/lib/store";
-import { PRICE_MAX_PER_YAPP, PRICE_MIN_PER_YAPP } from "@/lib/taxonomy";
+import { FEE_PCT, PRICE_MAX_PER_YAPP, PRICE_MIN_PER_YAPP } from "@/lib/taxonomy";
 import type { Creator, Package, PackageTier } from "@/lib/types";
 
 import { ProfileSection, useDraft } from "./section";
@@ -27,7 +27,7 @@ type Field = "name" | "summary" | NumField | "includes";
 const numFields: { id: NumField; label: string; min: number; max: number; unit?: string }[] = [
   { id: "price", label: "Price (USD)", min: PRICE_MIN_PER_YAPP, max: PRICE_MAX_PER_YAPP },
   { id: "deliveryDays", label: "Delivery days", min: 1, max: 60 },
-  { id: "revisions", label: "Revisions", min: 0, max: 10 },
+  { id: "revisions", label: "Revisions", min: 2, max: 10 },
   { id: "videos", label: "Videos", min: 1, max: 20 },
   { id: "maxSeconds", label: "Max length (s)", min: 5, max: 600 },
 ];
@@ -69,7 +69,7 @@ export function PackagesEditor({ creator }: { creator: Creator }) {
         summary: "",
         price: Number.NaN,
         deliveryDays: Number.NaN,
-        revisions: 1,
+        revisions: 2,
         videos: 1,
         maxSeconds: 60,
         includes: [],
@@ -104,7 +104,7 @@ export function PackagesEditor({ creator }: { creator: Creator }) {
     <ProfileSection
       id="packages"
       title="Packages"
-      description="Prices must go up from Basic to Premium. You keep 100%; the client pays Yapp's fee."
+      description={`Prices must go up from Basic to Premium. Each price is what the buyer pays; you earn it less the ${FEE_PCT}% Yapp fee. Usage rights and raw footage come with every order.`}
       summary={creator.packages.map((p) => `${p.name} ${money(p.price)}`).join(" · ")}
       dirty={dirty}
       attempted={attempted}
@@ -175,6 +175,11 @@ export function PackagesEditor({ creator }: { creator: Creator }) {
                     onChange={(e) => patch(pkg.tier, { [f.id]: toNum(e.target.value) } as Partial<Package>)}
                     onBlur={() => touch(pkg.tier, f.id)}
                     error={err(pkg.tier, f.id)}
+                    hint={
+                      f.id === "price" && Number.isFinite(pkg.price) && pkg.price > 0
+                        ? `You earn ${moneyExact(creatorNet(pkg.price))} after the ${FEE_PCT}% Yapp fee`
+                        : undefined
+                    }
                     className={f.id === "price" ? "col-span-2" : ""}
                   />
                 ))}

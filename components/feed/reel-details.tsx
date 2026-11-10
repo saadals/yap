@@ -14,11 +14,11 @@ import { VideoThumb } from "@/components/domain/video-thumb";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
-import { dueLabel, money, moneyRange, plural } from "@/lib/format";
+import { creatorNet, dueLabel, money, moneyExact, moneyRange, netRange, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { businessById, pitchesForRequest, portfolio, productById, startingPrice } from "@/lib/selectors";
+import { businessById, pitchesForRequest, platformList, portfolio, productById, startingPrice } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { campaignPlatformById, formatById, requestStatus, tierById } from "@/lib/taxonomy";
+import { CAMPAIGN_FEE_RATE, PICK_NOW, formatById, requestStatus, tierById, usageById } from "@/lib/taxonomy";
 
 import type { CampaignItem, FeedItem, OrderItem, VideoItem } from "./feed-items";
 import { reelHref } from "./feed-items";
@@ -106,9 +106,11 @@ function OrderBody({ item, titleId }: { item: OrderItem; titleId: string }) {
         <h2 id={titleId} className="y-display y-title">
           {request.title}
         </h2>
-        <p className="flex items-baseline gap-1.5">
+        <p className="flex flex-wrap items-baseline gap-x-1.5">
           <span className="y-display y-num y-reel-big">{moneyRange(request.budget.min, request.budget.max)}</span>
-          <span className="y-reel-unit">budget</span>
+          <span className="y-reel-unit">
+            budget{item.own ? "" : ` · you earn ${netRange(request.budget.min, request.budget.max)}`}
+          </span>
         </p>
         <p className="y-small y-fg-2">
           {formatById[request.brief.format]?.name} · {languageList(request.brief.languages)} ·{" "}
@@ -156,7 +158,7 @@ function CampaignBody({ item, titleId }: { item: CampaignItem; titleId: string }
   if (!terms) return null;
   const business = businessById(s, request.businessId);
   const product = productById(s, request.brief.productId);
-  const platform = campaignPlatformById[terms.platform].name;
+  const platform = platformList(terms.platforms);
   const taken = request.slots - openSlots;
 
   return (
@@ -165,13 +167,16 @@ function CampaignBody({ item, titleId }: { item: CampaignItem; titleId: string }
         <h2 id={titleId} className="y-display y-title">
           {request.title}
         </h2>
-        <p className="flex items-baseline gap-1.5">
+        <p className="flex flex-wrap items-baseline gap-x-1.5">
           <span className="y-display y-num y-reel-big">{money(terms.pricePerVideo)}</span>
-          <span className="y-reel-unit">per Yapp</span>
+          <span className="y-reel-unit">
+            per Yapp{item.own ? "" : ` · you earn ${moneyExact(creatorNet(terms.pricePerVideo, CAMPAIGN_FEE_RATE))}`}
+          </span>
         </p>
         <p className="y-small y-fg-2">
           {platform} · {tierById[terms.tierId].label} followers · Post to your own account
         </p>
+        <p className="y-small y-fg-2">Usage: {usageById[request.brief.usage].name}, included in the price</p>
       </Card>
       {business ? (
         <Card>
@@ -203,7 +208,7 @@ function CampaignButton({ item }: { item: CampaignItem }) {
   const { request, openSlots } = item;
   const terms = request.campaign;
   if (!terms) return null;
-  const platform = campaignPlatformById[terms.platform].name;
+  const platform = platformList(terms.platforms);
   const state = campaignState(item);
   const page = paths.order(request.id);
   const reason = state.kind === "ineligible" ? reasonLine[state.reason]?.(platform) : undefined;
@@ -211,11 +216,11 @@ function CampaignButton({ item }: { item: CampaignItem }) {
   const button =
     state.kind === "make" ? (
       <ReelCta
-        label="Make a Yapp"
+        label={PICK_NOW}
         neon
         chip={{ open: openSlots, total: request.slots }}
         onClick={() => setSheet("take")}
-        ariaLabel={`Make a Yapp, ${openSlots} of ${request.slots} remaining`}
+        ariaLabel={`${PICK_NOW}, ${openSlots} of ${request.slots} remaining`}
       />
     ) : state.kind === "mine" ? (
       <ReelCta label={state.label} href={paths.commission(state.commissionId)} />
@@ -252,7 +257,7 @@ function CampaignButton({ item }: { item: CampaignItem }) {
           setSheet(null);
           toast({ message: `Your creator profile is ready. Next, connect your ${platform}.` });
         }}
-        reason="to make a Yapp on this campaign"
+        reason="to pick a slot on this campaign"
       />
     </>
   );

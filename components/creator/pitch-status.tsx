@@ -139,7 +139,7 @@ export function WithdrawPitchButton({
               onClick={() => {
                 actions.withdrawPitch(pitch.id);
                 setOpen(false);
-                toast({ message: "Pitch withdrawn. You can pitch again while the request is open." });
+                toast({ message: "Pitch withdrawn. You can pitch again while the order is open." });
                 onWithdrawn?.();
               }}
             >
@@ -149,7 +149,7 @@ export function WithdrawPitchButton({
         }
       >
         <p className="y-small y-fg-2">
-          Withdrawing can&apos;t be undone, but you can send a fresh pitch as long as the request is
+          Withdrawing can&apos;t be undone, but you can send a fresh pitch as long as the order is
           still open.
         </p>
       </Sheet>

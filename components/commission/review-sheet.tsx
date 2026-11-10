@@ -1,26 +1,26 @@
 "use client";
 
-import { Lightbulb, Plus } from "lucide-react";
+import { Check, Lightbulb, Plus } from "lucide-react";
 import { useId, useState } from "react";
 
 import { StarInput } from "@/components/domain/stars";
-import { TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
-import { Sheet } from "@/components/ui/sheet";
+import { Sheet, SheetActions } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { plural } from "@/lib/format";
 import { actions } from "@/lib/store";
 
 import { suggestedLearnings, type Workspace } from "./helpers";
 
-const MIN_TEXT = 20;
+export const REVIEW_MIN_CHARS = 20;
 
 /**
- * Business reviews the creator: overall + three sub-ratings, written review, would-rehire, and
- * learnings saved to the product so they carry into the next brief.
+ * The review form (Work spec 6.10.2): overall stars (required), three optional sub-ratings, a
+ * review of at least 20 characters with its counter, "I'd hire {name} again", and the learnings to
+ * save to the product so they carry into the next brief (folded, optional). Returns the fields, the
+ * validity and `submit`, so the approve sheet's second step and the standalone sheet share it.
  */
-export function ReviewSheet({ ws, open, onClose }: { ws: Workspace; open: boolean; onClose: () => void }) {
-  const toast = useToast();
+export function useReviewForm(ws: Workspace) {
   const { commission, creatorName, product } = ws;
   const suggestions = suggestedLearnings(commission);
   const [rating, setRating] = useState(0);
@@ -32,17 +32,13 @@ export function ReviewSheet({ ws, open, onClose }: { ws: Workspace; open: boolea
   const [extra, setExtra] = useState<string[]>([]);
   const [chosen, setChosen] = useState<string[]>([]);
   const [draft, setDraft] = useState("");
-  const [tried, setTried] = useState(false);
-  const [touchedText, setTouchedText] = useState(false);
   const rehireId = useId();
+  const textId = useId();
+  const counterId = useId();
   const draftId = useId();
 
-  const ratingError = tried && !rating ? "Pick an overall rating from 1 to 5 stars." : null;
   const length = text.trim().length;
-  const textError =
-    (tried || touchedText) && length < MIN_TEXT
-      ? `A few more words, please: at least ${MIN_TEXT} characters (${length} so far).`
-      : null;
+  const valid = rating > 0 && length >= REVIEW_MIN_CHARS;
   const all = [...suggestions, ...extra];
 
   const addDraft = () => {
@@ -53,9 +49,9 @@ export function ReviewSheet({ ws, open, onClose }: { ws: Workspace; open: boolea
     setDraft("");
   };
 
-  const submit = () => {
-    setTried(true);
-    if (!rating || length < MIN_TEXT) return;
+  /** Posts the review; returns how many learnings were saved, or null when it isn't valid yet. */
+  const submit = (): number | null => {
+    if (!valid) return null;
     const learnings = all.filter((item) => chosen.includes(item));
     actions.leaveReview({
       commissionId: commission.id,
@@ -67,163 +63,172 @@ export function ReviewSheet({ ws, open, onClose }: { ws: Workspace; open: boolea
       wouldRehire: rehire,
       learnings,
     });
-    toast({
-      message: learnings.length
-        ? `Review posted. ${plural(learnings.length, "learning")} saved to ${product?.name ?? "your product"} for next time.`
-        : `Review posted to ${creatorName}'s profile.`,
-    });
-    onClose();
+    return learnings.length;
   };
 
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title={`Review ${creatorName}`}
-      description={`Your review appears on ${creatorName}'s profile with your name and team.`}
-      width="lg"
-      footer={
-        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <PillButton variant="ghost" onClick={onClose}>
-            Not now
-          </PillButton>
-          <PillButton variant="contrast" size="lg" onClick={submit}>
-            Post review
-          </PillButton>
-        </div>
-      }
-    >
-      <form
-        className="flex flex-col gap-7"
-        onSubmit={(event) => {
-          event.preventDefault();
-          submit();
-        }}
-      >
-        <div className="flex flex-col gap-2">
-          <span className="y-label">
-            <span>Overall</span>
-            <span className="y-micro y-fg-3 font-medium">Required</span>
-          </span>
-          <StarInput value={rating} onChange={setRating} label="Overall rating" size={36} />
-          {ratingError ? (
-            <p role="alert" className="y-small px-1 font-medium text-(--y-danger)">
-              {ratingError}
-            </p>
-          ) : null}
-        </div>
+  const fields = (
+    <div className="flex flex-col gap-[18px]">
+      <div className="y-ord-fld">
+        <span className="y-ord-lb">Overall</span>
+        <StarInput value={rating} onChange={setRating} label="Overall rating" size={34} />
+      </div>
 
-        <fieldset className="flex flex-col gap-1">
-          <legend className="y-label mb-1">The details</legend>
-          <p className="y-micro y-fg-3 mb-2">Optional. Skipped ones use your overall rating.</p>
-          {(
-            [
-              ["Quality of the video", quality, setQuality],
-              ["Communication", communication, setCommunication],
-              ["On time", timeliness, setTimeliness],
-            ] as const
-          ).map(([label, value, set]) => (
-            <div
-              key={label}
-              className="flex flex-col gap-1 border-b border-(--b-line) py-2 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <span className="y-small font-medium">{label}</span>
-              <StarInput value={value} onChange={set} label={label} size={24} />
-            </div>
-          ))}
-        </fieldset>
+      <fieldset className="y-ord-fld">
+        <legend className="y-ord-lb mb-2">
+          The details <span className="y-fg-2 font-normal">· optional</span>
+        </legend>
+        {(
+          [
+            ["Quality", quality, setQuality],
+            ["Communication", communication, setCommunication],
+            ["Timeliness", timeliness, setTimeliness],
+          ] as const
+        ).map(([label, value, set]) => (
+          <div key={label} className="y-ord-srow">
+            <span>{label}</span>
+            <StarInput value={value} onChange={set} label={label} size={22} />
+          </div>
+        ))}
+      </fieldset>
 
-        <TextArea
-          label="Your review"
-          required
+      <div className="y-ord-fld">
+        <label htmlFor={textId} className="y-ord-lb">
+          Your review
+        </label>
+        <textarea
+          id={textId}
+          className="y-input y-ord-textarea"
           rows={4}
           value={text}
           onChange={(event) => setText(event.target.value)}
-          onBlur={() => setTouchedText(true)}
-          error={textError}
-          hint={`What was it like working with ${creatorName}? Other teams read this before hiring.`}
-          placeholder={`e.g. ${creatorName} got our audience straight away. The hook landed in the first two seconds and the changes came back a day early.`}
+          aria-describedby={counterId}
+          placeholder={`What was it like working with ${creatorName}? What made the ${ws.adCopy ? "copy" : "video"} work?`}
         />
+        <small id={counterId} aria-live="polite" className={length >= REVIEW_MIN_CHARS ? "text-(--y-success)" : ""}>
+          {length >= REVIEW_MIN_CHARS ? (
+            <span className="inline-flex items-center gap-1">
+              <Check size={13} strokeWidth={3} aria-hidden /> Good to go
+            </span>
+          ) : length ? (
+            `At least ${REVIEW_MIN_CHARS} characters · ${REVIEW_MIN_CHARS - length} more`
+          ) : (
+            `At least ${REVIEW_MIN_CHARS} characters`
+          )}
+        </small>
+      </div>
 
-        <label htmlFor={rehireId} className="y-tile flex cursor-pointer items-center gap-4 p-4">
-          <span className="flex flex-1 flex-col">
-            <span className="y-small font-semibold">I&apos;d hire {creatorName} again</span>
-            <span className="y-micro y-fg-2">Shown as &ldquo;Would hire again&rdquo; on the review.</span>
-          </span>
-          <input
-            id={rehireId}
-            type="checkbox"
-            role="switch"
-            className="y-switch"
-            checked={rehire}
-            onChange={(event) => setRehire(event.target.checked)}
-          />
-        </label>
+      <label htmlFor={rehireId} className="y-ord-tgl">
+        <input
+          id={rehireId}
+          type="checkbox"
+          role="switch"
+          className="y-switch"
+          checked={rehire}
+          onChange={(event) => setRehire(event.target.checked)}
+        />
+        <span>
+          <b>I&apos;d hire {creatorName} again</b>
+          <small>Shown as &ldquo;Would hire again&rdquo; on the review.</small>
+        </span>
+      </label>
 
-        <fieldset className="flex flex-col gap-2">
-          <legend className="y-head mb-1 inline-flex items-center gap-2">
-            <Lightbulb size={18} aria-hidden /> Save learnings for next time
-          </legend>
-          <p className="y-small y-fg-2 mb-1 max-w-[62ch]">
-            Tick what should carry into your next brief{product ? ` for ${product.name}` : ""}. Every creator you
-            work with sees these alongside the brief.
+      <details className="y-ord-more">
+        <summary>
+          <Lightbulb size={16} aria-hidden /> Save learnings for next time
+          <span className="y-fg-2 font-normal"> · optional</span>
+        </summary>
+        <div className="flex flex-col gap-2 pt-3">
+          <p className="y-small y-fg-2">
+            Tick what should carry into your next brief{product ? ` for ${product.name}` : ""}. Every creator you work with
+            sees these with the brief.
           </p>
           {all.length ? (
             <ul className="flex flex-col gap-2">
               {all.map((item) => (
                 <li key={item}>
-                  <label className="y-tile flex cursor-pointer items-start gap-3 p-3">
+                  <label className="y-ord-chk">
                     <input
                       type="checkbox"
-                      className="y-check mt-0.5"
                       checked={chosen.includes(item)}
                       onChange={() =>
                         setChosen((list) => (list.includes(item) ? list.filter((v) => v !== item) : [...list, item]))
                       }
                     />
-                    <span className="flex flex-col gap-0.5">
-                      <span className="y-small">{item}</span>
-                      <span className="y-micro y-fg-3">
-                        {extra.includes(item) ? "Added by you" : "From your notes on the delivery"}
-                      </span>
+                    <span>
+                      {item}
+                      <small className="y-fg-2 block">{extra.includes(item) ? "Added by you" : "From your comments"}</small>
                     </span>
                   </label>
                 </li>
               ))}
             </ul>
-          ) : (
-            <p className="y-micro y-fg-3">You didn&apos;t leave timestamped notes, so there&apos;s nothing to suggest. Add your own below.</p>
-          )}
-          <div className="flex flex-col gap-2 pt-1">
-            <label htmlFor={draftId} className="y-label">
-              <span>Add a learning</span>
-            </label>
-            <div className="flex gap-2">
-              <input
-                id={draftId}
-                className="y-input flex-1"
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    addDraft();
-                  }
-                }}
-                placeholder="e.g. Open on the shop counter, not the phone"
-              />
-              <PillButton variant="soft" icon={<Plus size={18} aria-hidden />} onClick={addDraft} disabled={!draft.trim()}>
-                Add
-              </PillButton>
-            </div>
+          ) : null}
+          <label htmlFor={draftId} className="y-ord-lb pt-1">
+            Add a learning
+          </label>
+          <div className="flex gap-2">
+            <input
+              id={draftId}
+              className="y-input flex-1"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  addDraft();
+                }
+              }}
+              placeholder="e.g. Open on the shop counter, not the phone"
+            />
+            <PillButton variant="soft" icon={<Plus size={18} aria-hidden />} onClick={addDraft} disabled={!draft.trim()}>
+              Add
+            </PillButton>
           </div>
           {chosen.length ? (
-            <p className="y-micro y-fg-2 px-1" aria-live="polite">
+            <p className="y-micro y-fg-2" aria-live="polite">
               {plural(chosen.length, "learning")} will be saved{product ? ` to ${product.name}` : ""}.
             </p>
           ) : null}
-        </fieldset>
-      </form>
+        </div>
+      </details>
+    </div>
+  );
+
+  return { fields, valid, submit };
+}
+
+/** "Leave a review" later, from the Done step (the approve sheet's second step on its own). */
+export function ReviewSheet({ ws, open, onClose }: { ws: Workspace; open: boolean; onClose: () => void }) {
+  const toast = useToast();
+  const form = useReviewForm(ws);
+  const post = () => {
+    const saved = form.submit();
+    if (saved === null) return;
+    toast({
+      message: saved
+        ? `Review posted. ${plural(saved, "learning")} saved to ${ws.product?.name ?? "your product"} for next time.`
+        : `Review posted to ${ws.creatorName}'s profile.`,
+    });
+    onClose();
+  };
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={`Review ${ws.creatorName}`}
+      description="Your review helps other brands choose. It shows on their profile with your name and team."
+      footer={
+        <SheetActions>
+          <PillButton variant="soft" onClick={onClose}>
+            Not now
+          </PillButton>
+          <PillButton variant="contrast" disabled={!form.valid} onClick={post}>
+            Post review
+          </PillButton>
+        </SheetActions>
+      }
+    >
+      {form.fields}
     </Sheet>
   );
 }

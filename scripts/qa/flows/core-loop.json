@@ -1,26 +1,159 @@
 {
   "account": "nour",
   "steps": [
-    { "go": "/work/c-201", "after": 3500 },
-    { "text": "Review version 1 from Layla" },
-    { "click": "Approve and release" },
-    { "click": "Approve and release", "after": 1500 },
-    { "text": "Layla has been paid" },
-    { "click": "Leave a review", "after": 1200 },
-    { "eval": "(() => { document.querySelectorAll('[role=dialog] [aria-label=\"5 stars, Excellent\"]').forEach((b) => b.click()); return true })()" },
-    { "type": { "sel": "[role=dialog] textarea", "text": "Layla nailed the shop-counter setting again and the WhatsApp moment lands in the first three seconds. Easy to work with, fast, and she read every note." } },
-    { "type": { "sel": "[role=dialog] input[placeholder^='e.g. Open']", "text": "Keep the end card on screen for at least 2 seconds" } },
-    { "click": "Add", "after": 600 },
-    { "click": "Post review", "after": 1500 },
-    { "text": "Commission Layla again" },
-    { "go": "/products/p-daftar-invoices", "after": 3000 },
-    { "text": "Keep the end card on screen for at least 2 seconds" },
-    { "go": "/creators/laylatalks/commission?again=c-201", "after": 3000 },
-    { "text": "5 learnings" },
-    { "account": "layla" },
-    { "go": "/wallet", "after": 3000 },
-    { "text": "$1,040" },
-    { "go": "/creators/laylatalks", "after": 3000 },
-    { "text": "Layla nailed the shop-counter setting again" }
+    {
+      "go": "/work/c-201",
+      "after": 3500
+    },
+    {
+      "text": "Version 1 is in. Approve it, or request changes"
+    },
+    {
+      "text": "Watermarked review copy."
+    },
+    {
+      "click": "Approve and release",
+      "after": 1000
+    },
+    {
+      "text": "You pay"
+    },
+    {
+      "text": "Layla receives"
+    },
+    {
+      "text": "Yapp fee (20%)"
+    },
+    {
+      "notText": "Service fee"
+    },
+    {
+      "shot": "s2d-approve-sheet"
+    },
+    {
+      "click": "Approve and release payment",
+      "after": 1500
+    },
+    {
+      "text": "Approved. $240 is on its way to Layla"
+    },
+    {
+      "eval": "(() => { document.querySelectorAll('[role=dialog] [aria-label=\"5 stars, Excellent\"]').forEach((b) => b.click()); return true })()"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] textarea",
+        "text": "Layla nailed the shop-counter setting again and the WhatsApp moment lands in the first three seconds. Easy to work with, fast, and she read every note."
+      }
+    },
+    {
+      "text": "Good to go"
+    },
+    {
+      "clickSel": "[role=dialog] details summary",
+      "after": 400
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[placeholder^='e.g. Open']",
+        "text": "Keep the end card on screen for at least 2 seconds"
+      }
+    },
+    {
+      "click": "Add",
+      "after": 600
+    },
+    {
+      "click": "Post review",
+      "after": 1500
+    },
+    {
+      "text": "Approved \u00b7 $300 released"
+    },
+    {
+      "text": "Layla has been paid $240 after the 20% Yapp fee"
+    },
+    {
+      "click": "Done",
+      "after": 800
+    },
+    {
+      "text": "Order a variation"
+    },
+    {
+      "text": "Your review"
+    },
+    {
+      "text": "Approved. The clean file and raw footage are in Files."
+    },
+    {
+      "go": "/products/p-daftar-invoices",
+      "after": 3000
+    },
+    {
+      "text": "Keep the end card on screen for at least 2 seconds"
+    },
+    {
+      "go": "/creators/laylatalks/commission?again=c-201",
+      "after": 3000
+    },
+    {
+      "text": "5 learnings"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/wallet",
+      "after": 3000
+    },
+    {
+      "text": "$832"
+    },
+    {
+      "text": "$300 less the fee"
+    },
+    {
+      "shot": "s2d-wallet-layla",
+      "full": true
+    },
+    {
+      "go": "/work/c-201",
+      "after": 3500
+    },
+    {
+      "text": "Daftar approved version 1"
+    },
+    {
+      "text": "$240"
+    },
+    {
+      "text": "You earn \u00b7 after the 20% Yapp fee"
+    },
+    {
+      "click": "Rate Daftar",
+      "after": 900
+    },
+    {
+      "text": "Private: only Yapp sees this."
+    },
+    {
+      "click": "5 stars, Excellent",
+      "after": 300
+    },
+    {
+      "click": "Send rating",
+      "after": 1200
+    },
+    {
+      "text": "You rated Daftar"
+    },
+    {
+      "go": "/creators/laylatalks",
+      "after": 3000
+    },
+    {
+      "text": "Layla nailed the shop-counter setting again"
+    }
   ]
 }

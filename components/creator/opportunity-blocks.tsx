@@ -6,7 +6,7 @@ import { BusinessLogo } from "@/components/domain/business-logo";
 import { Block } from "@/components/ui/block";
 import { MatchScore } from "@/components/ui/match-score";
 import { money, plural, timeAgoInline } from "@/lib/format";
-import { reliabilityLine, type Fit } from "@/lib/selectors";
+import { reliabilitySummary, type Fit } from "@/lib/selectors";
 import type { Business, ContentRequest, Pitch, Product } from "@/lib/types";
 
 import { median } from "./pitch-helpers";
@@ -18,7 +18,7 @@ import { median } from "./pitch-helpers";
 export function BusinessRow({ business, request }: { business: Business; request: ContentRequest }) {
   const meta = [
     business.paymentVerified ? "Payment verified" : "Payment not verified yet",
-    reliabilityLine(business) ?? "New on Yapp",
+    reliabilitySummary(business) ?? "New on Yapp",
     `Posted ${timeAgoInline(request.postedAt)}`,
   ].join(" · ");
   return (

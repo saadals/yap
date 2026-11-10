@@ -14,6 +14,7 @@ import { actions, useDemo, useHydrated } from "@/lib/store";
 import { AUTO_APPROVE_DAYS } from "@/lib/taxonomy";
 import type { Role } from "@/lib/types";
 
+import { BrandAccounts } from "./brand-accounts";
 import { CompanyProfileForm } from "./company-profile";
 import { ConfirmSheet } from "./confirm-sheet";
 import { SettingsSection, SwitchRow } from "./controls";
@@ -26,8 +27,8 @@ import { YouForm } from "./you-form";
 
 /**
  * /settings: one page for the whole account, one section at a time. Anchors
- * (`paths.settings("business")` etc.): you, business, team (business accounts), notifications,
- * making, account. Retired anchors from the old per-role settings are aliased.
+ * (`paths.settings("business")` etc.): you, business, brand (the accounts creators tag), team
+ * (business accounts), notifications, making, account. Retired anchors from the old per-role settings are aliased.
  */
 const aliases: Record<string, string> = {
   company: "business",
@@ -35,6 +36,7 @@ const aliases: Record<string, string> = {
   alerts: "making",
   approvals: "notifications",
   danger: "account",
+  handles: "brand",
 };
 
 function FormSkeleton({ rows = 3 }: { rows?: number }) {
@@ -60,6 +62,7 @@ export function SettingsScreen() {
   const sections: SettingsAnchor[] = [
     { id: "you", label: "You" },
     { id: "business", label: "Business account" },
+    { id: "brand", label: "Brand accounts" },
     ...(isBusiness ? [{ id: "team", label: "Team" }] : []),
     { id: "notifications", label: "Notifications" },
     { id: "making", label: "Making" },
@@ -88,6 +91,16 @@ export function SettingsScreen() {
                 <FormSkeleton rows={4} />
               </SettingsSection>
             )}
+          </div>
+
+          <div hidden={section !== "brand"}>
+            <SettingsSection
+              id="brand"
+              title="Brand accounts"
+              description="The accounts creators tag when they post a campaign video, one per platform. New orders fill them in for you, and saving one there updates it here."
+            >
+              {hydrated ? <BrandAccounts key={account.id} /> : <FormSkeleton rows={3} />}
+            </SettingsSection>
           </div>
 
           {isBusiness ? (

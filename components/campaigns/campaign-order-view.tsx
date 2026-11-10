@@ -14,7 +14,7 @@ import { TakeView } from "./take-view";
 
 /**
  * A campaign's order page (the body of /orders/[id], inside AppShell + Page). The owner manages it:
- * progress, slots, money, tier and close. Everyone else reads it and takes a slot.
+ * progress, slots, money, tier and close. Everyone else reads it and picks a slot.
  */
 export function CampaignOrderView({ request }: { request: ContentRequest }) {
   const s = useDemo();
