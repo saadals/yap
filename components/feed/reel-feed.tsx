@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
-import { BrandMark, Wordmark } from "@/components/ui/brand";
+import { Lockup } from "@/components/ui/brand";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
@@ -125,7 +125,8 @@ function Feed({ reel, detailsId }: { reel: string | null; detailsId: string | nu
   });
 
   // What floats over the reels (logo, tabs, "+", the tab bar outside the feed) follows the reel.
-  useEffect(() => {
+  // A layout effect, so the first frame already shows the right logo file over a dark video.
+  useLayoutEffect(() => {
     const root = document.documentElement;
     if (tone === "page") delete root.dataset.reelTone;
     else root.dataset.reelTone = tone;
@@ -367,9 +368,8 @@ function FloatingTop() {
   const [createOpen, setCreateOpen] = useState(false);
   return (
     <div className="y-reel-top">
-      <Link href={paths.home} className="y-reel-logo" aria-label="Yapp home">
-        <BrandMark size={26} />
-        <Wordmark size={22} />
+      <Link href={paths.home} className="y-reel-logo" aria-label="Yapping home">
+        <Lockup size={28} />
       </Link>
       <button
         type="button"

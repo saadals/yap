@@ -46,7 +46,7 @@ type Candidate = Omit<NeedsYou, "urgent"> & {
 
 const possessive = (name: string) => (name.endsWith("s") ? `${name}'` : `${name}'s`);
 
-/** timeAgo, lower-cased for mid-sentence use ("yesterday", "3h ago", "7 Nov"). */
+/** timeAgo, lower-cased for mid-sentence use ("yesterday", "3h ago", "Nov 7"). */
 export const agoLower = (iso: string) => {
   const ago = timeAgo(iso);
   return ago === "Yesterday" ? "yesterday" : ago;
@@ -72,7 +72,7 @@ function orderingCandidates(s: DemoState): Candidate[] {
       tier: 0,
       at: Date.parse(auto),
       eyebrow: "Ready for review",
-      title: `Review ${possessive(who)} ${formatById[c.brief.format].name.toLowerCase()}`,
+      title: `Review ${possessive(who)} ${formatById[c.brief.format].noun[0]}`,
       line: [
         delivery ? `Version ${delivery.version} arrived ${agoLower(delivery.deliveredAt)}.` : "",
         `Auto-approves ${weekdayDate(auto)}.`,
@@ -200,8 +200,8 @@ function makingCandidates(s: DemoState): Candidate[] {
         eyebrow: removed ? "Post taken down" : "Post due",
         title: removed ? `Put your ${business} post back up` : `Post your video for ${business}`,
         line: removed
-          ? `${money(c.price)} stays locked while it's down.`
-          : `${money(c.price)} unlocks at month end once it's live with the brand tag.`,
+          ? `${money(c.price)} is on hold until it's back up.`
+          : `${money(c.price)} is released 7 days after we verify it with the brand tag.`,
         action: removed ? "See what to do" : "Post it",
         href: paths.commission(c.id),
       });

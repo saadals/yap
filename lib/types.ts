@@ -27,7 +27,7 @@ export type Role = "business" | "creator";
 /**
  * A person's account. Every account can order (through its buyer profile, `businessId`) and can
  * make videos once it has a creator profile (`creatorId`). A "business" account adds company
- * details, VAT invoices and a team to the buyer profile; a "personal" one orders in its own name.
+ * details, tax invoices and a team to the buyer profile; a "personal" one orders in its own name.
  */
 export type Account = {
   id: string;
@@ -53,40 +53,35 @@ export type Tint = "violet" | "sun" | "sea" | "coral" | "mint" | "blush";
 /* -------------------------------------------------------------------------- */
 
 export type FormatId =
-  | "selfie-demo"
+  | "app-demo"
   | "screen-walkthrough"
-  | "ugc-review"
-  | "problem-skit"
-  | "tutorial"
+  | "unboxing"
+  | "problem-solution"
+  | "comparison"
+  | "testimonial"
+  | "talking-head"
+  | "voiceover"
   | "hook-pack";
 
 export type PlatformId = "tiktok" | "instagram" | "youtube" | "snapchat" | "x" | "linkedin";
 
-export type LanguageId =
-  | "ar-gulf"
-  | "ar-saudi"
-  | "ar-egyptian"
-  | "ar-levantine"
-  | "ar-iraqi"
-  | "ar-maghrebi"
-  | "ar-msa"
-  | "en";
+/** The language a video is made in (ISO 639-1 codes, so they double as `lang` attributes). */
+export type LanguageId = "en" | "es" | "fr" | "ar" | "pt" | "hi" | "ko" | "zh";
 
 export type Aspect = "9:16" | "1:1" | "4:5" | "16:9";
 
 export type CreatorKind = "presenter" | "producer" | "influencer";
 
+/** Product categories (labels in lib/taxonomy.tsx). */
 export type NicheId =
-  | "fintech"
-  | "productivity"
-  | "ecommerce"
-  | "edtech"
-  | "health"
   | "ai"
-  | "b2b"
   | "consumer"
+  | "b2b"
+  | "fintech"
+  | "gadgets"
   | "gaming"
-  | "travel";
+  | "health"
+  | "ecommerce";
 
 export type AddonId =
   | "extra-revision"
@@ -98,9 +93,9 @@ export type AddonId =
   | "extra-hooks"
   | "post-to-account";
 
-export type CountryId = "sa" | "ae" | "eg" | "jo" | "lb" | "iq" | "kw" | "qa" | "ma" | "bh" | "om";
+export type CountryId = "us" | "ca" | "br" | "eg" | "ng" | "sa" | "ae" | "gb";
 
-export type City = { id: string; name: string; nameAr: string; countryId: CountryId };
+export type City = { id: string; name: string; countryId: CountryId };
 
 /* -------------------------------------------------------------------------- */
 /* Video (portfolio pieces and deliveries)                                     */
@@ -114,7 +109,7 @@ export type Scene = "selfie" | "screen" | "split" | "desk" | "street";
 export type ScriptLine = {
   /** Seconds from start. First line is at 0; lines are ascending. */
   at: number;
-  /** Caption in the video's own language (Arabic script for Arabic videos). */
+  /** Caption in the video's own language. */
   text: string;
   /** English translation, present when the video is not in English. */
   translation?: string;
@@ -141,6 +136,8 @@ export type Video = {
   madeFor?: string;
   /** Performance reported by the client, when shared. */
   stats?: { views: number; watchThroughPct?: number };
+  /** Nobody on camera although the format usually shows someone: the thumbnail draws a microphone, not a face. */
+  voiceOnly?: boolean;
   script: ScriptLine[];
 };
 
@@ -182,7 +179,6 @@ export type Creator = {
   id: string;
   handle: string;
   name: string;
-  nameAr?: string;
   firstName: string;
   kind: CreatorKind;
   cityId: string;
@@ -232,6 +228,17 @@ export type TeamMember = {
   email: string;
 };
 
+/**
+ * How a brand treats creators, from its history on Yapp. Creators see these numbers instead of a
+ * star rating (their feedback about a brand is private).
+ */
+export type BrandReliability = {
+  /** Median hours from a delivered version to the brand's approval or change request. */
+  reviewHours: number;
+  /** Share of versions approved by the 3-day timer because the brand didn't respond (lower is better). */
+  timerApprovedPct: number;
+};
+
 export type Business = {
   id: string;
   /** "personal": someone ordering in their own name (shows their face, not a logo). */
@@ -250,8 +257,8 @@ export type Business = {
   paymentVerified: boolean;
   memberSince: string;
   hires: number;
-  /** Average rating given to this business by creators (clarity, responsiveness). */
-  clientRating: number;
+  /** Undefined until the brand has reviewed work on Yapp. */
+  reliability?: BrandReliability;
   website: string;
 };
 
@@ -327,19 +334,23 @@ export type RequestStatus = "draft" | "open" | "hired" | "closed";
 /** Follower tiers set the fixed price per video on a UGC campaign (lib/taxonomy.tsx). */
 export type FollowerTierId = "t10" | "t20" | "t50" | "t100" | "t250";
 
+/** One money movement on a campaign's card: a charge, a top-up or a refund. */
 export type LedgerEntry = {
   id: string;
   at: string;
   kind: "charge" | "top_up" | "refund";
+  /** What moved on the card, service fee included. */
   amount: number;
+  /** The service-fee share of `amount` (refunds return the matching share). */
+  fee: number;
   note: string;
 };
 
 /**
  * UGC campaign terms. The business buys `slots` videos (min 10, steps of 5), each from a different
- * creator, at a fixed price set by the follower tier. The whole budget is held up front; eligible
- * creators take slots first come, first served. Each taken slot is a Commission with
- * `source: "campaign"` and `campaignSlot`.
+ * creator, at a fixed price set by the follower tier. The whole budget plus the service fee is
+ * charged when the campaign is posted and held per slot; eligible creators take slots first come,
+ * first served. Each taken slot is a Commission with `source: "campaign"` and `campaignSlot`.
  */
 export type CampaignTerms = {
   tierId: FollowerTierId;
@@ -351,6 +362,13 @@ export type CampaignTerms = {
   /* Talking points and restrictions live on the brief (`mustInclude` / `avoid`). */
   /** Explainer video about the product (a seeded or simulated upload). */
   explainer?: { name: string; videoId?: string; durationSec: number };
+  /** Days a creator has to upload version 1 after taking a slot. Set by the brand, fixed once posted. */
+  deadlineDays: number;
+  /**
+   * When the campaign stops taking creators (14 days after posting) unless the brand closes it
+   * earlier. The demo clock is fixed, so nothing closes by itself; closing is the brand's action.
+   */
+  closesAt: string;
   /** Set when the tier was changed after publishing (allowed once). */
   tierChangedAt?: string;
   previousTierId?: FollowerTierId;
@@ -466,13 +484,13 @@ export type Delivery = {
 };
 
 /**
- * - authorized: card authorised for a direct offer, not charged yet
- * - held: secured, released on approval
- * - pending: approved campaign work, in the creator's wallet but locked until month end (and only
- *   if the post stays up)
+ * - authorized: card authorized for a direct offer, not charged until the creator accepts
+ * - held: charged and held, released on approval (campaign slots: while the creator works)
+ * - pending: approved campaign work, still held: released 7 days after the creator's post is
+ *   verified (`withdrawableFrom`), if the post is still live
  * - released: paid to the creator (available to withdraw)
- * - refunded: back to the business
- * - returned: a campaign slot that ended without approval; the money went back to the campaign hold
+ * - refunded: back to the business, service fee included
+ * - returned: a campaign slot that ended without being paid; the money went back to the campaign hold
  */
 export type PaymentStatus = "authorized" | "held" | "pending" | "released" | "refunded" | "returned";
 
@@ -481,6 +499,10 @@ export type CampaignPost = {
   status: "due" | "checking" | "live" | "removed";
   url?: string;
   at?: string;
+  /** First verification: starts the 7 days to payment and the 30 days the post must stay up. */
+  verifiedAt?: string;
+  /** When the post was found down (the creator has 48 hours to restore it). */
+  removedAt?: string;
   /** What verification found (tag and paid-partnership disclosure). */
   tagFound?: boolean;
   disclosureFound?: boolean;
@@ -500,7 +522,10 @@ export type Commission = {
   /** Creator's price for the work itself (creators keep 100% of this). */
   price: number;
   addons: { id: AddonId; price: number }[];
-  /** Service fee paid by the business, charged only when the commission completes. */
+  /**
+   * Service fee the business pays on top of the price: charged with the payment (at hire; campaign
+   * slots with the campaign budget), held with it and refunded with it.
+   */
   feeRate: number;
   revisionsIncluded: number;
   revisionsUsed: number;
@@ -525,10 +550,13 @@ export type Commission = {
   campaignSlot?: number;
   /** Campaign slots: the creator's post on their own account. */
   post?: CampaignPost;
-  /** Campaign slots: when pending money becomes withdrawable (month end), if the post is live. */
+  /**
+   * Campaign slots: when pending money is released (7 days after the post is verified), if the post
+   * is still live. Unset until the post is verified.
+   */
   withdrawableFrom?: string;
-  /** Why a campaign slot ended without approval. */
-  cancelCode?: "replaced" | "video_rejected" | "campaign_closed";
+  /** Why a campaign slot ended without being paid. */
+  cancelCode?: "replaced" | "video_rejected" | "campaign_closed" | "post_removed";
   /** Campaign slots: quick star rating from the business on approval. */
   quickRating?: number;
 };
@@ -617,7 +645,7 @@ export type PaymentMethod = {
   id: string;
   /** Buyer profile the card belongs to. */
   businessId: string;
-  brand: "visa" | "mastercard" | "mada" | "applepay";
+  brand: "visa" | "mastercard" | "amex" | "applepay";
   last4: string;
   expiry: string;
   holder: string;

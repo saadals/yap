@@ -53,7 +53,7 @@ export function PitchTimeline({ pitch }: { pitch: Pitch }) {
                     ? "bg-(--y-danger-soft) text-(--y-danger)"
                     : step.state === "current"
                       ? "bg-(--b-bg) text-(--b-fg) shadow-[inset_0_0_0_2px_var(--b-fg)]"
-                      : "bg-(--b-chip) text-(--b-fg-3)"
+                      : "bg-(--b-chip) text-(--b-fg-2)"
               }`}
             >
               {step.state === "done" ? (

@@ -5,6 +5,7 @@ import {
   BadgeCheck,
   Ban,
   Check,
+  Clock,
   Lightbulb,
   Link2,
   Megaphone,
@@ -29,7 +30,7 @@ import { PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { money, plural, shortDate } from "@/lib/format";
+import { money, plural, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
   campaignMoney,
@@ -40,7 +41,13 @@ import {
 } from "@/lib/selectors";
 import { absoluteUrl } from "@/lib/site";
 import { useDemo } from "@/lib/store";
-import { CAMPAIGN_MAX_REASSIGNMENTS, campaignPlatformById, languageById, tierById } from "@/lib/taxonomy";
+import {
+  CAMPAIGN_FEE_RATE,
+  CAMPAIGN_MAX_REASSIGNMENTS,
+  campaignPlatformById,
+  languageById,
+  tierById,
+} from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
 import { ExplainerTile } from "./explainer";
@@ -53,7 +60,7 @@ import {
   type CampaignRequest,
 } from "./owner-sheets";
 import { ActionList, Bullets, Disclosure, RowMenu, type MenuItem } from "./parts";
-import { followersOn, perYapp, postingRule } from "./shared";
+import { deadlineLine, followersOn, perYapp, postingRule } from "./shared";
 
 type SheetKind = "more" | "tier" | "close" | "edit" | "learning";
 
@@ -178,14 +185,14 @@ export function OwnerView({ request }: { request: CampaignRequest }) {
         <LearningSheet productId={product.id} productName={product.name} onClose={() => setSheet(null)} />
       ) : null}
       {removing && removingCreator ? (
-        <RemoveCreatorSheet commission={removing} creator={removingCreator} onClose={() => setRemoveId(null)} />
+        <RemoveCreatorSheet commission={removing} creator={removingCreator} closed={closed} onClose={() => setRemoveId(null)} />
       ) : null}
     </div>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* Progress (butter: money and progress)                                       */
+/* Progress                                                                    */
 /* -------------------------------------------------------------------------- */
 
 function Swatch({ color, hollow = false }: { color: string; hollow?: boolean }) {
@@ -218,7 +225,7 @@ function ProgressBlock({ request }: { request: CampaignRequest }) {
     .join(", ")}`;
 
   return (
-    <Block as="section" aria-labelledby="progress-h" tone="butter" pad="md" className="flex flex-col gap-5">
+    <Block as="section" aria-labelledby="progress-h" tone="paper" pad="md" className="flex flex-col gap-5">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-col gap-1">
           <h2 id="progress-h" className="y-micro y-fg-2">
@@ -255,11 +262,11 @@ function ProgressBlock({ request }: { request: CampaignRequest }) {
           </li>
         ))}
       </ul>
-      {closed ? (
-        <p className="y-small y-fg-2 border-t border-(--b-line) pt-3">
-          Closed. Open slots were refunded; creators already filming carry on.
-        </p>
-      ) : null}
+      <p className="y-small y-fg-2 border-t border-(--b-line) pt-3">
+        {closed
+          ? "Closed. Open slots were refunded with their fee; creators already filming carry on."
+          : `Open until ${weekdayDate(request.campaign.closesAt)}, unless you close it sooner. Slots nobody takes are refunded with their fee when it closes.`}
+      </p>
     </Block>
   );
 }
@@ -277,7 +284,7 @@ function SlotsBlock({ request, onRemove }: { request: CampaignRequest; onRemove:
 
   return (
     <Block as="section" aria-labelledby="slots-h" tone="paper" pad="none" className="flex flex-col p-2 md:p-3">
-      <h2 id="slots-h" className="y-display y-title px-3 pt-3 pb-2">
+      <h2 id="slots-h" className="y-head px-3 pt-3 pb-2">
         Creators
       </h2>
       <ul className="flex flex-col">
@@ -326,9 +333,9 @@ function SlotsBlock({ request, onRemove }: { request: CampaignRequest; onRemove:
                   Slot {view.slot} · {followers.text}
                   {followers.verified ? <BadgeCheck size={13} aria-label="verified" className="flex-none" /> : null}
                 </p>
-                <SlotBadge commission={c} className="w-fit sm:hidden" />
+                <SlotBadge commission={c} side="business" className="w-fit sm:hidden" />
               </div>
-              <SlotBadge commission={c} className="hidden flex-none sm:inline-flex" />
+              <SlotBadge commission={c} side="business" className="hidden flex-none sm:inline-flex" />
               <RowMenu label={`More for ${creator.firstName}`} items={items} />
             </li>
           );
@@ -357,7 +364,7 @@ function SlotsBlock({ request, onRemove }: { request: CampaignRequest; onRemove:
                       {creator?.name ?? "A creator"}
                       <span className="y-fg-2 font-normal"> · Slot {slot}</span>
                     </Link>
-                    <SlotBadge commission={commission} />
+                    <SlotBadge commission={commission} side="business" />
                   </li>
                 );
               })}
@@ -386,11 +393,11 @@ function MoneyBlock({ request }: { request: CampaignRequest }) {
   return (
     <Block as="section" aria-labelledby="money-h" tone="paper" pad="md" className="flex flex-col gap-4">
       <div className="flex flex-col gap-0.5">
-        <h2 id="money-h" className="y-display y-title">
+        <h2 id="money-h" className="y-head">
           Money
         </h2>
         <p className="y-micro y-fg-2">
-          {method ? `On ${paymentLabel(method)} · ` : ""}No service fee on campaigns
+          {method ? `On ${paymentLabel(method)} · ` : ""}Includes the {Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee
         </p>
       </div>
       <dl className="grid grid-cols-3 gap-3">
@@ -417,7 +424,7 @@ function MoneyBlock({ request }: { request: CampaignRequest }) {
                   </div>
                   <span className="y-small y-num flex-none font-semibold">
                     {entry.kind === "refund" ? "−" : "+"}
-                    {money(entry.amount)}
+                    {money(entry.amount, !Number.isInteger(entry.amount))}
                   </span>
                 </li>
               ))}
@@ -469,11 +476,15 @@ function BriefBlock({ request }: { request: CampaignRequest }) {
               <Megaphone size={16} aria-hidden className="mt-0.5 flex-none" />
               {postingRule(terms)}
             </p>
+            <p className="y-small flex gap-2">
+              <Clock size={16} aria-hidden className="mt-0.5 flex-none" />
+              {deadlineLine(terms)}
+            </p>
           </div>
           {brief.languages.length ? (
             <p className="y-small">
               <span className="y-fg-2">Languages: </span>
-              {brief.languages.map((id) => languageById[id].short).join(", ")}
+              {brief.languages.map((id) => languageById[id].name).join(", ")}
             </p>
           ) : null}
           {terms.explainer ? <ExplainerTile name={terms.explainer.name} durationSec={terms.explainer.durationSec} /> : null}

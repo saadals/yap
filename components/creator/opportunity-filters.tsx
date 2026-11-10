@@ -8,7 +8,7 @@ import type { FormatId, LanguageId } from "@/lib/types";
 
 export type OpportunityFilterState = {
   formats: FormatId[];
-  dialects: LanguageId[];
+  languages: LanguageId[];
   minBudget: number;
 };
 
@@ -18,19 +18,19 @@ function toggle<T>(list: T[], value: T): T[] {
   return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
-/** Format, dialect and minimum budget filters. Rendered in a sidebar (desktop) or a sheet (mobile). */
+/** Format, language and minimum budget filters. Rendered in a sidebar (desktop) or a sheet (mobile). */
 export function OpportunityFilters({
   value,
   onChange,
   formatCounts,
-  dialectCounts,
+  languageCounts,
   savedMinBudget,
   onSaveMinBudget,
 }: {
   value: OpportunityFilterState;
   onChange: (next: OpportunityFilterState) => void;
   formatCounts: [FormatId, number][];
-  dialectCounts: [LanguageId, number][];
+  languageCounts: [LanguageId, number][];
   savedMinBudget: number;
   onSaveMinBudget: (amount: number) => void;
 }) {
@@ -62,21 +62,16 @@ export function OpportunityFilters({
       </fieldset>
 
       <fieldset className="flex flex-col gap-3">
-        <legend className="y-label mb-3">Language or dialect</legend>
+        <legend className="y-label mb-3">Language</legend>
         <div className="flex flex-wrap gap-2">
-          {dialectCounts.map(([id, count]) => (
+          {languageCounts.map(([id, count]) => (
             <FilterChip
               key={id}
-              pressed={value.dialects.includes(id)}
+              pressed={value.languages.includes(id)}
               count={count}
-              onClick={() => onChange({ ...value, dialects: toggle(value.dialects, id) })}
+              onClick={() => onChange({ ...value, languages: toggle(value.languages, id) })}
             >
-              {languageById[id].short}
-              {id !== "en" ? (
-                <span dir="rtl" lang="ar" className="ms-1.5 font-normal opacity-75">
-                  {languageById[id].native}
-                </span>
-              ) : null}
+              {languageById[id].name}
             </FilterChip>
           ))}
         </div>

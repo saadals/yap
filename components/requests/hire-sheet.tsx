@@ -9,7 +9,7 @@ import { Celebrate } from "@/components/ui/celebrate";
 import { TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
-import { money, priceBreakdown, weekdayDate } from "@/lib/format";
+import { money, moneyExact, priceBreakdown, quoted, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
@@ -111,7 +111,7 @@ export function HireSheet({
         disabled={!methodId || phase !== "form"}
         onClick={confirm}
       >
-        <span>{phase === "paying" ? "Securing payment…" : `Hire ${creator.firstName} · ${money(totals.total, true)}`}</span>
+        <span>{phase === "paying" ? "Securing payment…" : `Hire ${creator.firstName} · ${moneyExact(totals.total)}`}</span>
         <span aria-hidden className="y-arrow">
           {phase === "paying" ? (
             <span className="size-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -139,7 +139,7 @@ export function HireSheet({
         <div className="y-tile flex flex-col gap-3 p-4">
           <CreatorRow creator={creator} href={null} meta={<TrustLine creator={creator} />} />
           <p dir="auto" className="y-small border-t border-(--b-line) pt-3">
-            <span className="y-fg-2">Their angle: </span>&ldquo;{pitch.angle}&rdquo;
+            <span className="y-fg-2">Their angle: </span>{quoted(pitch.angle)}
           </p>
         </div>
 

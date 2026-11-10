@@ -12,7 +12,7 @@ import { useToast } from "@/components/ui/toast";
 import { addDays } from "@/lib/clock";
 import { clock, plural, weekdayDate } from "@/lib/format";
 import { actions } from "@/lib/store";
-import { addonById, includedRights } from "@/lib/taxonomy";
+import { addonById, CAMPAIGN_RELEASE_DAYS, includedRights } from "@/lib/taxonomy";
 
 import { DeliverSheet } from "./deliver-sheet";
 import { cash, revisionsLeft, type SheetName, type Workspace } from "./helpers";
@@ -264,7 +264,7 @@ function ApproveWorkSheet({ ws, open, onClose }: SheetProps) {
       open={open}
       onClose={onClose}
       title={`Approve version ${latest?.version ?? 1}?`}
-      description={`Payment is released to ${creatorName} straight away. This can't be undone.`}
+      description={`The payment held since you hired ${creatorName} is released to them straight away. This can't be undone.`}
       width="md"
       footer={
         <Footer
@@ -282,7 +282,7 @@ function ApproveWorkSheet({ ws, open, onClose }: SheetProps) {
                 ws.openSheet("celebrate");
               }}
             >
-              Approve and release {cash(totals.creatorEarns)}
+              Approve and release {cash(totals.creatorEarns)} to {creatorName}
             </PillButton>
           }
         />
@@ -290,10 +290,10 @@ function ApproveWorkSheet({ ws, open, onClose }: SheetProps) {
     >
       <div className="flex flex-col gap-6">
         <div className="y-tile flex flex-col gap-3 p-5">
-          <Row label={`${creatorName} receives`} value={cash(totals.creatorEarns)} />
+          <Row label={`${creatorName} receives`} value={cash(totals.creatorEarns)} strong />
           <Row label={`Yapp service fee (${Math.round(commission.feeRate * 100)}%)`} value={cash(totals.fee)} />
           <div className="border-t border-(--b-line) pt-3">
-            <Row label="Total charged" value={cash(totals.total)} strong />
+            <Row label="Charged when you hired, held since" value={cash(totals.total)} />
           </div>
         </div>
 
@@ -340,7 +340,7 @@ function CelebrateSheet({ ws, open, onClose }: SheetProps) {
     <Sheet
       open={open}
       onClose={onClose}
-      title={`Done! ${creatorName} has been paid.`}
+      title={`${creatorName} has been paid.`}
       hideTitle
       side="center"
       width="sm"
@@ -364,7 +364,7 @@ function CelebrateSheet({ ws, open, onClose }: SheetProps) {
       <div className="flex flex-col items-center gap-4 pb-2 text-center" role="status">
         <Celebrate className="h-32 w-52" />
         <p className="y-display y-title" aria-hidden>
-          Done! {creatorName} has been paid.
+          {creatorName} has been paid.
         </p>
         <p className="y-body y-fg-2 max-w-[40ch]">
           {cash(totals.creatorEarns)} was released to {creatorName}. The video is yours to post
@@ -393,7 +393,7 @@ function ApproveSlotSheet({ ws, open, onClose }: SheetProps) {
       open={open}
       onClose={onClose}
       title="Approve this video?"
-      description={`The full-quality file unlocks for you, and ${cash(commission.price)} goes to ${creatorName}'s wallet. This can't be undone.`}
+      description={`The full-quality file unlocks for you, and ${creatorName} posts it next. This can't be undone.`}
       width="md"
       footer={
         <Footer
@@ -444,6 +444,11 @@ function ApproveSlotSheet({ ws, open, onClose }: SheetProps) {
               {creatorName} posts it on their {slot?.platformName ?? "own"} account, tagging {slot?.brandHandle ?? "you"}, with
               the paid-partnership label.
             </li>
+            <li className="y-small flex items-start gap-2.5">
+              <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
+              Their {cash(commission.price)} stays held in your campaign until {CAMPAIGN_RELEASE_DAYS} days after we
+              verify the post, and is paid only if it&apos;s still up.
+            </li>
           </ul>
         </div>
 
@@ -473,7 +478,11 @@ function RejectSheet({ ws, open, onClose }: SheetProps) {
       open={open}
       onClose={onClose}
       title="Reject this video?"
-      description="The slot goes to another creator automatically, and its money stays held in your campaign."
+      description={
+        ws.slot?.request?.status === "closed"
+          ? "The campaign is closed, so the slot's money is refunded to your card with its fee."
+          : "The slot goes to another creator automatically, and its money stays held in your campaign."
+      }
       width="md"
       footer={
         <Footer
@@ -526,7 +535,11 @@ function RemoveCreatorSheet({ ws, open, onClose }: SheetProps) {
       open={open}
       onClose={onClose}
       title={`Remove ${creatorName} from this slot?`}
-      description="The slot reopens for another creator automatically, and its money stays held in your campaign."
+      description={
+        ws.slot?.request?.status === "closed"
+          ? "The campaign is closed, so the slot's money is refunded to your card with its fee."
+          : "The slot reopens for another creator automatically, and its money stays held in your campaign."
+      }
       width="md"
       footer={
         <Footer
@@ -593,7 +606,7 @@ function DeclineSheet({ ws, open, onClose }: SheetProps) {
       open={open}
       onClose={onClose}
       title="Decline this offer?"
-      description={`We'll tell ${businessName} and release the authorisation on their card. Nothing is charged.`}
+      description={`We'll tell ${businessName} and release the authorization on their card. Nothing is charged.`}
       width="md"
       footer={
         <Footer
@@ -670,7 +683,7 @@ function WithdrawSheet({ ws, open, onClose }: SheetProps) {
               size="lg"
               onClick={() => {
                 actions.withdrawOffer(commission.id);
-                toast({ message: `Offer withdrawn. The ${cash(totals.total)} authorisation was released.` });
+                toast({ message: `Offer withdrawn. The ${cash(totals.total)} authorization was released.` });
                 onClose();
               }}
             >
@@ -681,7 +694,7 @@ function WithdrawSheet({ ws, open, onClose }: SheetProps) {
       }
     >
       <p className="y-body y-fg-2">
-        The {cash(totals.total)} authorisation on your card is released right away. You can send {creatorName} a new
+        The {cash(totals.total)} authorization on your card is released right away. You can send {creatorName} a new
         offer any time.
       </p>
     </Sheet>

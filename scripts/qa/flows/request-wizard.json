@@ -17,7 +17,7 @@
       "text": "What kind of video?"
     },
     {
-      "click": "Honest review",
+      "click": "Testimonial",
       "after": 600
     },
     {
@@ -32,7 +32,7 @@
       "after": 800
     },
     {
-      "text": "Which language or dialect?"
+      "text": "Which language?"
     },
     {
       "click": "Continue",
@@ -78,7 +78,7 @@
       "after": 3500
     },
     {
-      "text": "honest review for Daftar Invoices"
+      "text": "Testimonial for Daftar Invoices"
     }
   ]
 }

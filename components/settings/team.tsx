@@ -139,7 +139,7 @@ export function TeamSection() {
                   {member.name}
                   {isMe ? <Badge tone="ink" className="!min-h-6 !px-2 text-xs">You</Badge> : null}
                   {invited.includes(member.id) ? (
-                    <Badge tone="info" icon={<Mail size={12} aria-hidden />} className="!min-h-6 !px-2 text-xs">
+                    <Badge tone="neutral" icon={<Mail size={12} aria-hidden />} className="!min-h-6 !px-2 text-xs">
                       Invite sent
                     </Badge>
                   ) : null}

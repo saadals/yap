@@ -2,7 +2,7 @@ import { Mic, Play } from "lucide-react";
 
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { clock, compact } from "@/lib/format";
-import { formatById, isArabic } from "@/lib/taxonomy";
+import { formatById, textDir } from "@/lib/taxonomy";
 import type { Aspect, Tint, Video } from "@/lib/types";
 
 const tintVar: Record<Tint, string> = {
@@ -112,7 +112,7 @@ export function VideoThumb({
   const wide = ratio[aspect] >= 1;
   const [a, b] = video.tints;
   const accent = tintVar[b];
-  const arabic = isArabic(video.lang);
+  const rtl = textDir(video.lang) === "rtl";
   const format = formatById[video.format];
 
   return (
@@ -152,12 +152,12 @@ export function VideoThumb({
 
       {showHook ? (
         <div
-          className={`absolute inset-x-[7%] z-[2] ${hookAt === "top" ? "top-[7%]" : "bottom-[15%]"} ${arabic ? "text-right" : "text-left"}`}
-          dir={arabic ? "rtl" : "ltr"}
-          lang={arabic ? "ar" : "en"}
+          className={`absolute inset-x-[7%] z-[2] ${hookAt === "top" ? "top-[7%]" : "bottom-[15%]"} ${rtl ? "text-right" : "text-left"}`}
+          dir={textDir(video.lang)}
+          lang={video.lang}
           style={{ fontSize: wide ? "clamp(10px, 3.6cqw, 22px)" : "clamp(10px, 6.4cqw, 22px)" }}
         >
-          <span className={`y-thumb-caption ${arabic ? "y-display" : ""}`}>{video.hook}</span>
+          <span className={`y-thumb-caption ${rtl ? "y-display" : ""}`}>{video.hook}</span>
         </div>
       ) : null}
 
@@ -220,7 +220,7 @@ function Scene({ video, wide, accent }: { video: Video; wide: boolean; accent: s
             className="absolute bottom-[18%] left-[58%] z-[1] aspect-square w-[11%] rounded-full border-[3px] border-white bg-white/40"
             aria-hidden
           />
-          {video.format === "screen-walkthrough" ? (
+          {video.voiceOnly || formatById[video.format]?.voiceOnly ? (
             <span className="absolute start-[8%] bottom-[14%] z-[1] grid aspect-square w-[16%] place-items-center rounded-full bg-[#0e0e10] text-white">
               <Mic size="50%" aria-hidden />
             </span>

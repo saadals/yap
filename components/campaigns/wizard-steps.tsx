@@ -12,9 +12,12 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { money, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
-  CAMPAIGN_DEADLINE_DAYS,
+  CAMPAIGN_DEADLINE_OPTIONS,
+  CAMPAIGN_FEE_RATE,
   CAMPAIGN_MAX_VIDEOS,
   CAMPAIGN_MIN_VIDEOS,
+  CAMPAIGN_OPEN_DAYS,
+  CAMPAIGN_RELEASE_DAYS,
   CAMPAIGN_STEP,
   campaignPlatformById,
   campaignPlatforms,
@@ -26,7 +29,7 @@ import type { Product } from "@/lib/types";
 
 import { ExplainerField } from "./explainer";
 import { ChoiceTile, GroupError, ListEditor, Question } from "./parts";
-import { applyProduct, type CampaignForm, type FieldKey, totalFor } from "./shared";
+import { applyProduct, budgetFor, type CampaignForm, type FieldKey, totalFor } from "./shared";
 
 export type FormPatch = Partial<CampaignForm> | ((form: CampaignForm) => Partial<CampaignForm>);
 
@@ -44,7 +47,7 @@ function ProductMark({ product }: { product: Pick<Product, "name" | "brandColor"
   return (
     <span
       aria-hidden
-      className="y-display grid size-11 flex-none place-items-center rounded-[14px] text-lg font-semibold text-white"
+      className="y-display grid size-11 flex-none place-items-center rounded-(--y-r-field) text-lg font-semibold text-white"
       style={{ background: product.brandColor }}
     >
       {product.name.slice(0, 1)}
@@ -112,7 +115,7 @@ export function ProductStep({ form, set, products, error }: StepProps) {
             <span className="flex items-center gap-3">
               <ProductMark product={p} />
               <span className="min-w-0">
-                <span className="y-head block">{p.name}</span>
+                <span className="y-body block font-semibold">{p.name}</span>
                 <span className="y-micro y-fg-2 block">
                   {p.surfaces.length ? p.surfaces.map((x) => surfaceLabel[x]).join(" · ") : "Product"}
                 </span>
@@ -188,12 +191,12 @@ export function SayStep({ form, set, product, error }: StepProps) {
                     }))
                   }
                 >
-                  {language.short}
+                  {language.name}
                 </FilterChip>
               );
             })}
           </div>
-          <p className="y-micro y-fg-3 px-1">Skip this and creators speak Saudi or Khaleeji Arabic.</p>
+          <p className="y-micro y-fg-3 px-1">Skip this and creators make it in English.</p>
         </div>
       </Question>
 
@@ -253,7 +256,7 @@ export function SayStep({ form, set, product, error }: StepProps) {
         />
         <GroupError id="q-points-error" message={pointsErr} />
         <div className="flex flex-col gap-3 border-t border-(--b-line) pt-4">
-          <h3 className="y-head">
+          <h3 className="y-body font-semibold">
             Restrictions <span className="y-small y-fg-3 ms-1 font-medium">Optional</span>
           </h3>
           <ListEditor
@@ -309,8 +312,26 @@ export function VideosStep({ form, set, error }: StepProps) {
       <GroupError message={error("videos")} />
       <p className="y-micro y-fg-3 px-1">
         At least {CAMPAIGN_MIN_VIDEOS}, in steps of {CAMPAIGN_STEP}. At {tier.label} followers that&apos;s{" "}
-        {money(totalFor(form))}.
+        {money(totalFor(form))} with the service fee.
       </p>
+      <div className="flex flex-col gap-3 border-t border-(--b-line) pt-4">
+        <div className="flex flex-col gap-1">
+          <h3 id="q-deadline" className="y-body font-semibold">
+            Time to upload
+          </h3>
+          <p className="y-small y-fg-2 max-w-[60ch]">
+            Days a creator has to upload their first version after taking a slot. It can&apos;t change once the
+            campaign is live.
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2" role="group" aria-labelledby="q-deadline">
+          {CAMPAIGN_DEADLINE_OPTIONS.map((days) => (
+            <FilterChip key={days} pressed={form.deadlineDays === days} onClick={() => set({ deadlineDays: days })}>
+              {plural(days, "day")}
+            </FilterChip>
+          ))}
+        </div>
+      </div>
     </Question>
   );
 }
@@ -343,7 +364,7 @@ export function TierStep({ form, set, error }: StepProps) {
             checked={form.tierId === tier.id}
             onChange={() => set({ tierId: tier.id })}
           >
-            <span className="y-head">{tier.label}</span>
+            <span className="y-body font-semibold">{tier.label}</span>
             <span className="y-micro y-fg-2 inline-flex items-center gap-1.5">
               <ShieldCheck size={14} aria-hidden />
               verified real followers
@@ -369,22 +390,26 @@ export function TierStep({ form, set, error }: StepProps) {
 
 export function PayStep({ form, set, product, error }: StepProps) {
   const tier = tierById[form.tierId];
-  const total = totalFor(form);
+  const budget = budgetFor(form);
   const platform = campaignPlatformById[form.platform];
   const handle = form.brandHandle.trim().startsWith("@") ? form.brandHandle.trim() : `@${form.brandHandle.trim()}`;
   return (
     <>
-      <Block as="section" aria-labelledby="q-total" tone="butter" pad="md" className="flex flex-col gap-4">
+      <Block as="section" aria-labelledby="q-total" tone="paper" pad="md" className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
           <h2 id="q-total" className="y-micro y-fg-2">
-            Total budget
+            Charged and held now
           </h2>
-          <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">{money(total)}</p>
-          <p className="y-small y-num">
-            {form.videos} × {money(tier.pricePerVideo)} = {money(total)}
+          <p className="y-display y-num text-[44px] leading-none font-semibold tracking-[-0.04em]">
+            {money(budget.total, !Number.isInteger(budget.total))}
           </p>
-          <p className="y-small y-fg-2">No service fee on campaigns</p>
         </div>
+        <dl className="flex flex-col border-t border-(--b-line)">
+          <Row label={`${form.videos} videos × ${money(tier.pricePerVideo)}`}>{money(budget.subtotal)}</Row>
+          <Row label={`Service fee (${Math.round(CAMPAIGN_FEE_RATE * 100)}%)`}>
+            {money(budget.fee, !Number.isInteger(budget.fee))}
+          </Row>
+        </dl>
         <dl className="flex flex-col border-t border-(--b-line)">
           <Row label="Product">{product?.name ?? form.quickName.trim()}</Row>
           <Row label="Campaign">{form.title.trim()}</Row>
@@ -394,12 +419,13 @@ export function PayStep({ form, set, product, error }: StepProps) {
           <Row label="Creators">
             {tier.label} verified real followers{tier.placeholder ? " (price to be confirmed)" : ""}
           </Row>
-          <Row label="Delivery deadline">
-            <span className="y-fg-2 inline-flex items-center gap-1.5 font-normal">
+          <Row label="Upload deadline">
+            <span className="inline-flex items-center gap-1.5">
               <Clock size={14} aria-hidden />
-              {CAMPAIGN_DEADLINE_DAYS ? `${CAMPAIGN_DEADLINE_DAYS} days after taking a slot` : "Not set yet"}
+              {plural(form.deadlineDays, "day")} after taking a slot
             </span>
           </Row>
+          <Row label="Open for">{CAMPAIGN_OPEN_DAYS} days, or until you close it</Row>
         </dl>
       </Block>
       <Block as="section" tone="paper" pad="md" className="flex flex-col gap-3">
@@ -421,16 +447,17 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Sky trust note: how the hold works. */
+/** Trust note: how the hold works. */
 export function HoldNote() {
   return (
-    <Block tone="sky" pad="md" className="flex items-start gap-3">
+    <Block tone="paper" pad="md" className="flex items-start gap-3">
       <ShieldCheck size={20} aria-hidden className="mt-0.5 flex-none" />
       <div className="flex flex-col gap-1">
         <h2 className="y-head">How it works</h2>
         <p className="y-small">
-          The full budget is held now. Creators are paid from it only when you approve their video. Unfilled slots
-          are refunded if you close the campaign.
+          The budget and the service fee are charged now and held for you. A creator is paid {CAMPAIGN_RELEASE_DAYS}{" "}
+          days after their post of the video you approved is verified. Slots nobody takes are refunded with their fee
+          when the campaign closes.
         </p>
       </div>
     </Block>
@@ -463,7 +490,7 @@ export function CampaignPreview({ form, product }: { form: CampaignForm; product
       ) : null}
       <div className="flex items-baseline justify-between gap-3 border-t border-(--b-line) pt-3">
         <span className="y-small y-num">
-          {form.videos} × {money(tier.pricePerVideo)}
+          {form.videos} × {money(tier.pricePerVideo)} + {Math.round(CAMPAIGN_FEE_RATE * 100)}% fee
         </span>
         <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
           {money(totalFor(form))}

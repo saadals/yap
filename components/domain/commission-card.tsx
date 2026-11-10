@@ -41,11 +41,15 @@ export function CommissionCard({
   const when = campaign
     ? commission.status === "completed"
       ? commission.post?.status === "live"
-        ? "Post verified"
+        ? commission.payment.status === "pending" && commission.withdrawableFrom
+          ? `Post verified · paid ${shortDate(commission.withdrawableFrom)}`
+          : "Post verified"
         : "Post it to unlock your pay"
       : commission.status === "cancelled"
         ? "Slot ended"
-        : `Slot ${commission.campaignSlot ?? ""} · Campaign`
+        : commission.status === "in_progress" && commission.deliveries.length === 0
+          ? `Slot ${commission.campaignSlot ?? ""} · upload by ${shortDate(commission.dueDate)}`
+          : `Slot ${commission.campaignSlot ?? ""} · Campaign`
     : commission.status === "completed" && commission.completedAt
       ? `Completed ${shortDate(commission.completedAt)}`
       : ended
@@ -55,7 +59,7 @@ export function CommissionCard({
         : commission.status === "offered"
           ? role === "business"
             ? "Waiting for them to accept"
-            : `Reply by ${shortDate(commission.dueDate)}`
+            : `Due ${shortDate(commission.dueDate)} if you accept`
           : commission.status === "delivered" && commission.autoApproveAt
             ? `Auto-approves ${weekdayDate(commission.autoApproveAt)}`
             : due.text;
@@ -89,7 +93,7 @@ export function CommissionCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        {campaign ? <SlotBadge commission={commission} /> : <CommissionBadge status={commission.status} side={role} />}
+        {campaign ? <SlotBadge commission={commission} side={role} /> : <CommissionBadge status={commission.status} side={role} />}
         <span
           className={`y-micro ${!ended && due.urgency === "late" && commission.status !== "offered" ? "text-(--y-danger)" : "y-fg-2"}`}
         >

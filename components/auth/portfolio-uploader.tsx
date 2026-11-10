@@ -32,11 +32,14 @@ const palettes: [Tint, Tint][] = [
 ];
 
 const sceneFor: Record<FormatId, Scene> = {
-  "selfie-demo": "split",
+  "app-demo": "split",
   "screen-walkthrough": "screen",
-  "ugc-review": "selfie",
-  "problem-skit": "street",
-  tutorial: "desk",
+  unboxing: "desk",
+  "problem-solution": "street",
+  comparison: "split",
+  testimonial: "selfie",
+  "talking-head": "selfie",
+  voiceover: "screen",
   "hook-pack": "selfie",
 };
 
@@ -45,7 +48,7 @@ function sizeLabel(bytes: number) {
   return `${Math.max(1, Math.round(bytes / 1024 / 1024))} MB`;
 }
 
-/** Title from a file name: "my_selfie-demo.mp4" → "My selfie demo". */
+/** Title from a file name: "my_app-demo.mp4" → "My app demo". */
 function titleFrom(fileName: string) {
   const base = fileName.replace(/\.[a-z0-9]+$/i, "").replace(/[_-]+/g, " ").trim();
   return base ? base.charAt(0).toUpperCase() + base.slice(1) : "";
@@ -71,7 +74,7 @@ export function makeSample(
 
 /** A generated thumbnail for an uploaded sample (no real media in the prototype). */
 export function sampleVideo(sample: Sample, faceId: string, niche: NicheId): Video {
-  const format = sample.format || "selfie-demo";
+  const format = sample.format || "app-demo";
   return {
     id: sample.id,
     creatorId: faceId,
@@ -194,7 +197,7 @@ export function PortfolioUploader({
             onClick={() => {
               setFileError(null);
               const n = samples.length + 1;
-              const name = ["selfie-demo-budget-app.mp4", "screen-walkthrough-onboarding.mov", "honest-review-fitness-app.mp4"][n % 3];
+              const name = ["app-demo-budget-app.mp4", "screen-walkthrough-onboarding.mov", "testimonial-sleep-ring.mp4"][n % 3];
               onAdd([{ name, size: (38 + n * 17) * 1024 * 1024 }]);
             }}
           >
@@ -298,7 +301,7 @@ export function PortfolioUploader({
                     label="Title"
                     required
                     maxLength={60}
-                    placeholder="e.g. Budget app demo in Khaleeji"
+                    placeholder="e.g. Budget app demo in Spanish"
                     value={sample.title}
                     error={errors[`title-${sample.id}`]}
                     onChange={(event) => onChange(sample.id, { title: event.target.value })}

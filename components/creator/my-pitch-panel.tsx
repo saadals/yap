@@ -6,7 +6,7 @@ import { PitchBadge } from "@/components/domain/status-badge";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { PillButton } from "@/components/ui/pill-button";
 import { at } from "@/lib/clock";
-import { money, plural, weekdayDate } from "@/lib/format";
+import { money, plural, quoted, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { useDemo } from "@/lib/store";
 import { videoById } from "@/lib/selectors";
@@ -64,7 +64,7 @@ export function MyPitchPanel({
       <div className="y-tile flex flex-col gap-4 p-4 md:p-5">
         <div className="flex flex-col gap-1">
           <p className="y-micro y-fg-2">Angle</p>
-          <p className="y-display text-[19px] leading-snug">&ldquo;{pitch.angle}&rdquo;</p>
+          <p className="y-display text-[19px] leading-snug">{quoted(pitch.angle)}</p>
         </div>
         <div className="flex flex-col gap-1">
           <p className="y-micro y-fg-2">Message</p>

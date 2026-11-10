@@ -54,10 +54,14 @@ const pitchIcons: Record<PitchStatus, React.ReactNode> = {
   withdrawn: <Undo2 size={s} aria-hidden />,
 };
 
+/** A commission status's chip look from the viewer's side: the side that has to act sees "needs attention". */
+const commissionTone = (status: CommissionStatus, side?: Role): Tone =>
+  (side && commissionStatus[status].toneFor?.[side]) || commissionStatus[status].tone;
+
 /**
  * Status is never colour alone: icon + label, semantic tone. Pass `side` (the viewer's side of the
- * deal) where it changes the wording: an offer is "Offer sent" to the business, "New offer" to the
- * creator.
+ * deal) where it changes the wording or the look: an offer is "Offer sent" to the business, "New
+ * offer" to the creator; a delivery needs the business, requested changes need the creator.
  */
 export function CommissionBadge({
   status,
@@ -71,7 +75,7 @@ export function CommissionBadge({
   const info = commissionStatus[status];
   const label = status === "offered" && side === "creator" ? "New offer" : info.label;
   return (
-    <Badge tone={info.tone} icon={commissionIcons[status]} className={className}>
+    <Badge tone={commissionTone(status, side)} icon={commissionIcons[status]} className={className}>
       {label}
     </Badge>
   );
@@ -79,44 +83,51 @@ export function CommissionBadge({
 
 /**
  * A campaign slot's status (one creator's video on a UGC campaign): Filming → Review copy ready →
- * Approved, post due → Posted. Also how a slot ended (removed, not approved).
+ * Approved, post due → Posted. Also how a slot ended (removed, not approved). `side` sets the look
+ * where the side that has to act differs (the brand reviews a copy, the creator makes changes).
  */
-export function slotStatus(c: Pick<Commission, "status" | "post" | "cancelCode">): {
+export function slotStatus(
+  c: Pick<Commission, "status" | "post" | "cancelCode">,
+  side?: Role,
+): {
   label: string;
   tone: Tone;
   icon: React.ReactNode;
 } {
   switch (c.status) {
     case "in_progress":
-      return { label: "Filming", tone: "neutral", icon: <Clapperboard size={s} aria-hidden /> };
+      return { label: "Filming", tone: "active", icon: <Clapperboard size={s} aria-hidden /> };
     case "delivered":
-      return { label: "Review copy ready", tone: "warning", icon: <Eye size={s} aria-hidden /> };
+      return { label: "Review copy ready", tone: commissionTone("delivered", side), icon: <Eye size={s} aria-hidden /> };
     case "revision":
-      return { label: "Changes requested", tone: "warning", icon: <Repeat2 size={s} aria-hidden /> };
+      return { label: "Changes requested", tone: commissionTone("revision", side), icon: <Repeat2 size={s} aria-hidden /> };
     case "completed":
       if (c.post?.status === "live") return { label: "Posted", tone: "success", icon: <BadgeCheck size={s} aria-hidden /> };
-      if (c.post?.status === "checking") return { label: "Checking post", tone: "info", icon: <Loader2 size={s} aria-hidden /> };
+      if (c.post?.status === "checking") return { label: "Checking post", tone: "neutral", icon: <Loader2 size={s} aria-hidden /> };
       if (c.post?.status === "removed") return { label: "Post taken down", tone: "danger", icon: <AlertTriangle size={s} aria-hidden /> };
-      return { label: "Approved, post due", tone: "info", icon: <Megaphone size={s} aria-hidden /> };
+      return { label: "Approved, post due", tone: "active", icon: <Megaphone size={s} aria-hidden /> };
     case "cancelled":
-      if (c.cancelCode === "video_rejected") return { label: "Not approved", tone: "neutral", icon: <XCircle size={s} aria-hidden /> };
-      if (c.cancelCode === "campaign_closed") return { label: "Campaign closed", tone: "neutral", icon: <Ban size={s} aria-hidden /> };
-      return { label: "Removed", tone: "neutral", icon: <Ban size={s} aria-hidden /> };
+      if (c.cancelCode === "video_rejected") return { label: "Not approved", tone: "danger", icon: <XCircle size={s} aria-hidden /> };
+      if (c.cancelCode === "campaign_closed") return { label: "Campaign closed", tone: "danger", icon: <Ban size={s} aria-hidden /> };
+      if (c.cancelCode === "post_removed") return { label: "Post stayed down", tone: "danger", icon: <AlertTriangle size={s} aria-hidden /> };
+      return { label: "Removed", tone: "danger", icon: <Ban size={s} aria-hidden /> };
     case "disputed":
       return { label: commissionStatus.disputed.label, tone: "danger", icon: <LifeBuoy size={s} aria-hidden /> };
     default:
-      return { label: commissionStatus[c.status].label, tone: commissionStatus[c.status].tone, icon: commissionIcons[c.status] };
+      return { label: commissionStatus[c.status].label, tone: commissionTone(c.status, side), icon: commissionIcons[c.status] };
   }
 }
 
 export function SlotBadge({
   commission,
+  side,
   className,
 }: {
   commission: Pick<Commission, "status" | "post" | "cancelCode">;
+  side?: Role;
   className?: string;
 }) {
-  const info = slotStatus(commission);
+  const info = slotStatus(commission, side);
   return (
     <Badge tone={info.tone} icon={info.icon} className={className}>
       {info.label}
@@ -170,7 +181,7 @@ export function DueBadge({
 }) {
   return (
     <Badge
-      tone={urgency === "late" ? "danger" : urgency === "soon" ? "warning" : "neutral"}
+      tone={urgency === "late" ? "danger" : urgency === "soon" ? "warning" : "active"}
       icon={urgency === "late" ? <AlertTriangle size={s} aria-hidden /> : <Clock size={s} aria-hidden />}
       className={className}
     >

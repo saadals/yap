@@ -105,7 +105,7 @@ function PriceRange({
           return (
             <span
               key={start}
-              className={`block flex-1 rounded-t-[6px] transition-colors duration-(--y-dur-2) ${inside ? "bg-(--b-fg)" : "bg-(--b-line)"}`}
+              className={`block flex-1 rounded-t-[6px] transition-colors duration-(--y-dur-2) ${inside ? "bg-(--b-fg)" : "bg-(--b-line-strong)"}`}
               style={{ height: n ? `${Math.max(12, (n / max) * 100)}%` : "4px" }}
             />
           );
@@ -202,7 +202,7 @@ export function FilterSheet({
           <PriceRange s={s} value={draft} onChange={onDraft} />
         </Group>
 
-        <Group legend="Dialects" hint="Show creators who speak any of these.">
+        <Group legend="Languages" hint="Show creators who make videos in any of these.">
           <div className="flex flex-wrap gap-2">
             {languages.map((lang) => (
               <FilterChip
@@ -210,12 +210,7 @@ export function FilterSheet({
                 pressed={draft.langs.includes(lang.id)}
                 onClick={() => set({ langs: toggleIn(draft.langs, lang.id) })}
               >
-                {lang.short}
-                {lang.id !== "en" ? (
-                  <span dir="rtl" lang="ar" className="ms-1.5 font-normal opacity-75">
-                    {lang.native}
-                  </span>
-                ) : null}
+                {lang.name}
               </FilterChip>
             ))}
           </div>
@@ -278,7 +273,7 @@ export function FilterSheet({
           />
         </Group>
 
-        <Group legend="Niche" hint="Products they've made content for.">
+        <Group legend="Category" hint="Products they've made content for.">
           <div className="flex flex-wrap gap-2">
             {niches.map((niche) => (
               <FilterChip

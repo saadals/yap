@@ -16,7 +16,7 @@ import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HOUR } from "@/lib/clock";
-import { money, plural, timeAgo } from "@/lib/format";
+import { money, plural, timeAgoInline } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, me, pitchesForCreator, productById, requestById } from "@/lib/selectors";
 import { type DemoState, useDemo, useHydrated } from "@/lib/store";
@@ -237,7 +237,7 @@ function PitchRow({ pitch }: { pitch: Pitch }) {
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <p className="y-micro y-fg-2 truncate">
             {businessName}
-            {product ? ` · ${product.name}` : ""}
+            {product && product.name !== businessName ? ` · ${product.name}` : ""}
           </p>
           <h2 className="y-head">
             {request ? (
@@ -253,7 +253,7 @@ function PitchRow({ pitch }: { pitch: Pitch }) {
           </h2>
           <p className="y-small y-fg-2">
             <span className="y-num font-semibold text-(--b-fg)">{money(pitch.price)}</span> ·{" "}
-            {plural(pitch.deliveryDays, "day")} · Sent {timeAgo(pitch.sentAt)}
+            {plural(pitch.deliveryDays, "day")} · Sent {timeAgoInline(pitch.sentAt)}
           </p>
           <p className="y-small mt-1 max-w-[62ch]">
             {closed ? `${businessName} closed this order without hiring yet.` : pitchNextStep(pitch.status, businessName)}

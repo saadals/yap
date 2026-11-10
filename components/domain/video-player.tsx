@@ -4,7 +4,7 @@ import { Captions, Languages, Pause, Play, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { clock } from "@/lib/format";
-import { isArabic } from "@/lib/taxonomy";
+import { isTranslated, textDir } from "@/lib/taxonomy";
 import type { Beat, DeliveryComment, Video } from "@/lib/types";
 
 import { VideoThumb } from "./video-thumb";
@@ -173,7 +173,7 @@ export function VideoPlayer({
   });
   const [translate, setTranslate] = useState(true);
   const [captions, setCaptions] = useState(true);
-  const arabic = isArabic(video.lang);
+  const translated = isTranslated(video.lang);
   const wide = video.aspect === "16:9";
 
   const widthClass = wide ? "w-full" : { sm: "max-w-[260px]", md: "max-w-[340px]", lg: "max-w-[400px]" }[size];
@@ -207,13 +207,13 @@ export function VideoPlayer({
                 aria-live="polite"
               >
                 <span
-                  dir={arabic ? "rtl" : "ltr"}
-                  lang={arabic ? "ar" : "en"}
-                  className={`y-thumb-caption text-[15px] md:text-[17px] ${arabic ? "y-display" : ""}`}
+                  dir={textDir(video.lang)}
+                  lang={video.lang}
+                  className={`y-thumb-caption text-[15px] md:text-[17px] ${textDir(video.lang) === "rtl" ? "y-display" : ""}`}
                 >
                   {line.text}
                 </span>
-                {arabic && translate && line.translation ? (
+                {translated && translate && line.translation ? (
                   <span className="rounded-lg bg-black/65 px-2 py-0.5 text-[12px] font-medium text-white">
                     {line.translation}
                   </span>
@@ -281,7 +281,7 @@ export function VideoPlayer({
                 onMarkerClick?.(comment);
               }}
               className={`absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-(--b-bg,var(--y-paper)) transition-transform hover:scale-125 ${
-                comment.resolved ? "bg-(--b-line)" : "bg-(--y-c-coral)"
+                comment.resolved ? "bg-(--b-line)" : "bg-(--y-warning)"
               } ${activeCommentId === comment.id ? "scale-125 !bg-(--y-ink)" : ""}`}
               style={{ left: `${(comment.atSec / duration) * 100}%` }}
             />
@@ -299,7 +299,7 @@ export function VideoPlayer({
         >
           <Captions size={18} aria-hidden />
         </button>
-        {arabic ? (
+        {translated ? (
           <button
             type="button"
             onClick={() => setTranslate((c) => !c)}

@@ -10,16 +10,17 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { useToast } from "@/components/ui/toast";
 import { compact, dueLabel, relativeDay, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
+import { reliabilityLine } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { CAMPAIGN_DEADLINE_DAYS } from "@/lib/taxonomy";
+import { CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
 
 import { cash, paymentWords, type Workspace } from "./helpers";
 
 /**
  * The one slim side block: who, how much, when, revisions left and a way to get help.
  * Key dates live in the Activity tab; the price breakdown opens from the money row.
- * Campaign slots: the slot price with no fee, no due date yet, and "Remove creator" in place of
- * cancel (no extensions; the slot reopens for someone else instead).
+ * Campaign slots: the slot price (the brand also sees the fee), the upload deadline the brand set,
+ * and "Remove creator" in place of cancel (no extensions; the slot reopens for someone else instead).
  */
 export function SidePanels({ ws }: { ws: Workspace }) {
   const s = useDemo();
@@ -44,11 +45,11 @@ export function SidePanels({ ws }: { ws: Workspace }) {
   const amount = slot ? commission.price : side === "business" ? totals.total : totals.creatorEarns;
 
   const protection =
-    payment === "held"
+    payment === "held" || (slot && payment === "pending")
       ? slot
         ? side === "business"
-          ? `Paid from the campaign budget Yapp holds. ${creatorName} is paid only when you approve.`
-          : `Paid from the campaign budget Yapp holds. It moves to your wallet when ${businessName} approves.`
+          ? `Paid from the campaign budget Yapp holds, ${CAMPAIGN_RELEASE_DAYS} days after ${creatorName}'s post of the approved video is verified.`
+          : `Paid from the campaign budget Yapp holds, ${CAMPAIGN_RELEASE_DAYS} days after your post of the approved video is verified.`
         : side === "business"
           ? `Payment protected: released to ${creatorName} only when you approve.`
           : `Payment secured: paid to you when ${businessName} approves, or 3 days after delivery.`
@@ -109,7 +110,9 @@ export function SidePanels({ ws }: { ws: Workspace }) {
                 showRights={side === "business"}
               />
               {side === "business" && slot ? (
-                <p className="y-micro y-fg-2">No service fee on campaigns. Set by the campaign&apos;s follower tier.</p>
+                <p className="y-micro y-fg-2">
+                  Set by the campaign&apos;s follower tier. Charged with the campaign budget.
+                </p>
               ) : side === "business" && method ? (
                 <p className="y-micro y-fg-2">Paid with {paymentLabel(method)}</p>
               ) : null}
@@ -118,10 +121,16 @@ export function SidePanels({ ws }: { ws: Workspace }) {
         )}
 
         {showDue && slot ? (
-          CAMPAIGN_DEADLINE_DAYS === null ? (
+          // The brand's upload deadline covers version 1 only.
+          status === "in_progress" && commission.deliveries.length === 0 ? (
             <div className={row}>
-              <span className="y-small y-fg-2">Deadline</span>
-              <span className="y-small y-fg-2">Not set yet</span>
+              <span className="y-small y-fg-2">Upload by</span>
+              <span className="y-small inline-flex flex-wrap items-baseline justify-end gap-x-1.5 text-end">
+                <span className={`font-semibold ${due.urgency === "late" ? "text-(--y-danger)" : ""}`}>
+                  {weekdayDate(commission.dueDate)}
+                </span>
+                <span className="y-fg-2">· {relativeDay(commission.dueDate)}</span>
+              </span>
             </div>
           ) : null
         ) : showDue ? (
@@ -200,15 +209,16 @@ function Party({ ws }: { ws: Workspace }) {
     );
   }
   if (!business) return null;
+  // Creators see how reliably a brand reviews, not a star rating (their feedback stays private).
+  const meta = [reliabilityLine(business) ?? "New on Yapp", business.paymentVerified ? "Payment verified" : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
     <div className="flex items-center gap-3">
       <BusinessLogo business={business} size={40} />
       <div className="flex min-w-0 flex-col">
         <span className="y-small font-semibold">{business.name}</span>
-        <span className="y-micro y-fg-2 y-num">
-          ★ {business.clientRating.toFixed(1)} client rating · {business.hires} hires
-          {business.paymentVerified ? " · Payment verified" : ""}
-        </span>
+        <span className="y-micro y-fg-2 y-num">{meta}</span>
       </div>
     </div>
   );

@@ -1,6 +1,9 @@
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
+import { textDir } from "@/lib/taxonomy";
+import type { LanguageId } from "@/lib/types";
+
 /** Standard page container: max 1360px, page gutter, top spacing under the header. */
 export function Page({
   children,
@@ -54,7 +57,7 @@ export function PageHeader({
             {back.label}
           </Link>
         ) : null}
-        {eyebrow ? <div className="y-micro y-fg-3">{eyebrow}</div> : null}
+        {eyebrow ? <div className="y-eyebrow">{eyebrow}</div> : null}
         <h1 className="y-display y-t-display">{title}</h1>
         {description ? <p className="y-lead y-fg-2 max-w-[62ch]">{description}</p> : null}
       </div>
@@ -85,18 +88,20 @@ export function SectionLabel({
   );
 }
 
-/** Wraps Arabic snippets inside the English UI so they render RTL with the Arabic faces. */
-export function Ar({
+/** Text in a video's own language inside the English UI: tags the language, and Arabic runs RTL. */
+export function InLang({
+  lang,
   children,
   className = "",
   as: Tag = "span",
 }: {
+  lang: LanguageId;
   children: React.ReactNode;
   className?: string;
   as?: "span" | "p" | "div";
 }) {
   return (
-    <Tag dir="rtl" lang="ar" className={className}>
+    <Tag dir={textDir(lang)} lang={lang} className={className}>
       {children}
     </Tag>
   );

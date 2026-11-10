@@ -35,7 +35,7 @@ export default function SavedCreatorsPage() {
   );
 }
 
-/** Lower-cased text a search can match: name, handle, city, kind, dialects, headline. */
+/** Lower-cased text a search can match: name, handle, city, kind, languages, headline. */
 function haystack(creator: Creator) {
   return [
     creator.name,
@@ -43,7 +43,7 @@ function haystack(creator: Creator) {
     cityById(creator.cityId)?.name ?? "",
     creatorKindById[creator.kind].name,
     creator.headline,
-    ...creator.languages.flatMap((id) => [languageById[id].name, languageById[id].short]),
+    ...creator.languages.map((id) => languageById[id].name),
   ]
     .join(" ")
     .toLowerCase();
@@ -133,15 +133,15 @@ function SavedCreators() {
             { value: "worked", label: `Worked with · ${worked.length}` },
           ]}
         />
-        <div className="flex min-w-0 flex-1 gap-2">
-          <div className="relative min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 flex-wrap gap-2">
+          <div className="relative min-w-[13rem] flex-1">
             <Search size={18} aria-hidden className="pointer-events-none absolute start-5 top-1/2 -translate-y-1/2" />
             <input
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search creators"
-              aria-label="Search by name, city or dialect"
+              aria-label="Search by name, city or language"
               className="y-input !ps-12"
               autoComplete="off"
             />
@@ -150,7 +150,7 @@ function SavedCreators() {
             value={sort}
             onChange={(event) => setSort(event.target.value as Sort)}
             aria-label="Sort by"
-            className="y-input !w-auto flex-none"
+            className="y-input !w-auto flex-1 sm:flex-none"
           >
             <option value="recent">{tab === "saved" ? "Recently saved" : "Most recent"}</option>
             <option value="rating">Highest rated</option>
@@ -275,7 +275,7 @@ function NoMatches({ query, onClear }: { query: string; onClear: () => void }) {
         tint="sea"
         face="focus"
         title={`No one matches “${query.trim()}”`}
-        body="Try a first name, a city like Riyadh, or a dialect like Khaleeji."
+        body="Try a first name, a city like Toronto, or a language like Spanish."
         action={
           <PillButton variant="outline" icon={<X size={16} aria-hidden />} onClick={onClear}>
             Clear search

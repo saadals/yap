@@ -13,7 +13,7 @@ import type { NicheId } from "@/lib/types";
 const teamSizes = ["Just me", "2–10 people", "11–50 people", "51–200 people", "200+ people"];
 
 const perks = [
-  { icon: <FileText size={18} aria-hidden />, text: "VAT invoices with your company details" },
+  { icon: <FileText size={18} aria-hidden />, text: "Invoices with your company name and tax ID" },
   { icon: <Users size={18} aria-hidden />, text: "A team that can order and approve work" },
   { icon: <Building2 size={18} aria-hidden />, text: "Your company name and logo on your orders" },
 ];

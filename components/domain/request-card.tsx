@@ -17,11 +17,18 @@ import {
 } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import { campaignPlatformById, formatById, tierById } from "@/lib/taxonomy";
-import type { ContentRequest, Pitch } from "@/lib/types";
+import type { Business, ContentRequest, Pitch, Product } from "@/lib/types";
 
 import { BusinessLogo } from "./business-logo";
 import { languageList } from "./chips";
 import { PitchBadge, RequestBadge } from "./status-badge";
+
+/** "Roundleaf · 2 days ago", "Daftar · Daftar Stock · 1h ago": the brand only when it isn't the product's name too. */
+function postedLine(request: ContentRequest, business: Business | undefined, product: Product | undefined): string {
+  const names = [business?.name, product?.name].filter((name): name is string => Boolean(name));
+  const unique = names.filter((name, index) => names.indexOf(name) === index);
+  return [...unique, request.status === "draft" ? "Not posted yet" : timeAgo(request.postedAt)].join(" · ");
+}
 
 /**
  * An order as a card (custom request or UGC campaign).
@@ -124,12 +131,7 @@ function CustomRequestCard({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="y-micro y-fg-2 truncate">
-            {perspective === "creator" && business ? `${business.name} · ` : ""}
-            {product?.name}
-            {" · "}
-            {request.status === "draft" ? "Not posted yet" : timeAgo(request.postedAt)}
-          </p>
+          <p className="y-micro y-fg-2 truncate">{postedLine(request, perspective === "creator" ? business : undefined, product)}</p>
           <h3 className="y-head mt-0.5">
             <Link href={href} className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']">
               {request.title}
@@ -215,12 +217,7 @@ function CampaignCard({
           </span>
         )}
         <div className="min-w-0 flex-1">
-          <p className="y-micro y-fg-2 truncate">
-            {perspective === "creator" && business ? `${business.name} · ` : ""}
-            {product?.name}
-            {" · "}
-            {request.status === "draft" ? "Not posted yet" : timeAgo(request.postedAt)}
-          </p>
+          <p className="y-micro y-fg-2 truncate">{postedLine(request, perspective === "creator" ? business : undefined, product)}</p>
           <h3 className="y-head mt-0.5">
             <Link href={href} className="after:absolute after:inset-0 after:rounded-(--y-r-block) after:content-['']">
               {request.title}
@@ -247,7 +244,7 @@ function CampaignCard({
             <span>All slots taken</span>
           ) : (
             <span className="font-semibold text-(--b-fg)">
-              {open <= 3 ? `Only ${plural(open, "yapp")} left` : `${open} of ${request.slots} slots open`}
+              {open <= 3 ? `Only ${plural(open, "Yapp")} left` : `${open} of ${request.slots} slots open`}
             </span>
           )}
           {perspective === "creator" ? <span>{compact(request.views)} views</span> : null}

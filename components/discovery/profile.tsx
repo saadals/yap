@@ -112,7 +112,7 @@ export function CreatorProfile({ handle }: { handle: string }) {
   return (
     <div className="flex flex-col">
       {isOwn ? (
-        <Block tone="sky" pad="sm" className="mb-2 flex items-start gap-3 !px-5">
+        <Block tone="paper" pad="sm" className="mb-2 flex items-start gap-3 !px-5">
           <Eye size={20} aria-hidden className="mt-0.5 flex-none" />
           <p className="y-small">
             <span className="font-semibold">This is how others see your profile.</span>{" "}
@@ -201,12 +201,15 @@ export function CreatorProfile({ handle }: { handle: string }) {
             </>
           ) : (
             <>
+              {/* Delivery on its own line and "From" beside the price, so the bar stays two lines
+                  next to a long "Commission {name}" button at 390px. */}
               <span className="flex min-w-0 flex-1 flex-col leading-tight">
-                <span className="y-micro opacity-70">
-                  From · {cheapest ? `${cheapest.deliveryDays}-day delivery` : ""}
-                </span>
-                <span className="y-display y-num text-[22px] font-semibold tracking-[-0.02em]">
-                  {money(from)}
+                {cheapest ? (
+                  <span className="y-micro truncate opacity-70">{cheapest.deliveryDays}-day delivery</span>
+                ) : null}
+                <span className="flex items-baseline gap-1 whitespace-nowrap">
+                  <span className="y-micro opacity-70">From</span>
+                  <span className="y-display y-num text-[22px] font-semibold tracking-[-0.02em]">{money(from)}</span>
                 </span>
               </span>
               <PillButton href={commissionHref} variant="neon" arrow>

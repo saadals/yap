@@ -57,13 +57,13 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
           <div
             key={item.id}
             data-tone="night"
-            className="y-toast y-block pointer-events-auto flex min-h-14 w-full max-w-md items-center gap-3 !rounded-full py-2 ps-2 pe-2 shadow-(--y-shadow-float)"
+            className="y-toast y-block pointer-events-auto flex min-h-14 w-full max-w-md items-center gap-3 !rounded-full py-2 ps-2 pe-2"
           >
             <span
               aria-hidden
               className={`grid size-10 flex-none place-items-center rounded-full ${
                 item.tone === "info"
-                  ? "bg-(--y-sky) text-(--y-on-color)"
+                  ? "bg-(--b-chip) text-(--b-fg)"
                   : "bg-(--y-neon) text-(--y-on-color)"
               }`}
             >

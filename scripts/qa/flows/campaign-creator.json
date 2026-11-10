@@ -13,6 +13,9 @@
       "after": 1000
     },
     {
+      "text": "Within 5 days of taking a slot, set by Daftar"
+    },
+    {
       "click": "I'll post with the tag and the paid partnership label",
       "after": 400
     },
@@ -22,6 +25,9 @@
     },
     {
       "text": "Slot 8 of"
+    },
+    {
+      "text": "Upload by"
     },
     {
       "click": "Upload your review copy",
@@ -94,15 +100,22 @@
       "text": "Pending"
     },
     {
+      "text": "Daftar · released Wed"
+    },
+    {
+      "shot": "r3rules-creator-wallet-pending",
+      "full": true
+    },
+    {
       "after": 800,
       "clickSel": "button[aria-label^=\"Account menu\"]"
     },
     {
-      "click": "Jump to month end (demo)",
+      "click": "Skip 7 days (demo)",
       "after": 1500
     },
     {
-      "text": "Month closed"
+      "text": "7 days skipped"
     },
     {
       "go": "/wallet",

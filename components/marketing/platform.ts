@@ -8,12 +8,14 @@ import type { DemoState } from "@/lib/store";
 import { compact } from "@/lib/format";
 import {
   CAMPAIGN_FEE_RATE,
+  CAMPAIGN_KEEP_LIVE_DAYS,
   CAMPAIGN_MIN_VIDEOS,
+  CAMPAIGN_OPEN_DAYS,
+  CAMPAIGN_RELEASE_DAYS,
   CAMPAIGN_STEP,
   SERVICE_FEE_RATE,
   addons as addonList,
   followerTiers,
-  isArabic,
 } from "@/lib/taxonomy";
 import type { AddonId, Creator } from "@/lib/types";
 
@@ -22,7 +24,7 @@ export const MARKETING = {
   /** Share of deliveries approved on the first version, without a revision round. */
   firstTimeApprovalPct: 86,
   /** Typical bank / wallet transfer time once a creator withdraws. */
-  payoutTime: "1–3 business days",
+  payoutTime: "1–2 business days",
   /** Minimum withdrawal for creators. */
   minimumPayout: 20,
   /** How long a creator has to accept a direct offer before it expires. */
@@ -38,8 +40,15 @@ export function campaignFacts() {
   return {
     minVideos: CAMPAIGN_MIN_VIDEOS,
     step: CAMPAIGN_STEP,
+    /** Service fee on campaigns: charged with the budget when posted, held and refunded with it. */
     feePct: Math.round(CAMPAIGN_FEE_RATE * 100),
     customFeePct: Math.round(SERVICE_FEE_RATE * 100),
+    /** Creators are paid this many days after their post is verified. */
+    releaseDays: CAMPAIGN_RELEASE_DAYS,
+    /** Posts stay up this long from verification. */
+    keepLiveDays: CAMPAIGN_KEEP_LIVE_DAYS,
+    /** A campaign takes creators for this long unless the brand closes it. */
+    openDays: CAMPAIGN_OPEN_DAYS,
     fromPrice: confirmed[0]?.pricePerVideo ?? followerTiers[0].pricePerVideo,
     /** Lowest verified follower count a campaign accepts ("10K"). */
     floor: compact(followerTiers[0].min),
@@ -76,14 +85,14 @@ export function platformStats(s: DemoState) {
   const firstDeliveryDays = median(
     creators.map((c) => Math.min(...c.packages.map((p) => p.deliveryDays))),
   );
-  const dialects = new Set(creators.flatMap((c) => c.languages).filter(isArabic)).size;
+  const languages = new Set(creators.flatMap((c) => c.languages)).size;
   return {
     creators: creators.length,
     completed,
     reviewCount,
     avgRating,
     firstDeliveryDays,
-    dialects,
+    languages,
     onTimePct: median(creators.map((c) => c.onTimeRate)),
     repeatPct: median(creators.map((c) => c.repeatClientRate)),
     startingPrice: median(creators.map((c) => startingPrice(c))),

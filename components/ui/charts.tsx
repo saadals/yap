@@ -48,7 +48,7 @@ export function MiniBars({
         <div key={index} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
           <span
             className={`y-bars-grow block w-full max-w-10 rounded-full ${
-              highlightLast && index === values.length - 1 ? "bg-(--b-fg)" : "bg-(--b-line)"
+              highlightLast && index === values.length - 1 ? "bg-(--b-fg)" : "bg-(--b-line-strong)"
             }`}
             style={{ height: `${Math.max(8, (value / max) * 100)}%`, animationDelay: `${index * 40}ms` }}
           />

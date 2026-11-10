@@ -15,7 +15,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
 import { ContactNotice } from "@/components/requests/contact-notice";
 import { at } from "@/lib/clock";
-import { daysFromNow, money, moneyRange, plural, weekdayDate } from "@/lib/format";
+import { daysFromNow, money, moneyRange, plural, priceLimitError, priceLimits, quoted, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { actions } from "@/lib/store";
 import { addonById, formatById } from "@/lib/taxonomy";
@@ -88,7 +88,10 @@ export function PitchComposer({
   const [attempted, setAttempted] = useState(false);
 
   const priceNum = Number(price);
-  const priceValid = Number.isInteger(priceNum) && priceNum >= 20 && priceNum <= 10000;
+  // $30 to $5,000 per video the brief asks for (and never a pitch under $30).
+  const limits = priceLimits(request.brief.videoCount);
+  const priceError = price.trim() === "" ? `Enter your price, from ${money(limits.min)}.` : priceLimitError(priceNum, request.brief.videoCount);
+  const priceValid = priceError === null;
   const errors: Record<Field, string | null> = {
     angle:
       angle.trim().length < ANGLE_MIN
@@ -98,7 +101,7 @@ export function PitchComposer({
       message.trim().length < MESSAGE_MIN
         ? `Write at least ${MESSAGE_MIN} characters so ${businessName} knows why you're a fit (${MESSAGE_MIN - message.trim().length} to go).`
         : null,
-    price: priceValid ? null : "Enter a whole-dollar price between $20 and $10,000.",
+    price: priceError,
     days: days >= 1 && days <= 60 ? null : "Pick between 1 and 60 days.",
     // A brand-new creator profile has no portfolio yet: samples are optional until it does.
     samples:
@@ -236,7 +239,7 @@ export function PitchComposer({
           </div>
           <div className="flex flex-col gap-1">
             <p className="y-micro y-fg-2">Angle</p>
-            <p className="y-display text-[20px] leading-snug">&ldquo;{angle.trim()}&rdquo;</p>
+            <p className="y-display text-[20px] leading-snug">{quoted(angle)}</p>
           </div>
           <p className="y-body max-w-[62ch] whitespace-pre-line">{message.trim()}</p>
           {pickedVideos.length ? (
@@ -354,8 +357,8 @@ export function PitchComposer({
               required
               type="number"
               inputMode="numeric"
-              min={20}
-              max={10000}
+              min={limits.min}
+              max={limits.max}
               step={5}
               value={price}
               onChange={(e) => setPrice(e.target.value)}
@@ -507,7 +510,7 @@ export function PitchComposer({
         </legend>
         <p id="samples-hint" className="y-micro y-fg-2 px-1">
           {videos.length
-            ? `Pick 1 to 3. Closest matches to this ${format.name.toLowerCase()} are first.`
+            ? `Pick 1 to 3. Closest matches to this ${format.noun[0]} are first.`
             : "Optional for now: your portfolio is empty."}
         </p>
         {videos.length === 0 ? (

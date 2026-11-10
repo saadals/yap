@@ -76,7 +76,7 @@ export function Browse({ embedded = false }: { embedded?: boolean }) {
     setSheetOpen(true);
   };
 
-  const dialectValue = filters.langs.length === 1 ? filters.langs[0] : filters.langs.length > 1 ? "multi" : "";
+  const languageValue = filters.langs.length === 1 ? filters.langs[0] : filters.langs.length > 1 ? "multi" : "";
   const cityCount = new Set(s.creators.map((c) => c.cityId)).size;
   const signedIn = Boolean(account);
 
@@ -115,7 +115,7 @@ export function Browse({ embedded = false }: { embedded?: boolean }) {
             <input
               type="search"
               className="y-input ps-13"
-              placeholder="Name, @handle or niche"
+              placeholder="Name, @handle, language or category"
               value={q}
               onChange={(event) => setQ(event.target.value)}
               onBlur={() => {
@@ -123,27 +123,27 @@ export function Browse({ embedded = false }: { embedded?: boolean }) {
               }}
             />
           </label>
-          {/* Phones pick dialects in Filters, keeping the search to one row */}
+          {/* Phones pick languages in Filters, keeping the search to one row */}
           <label className="hidden min-w-0 md:block">
-            <span className="sr-only">Dialect</span>
+            <span className="sr-only">Language</span>
             <select
               className="y-input"
-              value={dialectValue}
+              value={languageValue}
               onChange={(event) => {
                 const value = event.target.value;
                 if (value === "multi") return;
                 commit({ ...filters, langs: value ? [value as LanguageId] : [] });
               }}
             >
-              <option value="">Any dialect</option>
+              <option value="">Any language</option>
               {filters.langs.length > 1 ? (
                 <option value="multi" disabled>
-                  {filters.langs.length} dialects selected
+                  {filters.langs.length} languages selected
                 </option>
               ) : null}
               {languages.map((lang) => (
                 <option key={lang.id} value={lang.id}>
-                  {lang.id === "en" ? lang.name : `${lang.short} · ${lang.native}`}
+                  {lang.name}
                 </option>
               ))}
             </select>
@@ -205,14 +205,7 @@ export function Browse({ embedded = false }: { embedded?: boolean }) {
               aria-label={`Remove filter: ${chip.label}`}
               onClick={() => commit(chip.remove(filters))}
             >
-              <span>
-                {chip.label}
-                {chip.native ? (
-                  <span dir="rtl" lang="ar" className="ms-1.5 font-normal opacity-75">
-                    {chip.native}
-                  </span>
-                ) : null}
-              </span>
+              <span>{chip.label}</span>
               <X size={16} aria-hidden />
             </button>
           ))}
@@ -247,7 +240,7 @@ export function Browse({ embedded = false }: { embedded?: boolean }) {
               body={
                 signedIn
                   ? "Try removing a filter or two. Or post an order and let creators who fit come to you."
-                  : "Try removing a filter or two, or search for a niche like “fintech” or “skit”."
+                  : "Try removing a filter or two, or search for a category like “fintech” or a format like “unboxing”."
               }
               shape="bean"
               tint="violet"

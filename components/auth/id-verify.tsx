@@ -16,7 +16,10 @@ export type IdStatus = "none" | "pending" | "verified";
 
 const documents = ["Passport", "National ID", "Residence permit"];
 
-/** Sky block with the mock "Verify with your ID" flow: sheet → pending → verified. */
+/**
+ * The mock "Verify with your ID" flow (sheet → pending → verified) as a quiet panel inside the
+ * step's card; the scan and badge icons say it's about trust.
+ */
 export function IdVerification({
   status,
   onSubmit,
@@ -29,7 +32,7 @@ export function IdVerification({
   const [open, setOpen] = useState(false);
   return (
     <Block
-      tone="sky"
+      tone="mist"
       pad="md"
       className="flex flex-col gap-4"
       data-invalid={error ? true : undefined}
@@ -68,7 +71,7 @@ export function IdVerification({
           Verify with your ID
         </PillButton>
       ) : status === "pending" ? (
-        <Badge tone="info" icon={<LoaderCircle size={14} aria-hidden className="animate-spin" />} className="w-fit">
+        <Badge tone="neutral" icon={<LoaderCircle size={14} aria-hidden className="animate-spin" />} className="w-fit">
           In review
         </Badge>
       ) : (

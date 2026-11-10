@@ -10,7 +10,7 @@
     { "eval": "(() => { [...document.querySelectorAll('main input[type=checkbox]')].slice(0, 2).forEach((b) => { if (!b.checked) b.click() }); return true })()" },
     { "click": "Preview pitch", "after": 1200 },
     { "click": "Send pitch", "after": 2000 },
-    { "text": "Sent" },
+    { "text": "Pitch sent" },
     { "account": "nour" },
     { "go": "/orders/r-101", "after": 3500 },
     { "text": "Pitches · 8" },

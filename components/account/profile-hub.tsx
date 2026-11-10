@@ -131,7 +131,7 @@ function Hub() {
         </Block>
 
         {creator ? null : (
-          <Block as="section" tone="lavender" pad="md" className="flex flex-wrap items-center gap-4" aria-labelledby="make-title">
+          <Block as="section" tone="paper" pad="md" className="flex flex-wrap items-center gap-4" aria-labelledby="make-title">
             <span aria-hidden className="grid size-11 flex-none place-items-center rounded-full bg-(--b-chip)">
               <Video size={20} />
             </span>

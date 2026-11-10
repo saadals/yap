@@ -251,7 +251,7 @@ function Header({ ws }: { ws: Workspace }) {
   );
 }
 
-/** "(avatar) Layla Mansour · Selfie demo · Repeat of “…”": who it's with, the format and where it came from. */
+/** "(avatar) Layla Mansour · App demo · Repeat of “…”": who it's with, the format and where it came from. */
 function WhoLine({ ws }: { ws: Workspace }) {
   const s = useDemo();
   const { commission, side, creator, business, slot } = ws;

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 
-import { BrandMark, Wordmark } from "@/components/ui/brand";
+import { Lockup } from "@/components/ui/brand";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { OtpInput } from "@/components/ui/otp-input";
 import { PillButton } from "@/components/ui/pill-button";
@@ -240,10 +240,7 @@ function Panel({ intent, next, onClose }: SignInPanelProps) {
           >
             <ChevronLeft size={22} aria-hidden className="y-flip" />
           </button>
-          <span className="flex items-center gap-1.5">
-            <BrandMark size={26} />
-            <Wordmark />
-          </span>
+          <Lockup size={28} />
           <span aria-hidden className="size-11 flex-none lg:hidden" />
           <button
             type="button"
@@ -258,8 +255,8 @@ function Panel({ intent, next, onClose }: SignInPanelProps) {
         </div>
 
         <div className="flex flex-col gap-1">
-          <h2 id={titleId} className="y-display text-[24px] leading-tight font-bold lg:text-[26px]">
-            Sign in to yapp
+          <h2 id={titleId} className="y-display text-[24px] leading-tight font-semibold lg:text-[26px]">
+            Sign in to Yapp
           </h2>
           {intent ? (
             <p className="y-small y-fg-2">
@@ -393,11 +390,11 @@ function Panel({ intent, next, onClose }: SignInPanelProps) {
             </p>
             <p className="y-micro y-fg-3">
               By continuing you agree to the{" "}
-              <Link href={`${paths.howItWorks}#faq`} className="y-link">
+              <Link href={paths.legal} className="y-link">
                 Terms
               </Link>{" "}
               and{" "}
-              <Link href={`${paths.howItWorks}#faq`} className="y-link">
+              <Link href={paths.legal} className="y-link">
                 Privacy Policy
               </Link>
               .

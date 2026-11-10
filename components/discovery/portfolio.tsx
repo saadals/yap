@@ -8,12 +8,12 @@ import { VideoPlayer } from "@/components/domain/video-player";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
-import { Ar } from "@/components/ui/page";
+import { InLang } from "@/components/ui/page";
 import { Sheet } from "@/components/ui/sheet";
-import { clock, compact, lengthLabel, plural } from "@/lib/format";
+import { clock, compact, lengthLabel, plural, quoted } from "@/lib/format";
 import { featuredVideo, portfolio } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { formatById, isArabic, languageById } from "@/lib/taxonomy";
+import { formatById, languageById } from "@/lib/taxonomy";
 import type { Beat, Creator, FormatId, Video } from "@/lib/types";
 
 const beatLabel: Record<Beat, string> = {
@@ -54,7 +54,6 @@ function Stats({ video }: { video: Video }) {
 }
 
 function Script({ video }: { video: Video }) {
-  const arabic = isArabic(video.lang);
   return (
     <ol className="flex flex-col gap-2">
       {video.script.map((line) => (
@@ -62,13 +61,9 @@ function Script({ video }: { video: Video }) {
           <span className="y-micro y-num y-fg-2 w-10 flex-none pt-0.5">{clock(line.at)}</span>
           <span className="flex min-w-0 flex-1 flex-col gap-1">
             <span className="y-micro y-fg-3 font-semibold">{beatLabel[line.beat]}</span>
-            {arabic ? (
-              <Ar as="p" className="y-body">
-                {line.text}
-              </Ar>
-            ) : (
-              <p className="y-body">{line.text}</p>
-            )}
+            <InLang lang={video.lang} as="p" className="y-body">
+              {line.text}
+            </InLang>
             {line.translation ? <p className="y-small y-fg-2">{line.translation}</p> : null}
           </span>
         </li>
@@ -79,7 +74,6 @@ function Script({ video }: { video: Video }) {
 
 /** The featured video, playable in place: the first and larger item of the portfolio. */
 function Featured({ s, video }: { s: DemoState; video: Video }) {
-  const arabic = isArabic(video.lang);
   return (
     <div
       className={`grid gap-5 ${
@@ -98,15 +92,11 @@ function Featured({ s, video }: { s: DemoState; video: Video }) {
         </div>
         <div className="flex flex-col gap-1 border-s-2 border-(--b-line) ps-4">
           <span className="y-micro y-fg-2">Opening line</span>
-          {arabic ? (
-            <Ar as="p" className="y-body self-start">
-              {video.hook}
-            </Ar>
-          ) : (
-            <p className="y-body">{video.hook}</p>
-          )}
+          <InLang lang={video.lang} as="p" className="y-body self-start">
+            {video.hook}
+          </InLang>
           {video.hookTranslation ? (
-            <p className="y-small y-fg-2">&ldquo;{video.hookTranslation}&rdquo;</p>
+            <p className="y-small y-fg-2">{quoted(video.hookTranslation)}</p>
           ) : null}
         </div>
       </div>
@@ -190,7 +180,7 @@ export function PortfolioBlock({ s, creator }: { s: DemoState; creator: Creator 
                   <span className="y-small y-clamp-2 font-semibold">{video.title}</span>
                   <span className="y-micro y-fg-2 truncate">
                     {video.madeFor ? `Made for ${video.madeFor}` : "Spec piece"} ·{" "}
-                    {languageById[video.lang].short}
+                    {languageById[video.lang].name}
                     {video.stats ? ` · ${compact(video.stats.views)} views` : ""}
                   </span>
                 </span>

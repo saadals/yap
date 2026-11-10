@@ -67,7 +67,7 @@ export function InviteToRequestSheet({
                     </p>
                   </div>
                   {pitch ? (
-                    <Badge tone="info" icon={<Send size={14} aria-hidden className="y-flip" />} className="self-start sm:self-center">
+                    <Badge tone="neutral" icon={<Send size={14} aria-hidden className="y-flip" />} className="self-start sm:self-center">
                       Already pitched
                     </Badge>
                   ) : invited ? (

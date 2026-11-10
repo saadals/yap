@@ -4,14 +4,19 @@
  *
  * - r-150 Daftar (Nour's): 10 videos at the 10K–20K tier on TikTok. Slots in every state, one
  *   creator removed earlier, 3 slots open — Layla is eligible and can take one.
- * - r-250 Kanz: nearly full ("Only 2 Yapps left"), Layla eligible.
+ * - r-250 Roundleaf: nearly full ("Only 2 Yapps left"), Layla eligible.
  * - r-251 Souqly: just published, Layla eligible.
- * - r-252 Rihla: Instagram 20K–50K, Layla isn't eligible (shows why).
+ * - r-252 Wayfolk: Instagram 20K–50K, Layla isn't eligible (shows why).
  *
  * Seeded campaigns never fill up on their own; only campaigns created in the browser get simulated
  * creators joining (`campaign.simulate`).
+ *
+ * Money follows the live rules: each budget was charged with the 10% service fee when posted;
+ * approved slots stay held (pending) and get their release date 7 days after the post is verified.
  */
-import { at, endOfMonth, hoursAgo } from "@/lib/clock";
+import { withCampaignFee } from "@/lib/campaigns";
+import { addDays, at, hoursAgo } from "@/lib/clock";
+import { CAMPAIGN_FEE_RATE, CAMPAIGN_OPEN_DAYS, CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
 import type {
   Brief,
   CampaignTerms,
@@ -46,7 +51,7 @@ type CampaignSeed = {
   title: string;
   postedDaysAgo: number;
   slots: number;
-  terms: Omit<CampaignTerms, "ledger" | "excludedCreatorIds" | "paymentMethodId">;
+  terms: Omit<CampaignTerms, "ledger" | "excludedCreatorIds" | "paymentMethodId" | "closesAt">;
   brief: Pick<Brief, "languages" | "audience" | "goal" | "keyMessage" | "mustInclude" | "avoid" | "durationSec"> &
     Partial<Brief>;
   methodId: string;
@@ -70,11 +75,12 @@ const seeds: CampaignSeed[] = [
       platform: "tiktok",
       brandHandle: "@daftar.app",
       explainer: { name: "daftar_explainer_60s.mp4", durationSec: 60 },
+      deadlineDays: 5,
     },
     brief: {
-      languages: ["ar-saudi", "ar-gulf"],
+      languages: ["en"],
       durationSec: 30,
-      audience: "Shop owners and home businesses in Saudi Arabia and the Gulf who chase customers for money.",
+      audience: "Shop owners and home businesses in Canada and the US, 25–55, who chase customers for money.",
       goal: "Real people show how fast an invoice goes out on WhatsApp with Daftar, in their own words.",
       keyMessage: "Send an invoice on WhatsApp in 10 seconds and let Daftar do the chasing.",
       mustInclude: [
@@ -86,50 +92,51 @@ const seeds: CampaignSeed[] = [
       avoid: ["The words 'accounting' or 'bookkeeping'", "Prices or discounts", "Competitor names"],
     },
     taken: [
-      { slot: 1, creatorId: "cr-noura", takenHoursAgo: 46, state: "approved_live" },
+      { slot: 1, creatorId: "cr-nina", takenHoursAgo: 46, state: "approved_live" },
       { slot: 2, creatorId: "cr-omar", takenHoursAgo: 45, state: "approved_due" },
       { slot: 3, creatorId: "cr-hana", takenHoursAgo: 44, state: "review" },
-      { slot: 4, creatorId: "cr-zaid", takenHoursAgo: 40, state: "revision" },
-      { slot: 5, creatorId: "cr-ali", takenHoursAgo: 39, state: "replaced" },
-      { slot: 5, creatorId: "cr-ahmed", takenHoursAgo: 30, state: "filming" },
+      { slot: 4, creatorId: "cr-jordan", takenHoursAgo: 40, state: "revision" },
+      { slot: 5, creatorId: "cr-aisha", takenHoursAgo: 39, state: "replaced" },
+      { slot: 5, creatorId: "cr-leo", takenHoursAgo: 30, state: "filming" },
       { slot: 6, creatorId: "cr-rana", takenHoursAgo: 26, state: "filming" },
       { slot: 7, creatorId: "cr-lina", takenHoursAgo: 9, state: "filming" },
     ],
   },
   {
     id: "r-250",
-    businessId: "b-kanz",
-    productId: "p-kanz",
-    title: "Your first round-up: film it on Kanz",
+    businessId: "b-roundleaf",
+    productId: "p-roundleaf",
+    title: "Your first round-up: film it on Roundleaf",
     postedDaysAgo: 4,
     slots: 10,
-    methodId: "pm-kanz",
+    methodId: "pm-roundleaf",
     views: 1240,
     terms: {
       tierId: "t10",
       pricePerVideo: 30,
       platform: "tiktok",
-      brandHandle: "@kanz.money",
-      explainer: { name: "kanz_roundups_45s.mp4", durationSec: 45 },
+      brandHandle: "@roundleaf.money",
+      explainer: { name: "roundleaf_roundups_45s.mp4", durationSec: 45 },
+      deadlineDays: 7,
     },
     brief: {
-      languages: ["ar-gulf", "ar-saudi"],
+      languages: ["en"],
       durationSec: 30,
-      audience: "Young professionals in the Gulf who want to save but never get round to it.",
+      audience: "Young professionals in Canada and the US, 22–35, who want to save but never get round to it.",
       goal: "Viewers see spare change rounding up into savings without thinking about it.",
-      keyMessage: "Kanz saves your spare change every time you pay.",
+      keyMessage: "Roundleaf saves your spare change every time you pay.",
       mustInclude: ["Pay for something real (coffee, groceries)", "Show the round-up notification", "Say how much you saved in the first week"],
       avoid: ["Investment or returns promises", "Showing card numbers"],
     },
     taken: [
       { slot: 1, creatorId: "cr-omar", takenHoursAgo: 90, state: "approved_live" },
       { slot: 2, creatorId: "cr-hana", takenHoursAgo: 88, state: "approved_live" },
-      { slot: 3, creatorId: "cr-youssef", takenHoursAgo: 80, state: "approved_due" },
-      { slot: 4, creatorId: "cr-zaid", takenHoursAgo: 70, state: "review" },
-      { slot: 5, creatorId: "cr-noura", takenHoursAgo: 60, state: "filming" },
-      { slot: 6, creatorId: "cr-dina", takenHoursAgo: 50, state: "filming" },
-      { slot: 7, creatorId: "cr-khalid", takenHoursAgo: 30, state: "filming" },
-      { slot: 8, creatorId: "cr-tariq", takenHoursAgo: 12, state: "filming" },
+      { slot: 3, creatorId: "cr-emma", takenHoursAgo: 80, state: "approved_due" },
+      { slot: 4, creatorId: "cr-jordan", takenHoursAgo: 70, state: "review" },
+      { slot: 5, creatorId: "cr-nina", takenHoursAgo: 60, state: "filming" },
+      { slot: 6, creatorId: "cr-priya", takenHoursAgo: 50, state: "filming" },
+      { slot: 7, creatorId: "cr-mateo", takenHoursAgo: 30, state: "filming" },
+      { slot: 8, creatorId: "cr-sofia", takenHoursAgo: 12, state: "filming" },
     ],
   },
   {
@@ -146,15 +153,16 @@ const seeds: CampaignSeed[] = [
       pricePerVideo: 30,
       platform: "tiktok",
       brandHandle: "@souqly",
+      deadlineDays: 3,
     },
     brief: {
-      languages: ["ar-egyptian", "ar-saudi", "ar-gulf"],
+      languages: ["en", "ar"],
       durationSec: 40,
-      audience: "People who sell on Instagram DMs and want a real shop link.",
-      goal: "Viewers see a shop go live in the time it takes to finish a coffee.",
-      keyMessage: "Your shop link, live before your coffee gets cold.",
-      mustInclude: ["Start a timer at the beginning", "Add one real product", "Share the shop link at the end"],
-      avoid: ["Saying it's free forever", "Other shop builders by name"],
+      audience: "People, 20–40, who sell through Instagram DMs in English or Arabic and want a real store link.",
+      goal: "Viewers see a store go live in the time it takes to finish a coffee.",
+      keyMessage: "Your store link, live before your coffee gets cold.",
+      mustInclude: ["Start a timer at the beginning", "Add one real product", "Share the store link at the end"],
+      avoid: ["Saying it's free forever", "Other store builders by name"],
     },
     taken: [
       { slot: 1, creatorId: "cr-lina", takenHoursAgo: 3, state: "filming" },
@@ -163,24 +171,25 @@ const seeds: CampaignSeed[] = [
   },
   {
     id: "r-252",
-    businessId: "b-rihla",
-    productId: "p-rihla",
-    title: "Plan a weekend away with Rihla",
+    businessId: "b-wayfolk",
+    productId: "p-wayfolk",
+    title: "Plan a weekend away with Wayfolk",
     postedDaysAgo: 1,
     slots: 10,
-    methodId: "pm-rihla",
+    methodId: "pm-wayfolk",
     views: 388,
     terms: {
       tierId: "t20",
       pricePerVideo: 40,
       platform: "instagram",
-      brandHandle: "@rihla.travel",
-      explainer: { name: "rihla_planner_50s.mp4", durationSec: 50 },
+      brandHandle: "@wayfolk.travel",
+      explainer: { name: "wayfolk_planner_50s.mp4", durationSec: 50 },
+      deadlineDays: 5,
     },
     brief: {
-      languages: ["ar-gulf", "en"],
+      languages: ["en"],
       durationSec: 45,
-      audience: "Friends and families in the Gulf planning short winter trips.",
+      audience: "Friends and families in the US and Canada, 20–40, planning short winter trips.",
       goal: "Viewers plan a real weekend in the app and feel it's easier than a group chat.",
       keyMessage: "From group chat chaos to a plan in five minutes.",
       mustInclude: ["Show the shared plan with friends", "Book one real stop", "Reels format, under 45 seconds"],
@@ -188,7 +197,7 @@ const seeds: CampaignSeed[] = [
     },
     taken: [
       { slot: 1, creatorId: "cr-hana", takenHoursAgo: 20, state: "filming" },
-      { slot: 2, creatorId: "cr-dina", takenHoursAgo: 8, state: "filming" },
+      { slot: 2, creatorId: "cr-priya", takenHoursAgo: 8, state: "filming" },
     ],
   },
 ];
@@ -196,7 +205,7 @@ const seeds: CampaignSeed[] = [
 function briefFor(seed: CampaignSeed): Brief {
   return {
     productId: seed.productId,
-    format: "ugc-review",
+    format: "testimonial",
     platforms: [seed.terms.platform],
     aspect: "9:16",
     videoCount: 1,
@@ -214,7 +223,7 @@ function reviewCopy(creatorId: string, id: string, title: string): Video {
     videos[0];
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { stats, ...rest } = source;
-  return { ...rest, id, title, format: "ugc-review", aspect: "9:16" };
+  return { ...rest, id, title, format: "testimonial", aspect: "9:16" };
 }
 
 const iso = (hoursAgoValue: number) => hoursAgo(hoursAgoValue);
@@ -255,7 +264,7 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
       id: `d-${id}-1`,
       version: 1,
       video: reviewCopy(s.creatorId, `v-${id}-1`, `${title} — review copy`),
-      note: "Review copy is up (watermarked). Filmed at my counter like the brief says.",
+      note: "Review copy is up (watermarked). Filmed it the way the brief asks.",
       deliveredAt: firstUpload,
       status: s.state === "review" ? "in_review" : s.state === "revision" ? "changes_requested" : "approved",
       comments:
@@ -279,22 +288,27 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
     status = "completed";
     payment = "pending";
     completedAt = iso(Math.max(1, s.takenHoursAgo - 24));
-    withdrawableFrom = endOfMonth(completedAt);
     events.push(ev(3, "approved", "business", "Version 1 approved. Full-quality file unlocked.", completedAt));
-    events.push(ev(4, "paid", "system", `$${seed.terms.pricePerVideo} added to the creator's wallet as pending`, completedAt));
+    events.push(
+      ev(4, "paid", "system", `$${seed.terms.pricePerVideo} stays held until ${CAMPAIGN_RELEASE_DAYS} days after the post is verified`, completedAt),
+    );
     post = { status: "due" };
   }
   if (s.state === "approved_live") {
     const postedAt = iso(Math.max(1, s.takenHoursAgo - 30));
+    // Verified a few minutes after posting; the pay is released 7 days later if the post is up.
+    const verifiedAt = addDays(postedAt, 4 / (24 * 60));
+    withdrawableFrom = addDays(verifiedAt, CAMPAIGN_RELEASE_DAYS);
     post = {
       status: "live",
       url: `https://www.tiktok.com/@creator/video/${7300000000 + index * 7919}`,
       at: postedAt,
+      verifiedAt,
       tagFound: true,
       disclosureFound: true,
     };
     events.push(ev(5, "posted", "creator", "Posted on their account", postedAt));
-    events.push(ev(6, "post_verified", "system", `Post verified: ${seed.terms.brandHandle} tagged, paid partnership label on`, postedAt));
+    events.push(ev(6, "post_verified", "system", `Post verified: ${seed.terms.brandHandle} tagged, paid partnership label on`, verifiedAt));
   }
 
   return {
@@ -307,13 +321,14 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
     requestId: seed.id,
     price: seed.terms.pricePerVideo,
     addons: [],
-    feeRate: 0,
+    feeRate: CAMPAIGN_FEE_RATE,
     revisionsIncluded: 2,
     revisionsUsed: s.state === "revision" ? 1 : 0,
     status,
     createdAt: takenAt,
     acceptedAt: takenAt,
-    dueDate: at(14, "18:00"),
+    // Version 1 is due within the deadline the brand set.
+    dueDate: addDays(takenAt, seed.terms.deadlineDays),
     completedAt,
     autoApproveAt,
     deliveries,
@@ -330,6 +345,7 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
 
 export const campaignRequests: ContentRequest[] = seeds.map((seed) => {
   const active = seed.taken.filter((t) => t.state !== "replaced").length;
+  const budget = withCampaignFee(seed.slots * seed.terms.pricePerVideo);
   return {
     id: seed.id,
     businessId: seed.businessId,
@@ -347,14 +363,16 @@ export const campaignRequests: ContentRequest[] = seeds.map((seed) => {
     kind: "campaign",
     campaign: {
       ...seed.terms,
+      closesAt: at(CAMPAIGN_OPEN_DAYS - seed.postedDaysAgo, "11:00"),
       paymentMethodId: seed.methodId,
       ledger: [
         {
           id: `lg-${seed.id}-1`,
           at: at(-seed.postedDaysAgo, "10:58"),
           kind: "charge",
-          amount: seed.slots * seed.terms.pricePerVideo,
-          note: `${seed.slots} videos × $${seed.terms.pricePerVideo} held`,
+          amount: budget.total,
+          fee: budget.fee,
+          note: `${seed.slots} videos × $${seed.terms.pricePerVideo}, plus the ${Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee`,
         },
       ],
       excludedCreatorIds: seed.taken.filter((t) => t.state === "replaced").map((t) => t.creatorId),

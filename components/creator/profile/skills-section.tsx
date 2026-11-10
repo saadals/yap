@@ -3,7 +3,6 @@
 import { AlertCircle, Check } from "lucide-react";
 import { useState } from "react";
 
-import { Ar } from "@/components/ui/page";
 import { FilterChip } from "@/components/ui/chip";
 import { useToast } from "@/components/ui/toast";
 import { plural } from "@/lib/format";
@@ -42,7 +41,7 @@ export function SkillsSection({ creator }: { creator: Creator }) {
   });
   const [attempted, setAttempted] = useState(false);
   const errors = {
-    languages: draft.languages.length ? null : "Pick at least one language or dialect.",
+    languages: draft.languages.length ? null : "Pick at least one language.",
     formats: draft.formats.length ? null : "Pick at least one format you make.",
   };
   const errorCount = Object.values(errors).filter(Boolean).length;
@@ -51,12 +50,12 @@ export function SkillsSection({ creator }: { creator: Creator }) {
   return (
     <ProfileSection
       id="skills"
-      title="Languages, formats and niches"
+      title="Languages, formats and categories"
       description="These drive your fit score. List only what you'd happily deliver."
       summary={[
-        creator.languages.map((l) => languageById[l].short).join(", "),
+        creator.languages.map((l) => languageById[l].name).join(", "),
         plural(creator.formats.length, "format"),
-        plural(creator.niches.length, "niche"),
+        plural(creator.niches.length, "category", "categories"),
       ].join(" · ")}
       dirty={dirty}
       attempted={attempted}
@@ -82,7 +81,7 @@ export function SkillsSection({ creator }: { creator: Creator }) {
     >
       <fieldset className="flex flex-col gap-3">
         <legend className="y-label mb-3 w-full">
-          <span>Languages and dialects</span>
+          <span>Languages you make videos in</span>
           <span className="y-micro y-fg-3 font-medium">{draft.languages.length} selected</span>
         </legend>
         <div className="flex flex-wrap gap-2">
@@ -92,8 +91,7 @@ export function SkillsSection({ creator }: { creator: Creator }) {
               pressed={draft.languages.includes(lang.id)}
               onClick={() => set((d) => ({ ...d, languages: toggle(d.languages, lang.id) }))}
             >
-              {lang.short}
-              {lang.id !== "en" ? <Ar className="ms-1.5 font-normal opacity-75">{lang.native}</Ar> : null}
+              {lang.name}
             </FilterChip>
           ))}
         </div>
@@ -140,7 +138,7 @@ export function SkillsSection({ creator }: { creator: Creator }) {
 
       <fieldset className="flex flex-col gap-3">
         <legend className="y-label mb-3 w-full">
-          <span>Niches</span>
+          <span>Categories</span>
           <span className="y-micro y-fg-3 font-medium">Optional</span>
         </legend>
         <div className="flex flex-wrap gap-2">

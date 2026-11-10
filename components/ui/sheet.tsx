@@ -100,8 +100,8 @@ export function Sheet({
       : { sm: "md:w-[420px]", md: "md:w-[520px]", lg: "md:w-[640px]" }[width];
   const placement =
     side === "center"
-      ? `md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[88dvh] md:rounded-(--y-r-block) ${widthClass}`
-      : `md:inset-y-2 md:end-2 md:start-auto md:bottom-2 md:max-h-none md:rounded-(--y-r-block) ${widthClass}`;
+      ? `md:inset-auto md:left-1/2 md:top-1/2 md:w-full md:-translate-x-1/2 md:-translate-y-1/2 md:max-h-[88dvh] md:rounded-(--y-r-sheet) ${widthClass}`
+      : `md:inset-y-2 md:end-2 md:start-auto md:bottom-2 md:max-h-none md:rounded-(--y-r-sheet) ${widthClass}`;
 
   return createPortal(
     <div className="fixed inset-0 z-[80]">

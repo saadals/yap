@@ -1,58 +1,33 @@
 import type { Metadata, Viewport } from "next";
-import { Funnel_Display, Funnel_Sans, Rubik, Zain } from "next/font/google";
+import { Inter } from "next/font/google";
 
 import { AppRoot } from "@/components/shell/app-root";
 import { themeBootScript } from "@/lib/site";
 
 import "./globals.css";
 
-/* Latin display + text (Funnel); Arabic display + text (Zain / Rubik) for Arabic content.
-   adjustFontFallback is off so a metric-adjusted Arial never swallows the other script. */
-const display = Funnel_Display({
+/* Inter, and nothing else: weights 400, 500 and 600 only (the brand book). Arabic snippets fall
+   through to the system's Arabic face. adjustFontFallback is off so a metric-adjusted Arial never
+   swallows the Arabic glyphs before the system face gets them. */
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--y-font-display",
-  display: "swap",
-  adjustFontFallback: false,
-});
-const text = Funnel_Sans({
-  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   variable: "--y-font-text",
   display: "swap",
   adjustFontFallback: false,
 });
-const arDisplay = Zain({
-  subsets: ["arabic"],
-  weight: ["400", "700", "800"],
-  variable: "--y-font-ar-display",
-  display: "swap",
-  adjustFontFallback: false,
-});
-const arText = Rubik({
-  subsets: ["arabic"],
-  variable: "--y-font-ar-text",
-  display: "swap",
-  adjustFontFallback: false,
-});
 
-/** Only the primary family: next/font's generated fallback face covers all of Unicode and would
-    swallow Arabic glyphs before the Arabic face gets a chance. */
-const primary = (font: { style: { fontFamily: string } }) =>
-  font.style.fontFamily.split(",")[0].trim();
-
+/** Only the primary family, so the browser falls through to system faces for other scripts. */
 const fontVars = {
-  "--y-font-display": primary(display),
-  "--y-font-text": primary(text),
-  "--y-font-ar-display": primary(arDisplay),
-  "--y-font-ar-text": primary(arText),
+  "--y-font-text": inter.style.fontFamily.split(",")[0].trim(),
 } as React.CSSProperties;
 
 export const metadata: Metadata = {
   title: {
-    default: "Yapp · Social videos for your app, made by real creators",
+    default: "Yapp · Short videos from real creators, made for tech brands",
     template: "%s · Yapp",
   },
-  description:
-    "Commission creators who speak your audience's language to make selfie demos, walkthroughs and honest reviews for your app. Payment is protected until you approve.",
+  description: "Short videos from real creators, made for tech brands.",
 };
 
 export const viewport: Viewport = {
@@ -61,19 +36,14 @@ export const viewport: Viewport = {
   // Without this, env(safe-area-inset-*) reads 0 and the full-bleed feed can't clear the notch.
   viewportFit: "cover",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#eeeeea" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0b" },
+    { media: "(prefers-color-scheme: light)", color: "#f7f7f9" },
+    { media: "(prefers-color-scheme: dark)", color: "#0b0b0c" },
   ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html
-      lang="en"
-      dir="ltr"
-      className={`${display.variable} ${text.variable} ${arDisplay.variable} ${arText.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" dir="ltr" className={inter.variable} suppressHydrationWarning>
       <head>
         {/* Applies the saved theme before first paint (works on static hosting too). */}
         <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />

@@ -254,7 +254,7 @@ export function ProductStep({ data, set, errors }: StepProps<OrderData>) {
         label="Who is it for?"
         required
         rows={3}
-        placeholder="e.g. Small shop owners in Saudi Arabia, 25–45, who live on WhatsApp and still keep a paper notebook."
+        placeholder="e.g. Freelancers in the US and Canada, 25–40, who send invoices from their phone and still track them in a spreadsheet."
         value={data.audience}
         error={errors.audience}
         onChange={(event) => set({ audience: event.target.value })}

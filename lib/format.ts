@@ -1,5 +1,5 @@
-import { DAY, HOUR, MINUTE, NOW, TIME_ZONE } from "./clock";
-import { SERVICE_FEE_RATE } from "./taxonomy";
+import { DAY, HOUR, MINUTE, NOW, TIME_ZONE, TZ_OFFSET } from "./clock";
+import { PITCH_MIN, PRICE_MAX_PER_YAPP, PRICE_MIN_PER_YAPP, SERVICE_FEE_RATE } from "./taxonomy";
 
 /** Arabic-Indic (٠-٩) and Eastern Arabic (۰-۹) digits become Latin ones. */
 export function toLatinDigits(value: string): string {
@@ -29,6 +29,12 @@ export function money(amount: number, cents = false): string {
   return cents ? usdCents.format(amount) : usd.format(Math.round(amount));
 }
 
+/** "$286" for whole dollars, "$291.50" otherwise: for totals that must agree to the cent. */
+export function moneyExact(amount: number): string {
+  const rounded = Math.round(amount * 100) / 100;
+  return Number.isInteger(rounded) ? money(rounded) : money(rounded, true);
+}
+
 /** "$200–350" */
 export function moneyRange(min: number, max: number): string {
   if (min === max) return money(min);
@@ -45,6 +51,21 @@ export function priceBreakdown(
   const subtotal = price + addonsTotal;
   const fee = Math.round(subtotal * feeRate * 100) / 100;
   return { price, addonsTotal, subtotal, fee, total: subtotal + fee, creatorEarns: subtotal };
+}
+
+/** Allowed price for work covering `videos` Yapps: $30–5,000 each (a pitch never under $30). */
+export function priceLimits(videos = 1) {
+  const count = Math.max(1, Math.round(videos));
+  return { min: Math.max(PITCH_MIN, PRICE_MIN_PER_YAPP * count), max: PRICE_MAX_PER_YAPP * count };
+}
+
+/** Why a price isn't allowed (plain, for an inline message), or null when it is. */
+export function priceLimitError(price: number, videos = 1): string | null {
+  const { min, max } = priceLimits(videos);
+  if (Number.isInteger(price) && price >= min && price <= max) return null;
+  return videos > 1
+    ? `Whole dollars, ${money(PRICE_MIN_PER_YAPP)}–${num(PRICE_MAX_PER_YAPP)} a video: ${money(min)}–${num(max)} for ${videos}.`
+    : `Whole dollars, ${money(min)}–${num(max)}.`;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -67,57 +88,57 @@ export function plural(count: number, one: string, many = `${one}s`): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Time (relative to the fixed demo clock, displayed in Riyadh time)           */
+/* Time (relative to the fixed demo clock, displayed in Eastern time)          */
 /* -------------------------------------------------------------------------- */
 
-const dateShort = new Intl.DateTimeFormat("en-GB", {
+const dateShort = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
   day: "numeric",
   month: "short",
 });
-const dateWeekday = new Intl.DateTimeFormat("en-GB", {
+const dateWeekday = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
   weekday: "short",
   day: "numeric",
   month: "short",
 });
-const dateLong = new Intl.DateTimeFormat("en-GB", {
+const dateLong = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
   day: "numeric",
   month: "long",
   year: "numeric",
 });
-const monthYear = new Intl.DateTimeFormat("en-GB", {
+const monthYear = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
   month: "long",
   year: "numeric",
 });
-const clockTime = new Intl.DateTimeFormat("en-GB", {
+const clockTime = new Intl.DateTimeFormat("en-US", {
   timeZone: TIME_ZONE,
-  hour: "2-digit",
+  hour: "numeric",
   minute: "2-digit",
-  hour12: false,
+  hour12: true,
 });
+const weekdayOnly = new Intl.DateTimeFormat("en-US", { timeZone: TIME_ZONE, weekday: "short" });
 
-/** "7 Nov" */
+/** "Nov 7" */
 export const shortDate = (iso: string) => dateShort.format(new Date(iso));
-/** "Thu, 7 Nov" */
+/** "Thu, Nov 7" */
 export const weekdayDate = (iso: string) => dateWeekday.format(new Date(iso));
-/** "7 November 2026" */
+/** "November 7, 2026" */
 export const longDate = (iso: string) => dateLong.format(new Date(iso));
 /** "March 2025" */
 export const monthYearOf = (iso: string) => monthYear.format(new Date(iso));
-/** "14:30" */
+/** "2:30 PM" */
 export const timeOf = (iso: string) => clockTime.format(new Date(iso));
 
-/** Whole calendar days between NOW and `iso` in Riyadh time (positive = future). */
+/** Whole calendar days between NOW and `iso` in display time (positive = future). */
 export function daysFromNow(iso: string): number {
-  const offset = 3 * HOUR;
-  const day = (ms: number) => Math.floor((ms + offset) / DAY);
+  const day = (ms: number) => Math.floor((ms + TZ_OFFSET) / DAY);
   return day(Date.parse(iso)) - day(NOW);
 }
 
-/** "just now", "12 min ago", "3h ago", "Yesterday", "4 days ago", "7 Nov" */
+/** "just now", "12 min ago", "3h ago", "Yesterday", "4 days ago", "Nov 7" */
 export function timeAgo(iso: string): string {
   const diff = NOW - Date.parse(iso);
   if (diff < MINUTE) return "just now";
@@ -129,15 +150,18 @@ export function timeAgo(iso: string): string {
   return shortDate(iso);
 }
 
-/** Message-list stamp: today → "14:30", yesterday → "Yesterday", this week → "Mon", else "7 Nov". */
+/** timeAgo for the middle of a sentence ("Posted yesterday", "Sent 3h ago"). */
+export function timeAgoInline(iso: string): string {
+  const text = timeAgo(iso);
+  return text === "Yesterday" ? "yesterday" : text;
+}
+
+/** Message-list stamp: today → "2:30 PM", yesterday → "Yesterday", this week → "Mon", else "Nov 7". */
 export function stamp(iso: string): string {
   const days = -daysFromNow(iso);
   if (days <= 0) return timeOf(iso);
   if (days === 1) return "Yesterday";
-  if (days < 7)
-    return new Intl.DateTimeFormat("en-GB", { timeZone: TIME_ZONE, weekday: "short" }).format(
-      new Date(iso),
-    );
+  if (days < 7) return weekdayOnly.format(new Date(iso));
   return shortDate(iso);
 }
 
@@ -185,4 +209,20 @@ export function initials(name: string): string {
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase())
     .join("");
+}
+
+/**
+ * Text in curly quotes for display. Text that is already one quotation keeps it, with its own
+ * quotes made curly ("'Sixty seconds…'" → “Sixty seconds…”); text that opens with a quote of its own
+ * ("'Who's closing tonight?' is how…") is shown as written, so quotes never double up.
+ */
+export function quoted(text: string): string {
+  const t = text.trim();
+  const whole = t.match(/^(['"‘“])([\s\S]*)(['"’”])([.?…]?)$/);
+  // Whole only if no quote of the same kind closes or opens inside ("'A' and 'B'" isn't one quote).
+  const inner = whole && (/['‘]/.test(whole[1]) ? /['‘’]\s|\s['‘’]/ : /["“”]\s|\s["“”]/);
+  // Straight double quotes inside become curly single ones, so “…‘like this’…” nests cleanly.
+  const nest = (body: string) => body.replace(/"([^"]*)"/g, "‘$1’");
+  if (whole && inner && !inner.test(whole[2])) return `“${nest(whole[2])}${whole[4]}”`;
+  return /^['"‘“]/.test(t) ? t : `“${nest(t)}”`;
 }

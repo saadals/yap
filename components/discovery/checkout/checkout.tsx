@@ -11,7 +11,7 @@ import { Block } from "@/components/ui/block";
 import { Celebrate } from "@/components/ui/celebrate";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
-import { lengthLabel, money, plural, shortDate, weekdayDate } from "@/lib/format";
+import { lengthLabel, money, moneyExact, plural, shortDate, timeOf, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 import { commissionById, creatorByHandle, me, videoById } from "@/lib/selectors";
@@ -220,7 +220,7 @@ export function Checkout({
   if (sent) return <Success s={s} creator={creator} x={x} commissionId={sent} repeat={repeat} />;
 
   const editor: EditorProps = { s, creator, d, x, set, replace: setD, errorFor, touch };
-  const totalLabel = money(x.totals.total);
+  const totalLabel = moneyExact(x.totals.total);
 
   const summaries: Record<SectionId, React.ReactNode> = {
     package: `${tierName[x.pkg.tier]} · ${x.pkg.name} · ${money(x.pkg.price)}`,
@@ -233,7 +233,7 @@ export function Checkout({
       <span className="flex flex-col gap-1">
         <span className="font-semibold text-(--b-fg)">{x.title}</span>
         <span>
-          {formatById[d.format].name} · {d.languages.map((l) => languageById[l].short).join(", ")} ·{" "}
+          {formatById[d.format].name} · {d.languages.map((l) => languageById[l].name).join(", ")} ·{" "}
           {deliverablesLabel(d)} · {d.aspect} · {d.platforms.map((p) => platformById[p].short).join(", ")}
         </span>
       </span>
@@ -392,7 +392,7 @@ export function Checkout({
           <div className="mx-auto mb-2 max-w-md px-3 text-center">
             <button
               type="button"
-              className="y-small rounded-full bg-(--y-paper) px-3 py-1.5 font-semibold shadow-(--y-shadow-float)"
+              className="y-bar y-small rounded-full px-3 py-1.5 font-semibold"
               onClick={() => jumpTo(missing[0])}
             >
               {missing.length === 1 ? fieldTodo[missing[0]] : `${missing.length} things left · ${fieldTodo[missing[0]]}`}
@@ -445,12 +445,12 @@ function OrderSummary({
         <div className={row}>
           <dt className="y-small y-fg-2">Deliverables</dt>
           <dd className="y-small text-end font-semibold">
-            {d.videoCount} × {formatById[d.format].name.toLowerCase()}, up to {lengthLabel(d.durationSec)}
+            {d.videoCount} × {formatById[d.format].noun[0]}, up to {lengthLabel(d.durationSec)}
           </dd>
         </div>
         <div className={row}>
           <dt className="y-small y-fg-2">Due</dt>
-          <dd className="y-small text-end font-semibold">{weekdayDate(x.dueDate)}, 18:00</dd>
+          <dd className="y-small text-end font-semibold">{weekdayDate(x.dueDate)}, {timeOf(x.dueDate)}</dd>
         </div>
         <div className={row}>
           <dt className="y-small y-fg-2">Revisions</dt>
@@ -507,8 +507,8 @@ function Success({
       </div>
       <dl className="grid w-full grid-cols-1 gap-2 text-start sm:grid-cols-3">
         <div className="y-tile flex flex-col gap-1 p-4">
-          <dt className="y-micro y-fg-2">Authorised, not charged</dt>
-          <dd className="y-display y-num text-[26px] leading-none font-semibold">{money(x.totals.total)}</dd>
+          <dt className="y-micro y-fg-2">Authorized, not charged</dt>
+          <dd className="y-display y-num text-[26px] leading-none font-semibold">{moneyExact(x.totals.total)}</dd>
         </div>
         <div className="y-tile flex flex-col gap-1 p-4">
           <dt className="y-micro y-fg-2">Due</dt>
@@ -523,7 +523,7 @@ function Success({
         {repeat && x.learnings.length
           ? `Your brief went with ${plural(x.learnings.length, "carried-forward learning")}, so ${creator.firstName} starts where you left off. `
           : ""}
-        Payment is held only once {creator.firstName} accepts, and the service fee is charged when you
+        You&apos;re charged when {creator.firstName} accepts, service fee included, and it&apos;s held until you
         approve the work.
       </p>
       {owner ? (

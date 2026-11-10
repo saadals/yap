@@ -38,7 +38,7 @@ const faq: FaqItem[] = [
   },
   {
     q: "What's a UGC campaign?",
-    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at a fixed price per video (from ${money(CAMPAIGN.fromPrice)}). Slots go first come, first served. Take one, film it, upload a review copy, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
+    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at a fixed price per video (from ${money(CAMPAIGN.fromPrice)}). Slots go first come, first served. Take one, upload a review copy within the days the brand set, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
   },
   {
     q: "How do you check my followers?",
@@ -50,7 +50,7 @@ const faq: FaqItem[] = [
   },
   {
     q: "What does Yapp charge creators?",
-    a: `Nothing. You keep 100% of your price and your add-ons. On custom orders the buyer pays a ${FEE_PCT}% service fee on top, only when the work is approved. Campaigns have no fee at all.`,
+    a: `Nothing. You keep 100% of your price and your add-ons, on custom orders and campaigns alike. The buyer pays Yapp's ${FEE_PCT}% service fee on top.`,
   },
   {
     q: "When do I get paid?",
@@ -62,8 +62,9 @@ const faq: FaqItem[] = [
           automatically {AUTO_APPROVE_DAYS} days after you deliver if they don&apos;t respond.
         </p>
         <p>
-          Campaign pay works differently: it sits in your wallet as pending until month end, as long
-          as your post stays up.
+          Campaign pay works differently: after the brand approves your video, you post it, and the pay
+          is released {CAMPAIGN.releaseDays} days after we verify the post, as long as it&apos;s still up.
+          Your wallet shows the exact date. Keep the post up for {CAMPAIGN.keepLiveDays} days.
         </p>
         <p>
           Withdraw any time from {money(MARKETING.minimumPayout)} to a bank account or wallet.
@@ -90,7 +91,7 @@ const faq: FaqItem[] = [
   },
   {
     q: "Which languages and formats can I offer?",
-    a: "Every Arabic dialect plus formal Fusha and English. List the dialects you're natural in and the formats you're good at: selfie demos, screen walkthroughs, honest reviews, skits, tutorials and ad hook packs.",
+    a: "English, Spanish, French, Arabic, Portuguese, Hindi, Korean and Chinese. List the languages you're natural in and the formats you're good at: app demos, screen walkthroughs, unboxings, problem → solution videos, comparisons, testimonials, talking heads, voiceovers and ad hook packs.",
   },
 ];
 
@@ -137,19 +138,17 @@ function Hero() {
         className="flex flex-col justify-between gap-10 lg:col-span-7 lg:min-h-[560px]"
       >
         <div className="flex flex-col gap-6 md:gap-8">
-          <p className="y-chip w-fit">
-            <Mic size={14} aria-hidden />
+          {/* Wraps on the narrowest phones instead of pushing the page sideways. */}
+          <p className="y-chip w-fit max-w-full py-1.5 whitespace-normal">
+            <Mic size={14} aria-hidden className="flex-none" />
             For presenters, video producers and influencers
           </p>
-          <h1
-            id="hero-title"
-            className="y-display y-hero max-sm:!text-[2.6rem] lg:!text-[4rem] xl:!text-[4.75rem]"
-          >
-            Get paid to <span className="y-strong">talk about apps</span> you&apos;d actually use
+          <h1 id="hero-title" className="y-display y-hero">
+            Get paid to <span className="y-strong">talk about tech</span> you&apos;d actually use
           </h1>
           <p className="y-lead y-fg-2 max-w-[50ch]">
-            App teams need people who explain their product naturally, in their customers&apos;
-            dialect. Your portfolio gets you hired; followers unlock UGC campaigns too.
+            Tech brands need people who explain their product naturally, in their customers&apos;
+            language. Your portfolio gets you hired; followers unlock UGC campaigns too.
           </p>
         </div>
         <div className="flex flex-col gap-4">
@@ -169,7 +168,7 @@ function Hero() {
       </Block>
 
       <Block
-        tone="butter"
+        tone="paper"
         pad="none"
         className="relative isolate flex min-h-[520px] items-center justify-center overflow-hidden px-6 py-16 lg:col-span-5 lg:min-h-0"
       >
@@ -210,7 +209,7 @@ function Hero() {
 const creatorSteps = [
   {
     title: "Build your profile",
-    body: "Your best videos, the dialects you speak, the formats you make, and your own prices.",
+    body: "Your best videos, the languages you speak, the formats you make, and your own prices.",
   },
   {
     title: "Pitch, accept or take a slot",
@@ -237,7 +236,7 @@ function HowItWorksForCreators() {
         <ol className="grid gap-10 md:grid-cols-3 md:gap-8">
           {creatorSteps.map((step, index) => (
             <li key={step.title} className="flex flex-col gap-4">
-              <StepNumber n={index + 1} className="text-[56px] md:text-[72px]" />
+              <StepNumber n={index + 1} />
               <div className="flex flex-col gap-2">
                 <h3 className="y-display y-title">
                   <span className="sr-only">Step {index + 1}: </span>
@@ -270,7 +269,7 @@ function Payouts() {
             You keep <span className="y-strong">100% of your price</span>
           </>
         }
-        sub={`On custom orders, buyers pay Yapp's ${FEE_PCT}% fee on top. Campaign pay sits in your wallet as pending until month end, as long as the post stays up.`}
+        sub={`Buyers pay Yapp's ${FEE_PCT}% fee on top. Campaign pay is released ${CAMPAIGN.releaseDays} days after we verify your post, as long as it's still up.`}
       />
       <div className="flex flex-col gap-2">
         <Block tone="paper" pad="lg">
@@ -313,7 +312,7 @@ function OpenRequests() {
             Open orders <span className="y-strong">right now</span>
           </>
         }
-        sub="Real briefs and campaigns from app teams, with the price stated up front."
+        sub="Real briefs and campaigns from tech brands, with the price stated up front."
         action={
           <PillButton href={paths.explore("orders")} variant="contrast" arrow>
             See all open orders
@@ -339,7 +338,7 @@ function OpenRequests() {
 function FinalCta() {
   return (
     <section aria-labelledby="creator-cta-title" className="mt-16 md:mt-24">
-      <Block tone="lavender" pad="none" className="grid overflow-hidden lg:grid-cols-12">
+      <Block tone="night" pad="none" className="grid overflow-hidden lg:grid-cols-12">
         <div className="flex flex-col gap-8 p-6 md:p-10 lg:col-span-7">
           <h2 id="creator-cta-title" className="y-display y-t-display max-w-[16ch]">
             Your next client is <span className="y-strong">looking for your voice</span>

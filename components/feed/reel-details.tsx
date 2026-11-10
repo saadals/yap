@@ -186,7 +186,7 @@ function CampaignBody({ item, titleId }: { item: CampaignItem; titleId: string }
           ))}
         </span>
         <p className="y-small y-fg-2">
-          {openSlots} of {request.slots} remaining
+          {openSlots} of {request.slots} remaining · upload within {plural(terms.deadlineDays, "day")} of taking one
         </p>
       </Card>
       <Card>

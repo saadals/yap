@@ -2,7 +2,7 @@ import { CheckCircle2, Eye, Repeat2, XCircle } from "lucide-react";
 
 import type { BadgeTone } from "@/components/ui/badge";
 import { addDays } from "@/lib/clock";
-import { money, timeAgo } from "@/lib/format";
+import { moneyExact, timeAgo } from "@/lib/format";
 import type { commissionTotals } from "@/lib/selectors";
 import type {
   Business,
@@ -18,7 +18,7 @@ import type {
 } from "@/lib/types";
 
 /** Whole dollars when the amount is whole, cents otherwise ("$286", "$313.50"). */
-export const cash = (amount: number) => (Number.isInteger(amount) ? money(amount) : money(amount, true));
+export const cash = (amount: number) => moneyExact(amount);
 
 export type SheetName =
   | "deliver"
@@ -78,25 +78,26 @@ export const versionStatus: Record<
   Delivery["status"],
   { label: string; tone: BadgeTone; icon: React.ReactNode }
 > = {
-  in_review: { label: "In review", tone: "warning", icon: <Eye size={14} aria-hidden /> },
+  in_review: { label: "In review", tone: "neutral", icon: <Eye size={14} aria-hidden /> },
   changes_requested: {
     label: "Changes requested",
-    tone: "neutral",
+    tone: "warning",
     icon: <Repeat2 size={14} aria-hidden />,
   },
   approved: { label: "Approved", tone: "success", icon: <CheckCircle2 size={14} aria-hidden /> },
-  rejected: { label: "Not approved", tone: "neutral", icon: <XCircle size={14} aria-hidden /> },
+  rejected: { label: "Not approved", tone: "danger", icon: <XCircle size={14} aria-hidden /> },
 };
 
 /** Payment state in a few words, from the viewer's side. */
 export function paymentWords(status: PaymentStatus, side: Role): string {
   switch (status) {
     case "authorized":
-      return "Authorised";
+      return "Authorized";
     case "held":
       return "Held safely";
     case "pending":
-      return side === "business" ? "Paid to their wallet" : "Pending";
+      // Approved campaign work: still held until 7 days after the post is verified.
+      return side === "business" ? "Approved, still held" : "Pending";
     case "released":
       return side === "business" ? "Paid" : "Released";
     case "refunded":
@@ -138,10 +139,10 @@ export function sizeLabel(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-/** timeAgo for mid-sentence use: "yesterday", "3h ago", "on 7 Nov". */
+/** timeAgo for mid-sentence use: "yesterday", "3h ago", "on Nov 7". */
 export function ago(iso: string): string {
   const text = timeAgo(iso);
   if (text === "Yesterday") return "yesterday";
-  if (/^\d{1,2} [A-Z][a-z]{2}$/.test(text)) return `on ${text}`;
+  if (/^[A-Z][a-z]{2} \d{1,2}$/.test(text)) return `on ${text}`;
   return text;
 }

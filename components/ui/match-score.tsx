@@ -22,7 +22,7 @@ export function MatchScore({
         <span className={`y-display y-num font-semibold tracking-[-0.04em] ${numberClass}`}>
           {value}
         </span>
-        <span className={`y-display font-semibold ${size === "lg" ? "text-3xl" : "text-base"}`}>
+        <span className={`y-display font-normal ${size === "lg" ? "text-3xl" : "text-base"}`}>
           %
         </span>
         {size !== "lg" ? <span className="y-micro y-fg-2 ms-1">{caption}</span> : null}

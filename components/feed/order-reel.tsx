@@ -4,7 +4,7 @@ import { Film, MailOpen } from "lucide-react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { languageList } from "@/components/domain/chips";
-import { clock, dueLabel, money, moneyRange, plural } from "@/lib/format";
+import { clock, dueLabel, money, moneyRange, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import type { IneligibleReason } from "@/lib/selectors";
 import { businessById, productById } from "@/lib/selectors";
@@ -94,12 +94,17 @@ export type CampaignState =
 export function campaignState(item: CampaignItem): CampaignState {
   const { request, own, eligibility, openSlots, slot } = item;
   if (own) return { kind: "manage" };
-  // "In progress", not a due date: campaigns have no delivery deadline yet (CAMPAIGN_DEADLINE_DAYS).
+  // Before the first upload, the brand's deadline; after it, where the Yapp stands.
   if (slot)
     return {
       kind: "mine",
       commissionId: slot.id,
-      label: slot.status === "completed" ? "Your Yapp · done" : "Your Yapp · in progress",
+      label:
+        slot.status === "completed"
+          ? "Your Yapp · done"
+          : slot.status === "in_progress" && slot.deliveries.length === 0
+            ? `Your Yapp · due ${shortDate(slot.dueDate)}`
+            : "Your Yapp · in progress",
     };
   if (request.status === "closed") return { kind: "closed" };
   if (openSlots === 0) return { kind: "full" };

@@ -58,7 +58,7 @@ function Hero() {
     <section aria-labelledby="hero-title">
       <Block tone="paper" pad="lg" className="flex flex-col gap-8 md:gap-10">
         <div className="flex flex-col gap-6">
-          <h1 id="hero-title" className="y-display y-hero max-sm:!text-[2.6rem] lg:!text-[4.75rem]">
+          <h1 id="hero-title" className="y-display y-hero">
             Simple to order, <span className="y-strong">safe to pay</span>
           </h1>
           <p className="y-lead y-fg-2 max-w-[52ch]">
@@ -122,7 +122,7 @@ function campaignSteps(facts: ReturnType<typeof campaignFacts>) {
     },
     {
       title: "Hold the budget",
-      body: "Videos × price, held up front. No service fee on campaigns.",
+      body: `Videos × price, plus the ${facts.feePct}% service fee, held up front. It stays open for ${facts.openDays} days.`,
     },
     {
       title: "Creators take slots",
@@ -134,7 +134,7 @@ function campaignSteps(facts: ReturnType<typeof campaignFacts>) {
     },
     {
       title: "They post it",
-      body: "On their own account, tagging you, with the paid-partnership label. Yapp checks the post.",
+      body: `On their own account, tagging you, with the paid-partnership label. Yapp checks the post, and pays them ${facts.releaseDays} days later if it's still up.`,
     },
   ];
 }
@@ -185,7 +185,7 @@ function Business() {
         <ol className="grid gap-x-8 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
           {list.map((step, index) => (
             <li key={step.title} className="flex flex-col gap-3">
-              <StepNumber n={index + 1} className="text-[44px]" />
+              <StepNumber n={index + 1} />
               <h3 className="y-display y-title">
                 <span className="sr-only">Step {index + 1}: </span>
                 {step.title}
@@ -213,7 +213,7 @@ function Pricing() {
             Clear prices. <span className="y-strong">You see every dollar.</span>
           </>
         }
-        sub={`No subscription, and posting is free. Custom and direct orders: the creator's price plus a ${FEE_PCT}% fee, charged only when work completes. Campaigns: no fee.`}
+        sub={`No subscription, and posting is free. Every order is the creator's price plus a ${FEE_PCT}% fee, charged when you hire or post a campaign and held until the work is released. A refund returns the fee too.`}
       />
       <div className="flex flex-col gap-2">
         <FeeCalculator />
@@ -232,7 +232,8 @@ function CampaignPrices() {
         <h3 className="y-display y-title">UGC campaigns</h3>
         <p className="y-small y-fg-2 max-w-[44ch]">
           A fixed price per video set by the creator&apos;s verified followers. {facts.minVideos} videos
-          minimum, in steps of {facts.step}. The total is held up front, with no service fee.
+          minimum, in steps of {facts.step}. The total and the {facts.feePct}% fee are held up front; slots
+          nobody takes are refunded with their fee.
         </p>
       </div>
       <ul className="flex flex-col divide-y divide-(--b-line) lg:col-span-7">
@@ -245,7 +246,7 @@ function CampaignPrices() {
         <li className="y-small y-fg-2 flex items-baseline justify-between gap-4 py-3 last:pb-0">
           <span>Example: {facts.minVideos} videos</span>
           <span className="y-num">
-            {money(facts.minVideos * facts.fromPrice)} total, held until each video is approved
+            {money(facts.minVideos * facts.fromPrice * (1 + facts.feePct / 100))} with the fee, held until each creator is paid
           </span>
         </li>
       </ul>
@@ -276,7 +277,7 @@ function Protection() {
         }
         sub="You never pay for a video you didn't get, and creators never wait on a client who went quiet."
       />
-      <Block tone="sky" pad="lg" className="grid gap-10 lg:grid-cols-12 lg:gap-8">
+      <Block tone="paper" pad="lg" className="grid gap-10 lg:grid-cols-12 lg:gap-8">
         <div className="flex flex-col gap-8 lg:col-span-7">
           <div className="flex flex-col gap-3">
             <IconTile>
@@ -350,12 +351,12 @@ function FaqSection() {
       a: "Use your revision rounds and leave notes at the exact moments that need work. If a delivery still doesn't match the agreed brief, open a resolution from the order. Yapp support reviews the brief, messages and versions, and can refund you in full or in part.",
     },
     {
-      q: "Can I choose the dialect?",
-      a: "Yes. Filter creators by dialect, and set the languages in your brief. Creators only list dialects they speak natively. Want the same video in Saudi and Egyptian? Ask for two versions, or hire two creators from the same order.",
+      q: "Can I choose the language?",
+      a: "Yes. Filter creators by language, and set the languages in your brief. Creators only list languages they speak natively. Want the same video in English and Spanish? Ask for two versions, or hire two creators from the same order.",
     },
     {
       q: "What's a UGC campaign?",
-      a: `An order for ${campaign.minVideos} or more videos, in steps of ${campaign.step}. You choose a follower tier, which sets one fixed price per video (from ${money(campaign.fromPrice)}), and the total is held up front with no service fee. Creators take slots first come, first served, and every video comes from a different creator. You review each one, then the creator posts it on their own account, tagging you, with the paid-partnership label.`,
+      a: `An order for ${campaign.minVideos} or more videos, in steps of ${campaign.step}. You choose a follower tier, which sets one fixed price per video (from ${money(campaign.fromPrice)}), and how many days creators have to upload. The total plus the ${campaign.feePct}% service fee is held up front. Creators take slots first come, first served, for ${campaign.openDays} days, and every video comes from a different creator. You review each one, then the creator posts it on their own account, tagging you, with the paid-partnership label. They're paid ${campaign.releaseDays} days after we verify the post, and keep it up for ${campaign.keepLiveDays} days.`,
     },
     {
       q: "Can creators post the video on their own accounts?",
@@ -378,8 +379,8 @@ function FaqSection() {
       a: "Direct orders can be withdrawn free until the creator accepts. After that, cancel by agreement with the creator for a refund, or automatically in full if they miss the deadline without delivering. If you can't agree, Yapp support decides. Closing a campaign refunds its open slots; videos already in progress carry on.",
     },
     {
-      q: "Do you provide invoices? What about VAT?",
-      a: "Every payment creates an invoice in Billing with your company details. Prices are in US dollars. Where VAT applies to Yapp's service fee, it's shown separately on the invoice.",
+      q: "Do you provide invoices? What about tax?",
+      a: "Every payment creates an invoice in Billing with your company details. Prices are in US dollars. Where sales tax, GST/HST or VAT applies to Yapp's service fee, it's shown separately on the invoice.",
     },
   ];
   return (
@@ -430,13 +431,13 @@ function Creators() {
 function FinalCta() {
   return (
     <section aria-labelledby="hiw-cta-title">
-      <Block tone="butter" pad="none" className="grid overflow-hidden lg:grid-cols-12">
+      <Block tone="night" pad="none" className="grid overflow-hidden lg:grid-cols-12">
         <div className="flex flex-col gap-8 p-6 md:p-10 lg:col-span-8">
           <h2 id="hiw-cta-title" className="y-display y-t-display max-w-[18ch]">
             Ready for your first video? <span className="y-strong">Start with a brief.</span>
           </h2>
           <div className="flex flex-wrap gap-2">
-            <PillButton href={paths.newOrder()} variant="contrast" size="lg" arrow>
+            <PillButton href={paths.newOrder()} variant="neon" size="lg" arrow>
               Place an order
             </PillButton>
             <PillButton href={paths.creators} variant="outline" size="lg">

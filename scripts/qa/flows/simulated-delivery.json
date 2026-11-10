@@ -2,12 +2,12 @@
   "account": "nour",
   "steps": [
     { "go": "/orders/r-101", "after": 3500 },
-    { "click": "Noura Al-Qahtani", "after": 1200 },
-    { "click": "Hire Noura", "after": 1500 },
-    { "click": "Hire Noura", "after": 2000 },
+    { "click": "Nina Holt", "after": 1200 },
+    { "click": "Hire Nina", "after": 1500 },
+    { "click": "Hire Nina", "after": 2000 },
     { "click": "Open commission", "after": 3000 },
     { "text": "In production" },
     { "wait": 29000 },
-    { "text": "Review version 1 from Noura" }
+    { "text": "Review version 1 from Nina" }
   ]
 }

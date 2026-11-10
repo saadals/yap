@@ -7,8 +7,9 @@ import { TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useToast } from "@/components/ui/toast";
-import { money } from "@/lib/format";
+import { money, priceLimitError, priceLimits } from "@/lib/format";
 import { actions } from "@/lib/store";
+import { PRICE_MAX_PER_YAPP, PRICE_MIN_PER_YAPP } from "@/lib/taxonomy";
 import type { Creator, Package, PackageTier } from "@/lib/types";
 
 import { ProfileSection, useDraft } from "./section";
@@ -22,8 +23,9 @@ const tiers: { id: PackageTier; label: string; hint: string }[] = [
 type NumField = "price" | "deliveryDays" | "revisions" | "videos" | "maxSeconds";
 type Field = "name" | "summary" | NumField | "includes";
 
+// Price limits depend on the package's video count ($30–5,000 per Yapp; see `priceLimitError`).
 const numFields: { id: NumField; label: string; min: number; max: number; unit?: string }[] = [
-  { id: "price", label: "Price (USD)", min: 20, max: 10000 },
+  { id: "price", label: "Price (USD)", min: PRICE_MIN_PER_YAPP, max: PRICE_MAX_PER_YAPP },
   { id: "deliveryDays", label: "Delivery days", min: 1, max: 60 },
   { id: "revisions", label: "Revisions", min: 0, max: 10 },
   { id: "videos", label: "Videos", min: 1, max: 20 },
@@ -41,7 +43,10 @@ function validate(packages: Package[]): Record<PackageTier, Partial<Record<Field
     if (p.summary.trim().length < 10) e.summary = "Say what's in it in one line.";
     for (const f of numFields) {
       const v = p[f.id];
-      if (!Number.isInteger(v) || v < f.min || v > f.max) e[f.id] = `Whole number, ${f.min}–${f.max}.`;
+      if (f.id === "price") {
+        const error = priceLimitError(v, Number.isInteger(p.videos) && p.videos > 0 ? p.videos : 1);
+        if (error) e.price = error;
+      } else if (!Number.isInteger(v) || v < f.min || v > f.max) e[f.id] = `Whole number, ${f.min}–${f.max}.`;
     }
     if (!e.price && index > 0) {
       const previous = packages[index - 1];
@@ -155,7 +160,8 @@ export function PackagesEditor({ creator }: { creator: Creator }) {
                 hint={`${pkg.summary.length}/120`}
                 error={err(pkg.tier, "summary")}
               />
-              <div className="grid grid-cols-2 gap-3">
+              {/* items-end: a label that wraps in a narrow column keeps the two inputs on one line. */}
+              <div className="grid grid-cols-2 items-end gap-3">
                 {numFields.map((f) => (
                   <TextField
                     key={f.id}
@@ -163,8 +169,8 @@ export function PackagesEditor({ creator }: { creator: Creator }) {
                     required
                     type="number"
                     inputMode="numeric"
-                    min={f.min}
-                    max={f.max}
+                    min={f.id === "price" ? priceLimits(pkg.videos || 1).min : f.min}
+                    max={f.id === "price" ? priceLimits(pkg.videos || 1).max : f.max}
                     value={show(pkg[f.id])}
                     onChange={(e) => patch(pkg.tier, { [f.id]: toNum(e.target.value) } as Partial<Package>)}
                     onBlur={() => touch(pkg.tier, f.id)}

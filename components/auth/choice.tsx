@@ -103,7 +103,7 @@ function Indicator({ checked, kind }: { checked: boolean; kind: "radio" | "check
     <span
       aria-hidden
       className={`grid size-7 flex-none place-items-center rounded-full ${
-        checked ? "bg-(--b-fg) text-(--b-bg)" : "shadow-[inset_0_0_0_2px_var(--b-line)]"
+        checked ? "bg-(--b-fg) text-(--b-bg)" : "shadow-[inset_0_0_0_2px_var(--b-fg-3)]"
       }`}
     >
       {checked ? (

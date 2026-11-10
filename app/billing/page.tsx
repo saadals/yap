@@ -22,6 +22,9 @@ import {
   creatorById,
 } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
+import { CAMPAIGN_RELEASE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
+
+const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
 
 export default function BillingPage() {
   return (
@@ -50,14 +53,14 @@ function Billing() {
     <Page>
       <PageHeader
         title="Billing & receipts"
-        description="The 10% service fee on custom orders is only charged when the work completes. Campaigns have no fee."
+        description={`You're charged when you hire or post a campaign, with Yapp's ${FEE_PCT}% service fee. Both are held until the work is released, and a refund returns the fee too.`}
       />
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12">
         <Block
           as="section"
           aria-labelledby="protected-title"
-          tone="sky"
+          tone="paper"
           pad="md"
           className="flex flex-col justify-between gap-5 lg:col-span-8"
         >
@@ -81,10 +84,10 @@ function Billing() {
                 ) : null}
                 <p className="y-small y-fg-2 max-w-[56ch]">
                   {spend.held > 0
-                    ? `Released only when you approve${held.length ? ` (${plural(held.length, "order")} in progress)` : ""}. Full refund if work isn't delivered.`
-                    : "Nothing is held right now. Payment is held when work starts, and released when you approve."}
+                    ? `Orders are released when you approve${held.length ? ` (${plural(held.length, "order")} in progress)` : ""}; campaign slots ${CAMPAIGN_RELEASE_DAYS} days after the creator's post is verified. Full refund, fee included, if work isn't delivered.`
+                    : "Nothing is held right now. Payment is charged and held when you hire, and released when you approve."}
                   {offers.length
-                    ? ` ${money(spend.authorized)} more is authorised for ${plural(offers.length, "offer")} awaiting acceptance.`
+                    ? ` ${money(spend.authorized)} more is authorized for ${plural(offers.length, "offer")} awaiting acceptance.`
                     : ""}
                 </p>
               </>
@@ -107,7 +110,7 @@ function Billing() {
                 <span className="font-semibold">
                   {plural(campaignToReview.progress.review, "review copy", "review copies")} waiting.
                 </span>{" "}
-                Approve to pay creators from {campaignToReview.request.title}.
+                Approve them on {campaignToReview.request.title} so creators can post.
               </p>
               <PillButton href={paths.order(campaignToReview.request.id)} variant="neon" arrow className="flex-none">
                 Review videos

@@ -16,7 +16,7 @@ import { countries } from "@/lib/taxonomy";
 import type { CountryId } from "@/lib/types";
 
 /* -------------------------------------------------------------------------- */
-/* Persistence: the store has no fields for legal name / VAT / country, so they */
+/* Persistence: the store has no fields for legal name / tax ID / country, so they */
 /* live in their own localStorage key, per buyer profile (the invoice email     */
 /* lives in the account's settings). Reset demo data clears every `yapp-` key.  */
 /* -------------------------------------------------------------------------- */
@@ -60,7 +60,7 @@ export type BillingDetails = {
   vat: string;
   country: CountryId;
   email: string;
-  /** A personal buyer profile: receipts carry the person's name, no company or VAT. */
+  /** A personal buyer profile: receipts carry the person's name, no company or tax ID. */
   personal: boolean;
 };
 
@@ -77,7 +77,7 @@ export function useBillingDetails(): BillingDetails {
   return {
     companyName: personal ? business.name : (stored?.companyName ?? business.name),
     vat: personal ? "" : (stored?.vat ?? ""),
-    country: stored?.country ?? cityById(business.cityId)?.countryId ?? "sa",
+    country: stored?.country ?? cityById(business.cityId)?.countryId ?? "us",
     email: me.settings(s).business.invoiceEmail,
     personal,
   };
@@ -94,17 +94,17 @@ function validate(form: BillingDetails) {
       !form.personal && form.companyName.trim().length < 2 ? "Enter the company name for your receipts." : null,
     vat:
       !form.personal && form.vat.trim() && !/^[A-Za-z0-9 -]{8,20}$/.test(form.vat.trim())
-        ? "Use 8 to 20 letters or numbers, like 300123456700003."
+        ? "Use 8 to 20 letters or numbers, like 12-3456789 or 123456789 RT0001."
         : null,
     email: !isEmail(form.email) ? "Enter an email like you@example.com." : null,
   };
 }
 
-/** Personal buyers: VAT invoices come with a business account. */
-function UpgradeForVat() {
+/** Personal buyers: invoices in a company name come with a business account. */
+function UpgradeForCompanyInvoices() {
   return (
     <p className="y-micro y-fg-2">
-      Need VAT invoices?{" "}
+      Need invoices in a company name?{" "}
       <Link href={paths.settings("business")} className="y-link font-semibold text-(--b-fg)">
         Upgrade to a business account
       </Link>
@@ -137,7 +137,7 @@ export function BillingDetailsCard({ titleId }: { titleId?: string }) {
               <span className="y-fg-2">
                 {" · "}
                 {countries[details.country]?.name}
-                {details.vat ? ` · VAT ${details.vat}` : ""}
+                {details.vat ? ` · Tax ID ${details.vat}` : ""}
               </span>
             </dd>
           </div>
@@ -153,7 +153,7 @@ export function BillingDetailsCard({ titleId }: { titleId?: string }) {
           <Skeleton className="h-4 w-40" />
         </div>
       )}
-      {hydrated && details.personal ? <UpgradeForVat /> : null}
+      {hydrated && details.personal ? <UpgradeForCompanyInvoices /> : null}
       <Sheet open={editing} onClose={() => setEditing(false)} title="Billing details" width="sm">
         <Form key={`${details.companyName}|${details.personal}`} initial={details} onSaved={() => setEditing(false)} />
       </Sheet>
@@ -207,14 +207,14 @@ function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => vo
             data-autofocus
           />
           <TextField
-            label="VAT or tax number"
-            hint="Add it if you reclaim VAT on the service fee."
+            label="Tax ID"
+            hint="Your business or sales tax number (an EIN, a GST/HST number or a VAT number). Add it if you claim back tax on the service fee."
             value={form.vat}
             onChange={(event) => set("vat", event.target.value)}
             onBlur={blur("vat")}
             error={show("vat")}
             inputMode="text"
-            placeholder="300123456700003"
+            placeholder="12-3456789"
           />
         </>
       )}
@@ -236,7 +236,7 @@ function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => vo
         value={form.country}
         onChange={(event) => set("country", event.target.value as CountryId)}
       />
-      {form.personal ? <UpgradeForVat /> : null}
+      {form.personal ? <UpgradeForCompanyInvoices /> : null}
       <div className="pt-1">
         <PillButton type="submit" variant="contrast" disabled={!dirty}>
           Save billing details

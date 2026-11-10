@@ -102,23 +102,27 @@
     }
   }
 
-  /* Country code: reads as "+966", opens the native list with full country names. */
+  /* Country code: reads as the dialling code and opens the native list with full country names.
+     Styled as a field, to sit beside the phone input. */
   .yapp .y-signin-cc {
     position: relative;
     flex: none;
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    min-height: 52px;
-    padding-inline: 16px 12px;
-    border-radius: 999px;
-    border: 1.5px solid transparent;
-    background: var(--b-chip);
-    color: var(--b-chip-fg);
+    min-height: 48px;
+    padding-inline: 14px 10px;
+    border-radius: var(--y-r-field);
+    border: 1px solid var(--y-line-strong);
+    background: var(--y-field);
+    color: var(--y-ink);
     font-weight: 600;
   }
   .yapp .y-signin-cc:has(select:focus-visible) {
-    border-color: var(--b-fg);
+    border-color: var(--y-green-text);
+    box-shadow:
+      0 0 0 1px var(--y-green-text),
+      0 0 0 4px rgb(52 240 108 / 0.25);
   }
   .yapp .y-signin-cc select {
     position: absolute;
@@ -129,17 +133,20 @@
     cursor: pointer;
   }
 
+  /* Social sign-in: ghost pills (white with a hairline), Apple inverted. */
   .yapp .y-signin-provider {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 10px;
     width: 100%;
-    min-height: 52px;
+    min-height: 48px;
     border-radius: 999px;
-    background: var(--b-chip);
-    color: var(--b-chip-fg);
-    box-shadow: inset 0 0 0 1px var(--y-line);
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow:
+      inset 0 0 0 1px var(--y-line-strong),
+      0 2px 6px rgb(20 20 40 / 0.03);
     font-size: 0.9375rem;
     font-weight: 600;
     cursor: pointer;
@@ -149,7 +156,7 @@
       opacity var(--y-dur-1) var(--y-ease);
   }
   .yapp .y-signin-provider:hover:not(:disabled) {
-    box-shadow: inset 0 0 0 1.5px var(--y-line-strong);
+    box-shadow: inset 0 0 0 1px var(--y-ink);
   }
   .yapp .y-signin-provider:active:not(:disabled) {
     transform: scale(0.98);
@@ -165,12 +172,26 @@
     box-shadow: none;
   }
 
+  /* Saved-account rows and "Use another account" are white on near-white glass: a hairline and a
+     soft shadow give them an edge, like the white cards elsewhere. */
+  .yapp .y-signin-account,
+  .yapp .y-signin-page .y-pill[data-variant="soft"] {
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 2px 6px rgb(20 20 40 / 0.04);
+  }
   .yapp .y-signin-account {
     display: flex;
     align-items: center;
     border-radius: var(--y-r-tile);
     background: var(--b-chip);
     color: var(--b-chip-fg);
+    transition: box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-signin-account:has(.y-signin-account-main:hover:not(:disabled)) {
+    box-shadow:
+      0 0 0 1px var(--y-line-strong),
+      0 6px 16px -6px rgb(20 20 40 / 0.12);
   }
   .yapp .y-signin-account-main {
     flex: 1;

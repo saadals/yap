@@ -144,7 +144,7 @@ function ReplyToReview({ review }: { review: Review }) {
         className="y-input"
         value={text}
         onChange={(event) => setText(event.target.value)}
-        placeholder={`Thanks ${review.authorName.split(" ")[0]}! …`}
+        placeholder={`Thanks ${review.authorName.split(" ")[0]}, …`}
       />
       <div className="flex gap-2">
         <PillButton type="submit" variant="contrast" size="sm" disabled={text.trim().length < 2}>

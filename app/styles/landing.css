@@ -270,8 +270,9 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     height: 60px;
     align-items: center;
     justify-content: space-between;
-    padding-inline: 20px 9px;
-    border-radius: 22px;
+    padding-inline: 24px 9px;
+    /* A pill, like the signed-in header. */
+    border-radius: 999px;
   }
   .yapp .y-welcome-nav::before {
     content: "";
@@ -300,6 +301,7 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     background: var(--y-glass-strong);
     color: var(--y-ink);
   }
+  /* The primary dark button (see .y-pill[data-variant="contrast"]): light in dark mode. */
   .yapp .y-welcome-order {
     display: inline-flex;
     align-items: center;
@@ -307,8 +309,8 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     height: 42px;
     padding-inline: 18px;
     border-radius: 999px;
-    background: var(--y-glossy-black);
-    color: #fff;
+    background: var(--y-btn-primary);
+    color: var(--y-btn-primary-fg);
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -320,15 +322,11 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
       background var(--y-dur-2) var(--y-ease),
       color var(--y-dur-2) var(--y-ease);
   }
-  html.dark .yapp .y-welcome-order {
-    background: #f4f4f0;
-    color: #0e0e10;
-  }
-  .yapp .y-welcome-order:hover,
-  html.dark .yapp .y-welcome-order:hover {
+  .yapp .y-welcome-order:hover {
     background: var(--y-neon);
     color: var(--y-on-color);
     transform: translateY(-1px);
+    box-shadow: var(--y-shadow-glow);
   }
   .yapp .y-welcome-order:active {
     transform: scale(0.98);
@@ -356,9 +354,10 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     grid-template-columns: 1fr;
     gap: 10px;
   }
+  /* Every button is a pill (brand book). */
   .yapp .y-welcome-btn {
     height: 56px;
-    border-radius: 18px;
+    border-radius: 999px;
     color: var(--y-ink);
     font-size: 1rem;
     font-weight: 600;
@@ -401,12 +400,12 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     }
     .yapp .y-welcome-btn {
       height: 64px;
-      border-radius: 20px;
       font-size: 17px;
     }
   }
+  /* Ink, not neon: a neon outline on the light scene is under 3:1. */
   .yapp .y-welcome :is(a, button):focus-visible {
-    outline: 2px solid var(--y-neon);
+    outline: 2.5px solid var(--y-ink);
     outline-offset: 3px;
   }
 
@@ -420,8 +419,8 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     aspect-ratio: 9 / 16;
     max-width: calc(100vw - 32px);
     overflow: hidden;
-    border-radius: 24px;
-    background: #0e0e10;
+    border-radius: var(--y-r-block);
+    background: #0b0b0c;
     color: #fff;
     pointer-events: none;
     box-shadow: 0 30px 80px rgb(0 0 0 / 0.18);
@@ -430,7 +429,7 @@ html.y-session .yapp .y-welcome:not([data-settled]) {
     transition:
       opacity 180ms linear,
       transform 180ms var(--y-ease);
-    --b-bg: #0e0e10;
+    --b-bg: #0b0b0c;
     --b-fg: #fff;
   }
   .yapp .y-reelprev[data-tap="true"] {

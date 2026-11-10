@@ -6,11 +6,17 @@ import { useId, useState } from "react";
 import { StarRow } from "@/components/domain/stars";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
-import { plural, relativeDay, shortDate, weekdayDate } from "@/lib/format";
+import { plural, quoted, relativeDay, shortDate, timeOf, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { reviewById } from "@/lib/selectors";
+import { keepLiveUntil, reviewById } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { addonById, CAMPAIGN_DEADLINE_DAYS, includedRights } from "@/lib/taxonomy";
+import {
+  addonById,
+  CAMPAIGN_KEEP_LIVE_DAYS,
+  CAMPAIGN_RELEASE_DAYS,
+  CAMPAIGN_RESTORE_HOURS,
+  includedRights,
+} from "@/lib/taxonomy";
 
 import { ago, autoApproveDate, cash, type SlotContext, type Workspace } from "./helpers";
 
@@ -58,9 +64,6 @@ function Step({
 function Line({ children }: { children: React.ReactNode }) {
   return <p className="y-body y-fg-2 max-w-[62ch]">{children}</p>;
 }
-
-/** Campaigns have no upload deadline yet (deferred by the PM): say so quietly, once. */
-const deadlineNote = CAMPAIGN_DEADLINE_DAYS === null ? " Deadline: not set yet." : "";
 
 /* -------------------------------------------------------------------------- */
 /* Business                                                                    */
@@ -153,7 +156,7 @@ function BusinessNextStep({ ws }: { ws: Workspace }) {
         >
           <figure className="flex flex-col gap-2">
             <StarRow value={review.rating} size={18} />
-            <blockquote className="y-body max-w-[62ch]">&ldquo;{review.text}&rdquo;</blockquote>
+            <blockquote className="y-body max-w-[62ch]">{quoted(review.text)}</blockquote>
             <figcaption className="y-micro y-fg-2">
               {review.authorName} · {shortDate(review.createdAt)}
               {review.wouldRehire ? " · Would hire again" : ""}
@@ -175,7 +178,7 @@ function BusinessNextStep({ ws }: { ws: Workspace }) {
         >
           <EndedCopy
             reason={commission.cancelReason}
-            money="The authorisation on your card was released. You weren't charged."
+            money="The authorization on your card was released. You weren't charged."
           />
         </Step>
       );
@@ -195,7 +198,7 @@ function BusinessNextStep({ ws }: { ws: Workspace }) {
             money={
               commission.acceptedAt
                 ? "Refunded in full to your card. Refunds take 3–5 working days to show."
-                : "The authorisation on your card was released. You weren't charged."
+                : "The authorization on your card was released. You weren't charged."
             }
           />
         </Step>
@@ -269,7 +272,7 @@ function CreatorNextStep({ ws }: { ws: Workspace }) {
         >
           <EndedCopy
             reason={commission.cancelReason}
-            money={`${businessName} was told, and the authorisation on their card was released.`}
+            money={`${businessName} was told, and the authorization on their card was released.`}
           />
         </Step>
       );
@@ -332,13 +335,13 @@ function OfferStep({ ws }: { ws: Workspace }) {
         </div>
         {commission.offerMessage ? (
           <figure className="flex flex-col gap-1 border-s-2 border-(--b-line) ps-4">
-            <blockquote className="y-body max-w-[62ch]">&ldquo;{commission.offerMessage}&rdquo;</blockquote>
+            <blockquote className="y-body max-w-[62ch]">{quoted(commission.offerMessage)}</blockquote>
             <figcaption className="y-micro y-fg-2">{businessName}</figcaption>
           </figure>
         ) : null}
         <p className="y-small inline-flex items-start gap-2 font-medium">
           <ShieldCheck size={18} aria-hidden className="mt-px flex-none" />
-          Payment is already authorised. You&apos;re paid when they approve.
+          Payment is already authorized. You&apos;re paid when they approve.
         </p>
       </div>
     </Step>
@@ -397,7 +400,7 @@ function CreatorPaid({ ws }: { ws: Workspace }) {
       {review ? (
         <figure className="flex flex-col gap-2 pt-3">
           <StarRow value={review.rating} />
-          <blockquote className="y-body max-w-[62ch]">&ldquo;{review.text}&rdquo;</blockquote>
+          <blockquote className="y-body max-w-[62ch]">{quoted(review.text)}</blockquote>
           <figcaption className="y-micro y-fg-2">
             {review.authorName}, {review.authorTitle}
           </figcaption>
@@ -447,6 +450,11 @@ function EndedCopy({ reason, money }: { reason?: string; money: string }) {
 function BusinessSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
   const toast = useToast();
   const { commission, creatorName, latest } = ws;
+  // A slot that ends on a closed campaign is refunded; otherwise it reopens with its money held.
+  const slotMoneyLine =
+    commission.payment.status === "refunded"
+      ? "The campaign is closed, so the slot's money and its fee went back to your card."
+      : "The slot reopened for another creator, and its money stays held in your campaign.";
   const backToCampaign = commission.requestId ? (
     <PillButton variant="contrast" arrow href={paths.order(commission.requestId)}>
       Back to campaign
@@ -458,7 +466,8 @@ function BusinessSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
       return (
         <Step title={`${creatorName} is filming`}>
           <Line>
-            Their review copy comes here, watermarked until you approve it.{deadlineNote}
+            Their review copy comes here, watermarked until you approve it. It&apos;s due{" "}
+            {weekdayDate(commission.dueDate)}.
           </Line>
         </Step>
       );
@@ -489,14 +498,17 @@ function BusinessSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
 
     case "completed": {
       const post = commission.post;
+      const releaseOn = commission.withdrawableFrom;
       const postLine =
         post?.status === "live"
-          ? `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on.`
+          ? commission.payment.status === "released"
+            ? `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on. ${creatorName} has been paid.`
+            : `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on. ${creatorName} is paid${releaseOn ? ` on ${weekdayDate(releaseOn)}` : ""} if it's still up.`
           : post?.status === "checking"
             ? `${creatorName} posted it. We're checking the tag and the paid-partnership label.`
             : post?.status === "removed"
-              ? `${creatorName}'s post was taken down. Their payment stays locked until it's back up.`
-              : `${creatorName} will post it on their ${slot.platformName} account with the paid-partnership label, tagging ${slot.brandHandle}.`;
+              ? `${creatorName}'s post was taken down. Their pay stays held; if it isn't back within ${CAMPAIGN_RESTORE_HOURS} hours, the slot reopens and its money returns to your campaign.`
+              : `${creatorName} will post it on their ${slot.platformName} account with the paid-partnership label, tagging ${slot.brandHandle}. They're paid ${CAMPAIGN_RELEASE_DAYS} days after we verify it.`;
       return (
         <Step
           title="Full-quality file unlocked"
@@ -545,7 +557,7 @@ function BusinessSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
           <Step title="You didn't approve this video" actions={backToCampaign}>
             <EndedCopy
               reason={reason}
-              money="The slot reopened for another creator, and its money stays held in your campaign."
+              money={slotMoneyLine}
             />
           </Step>
         );
@@ -557,11 +569,23 @@ function BusinessSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
           </Step>
         );
       }
+      if (commission.cancelCode === "post_removed") {
+        return (
+          <Step title={`${creatorName}'s post stayed down`} actions={backToCampaign}>
+            <Line>
+              It wasn&apos;t back within {CAMPAIGN_RESTORE_HOURS} hours, so {creatorName} wasn&apos;t paid.{" "}
+              {commission.payment.status === "refunded"
+                ? "The campaign is closed, so the slot's money and its fee went back to your card."
+                : "The slot reopened, and its money is back in your campaign."}
+            </Line>
+          </Step>
+        );
+      }
       return (
         <Step title={`You removed ${creatorName} from this slot`} actions={backToCampaign}>
           <EndedCopy
             reason={reason}
-            money="The slot reopened for another creator, and its money stays held in your campaign."
+            money={slotMoneyLine}
           />
         </Step>
       );
@@ -602,8 +626,9 @@ function CreatorSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
           }
         >
           <Line>
-            {businessName} sees a watermarked, low-quality copy until they approve it. The talking points are in
-            the brief below.{deadlineNote}
+            Upload by {weekdayDate(commission.dueDate)}, {timeOf(commission.dueDate)} ({relativeDay(commission.dueDate)}).{" "}
+            {businessName} sees a watermarked, low-quality copy until they approve it. The talking points are in the
+            brief below.
           </Line>
         </Step>
       );
@@ -663,6 +688,7 @@ function CreatorSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
       }
       if (post?.status === "live") {
         const released = commission.payment.status === "released";
+        const keepUntil = keepLiveUntil(commission);
         return (
           <Step
             live
@@ -686,8 +712,9 @@ function CreatorSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
           >
             <Line>
               {released
-                ? `${cash(commission.price)} is ready to withdraw. Thanks for keeping the post up.`
-                : `${cash(commission.price)} pending, withdrawable ${commission.withdrawableFrom ? shortDate(commission.withdrawableFrom) : "at month end"} if the post stays up.`}
+                ? `${cash(commission.price)} is ready to withdraw.`
+                : `${cash(commission.price)} is released ${commission.withdrawableFrom ? `on ${weekdayDate(commission.withdrawableFrom)}` : `${CAMPAIGN_RELEASE_DAYS} days after verification`} if the post is still up.`}
+              {` Keep it up until ${keepUntil ? weekdayDate(keepUntil) : `${CAMPAIGN_KEEP_LIVE_DAYS} days after verification`}.`}
             </Line>
           </Step>
         );
@@ -701,8 +728,9 @@ function CreatorSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
             >
               <AlertTriangle size={20} aria-hidden className="mt-0.5 flex-none" />
               <p className="y-small font-medium">
-                The {cash(commission.price)} stays locked while the post is down. Put it back up and paste the new
-                link to unlock it at month end.
+                Your {cash(commission.price)} is on hold while the post is down. Put it back up within{" "}
+                {CAMPAIGN_RESTORE_HOURS} hours and paste the new link, or the slot and its pay go back to{" "}
+                {businessName}.
               </p>
             </div>
             <PostLinkForm ws={ws} slot={slot} again />
@@ -713,12 +741,22 @@ function CreatorSlotStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
     }
 
     case "cancelled": {
+      if (commission.cancelCode === "post_removed") {
+        return (
+          <Step title="Your post stayed down" actions={findMore}>
+            <Line>
+              It wasn&apos;t back within {CAMPAIGN_RESTORE_HOURS} hours, so the slot and its pay went back to{" "}
+              {businessName}. Other campaigns are open in Discover.
+            </Line>
+          </Step>
+        );
+      }
       if (commission.cancelCode === "video_rejected") {
         return (
           <Step title="This video wasn't approved" actions={findMore}>
             {commission.cancelReason ? (
               <figure className="flex flex-col gap-1 border-s-2 border-(--b-line) ps-4">
-                <blockquote className="y-body max-w-[62ch]">&ldquo;{commission.cancelReason}&rdquo;</blockquote>
+                <blockquote className="y-body max-w-[62ch]">{quoted(commission.cancelReason)}</blockquote>
                 <figcaption className="y-micro y-fg-2">{businessName}</figcaption>
               </figure>
             ) : null}
@@ -756,11 +794,14 @@ function PostStep({ ws, slot }: { ws: Workspace; slot: SlotContext }) {
     `Post it on ${slot.platformName} from your account${slot.social ? ` (@${slot.social.handle})` : ""}.`,
     `Tag ${slot.brandHandle} in the caption.`,
     `Turn on the ${slot.disclosure.charAt(0).toLowerCase()}${slot.disclosure.slice(1)}.`,
-    `Keep it up until month end${commission.withdrawableFrom ? ` (${shortDate(commission.withdrawableFrom)})` : ""}.`,
+    `Keep it up for ${CAMPAIGN_KEEP_LIVE_DAYS} days after we verify it.`,
   ];
   return (
     <Step title={`Post it to unlock ${cash(commission.price)}`}>
-      <Line>{businessName} approved your video. Post it on your own account, then paste the link here.</Line>
+      <Line>
+        {businessName} approved your video. Post it on your own account, then paste the link here. Your{" "}
+        {cash(commission.price)} is released {CAMPAIGN_RELEASE_DAYS} days after we verify the post.
+      </Line>
       <ol className="flex max-w-[62ch] flex-col gap-2 pt-2">
         {steps.map((text, index) => (
           <li key={text} className="y-small flex items-start gap-3">

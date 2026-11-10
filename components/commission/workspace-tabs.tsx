@@ -41,6 +41,7 @@ import { shortDate, timeAgo, timeOf, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { creatorById, threadById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
+import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
 import type { CommissionEvent, ProductAsset } from "@/lib/types";
 
 import { autoApproveDate, type TabId, type Workspace } from "./helpers";
@@ -288,7 +289,8 @@ function Posting({ ws }: { ws: Workspace }) {
     { label: "Post on", value: slot.platformName },
     { label: "Tag", value: slot.brandHandle },
     { label: "Turn on", value: slot.disclosure },
-    { label: "Keep it up", value: "Until month end, so the payment unlocks" },
+    { label: "Keep it up", value: `${CAMPAIGN_KEEP_LIVE_DAYS} days from verification` },
+    { label: "Paid", value: `${CAMPAIGN_RELEASE_DAYS} days after verification, if it's still up` },
   ];
   return (
     <div className="flex flex-col gap-3 border-t border-(--b-line) pt-6">
@@ -408,14 +410,16 @@ function KeyDates({ ws }: { ws: Workspace }) {
   const ended = ["completed", "cancelled", "declined"].includes(commission.status);
   const rows: { label: string; value: string }[] = slot
     ? [
-        // Campaign slots have no deadline yet (deferred by the PM).
         { label: "Slot taken", value: commission.createdAt },
+        // The brand's upload deadline (version 1).
+        ...(latest || ended ? [] : [{ label: "Upload by", value: commission.dueDate }]),
         ...(latest ? [{ label: `Review copy ${latest.version} uploaded`, value: latest.deliveredAt }] : []),
         ...(auto ? [{ label: "Auto-approves", value: auto }] : []),
         ...(commission.completedAt ? [{ label: "Approved", value: commission.completedAt }] : []),
         ...(commission.post?.at ? [{ label: "Posted", value: commission.post.at }] : []),
+        ...(commission.post?.verifiedAt ? [{ label: "Verified", value: commission.post.verifiedAt }] : []),
         ...(commission.withdrawableFrom && commission.payment.status === "pending"
-          ? [{ label: "Withdrawable from", value: commission.withdrawableFrom }]
+          ? [{ label: "Pay released", value: commission.withdrawableFrom }]
           : []),
       ]
     : [

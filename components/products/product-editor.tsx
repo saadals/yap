@@ -159,7 +159,7 @@ function withProduct(path: string, productId: string) {
   return `${base}?${params.toString()}`;
 }
 
-/** "Yesterday" → "yesterday"; dates ("7 Nov") keep their case. */
+/** "Yesterday" → "yesterday"; dates ("Nov 7") keep their case. */
 const lowerAgo = (iso: string) => {
   const ago = timeAgo(iso);
   return ago === "Yesterday" ? "yesterday" : ago;
@@ -623,12 +623,12 @@ export function ProductEditor({
               required
               rows={3}
               maxLength={500}
-              placeholder="e.g. Small shop owners in Saudi Arabia, 25–45, who live on WhatsApp."
+              placeholder="e.g. Freelancers in the US and Canada, 25–40, who send invoices from their phone."
               value={form.audience}
               onChange={(event) => set("audience", event.target.value)}
               onBlur={() => touch("audience")}
               error={errorFor("audience")}
-              hint="Who, where and roughly what age. Creators pick a dialect and setting from it."
+              hint="Who, where and roughly what age. Creators pick a language and setting from it."
             />
             <TextArea
               label="What it does"
@@ -741,10 +741,7 @@ export function ProductEditor({
 
         {/* -------------------------------------------- mobile save bar */}
         <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] lg:hidden">
-          <div
-            data-tone="paper"
-            className="y-block mx-auto flex max-w-md items-center gap-3 !rounded-full p-2 ps-5 shadow-(--y-shadow-float)"
-          >
+          <div className="y-bar mx-auto flex max-w-md items-center gap-3 rounded-full p-2 ps-5">
             <span className="y-small y-fg-2 min-w-0 flex-1 truncate" role="status" aria-live="polite">
               {status}
             </span>

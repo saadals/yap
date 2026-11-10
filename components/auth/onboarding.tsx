@@ -357,21 +357,18 @@ export function Onboarding() {
                 title: "Order videos",
                 body: "Get videos made for your product: a custom order or a UGC campaign.",
                 icon: <ShoppingBag size={24} />,
-                tone: "night",
               },
               {
                 value: "make",
                 title: "Make videos",
                 body: "Film demos and reviews for apps, and get paid.",
                 icon: <Video size={24} />,
-                tone: "butter",
               },
               {
                 value: "both",
                 title: "Both",
                 body: "Order for your product and make videos too, from one account.",
                 icon: <Clapperboard size={24} />,
-                tone: "mist",
               },
             ]}
           />
@@ -472,7 +469,7 @@ function Done({ data, finished }: { data: Data; finished: Finished }) {
     return (
       <OnboardingDone
         title="Your profile is live"
-        lead="Accept orders that match your dialects and formats. Lead with a sharp hook and your closest sample."
+        lead="Accept orders that match your languages and formats. Lead with a sharp hook and your closest sample."
         primary={{
           href: paths.explore("orders"),
           label: "Find orders to accept",

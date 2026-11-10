@@ -9,9 +9,9 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { money, plural } from "@/lib/format";
-import { campaignProgress, openSlotCount } from "@/lib/selectors";
+import { campaignProgress, openSlotCount, withCampaignFee } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { followerTiers, tierById } from "@/lib/taxonomy";
+import { CAMPAIGN_FEE_RATE, followerTiers, tierById } from "@/lib/taxonomy";
 import type { CampaignTerms, Commission, ContentRequest, Creator, FollowerTierId } from "@/lib/types";
 
 import { ChoiceTile, GroupError, ListEditor } from "./parts";
@@ -32,10 +32,13 @@ function useCardLabel(methodId: string) {
 export function RemoveCreatorSheet({
   commission,
   creator,
+  closed = false,
   onClose,
 }: {
   commission: Commission;
   creator: Creator;
+  /** On a closed campaign the slot can't reopen: its money is refunded instead. */
+  closed?: boolean;
   onClose: () => void;
 }) {
   const toast = useToast();
@@ -56,7 +59,11 @@ export function RemoveCreatorSheet({
             className="flex-1"
             onClick={() => {
               actions.removeCampaignCreator(commission.id);
-              toast({ message: `${creator.firstName} removed. Slot ${slot} is open again.` });
+              toast({
+                message: closed
+                  ? `${creator.firstName} removed. The slot's money is on its way back to your card.`
+                  : `${creator.firstName} removed. Slot ${slot} is open again.`,
+              });
               onClose();
             }}
           >
@@ -70,12 +77,13 @@ export function RemoveCreatorSheet({
     >
       <div className="flex flex-col gap-3">
         <p className="y-body">
-          The slot reopens for other creators automatically, first come first served. You don&apos;t need to do
-          anything else.
+          {closed
+            ? `The campaign is closed, so the slot doesn't reopen. Its ${money(commission.price)} is refunded to your card with its fee.`
+            : "The slot reopens for other creators automatically, first come first served. You don't need to do anything else."}
         </p>
         <p className="y-small y-fg-2">
-          The {money(commission.price)} for this slot stays held. {creator.firstName} can&apos;t take a slot on this
-          campaign again.
+          {closed ? "" : `The ${money(commission.price)} for this slot stays held with its fee. `}
+          {creator.firstName} can&apos;t take a slot on this campaign again.
         </p>
       </div>
     </Sheet>
@@ -95,7 +103,9 @@ export function ChangeTierSheet({ request, onClose }: { request: CampaignRequest
   const open = openSlotCount(s, request);
   const card = useCardLabel(terms.paymentMethodId);
   const next = tierId ? tierById[tierId] : undefined;
-  const diff = next ? (next.pricePerVideo - terms.pricePerVideo) * open : 0;
+  // The card difference for the open slots, with their share of the service fee.
+  const subtotal = next ? (next.pricePerVideo - terms.pricePerVideo) * open : 0;
+  const diff = Math.sign(subtotal) * withCampaignFee(Math.abs(subtotal)).total;
 
   const confirmLabel = !next
     ? "Pick a tier"
@@ -172,6 +182,7 @@ export function ChangeTierSheet({ request, onClose }: { request: CampaignRequest
                 <p className="y-head y-num">
                   {diff > 0 ? `Hold ${money(diff)} more on ${card}` : diff < 0 ? `${money(-diff)} back to your card` : "No change to what's held"}
                 </p>
+                {diff !== 0 ? <p className="y-micro y-fg-2">Includes the {Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee.</p> : null}
               </>
             ) : (
               <p className="y-small">
@@ -195,7 +206,8 @@ export function CloseCampaignSheet({ request, onClose }: { request: CampaignRequ
   const toast = useToast();
   const open = openSlotCount(s, request);
   const progress = campaignProgress(s, request);
-  const refund = open * request.campaign.pricePerVideo;
+  // Unpicked slots come back in full, with their share of the service fee.
+  const refund = withCampaignFee(open * request.campaign.pricePerVideo).total;
   const inWork = progress.taken - progress.approved;
   return (
     <Sheet
@@ -232,7 +244,7 @@ export function CloseCampaignSheet({ request, onClose }: { request: CampaignRequ
         <li className="y-body flex gap-2">
           <Check size={18} aria-hidden className="mt-1 flex-none" />
           {open
-            ? `The ${plural(open, "open slot")} ${open === 1 ? "is" : "are"} refunded: ${money(refund)} back to your card.`
+            ? `The ${plural(open, "open slot")} ${open === 1 ? "is" : "are"} refunded with ${open === 1 ? "its" : "their"} fee: ${money(refund)} back to your card.`
             : "There are no open slots to refund."}
         </li>
         <li className="y-body flex gap-2">
@@ -282,7 +294,7 @@ export function EditCampaignSheet({ request, onClose }: { request: CampaignReque
       onClose={onClose}
       width="md"
       title="Edit details"
-      description="The tier and number of videos aren't edited here."
+      description="The tier, the number of videos and the upload deadline aren't edited here."
       footer={
         <div className="flex gap-2">
           <PillButton variant="contrast" size="lg" className="flex-1" onClick={save}>

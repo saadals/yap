@@ -12,15 +12,13 @@ export function FormatChip({ id, className = "" }: { id: FormatId; className?: s
   );
 }
 
-/** Dialect chips. `native` adds the Arabic name (e.g. "Saudi · سعودي"). */
+/** Video language chips ("English", "Spanish"). */
 export function LanguageChips({
   ids,
-  native = false,
   max,
   className = "",
 }: {
   ids: LanguageId[];
-  native?: boolean;
   max?: number;
   className?: string;
 }) {
@@ -28,19 +26,9 @@ export function LanguageChips({
   const rest = max ? ids.length - shown.length : 0;
   return (
     <span className={`flex flex-wrap gap-1.5 ${className}`}>
-      {shown.map((id) => {
-        const lang = languageById[id];
-        return (
-          <Chip key={id}>
-            {lang.short}
-            {native && id !== "en" ? (
-              <span dir="rtl" lang="ar" className="y-fg-2">
-                · {lang.native}
-              </span>
-            ) : null}
-          </Chip>
-        );
-      })}
+      {shown.map((id) => (
+        <Chip key={id}>{languageById[id].name}</Chip>
+      ))}
       {rest > 0 ? <Chip>+{rest}</Chip> : null}
     </span>
   );
@@ -56,6 +44,6 @@ export function PlatformChips({ ids, className = "" }: { ids: PlatformId[]; clas
   );
 }
 
-/** Plain-text list: "Saudi, Khaleeji" */
-export const languageList = (ids: LanguageId[]) => ids.map((id) => languageById[id].short).join(", ");
+/** Plain-text list: "English, Spanish" */
+export const languageList = (ids: LanguageId[]) => ids.map((id) => languageById[id].name).join(", ");
 export const platformList = (ids: PlatformId[]) => ids.map((id) => platformById[id].short).join(", ");

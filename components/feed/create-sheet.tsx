@@ -26,7 +26,7 @@ function OptionBody({
     <>
       <span
         aria-hidden
-        className={`grid size-11 flex-none place-items-center rounded-[14px] ${
+        className={`grid size-11 flex-none place-items-center rounded-(--y-r-sm) ${
           neon ? "bg-(--y-neon) text-(--y-on-color)" : "bg-(--y-ink) text-(--y-paper)"
         }`}
       >

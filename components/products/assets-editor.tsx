@@ -111,7 +111,7 @@ export function AssetsEditor({
                 addLogin();
               }
             }}
-            placeholder="Which account, e.g. Shop: Al-Noor Perfumes"
+            placeholder="Which account, e.g. Shop: Danforth Phone Repair"
             className="y-input min-w-0 flex-1"
           />
           <PillButton

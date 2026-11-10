@@ -3,7 +3,7 @@
 import { Landmark, Plus, Trash2, Wallet } from "lucide-react";
 import { useState } from "react";
 
-import { FieldShell, SelectField, TextField } from "@/components/ui/field";
+import { FieldShell, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Sheet } from "@/components/ui/sheet";
@@ -102,34 +102,43 @@ export function PayoutMethods({ onAdd, titleId }: { onAdd: () => void; titleId?:
 /* Add payout method                                                           */
 /* -------------------------------------------------------------------------- */
 
-/** ISO 13616 check: rearrange, convert letters to numbers, mod 97 must equal 1. */
-function validIban(raw: string) {
-  const iban = raw.replace(/\s+/g, "").toUpperCase();
-  if (!/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false;
-  const rearranged = iban.slice(4) + iban.slice(0, 4);
-  let remainder = 0;
-  for (const char of rearranged) {
-    const value = /[A-Z]/.test(char) ? String(char.charCodeAt(0) - 55) : char;
-    for (const digit of value) remainder = (remainder * 10 + Number(digit)) % 97;
+/** Letters and digits only, upper case ("12-345 678" → "12345678"). */
+const compact = (raw: string) => raw.toUpperCase().replace(/[^A-Z0-9]/g, "");
+
+/** Works for a US or Canadian account number and for an IBAN; an IBAN also gets its checksum checked. */
+export function accountNumberError(raw: string): string | null {
+  const value = compact(raw);
+  if (!value) return "Enter your account number.";
+  if (value.length < 4 || value.length > 34) return "That doesn't look like an account number. Check it in your banking app.";
+  if (/^[A-Z]{2}\d{2}/.test(value) && value.length >= 15) {
+    // ISO 13616: rearrange, letters become numbers, mod 97 must equal 1.
+    const rearranged = value.slice(4) + value.slice(0, 4);
+    let remainder = 0;
+    for (const char of rearranged) {
+      const digits = /[A-Z]/.test(char) ? String(char.charCodeAt(0) - 55) : char;
+      for (const digit of digits) remainder = (remainder * 10 + Number(digit)) % 97;
+    }
+    if (remainder !== 1) return "That IBAN doesn't check out. Copy it again from your banking app.";
+  } else if (!/^\d+$/.test(value)) {
+    return "Account numbers are digits only. If yours starts with two letters, enter the whole IBAN.";
   }
-  return remainder === 1;
+  return null;
 }
 
-const banks = [
-  "Emirates NBD",
-  "First Abu Dhabi Bank",
-  "ADCB",
-  "Mashreq",
-  "Dubai Islamic Bank",
-  "Al Rajhi Bank",
-  "Saudi National Bank",
-  "Arab Bank",
-  "Other bank",
-];
-const wallets = ["Payoneer", "Wise", "PayPal"];
+/** Routing number (US) or transit and institution numbers (Canada); optional, an IBAN needs none. */
+export function bankCodeError(raw: string): string | null {
+  const value = compact(raw);
+  if (!value) return null;
+  return value.length >= 5 && value.length <= 11
+    ? null
+    : "Check the number: a US routing number has 9 digits, Canadian transit and institution numbers 8 together.";
+}
 
-type Form = { holder: string; bank: string; iban: string; wallet: string; account: string; makeDefault: boolean };
-const empty: Form = { holder: "", bank: banks[0], iban: "", wallet: wallets[0], account: "", makeDefault: false };
+export const ACCOUNT_HINT = "Your account number, or an IBAN outside North America. Spaces are fine.";
+export const BANK_CODE_HINT = "For US and Canadian accounts (in Canada, transit and institution numbers together). Leave it empty if you entered an IBAN.";
+
+type Form = { holder: string; bank: string; account: string; code: string; email: string; makeDefault: boolean };
+const empty: Form = { holder: "", bank: "", account: "", code: "", email: "", makeDefault: false };
 
 export function AddPayoutSheet({
   open,
@@ -148,15 +157,10 @@ export function AddPayoutSheet({
 
   const errors = {
     holder: kind === "bank" && form.holder.trim().length < 2 ? "Enter the name on the account." : null,
-    iban:
-      kind === "bank"
-        ? !form.iban.trim()
-          ? "Enter your IBAN."
-          : !validIban(form.iban)
-            ? "That IBAN doesn't check out. It starts with two letters, like AE07 0331 2345 6789 0123 456."
-            : null
-        : null,
-    account: kind === "wallet" && !isEmail(form.account) ? `Enter the email on your ${form.wallet} account.` : null,
+    bank: kind === "bank" && form.bank.trim().length < 2 ? "Enter your bank's name." : null,
+    account: kind === "bank" ? accountNumberError(form.account) : null,
+    code: kind === "bank" ? bankCodeError(form.code) : null,
+    email: kind === "wallet" && !isEmail(form.email) ? "Enter the email your wallet uses." : null,
   };
   const show = (key: keyof typeof errors) => (touched[key] ? errors[key] : null);
   const blur = (key: string) => () => setTouched((t) => ({ ...t, [key]: true }));
@@ -170,15 +174,14 @@ export function AddPayoutSheet({
   };
 
   const submit = () => {
-    setTouched({ holder: true, iban: true, account: true });
-    if (errors.holder || errors.iban || errors.account) return;
+    setTouched({ holder: true, bank: true, account: true, code: true, email: true });
+    if (errors.holder || errors.bank || errors.account || errors.code || errors.email) return;
     let input: Omit<PayoutMethod, "id" | "isDefault" | "creatorId">;
     if (kind === "bank") {
-      const iban = form.iban.replace(/\s+/g, "").toUpperCase();
-      input = { kind, label: form.bank, detail: `IBAN ending ${iban.slice(-4)}` };
+      input = { kind, label: form.bank.trim(), detail: `Account ending ${compact(form.account).slice(-4)}` };
     } else {
-      const [user, domain] = form.account.trim().split("@");
-      input = { kind, label: form.wallet, detail: `${user.slice(0, 2)}•••@${domain}` };
+      const [user, domain] = form.email.trim().split("@");
+      input = { kind, label: "Digital wallet", detail: `${user.slice(0, 2)}•••@${domain}` };
     }
     const id = actions.addPayoutMethod(input);
     const willBeDefault = form.makeDefault || me.payoutMethods(s).length === 0;
@@ -224,7 +227,7 @@ export function AddPayoutSheet({
           }}
           options={[
             { value: "bank", label: "Bank account" },
-            { value: "wallet", label: "Wallet" },
+            { value: "wallet", label: "Digital wallet" },
           ]}
           size="md"
           className="self-start"
@@ -240,64 +243,55 @@ export function AddPayoutSheet({
               onBlur={blur("holder")}
               error={show("holder")}
             />
-            <SelectField
+            <TextField
               label="Bank"
               required
-              options={banks.map((bank) => ({ value: bank, label: bank }))}
+              autoComplete="off"
               value={form.bank}
               onChange={(event) => set("bank", event.target.value)}
+              onBlur={blur("bank")}
+              error={show("bank")}
             />
-            <FieldShell
-              label="IBAN"
-              required
-              hint="Find it in your banking app. Spaces are fine."
-              error={show("iban")}
-            >
+            <FieldShell label="Account number" required hint={ACCOUNT_HINT} error={show("account")}>
               {({ id, describedBy }) => (
                 <input
                   id={id}
                   aria-describedby={describedBy}
-                  aria-invalid={show("iban") ? true : undefined}
+                  aria-invalid={show("account") ? true : undefined}
                   className="y-input y-num uppercase"
+                  inputMode="text"
                   autoComplete="off"
                   spellCheck={false}
-                  placeholder="AE07 0331 2345 6789 0123 456"
-                  value={form.iban}
-                  onBlur={blur("iban")}
-                  onChange={(event) =>
-                    set(
-                      "iban",
-                      event.target.value
-                        .toUpperCase()
-                        .replace(/[^A-Z0-9]/g, "")
-                        .slice(0, 34)
-                        .replace(/(.{4})(?=.)/g, "$1 "),
-                    )
-                  }
+                  value={form.account}
+                  onBlur={blur("account")}
+                  onChange={(event) => set("account", event.target.value.toUpperCase().slice(0, 42))}
                 />
               )}
             </FieldShell>
+            <TextField
+              label="Routing or transit number"
+              autoComplete="off"
+              spellCheck={false}
+              inputMode="numeric"
+              hint={BANK_CODE_HINT}
+              value={form.code}
+              onChange={(event) => set("code", event.target.value.slice(0, 16))}
+              onBlur={blur("code")}
+              error={show("code")}
+            />
           </>
         ) : (
-          <>
-            <SelectField
-              label="Wallet"
-              required
-              options={wallets.map((wallet) => ({ value: wallet, label: wallet }))}
-              value={form.wallet}
-              onChange={(event) => set("wallet", event.target.value)}
-            />
-            <TextField
-              label={`${form.wallet} email`}
-              required
-              type="email"
-              autoComplete="email"
-              value={form.account}
-              onChange={(event) => set("account", event.target.value)}
-              onBlur={blur("account")}
-              error={show("account")}
-            />
-          </>
+          <TextField
+            label="Wallet email"
+            hint="The email your digital wallet uses. Payouts arrive in US dollars."
+            required
+            type="email"
+            autoComplete="email"
+            value={form.email}
+            onChange={(event) => set("email", event.target.value)}
+            onBlur={blur("email")}
+            error={show("email")}
+          />
         )}
         <label className="flex min-h-11 cursor-pointer items-center gap-3">
           <input

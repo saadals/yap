@@ -61,11 +61,14 @@
       "after": 500
     },
     {
-      "click": "Hold $40 more and change",
+      "click": "Hold $44 more and change",
       "after": 1800
     },
     {
       "text": "$40 per Yapp"
+    },
+    {
+      "text": "$374"
     },
     {
       "click": "More",
@@ -76,6 +79,35 @@
     },
     {
       "key": "Escape"
+    },
+    {
+      "shot": "r3rules-owner-after-tier",
+      "full": true
+    },
+    {
+      "click": "More",
+      "after": 800
+    },
+    {
+      "click": "Close campaign",
+      "after": 1000
+    },
+    {
+      "text": "refunded with their fee: $176 back to your card"
+    },
+    {
+      "click": "Close campaign",
+      "after": 1800
+    },
+    {
+      "text": "Closed. Open slots were refunded with their fee"
+    },
+    {
+      "text": "$198"
+    },
+    {
+      "shot": "r3rules-owner-closed",
+      "full": true
     },
     {
       "go": "/orders/new?type=campaign&product=p-daftar-invoices",
@@ -103,14 +135,17 @@
       "after": 900
     },
     {
-      "text": "No service fee on campaigns"
+      "text": "Service fee (10%)"
     },
     {
-      "click": "Hold $300 and publish",
+      "click": "Hold $330 and publish",
       "after": 3000
     },
     {
       "text": "10 slots open"
+    },
+    {
+      "text": "$330 is held, fee included"
     },
     {
       "click": "View campaign",

@@ -10,7 +10,7 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { actions } from "@/lib/store";
-import { formatById, formats, isArabic, languageById, languages, niches } from "@/lib/taxonomy";
+import { formatById, formats, isTranslated, languageById, languages, niches, textDir } from "@/lib/taxonomy";
 import type { Aspect, Creator, FormatId, LanguageId, NicheId, Scene, ScriptLine, Video } from "@/lib/types";
 
 const scenes: { value: Scene; label: string }[] = [
@@ -28,28 +28,40 @@ const aspectOptions: { value: Aspect; label: string }[] = [
   { value: "16:9", label: "16:9" },
 ];
 
+/** Generic lines after the hook in each language: problem, demo, call to action. */
+const genericLines: Record<LanguageId, [string, string, string]> = {
+  en: ["Here's the problem nobody talks about.", "So I tried this. Watch.", "Try it today. Link in bio."],
+  es: ["A todos nos ha pasado…", "Mira cómo funciona la app, paso a paso.", "Pruébala hoy. El link está en mi bio."],
+  fr: ["On est tous passés par là…", "Regardez comment l'appli fonctionne, étape par étape.", "Essayez-la aujourd'hui. Le lien est dans ma bio."],
+  ar: ["كلنا مررنا بهذا الموقف…", "شاهدوا كيف يعمل التطبيق، خطوة بخطوة.", "جرّبوه اليوم، الرابط في البايو."],
+  pt: ["Todo mundo já passou por isso…", "Veja como o app funciona, passo a passo.", "Teste hoje. O link está na bio."],
+  hi: ["हम सबके साथ ऐसा हुआ है…", "देखिए ऐप कैसे काम करता है, स्टेप बाय स्टेप।", "आज ही आज़माइए, लिंक बायो में है।"],
+  ko: ["다들 이런 적 있죠…", "앱이 어떻게 작동하는지 하나씩 보여드릴게요.", "오늘 바로 써 보세요. 링크는 프로필에 있어요."],
+  zh: ["我们都遇到过这种情况……", "一步一步看看这个应用怎么用。", "今天就试试吧，链接在简介里。"],
+};
+const genericTranslations: [string, string, string] = [
+  "We've all been there…",
+  "Watch how the app works, step by step.",
+  "Try it today. Link in bio.",
+];
+
 /** Generic beats after the hook, in the video's language, so the player has captions to show. */
 function buildScript(hook: string, hookTranslation: string, lang: LanguageId, duration: number): ScriptLine[] {
-  const arabic = isArabic(lang);
-  const beats: { text: string; en: string; beat: ScriptLine["beat"]; at: number }[] = arabic
-    ? [
-        { text: "كلنا مرّينا بهالموقف…", en: "We've all been there…", beat: "problem", at: 0.2 },
-        { text: "شوفوا كيف يشتغل التطبيق، خطوة بخطوة.", en: "Watch how the app works, step by step.", beat: "demo", at: 0.45 },
-        { text: "جربوه اليوم، الرابط في البايو.", en: "Try it today, link in bio.", beat: "cta", at: 0.8 },
-      ]
-    : [
-        { text: "Here's the problem nobody talks about.", en: "", beat: "problem", at: 0.2 },
-        { text: "So I tried this. Watch.", en: "", beat: "demo", at: 0.45 },
-        { text: "Try it today. Link in bio.", en: "", beat: "cta", at: 0.8 },
-      ];
+  const translated = isTranslated(lang);
+  const [problem, demo, cta] = genericLines[lang];
+  const beats: { text: string; en: string; beat: ScriptLine["beat"]; at: number }[] = [
+    { text: problem, en: genericTranslations[0], beat: "problem", at: 0.2 },
+    { text: demo, en: genericTranslations[1], beat: "demo", at: 0.45 },
+    { text: cta, en: genericTranslations[2], beat: "cta", at: 0.8 },
+  ];
   let last = 0;
   const lines: ScriptLine[] = [
-    { at: 0, text: hook, translation: arabic && hookTranslation ? hookTranslation : undefined, beat: "hook" },
+    { at: 0, text: hook, translation: translated && hookTranslation ? hookTranslation : undefined, beat: "hook" },
   ];
   for (const b of beats) {
     const at = Math.max(last + 1, Math.round(duration * b.at));
     last = at;
-    lines.push({ at, text: b.text, translation: arabic ? b.en : undefined, beat: b.beat });
+    lines.push({ at, text: b.text, translation: translated ? b.en : undefined, beat: b.beat });
   }
   return lines;
 }
@@ -87,8 +99,8 @@ export function AddVideoSheet({
     lang: creator.languages[0] ?? "en",
     hook: "",
     hookTranslation: "",
-    format: creator.formats[0] ?? "selfie-demo",
-    duration: String(formatById[creator.formats[0] ?? "selfie-demo"].typical[0]),
+    format: creator.formats[0] ?? "app-demo",
+    duration: String(formatById[creator.formats[0] ?? "app-demo"].typical[0]),
     aspect: "9:16",
     scene: "selfie",
     niche: creator.niches[0] ?? "consumer",
@@ -104,7 +116,8 @@ export function AddVideoSheet({
 
   useEffect(() => () => window.clearInterval(timer.current), []);
 
-  const arabic = isArabic(form.lang);
+  const translated = isTranslated(form.lang);
+  const languageName = languageById[form.lang].name;
   const duration = Number(form.duration);
   const views = form.views.trim() ? Number(form.views) : undefined;
   const uploading = upload !== null && upload.progress < 100;
@@ -131,7 +144,7 @@ export function AddVideoSheet({
     id: "v-preview",
     creatorId: creator.id,
     title: form.title || "Your new video",
-    hook: form.hook || (arabic ? "الجملة الأولى في الفيديو" : "Your opening line"),
+    hook: form.hook || "Your opening line",
     lang: form.lang,
     format: form.format,
     durationSec: Number.isFinite(duration) && duration > 0 ? duration : 30,
@@ -174,7 +187,7 @@ export function AddVideoSheet({
     actions.addPortfolioVideo(creator.id, {
       title: form.title.trim(),
       hook: form.hook.trim(),
-      hookTranslation: arabic && form.hookTranslation.trim() ? form.hookTranslation.trim() : undefined,
+      hookTranslation: translated && form.hookTranslation.trim() ? form.hookTranslation.trim() : undefined,
       lang: form.lang,
       format: form.format,
       durationSec: duration,
@@ -301,7 +314,7 @@ export function AddVideoSheet({
               label="Title"
               required
               maxLength={80}
-              placeholder="e.g. Kanz: 'Where did my salary go?'"
+              placeholder="e.g. Roundleaf: 'Where did my paycheck go?'"
               value={form.title}
               onChange={(e) => update({ title: e.target.value })}
               onBlur={() => touch("title")}
@@ -319,23 +332,23 @@ export function AddVideoSheet({
               label="On-screen hook"
               required
               maxLength={90}
-              dir={arabic ? "rtl" : "ltr"}
-              lang={arabic ? "ar" : "en"}
-              placeholder={arabic ? "أرسلت الفاتورة على الواتساب… في عشر ثواني" : "I sent the invoice in ten seconds"}
+              dir={textDir(form.lang)}
+              lang={form.lang}
+              placeholder={translated ? `The opening line, in ${languageName}` : "I sent the invoice in ten seconds"}
               value={form.hook}
               onChange={(e) => update({ hook: e.target.value })}
               onBlur={() => touch("hook")}
-              hint={arabic ? `In ${languageById[form.lang].short}, as it appears in the video.` : "The first line viewers read."}
+              hint={translated ? `In ${languageName}, as it appears in the video.` : "The first line viewers read."}
               error={show("hook")}
             />
-            {arabic ? (
+            {translated ? (
               <TextField
                 label="Hook in English"
                 maxLength={120}
-                placeholder="I sent the invoice on WhatsApp… in ten seconds"
+                placeholder="I sent the invoice in ten seconds"
                 value={form.hookTranslation}
                 onChange={(e) => update({ hookTranslation: e.target.value })}
-                hint="Helps buyers who don't speak the dialect."
+                hint={`Helps buyers who don't speak ${languageName}.`}
               />
             ) : null}
           </div>
@@ -375,7 +388,7 @@ export function AddVideoSheet({
             options={scenes}
           />
           <SelectField
-            label="Industry"
+            label="Category"
             required
             value={form.niche}
             onChange={(e) => update({ niche: e.target.value as NicheId })}

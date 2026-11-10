@@ -16,7 +16,7 @@ export type TierGuide = { price: number; deliveryDays: number; revisions: number
 export type MarketGuide = {
   /** Creators the medians were computed from. */
   sample: number;
-  /** True when the sample matches the chosen formats/dialects (otherwise all creators). */
+  /** True when the sample matches the chosen formats/languages (otherwise all creators). */
   matched: boolean;
   tiers: Record<PackageTier, TierGuide>;
 };
@@ -29,18 +29,18 @@ const fallback: Record<PackageTier, TierGuide> = {
 
 /**
  * Median package price, delivery days and revisions per tier across seed creators who make any
- * of the chosen formats in any of the chosen dialects. Falls back to every creator when fewer
+ * of the chosen formats in any of the chosen languages. Falls back to every creator when fewer
  * than three match, so the guidance never rests on one or two people.
  */
 export function marketGuide(
   creators: Creator[],
   formats: FormatId[],
-  dialects: LanguageId[],
+  languages: LanguageId[],
 ): MarketGuide {
   const matches = creators.filter(
     (creator) =>
       (formats.length === 0 || creator.formats.some((f) => formats.includes(f))) &&
-      (dialects.length === 0 || creator.languages.some((l) => dialects.includes(l))),
+      (languages.length === 0 || creator.languages.some((l) => languages.includes(l))),
   );
   const matched = matches.length >= 3;
   const pool = matched ? matches : creators;

@@ -16,11 +16,12 @@ import { Page, PageHeader, SectionLabel } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
-import { money, plural, shortDate } from "@/lib/format";
+import { money, plural, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, commissionTotals, creatorEarnings, me } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { useDemo, useHydrated } from "@/lib/store";
+import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS } from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
 export default function WalletPage() {
@@ -94,7 +95,7 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
         <Block
           as="section"
           aria-labelledby="available-title"
-          tone="butter"
+          tone="paper"
           pad="lg"
           className="flex flex-col justify-between gap-8 lg:col-span-7"
         >
@@ -124,7 +125,7 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
               {earnings.available <= 0
                 ? "Approved work lands here."
                 : defaultMethod
-                  ? `Arrives in 1–2 business days to ${defaultMethod.label}`
+                  ? `Arrives in 1–2 business days · ${defaultMethod.detail}`
                   : "Add a payout method to withdraw"}
             </p>
           </div>
@@ -218,8 +219,17 @@ function WalletBody({ s, hydrated }: { s: DemoState; hydrated: boolean }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Pending: approved campaign videos, withdrawable at month end                */
+/* Pending: approved campaign videos, released 7 days after the post is verified */
 /* -------------------------------------------------------------------------- */
+
+/** When a pending amount is released, as an exact date once the post is verified. */
+function releaseLine(c: Commission): string {
+  const status = c.post?.status ?? "due";
+  if (status === "live" && c.withdrawableFrom) return `released ${weekdayDate(c.withdrawableFrom)}`;
+  if (status === "checking") return "checking your post";
+  if (status === "removed") return `post down: put it back within ${CAMPAIGN_RESTORE_HOURS} hours`;
+  return "waiting for your post";
+}
 
 function PostState({ c }: { c: Commission }) {
   const status = c.post?.status ?? "due";
@@ -231,14 +241,14 @@ function PostState({ c }: { c: Commission }) {
     );
   if (status === "checking")
     return (
-      <Badge tone="info" icon={<Loader2 size={14} aria-hidden />}>
+      <Badge tone="active" icon={<Loader2 size={14} aria-hidden />}>
         Checking post
       </Badge>
     );
   if (status === "removed")
     return (
-      <Badge tone="neutral" icon={<Lock size={14} aria-hidden />}>
-        Locked
+      <Badge tone="warning" icon={<Lock size={14} aria-hidden />}>
+        On hold
       </Badge>
     );
   return (
@@ -264,7 +274,8 @@ function PendingBlock({
   earnings: ReturnType<typeof creatorEarnings>;
   hydrated: boolean;
 }) {
-  const items = [...earnings.pendingItems].sort(byNewest);
+  // Soonest release first; amounts still waiting for a verified post after them.
+  const items = earnings.pendingItems;
   return (
     <Block as="section" aria-labelledby="pending-title" tone="paper" pad="md" className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-1">
@@ -272,7 +283,9 @@ function PendingBlock({
           <h2 id="pending-title" className="y-small flex items-center gap-2 font-semibold">
             <Hourglass size={18} aria-hidden /> Pending
           </h2>
-          <p className="y-micro y-fg-2">Unlocks at month end if the post stays up</p>
+          <p className="y-micro y-fg-2">
+            Campaign pay, released {CAMPAIGN_RELEASE_DAYS} days after we verify your post, if it&apos;s still up
+          </p>
         </div>
         {hydrated ? (
           <p className="y-display y-num text-[32px] leading-none font-semibold tracking-[-0.03em]">
@@ -287,7 +300,8 @@ function PendingBlock({
         <Skeleton className="h-12 w-full !rounded-(--y-r-tile)" />
       ) : items.length === 0 ? (
         <p className="y-small y-fg-2">
-          Nothing pending. When a campaign approves your video, its price waits here until month end.
+          Nothing pending. When a brand approves your campaign video, its price waits here until{" "}
+          {CAMPAIGN_RELEASE_DAYS} days after we verify your post.
         </p>
       ) : (
         <ul className="flex flex-col divide-y divide-(--b-line)">
@@ -303,8 +317,7 @@ function PendingBlock({
                     {c.title}
                   </Link>
                   <p className="y-micro y-fg-2 truncate">
-                    {business?.name}
-                    {c.withdrawableFrom ? ` · unlocks ${shortDate(c.withdrawableFrom)}` : ""}
+                    {business?.name} · {releaseLine(c)}
                   </p>
                 </div>
                 <span className="y-small y-num flex-none font-semibold">{money(commissionTotals(c).creatorEarns)}</span>
@@ -317,11 +330,13 @@ function PendingBlock({
         </ul>
       )}
 
-      {hydrated && earnings.pendingLocked > 0 ? (
+      {hydrated && items.length > 0 ? (
         <p className="y-micro y-fg-2 flex items-start gap-1.5">
           <Clock size={14} aria-hidden className="mt-px flex-none" />
-          {money(earnings.pendingLocked)} only unlocks if its post is live at month end. Posts that come
-          down stay locked.
+          {earnings.pendingWaiting > 0
+            ? `${money(earnings.pendingWaiting)} gets its date when the post is verified. `
+            : ""}
+          Keep each post up for {CAMPAIGN_KEEP_LIVE_DAYS} days after it&apos;s verified.
         </p>
       ) : null}
     </Block>
@@ -406,7 +421,7 @@ function HistoryBlock({ s, hydrated, mine }: { s: DemoState; hydrated: boolean; 
                     <CheckCircle2 size={14} aria-hidden /> Paid
                   </span>
                 ) : (
-                  <Badge tone="info" icon={<Clock size={14} aria-hidden />} className="!min-h-6 !px-2 text-xs">
+                  <Badge tone="active" icon={<Clock size={14} aria-hidden />} className="!min-h-6 !px-2 text-xs">
                     Processing
                   </Badge>
                 )}

@@ -4,14 +4,14 @@ import { CreditCard, Plus, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { PillButton } from "@/components/ui/pill-button";
-import { money, priceBreakdown } from "@/lib/format";
+import { money, moneyExact, priceBreakdown } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { addonById, includedRights, SERVICE_FEE_RATE } from "@/lib/taxonomy";
 import type { AddonId, PaymentMethod } from "@/lib/types";
 
 /**
- * Itemised price. Business view shows the service fee and total; creator view shows what
+ * Itemized price. Business view shows the service fee and total; creator view shows what
  * they earn (creators keep 100% of price + add-ons).
  */
 export function PriceSummary({
@@ -21,6 +21,7 @@ export function PriceSummary({
   feeRate = SERVICE_FEE_RATE,
   perspective = "business",
   showRights = true,
+  cents = false,
   className = "",
 }: {
   price: number;
@@ -29,20 +30,23 @@ export function PriceSummary({
   feeRate?: number;
   perspective?: "business" | "creator";
   showRights?: boolean;
+  /** Receipts show every amount with cents; elsewhere whole dollars stay whole, so the total matches its button. */
+  cents?: boolean;
   className?: string;
 }) {
   const totals = priceBreakdown(price, addons, feeRate);
+  const fmt = (amount: number) => (cents ? money(amount, true) : moneyExact(amount));
   const row = "flex items-baseline justify-between gap-4";
   return (
     <div className={`flex flex-col gap-2.5 ${className}`}>
       <div className={row}>
         <span className="y-small">{priceLabel}</span>
-        <span className="y-small y-num font-semibold">{money(price)}</span>
+        <span className="y-small y-num font-semibold">{fmt(price)}</span>
       </div>
       {addons.map((addon) => (
         <div key={addon.id} className={row}>
           <span className="y-small y-fg-2">+ {addonById[addon.id].name}</span>
-          <span className="y-small y-num">{money(addon.price)}</span>
+          <span className="y-small y-num">{fmt(addon.price)}</span>
         </div>
       ))}
       {perspective === "business" ? (
@@ -51,15 +55,15 @@ export function PriceSummary({
             <div className={`${row} border-t border-(--b-line) pt-2.5`}>
               <span className="y-small y-fg-2">
                 Service fee ({Math.round(feeRate * 100)}%)
-                <span className="y-micro y-fg-3 block">Only charged if the work is approved</span>
+                <span className="y-micro y-fg-3 block">Held with the payment, refunded with it</span>
               </span>
-              <span className="y-small y-num">{money(totals.fee, true)}</span>
+              <span className="y-small y-num">{fmt(totals.fee)}</span>
             </div>
           ) : null}
           <div className={`${row} border-t border-(--b-line) pt-2.5`}>
             <span className="y-head">Total</span>
             <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
-              {money(totals.total, true)}
+              {fmt(totals.total)}
             </span>
           </div>
         </>
@@ -72,7 +76,7 @@ export function PriceSummary({
             </span>
           </span>
           <span className="y-display y-num text-[28px] leading-none font-semibold tracking-[-0.02em]">
-            {money(totals.creatorEarns)}
+            {fmt(totals.creatorEarns)}
           </span>
         </div>
       )}
@@ -81,11 +85,11 @@ export function PriceSummary({
   );
 }
 
-/** The "payment protected" reassurance (sky = trust). */
+/** The "payment protected" reassurance (trust: the shield and the label carry it). */
 export function ProtectedNote({ className = "", compact = false }: { className?: string; compact?: boolean }) {
   return (
     <div
-      data-tone="sky"
+      data-tone="paper"
       className={`y-block flex items-start gap-3 !rounded-(--y-r-tile) ${compact ? "p-3" : "p-4"} ${className}`}
     >
       <ShieldCheck size={20} aria-hidden className="mt-0.5 flex-none" />
@@ -106,7 +110,7 @@ export function ProtectedNote({ className = "", compact = false }: { className?:
 
 export function paymentLabel(method: PaymentMethod) {
   if (method.brand === "applepay") return "Apple Pay";
-  const brand = { visa: "Visa", mastercard: "Mastercard", mada: "mada" }[method.brand];
+  const brand = { visa: "Visa", mastercard: "Mastercard", amex: "Amex" }[method.brand];
   return `${brand} •••• ${method.last4}`;
 }
 
@@ -197,7 +201,7 @@ export function PaymentMethodPicker({
               disabled={!valid}
               onClick={() => {
                 const id = actions.addPaymentMethod({
-                  brand: digits.startsWith("4") ? "visa" : digits.startsWith("5") ? "mastercard" : "mada",
+                  brand: digits.startsWith("4") ? "visa" : /^3[47]/.test(digits) ? "amex" : "mastercard",
                   last4: digits.slice(-4),
                   expiry: card.expiry,
                   holder: card.holder.trim(),

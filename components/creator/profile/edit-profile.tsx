@@ -152,7 +152,7 @@ function Editor({ creator }: { creator: Creator }) {
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 [&>*]:min-w-0">
         <aside className="flex flex-col gap-2 lg:order-2 lg:col-span-4" aria-label="Profile strength">
           <div className="flex flex-col gap-2 lg:sticky lg:top-24">
-            <Block tone="lavender" pad="md" className="flex flex-col gap-5">
+            <Block tone="paper" pad="md" className="flex flex-col gap-5">
               <div className="flex items-start justify-between gap-4">
                 <div className="flex items-center gap-3">
                   <FaceAvatar id={creator.id} name="" size={48} />

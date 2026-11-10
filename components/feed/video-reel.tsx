@@ -8,7 +8,7 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { money } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { startingPrice } from "@/lib/selectors";
-import { formatById, isArabic, languageById } from "@/lib/taxonomy";
+import { formatById, isTranslated, languageById, textDir } from "@/lib/taxonomy";
 import type { Video } from "@/lib/types";
 
 import type { VideoItem } from "./feed-items";
@@ -17,8 +17,8 @@ import { ReelCta, ReelFrame, ReelWho, type ReelProps } from "./reel-frame";
 
 /**
  * A creator's portfolio video as a full-bleed reel: the generated scene, simulated playback with
- * captions (and an English translation for Arabic) while it's the active reel, the creator top
- * start, and one neon pill: Order, which opens the details layer.
+ * captions (plus an English translation when the video isn't in English) while it's the active
+ * reel, the creator top start, and one neon pill: Order, which opens the details layer.
  */
 export function VideoReel({
   item,
@@ -32,7 +32,7 @@ export function VideoReel({
   const { video, creator } = item;
   const meta = [
     formatById[video.format]?.name,
-    languageById[video.lang]?.short,
+    languageById[video.lang]?.name,
     `From ${money(startingPrice(creator))}`,
   ]
     .filter(Boolean)
@@ -94,7 +94,7 @@ function ReelPlayback({
     autoplay,
     loop: true,
   });
-  const arabic = isArabic(video.lang);
+  const translated = isTranslated(video.lang);
   const text = started ? line.text : video.hook;
   const translation = started ? line.translation : video.hookTranslation;
 
@@ -120,14 +120,14 @@ function ReelPlayback({
       <div className="y-reel-bottom">
         <div className="flex flex-col items-center gap-1.5 text-center">
           <span
-            dir={arabic ? "rtl" : "ltr"}
-            lang={arabic ? "ar" : "en"}
-            className={`y-thumb-caption ${arabic ? "y-display" : ""}`}
+            dir={textDir(video.lang)}
+            lang={video.lang}
+            className={`y-thumb-caption ${textDir(video.lang) === "rtl" ? "y-display" : ""}`}
             style={{ fontSize: "clamp(15px, 4.6cqw, 19px)" }}
           >
             {text}
           </span>
-          {arabic && translation ? (
+          {translated && translation ? (
             <span className="rounded-lg bg-black/70 px-2 py-0.5 text-[13px] font-medium text-white">
               {translation}
             </span>

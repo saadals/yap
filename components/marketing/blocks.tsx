@@ -97,7 +97,7 @@ export function FloatWidget({
   return (
     <div
       data-tone={tone}
-      className={`y-block flex w-max max-w-[17rem] items-center gap-3 !rounded-[22px] p-2.5 pe-4 shadow-(--y-shadow-float) ${className}`}
+      className={`y-block flex w-max max-w-[17rem] items-center gap-3 !rounded-(--y-r-tile) p-2.5 pe-4 shadow-(--y-shadow-float) ${className}`}
     >
       {icon}
       <span className="flex min-w-0 flex-col">
@@ -121,19 +121,19 @@ export function IconTile({
   return (
     <span
       aria-hidden
-      className={`grid flex-none place-items-center bg-(--b-chip) text-(--b-chip-fg) ${size === "md" ? "size-11 rounded-[14px]" : "size-9 rounded-[12px]"} ${className}`}
+      className={`grid flex-none place-items-center bg-(--b-chip) text-(--b-chip-fg) ${size === "md" ? "size-11 rounded-(--y-r-field)" : "size-9 rounded-(--y-r-sm)"} ${className}`}
     >
       {children}
     </span>
   );
 }
 
-/** Chunky numeral for steps ("01"). */
+/** Step numeral ("01"): a big number, so light (400) and the same size as the landing's stats. */
 export function StepNumber({ n, className = "" }: { n: number; className?: string }) {
   return (
     <span
       aria-hidden
-      className={`y-display y-num block leading-[0.85] font-semibold tracking-[-0.05em] ${className}`}
+      className={`y-display y-num block text-[40px] leading-[0.85] tracking-[-0.04em] md:text-[52px] ${className}`}
     >
       {String(n).padStart(2, "0")}
     </span>

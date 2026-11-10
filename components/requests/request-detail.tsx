@@ -341,7 +341,7 @@ function OwnerRequestView({
                   <div className="min-w-0 flex-1">
                     <h2 className="y-head">You hired {creator.firstName}</h2>
                     <p className="y-small y-fg-2">
-                      {money(pitch.price)} · first version {commission ? `due ${weekdayDate(commission.dueDate)}` : `in ${pitch.deliveryDays} days`}
+                      {money(pitch.price)} · first version {commission ? `due ${weekdayDate(commission.dueDate)}` : `in ${plural(pitch.deliveryDays, "day")}`}
                     </p>
                   </div>
                   {commission ? (
@@ -575,7 +575,7 @@ function OwnerRequestView({
           <div className="grid gap-2 lg:grid-cols-12">
             <Block as="section" aria-labelledby="brief-h" tone="paper" pad="md" className="flex flex-col gap-5 lg:col-span-8">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h2 id="brief-h" className="y-display y-title">
+                <h2 id="brief-h" className="y-head">
                   The brief
                 </h2>
                 {isDraft ? (
@@ -664,7 +664,7 @@ function OwnerRequestView({
           <Block as="section" aria-labelledby="invited-h" tone="paper" pad="md" className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h2 id="invited-h" className="y-display y-title">
+                <h2 id="invited-h" className="y-head">
                   Invited creators
                 </h2>
                 <p className="y-small y-fg-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BadgeCheck, CalendarDays, Check, Globe, MailOpen, Pencil } from "lucide-react";
+import { AlertTriangle, BadgeCheck, CalendarDays, Check, Globe, MailOpen, Pencil, Sparkles, Wallet } from "lucide-react";
 import { useState } from "react";
 
 import { BriefSummary } from "@/components/domain/brief-summary";
@@ -107,7 +107,7 @@ export function BudgetStep({ form, set, error, market }: StepProps) {
     <>
       <Question
         id="q-budget"
-        tone="butter"
+        icon={<Wallet size={18} aria-hidden className="flex-none" />}
         title="What's your budget?"
         hint={`For all ${deliverableLabel(form.format, form.videoCount)}. Posting is free. When you hire, payment is held until you approve the work.`}
       >
@@ -157,7 +157,7 @@ export function BudgetStep({ form, set, error, market }: StepProps) {
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <p className="y-micro y-fg-2">Market guidance</p>
-                  <p className="y-head">
+                  <p className="y-body font-semibold">
                     {enoughData
                       ? `Most creators who fit charge ${moneyRange(market.low, market.high)}`
                       : `${plural(market.count, "creator")} ${market.count === 1 ? "fits" : "fit"}, from ${money(market.prices[0])}`}
@@ -189,7 +189,7 @@ export function BudgetStep({ form, set, error, market }: StepProps) {
           ) : (
             <p className="y-small">
               No creators offer this format in your language yet, so there&apos;s no market price to show.
-              Try another dialect on the language step.
+              Try another language on the language step.
             </p>
           )}
         </div>
@@ -240,7 +240,7 @@ export function BudgetStep({ form, set, error, market }: StepProps) {
         )}
         {Number.isFinite(form.dueInDays) && !deadlineErr ? (
           <div className="y-tile flex flex-col gap-2 p-4" aria-live="polite">
-            <p className="y-head">
+            <p className="y-body font-semibold">
               Due {weekdayDate(dueDateFor(form.dueInDays))}
               <span className="y-small y-fg-2 font-normal"> · {plural(form.dueInDays, "day")} from today</span>
             </p>
@@ -385,9 +385,10 @@ export function WhoStep({ s, form, set, product, error, market }: StepProps) {
               {f.reasons[0] ? <span className="y-micro y-fg-3 block truncate">{f.reasons[0]}</span> : null}
             </span>
             <span
-              className="flex-none rounded-full bg-(--y-lavender) px-2.5 py-1 text-(--y-on-color)"
+              className="flex flex-none items-center rounded-full bg-(--b-bg) px-2.5 py-1"
               aria-label={`${f.score}% fit`}
             >
+              <Sparkles size={13} aria-hidden className="me-1 flex-none" />
               <span className="y-display y-num text-[17px] font-semibold" aria-hidden>
                 {f.score}
               </span>
@@ -511,7 +512,7 @@ export function ReviewStep({ s, form, set, product, error, touch, goTo, market }
 
       <Block as="section" aria-labelledby="r-brief" tone="paper" pad="md" className="flex flex-col gap-5">
         <div className="flex flex-col gap-3">
-          <h2 id="r-brief" className="y-display y-title">
+          <h2 id="r-brief" className="y-head">
             The brief
           </h2>
           <div className="flex flex-wrap items-center gap-1.5">
@@ -527,7 +528,7 @@ export function ReviewStep({ s, form, set, product, error, touch, goTo, market }
       </Block>
 
       <Block as="section" aria-labelledby="r-terms" tone="paper" pad="md" className="flex flex-col gap-3">
-        <h2 id="r-terms" className="y-display y-title">
+        <h2 id="r-terms" className="y-head">
           Budget, timing and who can pitch
         </h2>
         <dl className="flex flex-col gap-2">

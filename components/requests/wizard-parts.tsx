@@ -8,10 +8,14 @@ import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import type { Reference } from "@/lib/types";
 
-/** One question per block: a calm title, an optional hint, then the answer controls. */
+/**
+ * One question per block: a calm title, an optional hint, then the answer controls. `icon` marks
+ * what the block is about (money, fit) where a tinted card used to say it.
+ */
 export function Question({
   id,
   title,
+  icon,
   hint,
   tone = "paper",
   optional = false,
@@ -21,6 +25,7 @@ export function Question({
 }: {
   id: string;
   title: string;
+  icon?: React.ReactNode;
   hint?: React.ReactNode;
   tone?: BlockTone;
   optional?: boolean;
@@ -38,7 +43,8 @@ export function Question({
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <h2 id={id} className="y-display y-title">
+          <h2 id={id} className={`y-head ${icon ? "flex items-center gap-2" : ""}`}>
+            {icon}
             {title}
             {optional ? <span className="y-small y-fg-3 ms-2 font-medium">Optional</span> : null}
           </h2>
@@ -321,7 +327,7 @@ export function ReferenceEditor({
   );
 }
 
-/** Lavender brief-strength meter (lavender = brief help). Lives in a lavender block. */
+/** Brief-strength meter (brief help). Lives in the brief strength block. */
 export function StrengthMeter({ score, label }: { score: number; label: string }) {
   return (
     <div className="flex flex-col gap-2">

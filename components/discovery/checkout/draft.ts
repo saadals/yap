@@ -5,10 +5,10 @@
  */
 
 import { at } from "@/lib/clock";
-import { daysFromNow, lengthLabel, priceBreakdown, weekdayDate } from "@/lib/format";
+import { daysFromNow, lengthLabel, plural, priceBreakdown, weekdayDate } from "@/lib/format";
 import { isPersonal, me, productById } from "@/lib/selectors";
 import type { DemoState, OfferInput } from "@/lib/store";
-import { formatById, languageById } from "@/lib/taxonomy";
+import { DEFAULT_LANGUAGE, formatById, languageById } from "@/lib/taxonomy";
 import type {
   AddonId,
   Aspect,
@@ -74,10 +74,9 @@ function snapLength(pkg: Package, seconds: number): number {
   return fitting.length ? fitting[fitting.length - 1] : options[0];
 }
 
-const LANGUAGE_PREFERENCE: LanguageId[] = ["ar-saudi", "ar-gulf"];
-
+/** English when the creator makes videos in it (the default), otherwise their first language. */
 function pickLanguage(creator: Creator): LanguageId {
-  return LANGUAGE_PREFERENCE.find((l) => creator.languages.includes(l)) ?? creator.languages[0] ?? "en";
+  return creator.languages.includes(DEFAULT_LANGUAGE) ? DEFAULT_LANGUAGE : (creator.languages[0] ?? DEFAULT_LANGUAGE);
 }
 
 const PLATFORM_PREFERENCE: PlatformId[] = ["tiktok", "instagram", "snapchat", "youtube"];
@@ -191,7 +190,7 @@ export function initDraft(
     durationSec: snapLength(pkg, formatById[format].typical[1]),
     goal: "",
     references: withVideo([]),
-    onCamera: format !== "screen-walkthrough",
+    onCamera: !formatById[format].voiceOnly,
     addons: [],
     slack: 0,
     message: null,
@@ -233,14 +232,15 @@ export function derive(s: DemoState, creator: Creator, d: Draft, repeat?: Commis
     d.title ??
     (product ? `${format.name} for ${product.name}` : personal ? format.name : `${format.name} for ${business.name}`);
   const sender = (me.member(s)?.name ?? me.account(s).name).split(" ")[0];
-  const dialects = d.languages.map((l) => languageById[l].short).join(" and ");
-  const what = `a ${format.name.toLowerCase()}${product ? ` for ${product.name}` : personal ? "" : " for our app"}${dialects ? ` in ${dialects}` : ""}`;
+  const spoken = d.languages.map((l) => languageById[l].name).join(" and ");
+  const noun = format.noun[0];
+  const what = `${/^[aeiou]/.test(noun) ? "an" : "a"} ${noun}${product ? ` for ${product.name}` : personal ? "" : " for our app"}${spoken ? ` in ${spoken}` : ""}`;
   const message =
     d.message ??
     (repeat
       ? personal
-        ? `Hi ${creator.firstName}! Back for another video. This builds on “${repeat.title}” and includes what I learned from it${learnings.length ? ` (${learnings.length} notes in the must-include list)` : ""}. Shout if anything's unclear.`
-        : `Hi ${creator.firstName}! Same team, new video. This builds on “${repeat.title}” and includes what we learned from it${learnings.length ? ` (${learnings.length} notes in the must-include list)` : ""}. Shout if anything's unclear.`
+        ? `Hi ${creator.firstName}, back for another video. This builds on “${repeat.title}” and includes what I learned from it${learnings.length ? ` (${plural(learnings.length, "note")} in the must-include list)` : ""}. Shout if anything's unclear.`
+        : `Hi ${creator.firstName}, same team, new video. This builds on “${repeat.title}” and includes what we learned from it${learnings.length ? ` (${plural(learnings.length, "note")} in the must-include list)` : ""}. Shout if anything's unclear.`
       : personal
         ? `Hi ${creator.firstName}, I'm ${sender}. I'd love ${what}. The brief is below, and I'm happy to answer any questions before you start.`
         : `Hi ${creator.firstName}, I'm ${sender} from ${business.name}. We'd love ${what}. The brief and our product notes are below, and I'm happy to answer any questions before you start.`);
@@ -304,7 +304,7 @@ export const fieldTodo: Record<FieldId, string> = {
   product: "Choose a product",
   title: "Add a title",
   format: "Pick a format",
-  languages: "Pick a dialect",
+  languages: "Pick a language",
   platforms: "Pick a platform",
   audience: "Describe the audience",
   goal: "Write the goal",
@@ -318,12 +318,12 @@ export function validate(s: DemoState, creator: Creator, d: Draft, x: Derived): 
   if (!x.product && businessProducts(s).length) errors.product = "Choose which product this video is for.";
   if (x.title.trim().length < 4) errors.title = "Give it a short title so you can find it later.";
   if (!creator.formats.includes(d.format)) errors.format = `${creator.firstName} doesn't offer this format. Pick one of theirs.`;
-  if (!d.languages.length) errors.languages = "Pick at least one dialect.";
+  if (!d.languages.length) errors.languages = "Pick at least one language.";
   if (!d.platforms.length) errors.platforms = "Pick at least one platform you'll post on.";
   if (d.audience.trim().length < 10) errors.audience = "Describe who should watch it, in a sentence or two.";
   if (d.goal.trim().length < 10) errors.goal = "Say what viewers should do or feel after watching.";
   if (d.keyMessage.trim().length < 6) errors.keyMessage = "Add the one thing viewers should remember.";
-  if (!me.paymentMethods(s).some((m) => m.id === d.paymentMethodId)) errors.payment = "Choose a card to authorise.";
+  if (!me.paymentMethods(s).some((m) => m.id === d.paymentMethodId)) errors.payment = "Choose a card to authorize.";
   return errors;
 }
 

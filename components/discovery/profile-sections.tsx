@@ -8,7 +8,6 @@ import { SaveCreatorButton } from "@/components/domain/creator-card";
 import { Badge } from "@/components/ui/badge";
 import { Block } from "@/components/ui/block";
 import { FaceAvatar } from "@/components/ui/face-avatar";
-import { Ar } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { useToast } from "@/components/ui/toast";
@@ -25,7 +24,7 @@ import { availabilityLabel, responseShort } from "./profile-utils";
 /* -------------------------------------------------------------------------- */
 
 /**
- * Name, one meta line, headline, dialects, and the track record as one quiet row of text.
+ * Name, one meta line, headline, languages, and the track record as one quiet row of text.
  * `footer` takes an extra line under the stats (e.g. "Commission again" on phones).
  */
 export function ProfileHero({
@@ -108,11 +107,10 @@ export function ProfileHero({
               ) : creator.kind === "influencer" && creator.followers ? (
                 <span>{compact(creator.followers)} followers</span>
               ) : null}
-              {creator.nameAr ? <Ar className="y-body">{creator.nameAr}</Ar> : null}
             </p>
           </div>
           <p className="y-lead max-w-[52ch]">{creator.headline}</p>
-          <LanguageChips ids={creator.languages} native />
+          <LanguageChips ids={creator.languages} />
         </div>
 
         <div className="hidden flex-none flex-col items-end gap-2 md:flex">
@@ -223,11 +221,11 @@ function TrackRecord({ creator }: { creator: Creator }) {
 /* About                                                                       */
 /* -------------------------------------------------------------------------- */
 
-/** Bio plus a few plain-text facts. Dialects live in the hero, examples in the portfolio. */
+/** Bio plus a few plain-text facts. Languages live in the hero, examples in the portfolio. */
 export function AboutBlock({ creator }: { creator: Creator }) {
   const facts = [
     { label: "Formats", value: creator.formats.map((id) => formatById[id].name).join(", ") },
-    { label: "Niches", value: creator.niches.map((id) => nicheById[id].name).join(", ") },
+    { label: "Categories", value: creator.niches.map((id) => nicheById[id].name).join(", ") },
     { label: "Makes content for", value: platformList(creator.platforms) },
     { label: "Equipment", value: creator.equipment.join(", ") },
   ].filter((fact) => fact.value);

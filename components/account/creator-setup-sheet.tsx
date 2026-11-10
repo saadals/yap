@@ -5,13 +5,12 @@ import { useId, useState } from "react";
 
 import { FilterChip } from "@/components/ui/chip";
 import { FieldShell, TextField } from "@/components/ui/field";
-import { Ar } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { formats, languages } from "@/lib/taxonomy";
+import { DEFAULT_LANGUAGE, formats, languages } from "@/lib/taxonomy";
 import type { FormatId, LanguageId } from "@/lib/types";
 
 import { CAMPAIGN_FLOOR, ConnectStatus, READ_ONLY_NOTE, useConnectSequence } from "./social";
@@ -72,7 +71,7 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
   const [form, setForm] = useState<Form>(() => ({
     name: account.name,
     headline: "",
-    languages: [],
+    languages: [DEFAULT_LANGUAGE],
     formats: [],
     tiktok: "",
   }));
@@ -90,7 +89,7 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
     if (connect.phase !== "idle") return;
     const found: Errors = {
       name: form.name.trim().length < 2 ? "Enter the name people will see." : undefined,
-      languages: form.languages.length ? undefined : "Pick at least one language or dialect.",
+      languages: form.languages.length ? undefined : "Pick at least one language.",
       formats: form.formats.length ? undefined : "Pick at least one format.",
     };
     setErrors(found);
@@ -141,7 +140,7 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
       <TextField
         label="Headline"
         maxLength={80}
-        placeholder="e.g. Friendly Saudi presenter for app demos"
+        placeholder="e.g. Friendly presenter for app demos and unboxings"
         hint="One line on what you make. You can change it any time."
         value={form.headline}
         onChange={(event) => set({ headline: event.target.value })}
@@ -149,7 +148,7 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
 
       <div className="flex flex-col gap-3">
         <p id={languagesId} className="y-label">
-          <span>Languages and dialects</span>
+          <span>Languages you make videos in</span>
           <span className="y-micro y-fg-3 font-medium">Required</span>
         </p>
         <div
@@ -164,8 +163,7 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
               pressed={form.languages.includes(lang.id)}
               onClick={() => set({ languages: toggle(form.languages, lang.id) })}
             >
-              {lang.short}
-              {lang.id !== "en" ? <Ar className="ms-1 opacity-70">{lang.native}</Ar> : null}
+              {lang.name}
             </FilterChip>
           ))}
         </div>

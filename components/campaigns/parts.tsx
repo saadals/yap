@@ -28,7 +28,7 @@ export function Question({
   return (
     <Block as="section" aria-labelledby={id} tone={tone} pad="md" className={`flex flex-col gap-4 ${className}`}>
       <div className="flex min-w-0 flex-col gap-1">
-        <h2 id={id} className="y-display y-title">
+        <h2 id={id} className="y-head">
           {title}
           {optional ? <span className="y-small y-fg-3 ms-2 font-medium">Optional</span> : null}
         </h2>

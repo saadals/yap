@@ -19,7 +19,7 @@ export type Helper = {
   stop: () => void;
 };
 
-/** Lavender = brief help. Live score with concrete next steps. */
+/** Brief help: live score with concrete next steps. */
 export function BriefStrengthBlock({
   strength,
   className = "",
@@ -31,12 +31,13 @@ export function BriefStrengthBlock({
     <Block
       as="section"
       aria-labelledby="brief-strength"
-      tone="lavender"
+      tone="paper"
       pad="md"
       className={`flex flex-col gap-4 ${className}`}
     >
       <div className="flex flex-col gap-1">
-        <h2 id="brief-strength" className="y-head">
+        <h2 id="brief-strength" className="y-head flex items-center gap-2">
+          <Sparkles size={18} aria-hidden className="flex-none" />
           Brief strength
         </h2>
         <p className="y-micro y-fg-2">Clear briefs get sharper pitches and fewer revision rounds.</p>
@@ -111,10 +112,7 @@ export function DirectionStep({
         title="What should it achieve?"
         hint="One goal and one message. Creators will build the hook and the call to action around them."
       >
-        <div
-          data-tone="lavender"
-          className="y-block flex flex-wrap items-center gap-3 !rounded-(--y-r-tile) p-3 ps-4"
-        >
+        <div className="y-tile flex flex-wrap items-center gap-3 p-3 ps-4">
           <Sparkles size={18} aria-hidden className="flex-none" />
           <p className="y-small min-w-0 flex-1">
             {helper.running ? (
@@ -168,8 +166,8 @@ export function DirectionStep({
       {learnings.length ? (
         <Block as="section" aria-labelledby="q-learnings" tone="paper" pad="md" className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
-            <h2 id="q-learnings" className="y-display y-title flex items-center gap-2">
-              <History size={22} aria-hidden /> Carried forward from past commissions
+            <h2 id="q-learnings" className="y-head flex items-center gap-2">
+              <History size={18} aria-hidden /> Carried forward from past commissions
             </h2>
             <p className="y-small y-fg-2 max-w-[60ch]">
               What you learned on earlier {product?.name} videos. Add any of it to this brief in one tap.

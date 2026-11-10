@@ -13,8 +13,8 @@ import type { Attachment, Message, Role } from "@/lib/types";
 import { VideoThumb } from "./video-thumb";
 
 const quickReplies: Record<Role, string[]> = {
-  business: ["Looks great, thank you!", "Can we keep it under 45 seconds?", "Any questions about the brief?"],
-  creator: ["Thanks! Starting today.", "Quick question about the brief:", "Version 1 is on its way."],
+  business: ["Looks great, thank you.", "Can we keep it under 45 seconds?", "Any questions about the brief?"],
+  creator: ["Thanks, starting today.", "Quick question about the brief:", "Version 1 is on its way."],
 };
 
 function dayLabel(iso: string) {
@@ -43,7 +43,7 @@ function AttachmentView({ attachment, mine }: { attachment: Attachment; mine: bo
     <button
       type="button"
       onClick={() => toast({ message: `Downloading ${attachment.name}`, tone: "info" })}
-      className={`flex items-center gap-2.5 rounded-[14px] px-3 py-2 text-start ${mine ? "bg-white/10" : "bg-(--b-bg)"}`}
+      className={`flex items-center gap-2.5 rounded-(--y-r-field) px-3 py-2 text-start ${mine ? "bg-white/10" : "bg-(--b-bg)"}`}
     >
       <FileText size={18} aria-hidden className="flex-none" />
       <span className="min-w-0">
@@ -58,7 +58,7 @@ function Bubble({ message, role, otherName }: { message: Message; role: Role; ot
   if (message.from === "system") {
     return (
       <li className="flex justify-center px-4">
-        <p className="y-micro y-fg-2 inline-flex max-w-md items-start gap-1.5 rounded-[14px] bg-(--b-chip) px-3 py-2 text-center">
+        <p className="y-micro y-fg-2 inline-flex max-w-md items-start gap-1.5 rounded-(--y-r-field) bg-(--b-chip) px-3 py-2 text-center">
           <Info size={14} aria-hidden className="mt-px flex-none" />
           <span>{message.text}</span>
         </p>

@@ -29,7 +29,7 @@ import { paths } from "@/lib/paths";
 import { campaignReceipts, me, receipts } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { useDemo } from "@/lib/store";
-import { countries } from "@/lib/taxonomy";
+import { CAMPAIGN_FEE_RATE, CAMPAIGN_RELEASE_DAYS, countries } from "@/lib/taxonomy";
 import type { LedgerEntry, PaymentStatus } from "@/lib/types";
 
 import type { BillingDetails } from "./billing-details";
@@ -55,19 +55,19 @@ type ReceiptStatus = Exclude<PaymentStatus, "authorized">;
 type StatusInfo = { label: string; tone: BadgeTone; icon: React.ReactNode };
 
 const statusInfo: Record<ReceiptStatus, StatusInfo> = {
-  held: { label: "Held", tone: "info", icon: <ShieldCheck size={14} aria-hidden /> },
+  held: { label: "Held", tone: "active", icon: <ShieldCheck size={14} aria-hidden /> },
   released: { label: "Paid", tone: "success", icon: <CheckCircle2 size={14} aria-hidden /> },
-  refunded: { label: "Refunded", tone: "neutral", icon: <Undo2 size={14} aria-hidden /> },
+  refunded: { label: "Refunded", tone: "danger", icon: <Undo2 size={14} aria-hidden /> },
   // Campaign slots only (receipts show the campaign's ledger instead); kept for completeness.
-  pending: { label: "Pending", tone: "info", icon: <Clock size={14} aria-hidden /> },
-  returned: { label: "Returned", tone: "neutral", icon: <RotateCcw size={14} aria-hidden /> },
+  pending: { label: "Pending", tone: "warning", icon: <Clock size={14} aria-hidden /> },
+  returned: { label: "Returned", tone: "danger", icon: <RotateCcw size={14} aria-hidden /> },
 };
 
 /** Campaign ledger lines: `label` names the line, the badge says what happened. */
 const ledgerInfo: Record<LedgerEntry["kind"], StatusInfo & { line: string }> = {
-  charge: { line: "Campaign budget held", label: "Held", tone: "info", icon: <ShieldCheck size={14} aria-hidden /> },
-  top_up: { line: "Tier change top-up", label: "Top-up", tone: "info", icon: <ArrowUpCircle size={14} aria-hidden /> },
-  refund: { line: "Refund", label: "Refunded", tone: "neutral", icon: <Undo2 size={14} aria-hidden /> },
+  charge: { line: "Campaign budget held", label: "Held", tone: "active", icon: <ShieldCheck size={14} aria-hidden /> },
+  top_up: { line: "Price change top-up", label: "Top-up", tone: "active", icon: <ArrowUpCircle size={14} aria-hidden /> },
+  refund: { line: "Refund", label: "Refunded", tone: "danger", icon: <Undo2 size={14} aria-hidden /> },
 };
 
 const statusOf = (row: Receipt): StatusInfo =>
@@ -128,9 +128,16 @@ const filters: { value: Filter; label: string }[] = [
   { value: "campaign", label: "Campaigns" },
 ];
 
-/** Order statuses filter order receipts; "Campaigns" shows every campaign ledger line. */
+/** A campaign line's status: the budget and top-ups are held, a refund is refunded. */
+const campaignStatus = (row: Extract<Receipt, { kind: "campaign" }>): Filter =>
+  row.entry.kind === "refund" ? "refunded" : "held";
+
+/** Status filters match every line with that badge; "Campaigns" shows every campaign ledger line. */
 const matches = (row: Receipt, filter: Filter | "all") =>
-  filter === "all" || (filter === "campaign" ? row.kind === "campaign" : row.kind === "order" && row.status === filter);
+  filter === "all" ||
+  (filter === "campaign"
+    ? row.kind === "campaign"
+    : (row.kind === "order" ? row.status : campaignStatus(row)) === filter);
 
 const monthKey = (iso: string) => isoDay(iso).slice(0, 7);
 
@@ -182,8 +189,8 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
             row.request.title,
             row.request.id,
             ledgerInfo[row.entry.kind].line,
-            row.amount.toFixed(2),
-            "0.00",
+            row.subtotal.toFixed(2),
+            row.fee.toFixed(2),
             row.amount.toFixed(2),
           ],
     );
@@ -285,9 +292,9 @@ export function ReceiptsSection({ rows, details }: { rows: Receipt[]; details: B
           {/* Desktop: table */}
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full border-collapse text-start">
-              <caption className="sr-only">Receipts. Select a receipt number to see the itemised receipt.</caption>
+              <caption className="sr-only">Receipts. Select a receipt number to see the itemized receipt.</caption>
               <thead>
-                <tr className="y-micro y-fg-2 border-b border-(--b-line) text-start">
+                <tr className="y-eyebrow border-b border-(--b-line) text-start">
                   <th scope="col" className="py-3 pe-3 text-start font-medium">Receipt</th>
                   <th scope="col" className="py-3 pe-3 text-start font-medium">Date</th>
                   <th scope="col" className="py-3 pe-3 text-start font-medium">Paid to</th>
@@ -439,7 +446,7 @@ function BilledTo({ details }: { details: BillingDetails }) {
       <dt className="y-micro y-fg-2">Billed to</dt>
       <dd className="y-small flex flex-col">
         <span className="font-semibold">{details.companyName}</span>
-        {details.vat ? <span className="y-num">VAT {details.vat}</span> : null}
+        {details.vat ? <span className="y-num">Tax ID {details.vat}</span> : null}
         <span>{countries[details.country]?.name}</span>
         <span className="y-fg-2 break-all">{details.email}</span>
       </dd>
@@ -465,7 +472,7 @@ function OrderReceiptSheet({
       ? "Held safely by Yapp. It's released to the creator only when you approve the final video, or automatically 3 days after delivery if you don't respond."
       : receipt.status === "released"
         ? `Released to ${receipt.creator?.firstName ?? "the creator"} when you approved the work${c.completedAt ? ` on ${longDate(c.completedAt)}` : ""}.`
-        : `Refunded in full to ${method ? paymentLabel(method) : "your card"}${refundedAt ? ` on ${longDate(refundedAt)}` : ""}. No service fee was charged.`;
+        : `Refunded in full to ${method ? paymentLabel(method) : "your card"}${refundedAt ? ` on ${longDate(refundedAt)}` : ""}, service fee included.`;
 
   return (
     <SheetFrame
@@ -477,9 +484,9 @@ function OrderReceiptSheet({
     >
       <div className="y-tile flex flex-col gap-3 p-4">
         <p className="y-micro y-fg-2 flex items-center gap-1.5">
-          <ReceiptText size={14} aria-hidden /> Itemised
+          <ReceiptText size={14} aria-hidden /> Itemized
         </p>
-        <PriceSummary price={c.price} addons={c.addons} feeRate={c.feeRate} perspective="business" showRights />
+        <PriceSummary price={c.price} addons={c.addons} feeRate={c.feeRate} perspective="business" showRights cents />
       </div>
 
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -524,10 +531,10 @@ function CampaignReceiptSheet({
   const card = method ? paymentLabel(method) : "your card";
   const note =
     entry.kind === "charge"
-      ? "Held by Yapp for this campaign. Each approved video moves its price to that creator's wallet; open slots are refunded if you close the campaign."
+      ? `Charged when you posted the campaign and held by Yapp, fee included. Each creator is paid ${CAMPAIGN_RELEASE_DAYS} days after their post is verified; slots nobody takes are refunded with their fee when the campaign closes.`
       : entry.kind === "top_up"
-        ? "Extra held after you changed the follower tier. Slots already taken keep their price."
-        : `Refunded to ${card}. The money left the campaign hold.`;
+        ? "Extra held, with its fee, after the price of open slots went up. Slots already taken keep their price."
+        : `Refunded to ${card}, with the matching share of the service fee.`;
   const row = "flex items-baseline justify-between gap-3";
 
   return (
@@ -540,19 +547,19 @@ function CampaignReceiptSheet({
     >
       <div className="y-tile flex flex-col gap-3 p-4">
         <p className="y-micro y-fg-2 flex items-center gap-1.5">
-          <ReceiptText size={14} aria-hidden /> Itemised
+          <ReceiptText size={14} aria-hidden /> Itemized
         </p>
         <dl className="flex flex-col gap-2">
           <div className={row}>
             <dt className="y-small">{ledgerInfo[entry.kind].line}</dt>
-            <dd className="y-small y-num font-semibold">{signed(receipt.amount)}</dd>
+            <dd className="y-small y-num font-semibold">{signed(receipt.subtotal)}</dd>
           </div>
           <div className={row}>
             <dt className="y-small y-fg-2">{entry.note}</dt>
           </div>
           <div className={row}>
-            <dt className="y-small y-fg-2">Service fee</dt>
-            <dd className="y-small y-num y-fg-2">No fee on campaigns</dd>
+            <dt className="y-small y-fg-2">Service fee ({Math.round(CAMPAIGN_FEE_RATE * 100)}%)</dt>
+            <dd className="y-small y-num y-fg-2">{signed(receipt.fee)}</dd>
           </div>
           <div className={`${row} border-t border-(--b-line) pt-2`}>
             <dt className="y-small font-semibold">Total</dt>
@@ -567,7 +574,7 @@ function CampaignReceiptSheet({
           <dt className="y-micro y-fg-2">Paid to</dt>
           <dd className="y-small flex flex-col">
             <span className="font-semibold">The campaign&apos;s creators</span>
-            <span className="y-fg-2">{money(request.campaign.pricePerVideo)} per approved video, no fee</span>
+            <span className="y-fg-2">{money(request.campaign.pricePerVideo)} per approved video, keeping 100%</span>
           </dd>
         </div>
         <div className="y-tile flex flex-col gap-1 p-4">

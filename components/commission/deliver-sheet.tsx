@@ -11,6 +11,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { clock, plural, weekdayDate } from "@/lib/format";
 import { actions } from "@/lib/store";
+import { CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
 
 import { autoApproveDate, cash, sizeLabel, type Workspace } from "./helpers";
 
@@ -137,7 +138,7 @@ export function DeliverSheet({ ws, open, onClose }: { ws: Workspace; open: boole
           <p className="y-body y-fg-2 max-w-[40ch]">
             We&apos;ve let them know.{" "}
             {slot
-              ? `They see it watermarked. ${auto ? `If they don't respond by ${weekdayDate(auto)}, it's approved automatically` : "Once they approve"} and ${cash(earns)} goes to your wallet as pending.`
+              ? `They see it watermarked. ${auto ? `If they don't respond by ${weekdayDate(auto)}, it's approved automatically.` : "Once they approve it, you post it."} Your ${cash(earns)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify your post.`
               : auto
                 ? `They have until ${weekdayDate(auto)} to review. If they don't respond, it's approved automatically and ${cash(earns)} is released to you.`
                 : `You're paid ${cash(earns)} as soon as they approve.`}

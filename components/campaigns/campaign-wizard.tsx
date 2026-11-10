@@ -12,9 +12,9 @@ import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/components/ui/toast";
-import { money, plural } from "@/lib/format";
+import { money, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { isCampaign, me } from "@/lib/selectors";
+import { campaignMoney, isCampaign, me } from "@/lib/selectors";
 import { actions, useDemo, useHydrated, type DemoState } from "@/lib/store";
 import { CAMPAIGN_MIN_VIDEOS, campaignPlatformById, tierById } from "@/lib/taxonomy";
 
@@ -23,6 +23,7 @@ import {
   STEPS,
   applyProduct,
   atHandle,
+  deadlineOrDefault,
   firstInvalidStep,
   handleFromWebsite,
   suggestedTitle,
@@ -44,8 +45,9 @@ import {
 } from "./wizard-steps";
 
 /**
- * Create a UGC campaign: product → what to say → videos → follower tier → review and pay. The
- * whole budget is held when it publishes. Reads `?product=` to prefill, or `?again=<campaign id>` to
+ * Create a UGC campaign: product → what to say → videos (and the upload deadline) → follower tier →
+ * review and pay. The budget and its 10% service fee are charged and held when it publishes. Reads
+ * `?product=` to prefill, or `?again=<campaign id>` to
  * start from an earlier campaign. Full page (own AppShell).
  */
 export function CampaignWizard() {
@@ -124,6 +126,7 @@ function initialState(s: DemoState, productParam: string, againParam: string): I
       avoid: [...again.brief.avoid],
       languages: [...again.brief.languages],
       videos: again.slots,
+      deadlineDays: deadlineOrDefault(terms.deadlineDays),
       tierId: terms.tierId,
       paymentMethodId: methods.some((m) => m.id === terms.paymentMethodId) ? terms.paymentMethodId : defaultMethod,
     };
@@ -150,6 +153,7 @@ function initialState(s: DemoState, productParam: string, againParam: string): I
     avoid: [],
     languages: previous?.brief.languages ?? [],
     videos: CAMPAIGN_MIN_VIDEOS,
+    deadlineDays: deadlineOrDefault(previous?.campaign?.deadlineDays),
     tierId: "t10",
     paymentMethodId: defaultMethod,
   };
@@ -265,6 +269,7 @@ function Wizard({ init }: { init: Init }) {
         },
         videos: form.videos,
         tierId: form.tierId,
+        deadlineDays: form.deadlineDays,
         platform: form.platform,
         brandHandle: atHandle(form.brandHandle),
         explainer: form.explainer ? { name: form.explainer.name, durationSec: form.explainer.durationSec } : undefined,
@@ -474,6 +479,7 @@ function Published({ s, requestId, videos }: { s: DemoState; requestId: string; 
   const request = s.requests.find((r) => r.id === requestId);
   const terms = request?.campaign;
   const slots = request?.slots ?? videos;
+  const held = request ? campaignMoney(s, request).held : 0;
   return (
     <Page width="narrow">
       <Block tone="paper" pad="lg" className="flex flex-col items-center gap-6 text-center">
@@ -484,7 +490,7 @@ function Published({ s, requestId, videos }: { s: DemoState; requestId: string; 
           </h1>
           <p className="y-lead y-fg-2 mx-auto max-w-[44ch]">
             {terms
-              ? `${money(terms.pricePerVideo * slots)} is held. Creators with ${tierById[terms.tierId].label} real followers on ${campaignPlatformById[terms.platform].name} can take a slot now. We'll let you know as they join.`
+              ? `${money(held)} is held, fee included. Creators with ${tierById[terms.tierId].label} real followers on ${campaignPlatformById[terms.platform].name} can take a slot until ${shortDate(terms.closesAt)}. We'll let you know as they join.`
               : "Eligible creators can take a slot now. We'll let you know as they join."}
           </p>
         </div>

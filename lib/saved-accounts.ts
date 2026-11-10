@@ -13,15 +13,16 @@ export type SignInMethod = "phone" | "apple" | "tiktok" | "instagram" | "google"
 export type SavedAccount = {
   accountId: string;
   method: SignInMethod;
-  /** Masked: "+966 ••• ••• 4821", "@laylatalks". */
+  /** Masked: "+1 ••• ••• 4821", "@laylatalks". */
   identifier: string;
 };
 
-export const SAVED_ACCOUNTS_KEY = "yapp-saved-accounts-v1";
+/** v2: the seed moved to +1 numbers (round 3), so an older saved list is dropped. */
+export const SAVED_ACCOUNTS_KEY = "yapp-saved-accounts-v2";
 const MAX_SAVED = 5;
 
 const seed: SavedAccount[] = [
-  { accountId: "nour", method: "phone", identifier: "+966 ••• ••• 4821" },
+  { accountId: "nour", method: "phone", identifier: "+1 ••• ••• 4821" },
   { accountId: "layla", method: "instagram", identifier: "@laylatalks" },
 ];
 

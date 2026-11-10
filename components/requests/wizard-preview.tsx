@@ -5,7 +5,7 @@ import { Eye } from "lucide-react";
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { languageList, platformList } from "@/components/domain/chips";
 import { Block } from "@/components/ui/block";
-import { lengthLabel, moneyRange, plural, weekdayDate } from "@/lib/format";
+import { lengthLabel, moneyRange, plural, quoted, weekdayDate } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { formatById } from "@/lib/taxonomy";
@@ -48,14 +48,14 @@ export function RequestPreview({
         <div className="min-w-0 flex-1">
           <p className="y-micro y-fg-2">
             {business?.name}
-            {product ? ` · ${product.name}` : ""}
+            {product && product.name !== business?.name ? ` · ${product.name}` : ""}
           </p>
           <p className={`y-head ${title ? "" : "y-fg-3"}`}>{title || "Your title appears here"}</p>
           <p className="y-small y-fg-2 mt-1">{meta}</p>
         </div>
       </div>
       {form.keyMessage.trim() ? (
-        <p className="y-display text-[18px] leading-snug">&ldquo;{form.keyMessage.trim()}&rdquo;</p>
+        <p className="y-display text-[18px] leading-snug">{quoted(form.keyMessage)}</p>
       ) : null}
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-(--b-line) pt-4">
         <p className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">

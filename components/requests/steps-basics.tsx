@@ -6,10 +6,9 @@ import Link from "next/link";
 import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { AvatarStack } from "@/components/ui/face-avatar";
-import { Ar } from "@/components/ui/page";
-import { lengthLabel, plural, timeAgo } from "@/lib/format";
+import { lengthLabel, plural, timeAgoInline } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { aspects, creatorKinds, formats, languages, platforms } from "@/lib/taxonomy";
+import { aspects, creatorKinds, formatById, formats, languages, platforms } from "@/lib/taxonomy";
 import type { Aspect, FormatId } from "@/lib/types";
 
 import { applyProduct, lengthOptions, typicalLength } from "./shared";
@@ -52,15 +51,15 @@ export function ProductStep({ form, set, product, products, error }: StepProps) 
               <span className="flex items-center gap-3">
                 <span
                   aria-hidden
-                  className="y-display grid size-11 flex-none place-items-center rounded-[14px] text-lg font-semibold text-white"
+                  className="y-display grid size-11 flex-none place-items-center rounded-(--y-r-field) text-lg font-semibold text-white"
                   style={{ background: p.brandColor }}
                 >
                   {p.name.slice(0, 1)}
                 </span>
                 <span className="min-w-0">
-                  <span className="y-head block">{p.name}</span>
+                  <span className="y-body block font-semibold">{p.name}</span>
                   <span className="y-micro y-fg-2 block">
-                    {p.surfaces.map((x) => surfaceLabel[x]).join(" · ")} · Updated {timeAgo(p.updatedAt)}
+                    {p.surfaces.map((x) => surfaceLabel[x]).join(" · ")} · Updated {timeAgoInline(p.updatedAt)}
                   </span>
                 </span>
               </span>
@@ -155,7 +154,7 @@ export function FormatStep({ s, form, set, error }: StepProps) {
           : f.format === "hook-pack" && f.videoCount === 5
             ? 1
             : f.videoCount;
-      return { format: id, durationSec: hi, onCamera: id !== "screen-walkthrough", videoCount };
+      return { format: id, durationSec: hi, onCamera: !formatById[id].voiceOnly, videoCount };
     });
   };
   return (
@@ -191,7 +190,7 @@ export function FormatStep({ s, form, set, error }: StepProps) {
                   <Icon size={20} />
                 </span>
                 <span className="min-w-0">
-                  <span className="y-head block">{format.name}</span>
+                  <span className="y-body block font-semibold">{format.name}</span>
                   <span className="y-micro y-fg-2 block">
                     Usually {typicalLength(format.id)}
                     {form.languages.length
@@ -260,7 +259,7 @@ export function DeliverablesStep({ form, set, error, touch }: StepProps) {
         title="How long can each one be?"
         hint={
           form.format
-            ? `Most ${formats.find((f) => f.id === form.format)!.name.toLowerCase()}s run ${typicalLength(form.format)}. Shorter keeps people watching.`
+            ? `Most ${formatById[form.format].noun[1]} run ${typicalLength(form.format)}. Shorter keeps people watching.`
             : undefined
         }
       >
@@ -337,7 +336,7 @@ export function DeliverablesStep({ form, set, error, touch }: StepProps) {
             <span className="flex items-center gap-2 font-semibold">
               <VideoIcon size={18} aria-hidden /> Creator on camera
             </span>
-            <span className="y-small y-fg-2">A real face builds trust. Best for selfie demos, reviews and skits.</span>
+            <span className="y-small y-fg-2">A real face builds trust. Best for app demos, testimonials and talking heads.</span>
           </ChoiceTile>
           <ChoiceTile name="camera" checked={!form.onCamera} onChange={() => set({ onCamera: false })}>
             <span className="flex items-center gap-2 font-semibold">
@@ -363,8 +362,8 @@ export function LanguageStep({ s, form, set, error, touch, market }: StepProps) 
     <>
       <Question
         id="q-lang"
-        title="Which language or dialect?"
-        hint="Pick the way your audience actually talks. Add every dialect you'd be happy with; creators who speak all of them rank highest. Numbers show how many creators speak each one and make this format."
+        title="Which language?"
+        hint="Pick the language your audience watches in. Add every language you'd be happy with; creators who make videos in all of them rank highest. Numbers show how many creators speak each one and make this format."
       >
         <div
           role="group"
@@ -392,15 +391,14 @@ export function LanguageStep({ s, form, set, error, touch, market }: StepProps) 
                   }));
                 }}
               >
-                {lang.short}
-                {lang.id !== "en" ? <Ar className="y-fg-3 font-medium">{lang.native}</Ar> : null}
+                {lang.name}
               </FilterChip>
             );
           })}
         </div>
         <GroupError id="q-lang-error" message={err} />
         <div
-          data-tone="lavender"
+          data-tone="paper"
           className="y-block flex flex-wrap items-center gap-3 !rounded-(--y-r-tile) p-4"
           aria-live="polite"
         >
@@ -414,10 +412,10 @@ export function LanguageStep({ s, form, set, error, touch, market }: StepProps) 
           <p className="y-small flex-1 font-semibold">
             {market.count
               ? `${plural(market.count, "creator")} ${market.count === 1 ? "matches" : "match"} so far`
-              : "No creators match this combination yet. Try another dialect."}
+              : "No creators match this combination yet. Try another language."}
             <span className="y-micro y-fg-2 block font-medium">
               They speak your pick{form.languages.length > 1 ? "s" : ""} and make{" "}
-              {form.format ? formats.find((f) => f.id === form.format)!.name.toLowerCase() + "s" : "this format"}.
+              {form.format ? formatById[form.format].noun[1] : "this format"}.
             </span>
           </p>
         </div>

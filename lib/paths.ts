@@ -30,6 +30,8 @@ export const paths = {
   about: "/about",
   howItWorks: "/how-it-works",
   forCreators: "/for-creators",
+  /** Terms, privacy and the other policies (in legal review: names only, no text yet). */
+  legal: "/legal",
   creators: "/creators",
   creator: (handle: string) => `/creators/${handle}`,
   /** Direct order from a creator's profile (`video` = the reel that inspired it). */

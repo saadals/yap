@@ -12,6 +12,7 @@ import type {
   Commission,
   ContentRequest,
   Creator,
+  FormatId,
   Package,
   Pitch,
   PitchStatus,
@@ -45,7 +46,7 @@ function fitLength(text: string, max: number): string {
   return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 }
 
-/** "Levantine and Khaleeji", "Saudi, Khaleeji and English" */
+/** "English and Spanish", "English, French and Arabic" */
 export function joinWords(words: string[]): string {
   if (words.length <= 1) return words[0] ?? "";
   return `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
@@ -88,7 +89,7 @@ export function median(values: number[]): number | undefined {
 
 export type RankedSample = { video: Video; tags: string[]; score: number };
 
-/** Portfolio pieces closest to the brief first: same format, same dialect, same niche. */
+/** Portfolio pieces closest to the brief first: same format, same language, same category. */
 export function rankSamples(
   videos: Video[],
   request: ContentRequest,
@@ -104,11 +105,11 @@ export function rankSamples(
       }
       if (request.brief.languages.includes(video.lang)) {
         score += 2;
-        tags.push(video.lang === "en" ? "English" : `${languageById[video.lang].short} dialect`);
+        tags.push(`In ${languageById[video.lang].name}`);
       }
       if (product && video.niche === product.niche) {
         score += 1;
-        tags.push("Same industry");
+        tags.push("Same category");
       }
       return { video, tags, score: score - index * 0.01 };
     })
@@ -124,24 +125,28 @@ export function angleSuggestions(request: ContentRequest, product?: Product): st
   const brief = request.brief;
   const name = product?.name ?? "the app";
   const feature = product?.features[0] ? lowerFirst(firstClause(product.features[0], 70)) : "the key feature";
-  const key = firstClause(brief.keyMessage, 80);
+  // The key message's first sentence: a clause can be a lone word ("Point, scan, done: …" → "Point").
+  const key = fitLength(brief.keyMessage.split(/(?<=[.?])\s/)[0].trim().replace(/[.]$/, ""), 80);
   const problem = product?.problem
     ? lowerFirst(firstClause(product.problem.replace(/^They /, "You "), 80))
     : "the everyday problem it fixes";
 
-  const formatLed: Record<string, string> = {
-    "selfie-demo": `Talk to camera like a friend, then show ${name} on my phone: ${feature}`,
+  const formatLed: Record<FormatId, string> = {
+    "app-demo": `Talk to camera like a friend, then show ${name} on my phone: ${feature}`,
     "screen-walkthrough": `Calm voiceover over a real-speed recording: ${feature}, start to finish`,
-    "ugc-review": `"Why I switched to ${name}": a week of real use, told honestly`,
-    "problem-skit": `A 20-second skit about the pain, with ${name} saving the day at the end`,
-    tutorial: `Follow along with me: ${feature}, every tap on screen`,
+    unboxing: `Open it on camera, set it up with the app, and give my honest first take on ${name}`,
+    "problem-solution": `Twenty seconds of the pain, then ${name} fixing it on screen`,
+    comparison: `${name} next to the way I did it before, same task, side by side`,
+    testimonial: `"Why I switched to ${name}": a week of real use, told honestly`,
+    "talking-head": `Straight to camera: why ${feature} matters, and how to do it in under a minute`,
+    voiceover: `A short story told over ${name} footage, with the product as the turning point`,
     "hook-pack": `Three openings to test (the pain, the result, the surprise) on one shared demo`,
   };
 
   return [
     `Open on the moment everyone knows: ${problem}`,
-    `Say "${key}" straight to camera, then prove it in one take`,
-    formatLed[brief.format] ?? `Show ${name} in action within the first 5 seconds`,
+    `Say “${key}” straight to camera, then prove it in one take`,
+    formatLed[brief.format],
   ].map((idea) => fitLength(idea, ANGLE_MAX));
 }
 
@@ -157,13 +162,13 @@ export function pitchTemplate(input: {
 }): string {
   const { creator, request, business, product, angle, days, pkg, sampleCount } = input;
   const brief = request.brief;
-  const format = formatById[brief.format].name.toLowerCase();
-  const city = cityById(creator.cityId)?.name ?? "the Gulf";
+  const formatPlural = formatById[brief.format].noun[1];
+  const city = cityById(creator.cityId)?.name;
   const kind = creatorKindById[creator.kind].name.toLowerCase();
   const article = /^[aeiou]/.test(kind) ? "an" : "a";
   const myLangs = creator.languages.filter((l) => brief.languages.includes(l));
-  const dialects = joinWords(
-    (myLangs.length ? myLangs : brief.languages).map((l) => languageById[l].short),
+  const spoken = joinWords(
+    (myLangs.length ? myLangs : brief.languages).map((l) => languageById[l].name),
   );
   const audience = lowerFirst(firstClause(brief.audience, 110));
   const tone = product?.tone.length ? joinWords(product.tone.map((t) => t.toLowerCase())) : "natural";
@@ -174,7 +179,7 @@ export function pitchTemplate(input: {
 
   return [
     `Hi ${business?.name ?? "there"} team,`,
-    `I'm ${creator.firstName}, ${article} ${kind} in ${city}. I make ${format}s in ${dialects}, and ${productName} is exactly the kind of product I love explaining.`,
+    `I'm ${creator.firstName}, ${article} ${kind}${city ? ` in ${city}` : ""}. I make ${formatPlural} in ${spoken}, and ${productName} is exactly the kind of product I love explaining.`,
     `My idea: ${idea}. I'd speak to ${audience}, keep it ${tone}, and finish on "${cta}".`,
     `${sampleCount ? `The ${plural(sampleCount, "sample")} attached ${sampleCount === 1 ? "is" : "are"} closest to this brief. ` : ""}I can deliver ${plural(brief.videoCount, "video")} in ${plural(days, "day")}${revisions}.`,
     `${creator.firstName}`,
@@ -188,8 +193,8 @@ export function pitchTemplate(input: {
 
 /** Rough reply expectation from the business's track record (shown after sending). */
 export function replyWindow(business?: Business): string {
-  if (!business) return "within 2 days";
-  return business.clientRating >= 4.7 || business.hires >= 10 ? "within a day" : "within 2 days";
+  if (!business?.reliability) return "within 2 days";
+  return business.reliability.reviewHours <= 24 ? "within a day" : "within 2 days";
 }
 
 export function pitchNextStep(status: PitchStatus, businessName: string): string {

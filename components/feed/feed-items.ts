@@ -252,7 +252,7 @@ export function feedItems(
   return [first, ...mixed.filter((item) => item.id !== first.id)];
 }
 
-/** Short spoken name for a reel ("Video by Layla Mansour", "Order from Kanz: …"). */
+/** Short spoken name for a reel ("Video by Layla Mansour", "Order from Roundleaf: …"). */
 export function reelLabel(item: FeedItem, businessName?: string): string {
   if (item.kind === "video") return `Video by ${item.creator.name}: ${item.video.title}`;
   const who = item.own ? "Your order" : `${item.kind === "campaign" ? "Campaign" : "Order"} from ${businessName ?? "a buyer"}`;

@@ -8,20 +8,20 @@ import { FieldShell, SelectField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { DAY, NOW } from "@/lib/clock";
+import { DAY, NOW, TZ_OFFSET } from "@/lib/clock";
 import { money, weekdayDate } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 
 import { payoutLabel } from "./payout-methods";
 
-/** Two business days from the demo clock, skipping Saturday and Sunday (UAE weekend). */
+/** Two business days from the demo clock, skipping Saturday and Sunday. */
 function arrivalDate(): string {
   let t = NOW;
   let added = 0;
   while (added < 2) {
     t += DAY;
-    const weekday = new Date(t + 3 * 60 * 60 * 1000).getUTCDay();
+    const weekday = new Date(t + TZ_OFFSET).getUTCDay();
     if (weekday !== 0 && weekday !== 6) added += 1;
   }
   return new Date(t).toISOString();

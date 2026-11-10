@@ -10,12 +10,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { Sheet } from "@/components/ui/sheet";
-import { Ar } from "@/components/ui/page";
 import { useToast } from "@/components/ui/toast";
 import { clock, compact } from "@/lib/format";
 import { actions, useDemo } from "@/lib/store";
 import { portfolio } from "@/lib/selectors";
-import { formatById, isArabic, languageById } from "@/lib/taxonomy";
+import { formatById, languageById } from "@/lib/taxonomy";
 import type { Creator, Video } from "@/lib/types";
 
 import { AddVideoSheet } from "./add-video-sheet";
@@ -30,7 +29,7 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
   const [previewing, setPreviewing] = useState<Video | null>(null);
   const [removing, setRemoving] = useState<Video | null>(null);
   const [announce, setAnnounce] = useState("");
-  const dialects = new Set(videos.map((v) => v.lang)).size;
+  const languageCount = new Set(videos.map((v) => v.lang)).size;
 
   const move = (index: number, delta: -1 | 1) => {
     const target = index + delta;
@@ -56,7 +55,7 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
       id="portfolio"
       title="Portfolio"
       description="Star your strongest piece and put the most relevant first. Changes save as you go."
-      summary={`${videos.length} ${videos.length === 1 ? "video" : "videos"} · ${dialects} languages and dialects`}
+      summary={`${videos.length} ${videos.length === 1 ? "video" : "videos"} · ${languageCount} ${languageCount === 1 ? "language" : "languages"}`}
       aside={
         <PillButton variant="neon" arrow onClick={() => setAdding(true)}>
           Add video
@@ -69,7 +68,7 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
           {videos.length < 5 ? <span className="y-fg-2">· add {5 - videos.length} more for a full profile</span> : null}
         </span>
         <span className="y-chip">
-          <span className="y-num font-semibold">{dialects}</span> languages and dialects
+          <span className="y-num font-semibold">{languageCount}</span> {languageCount === 1 ? "language" : "languages"}
         </span>
       </div>
 
@@ -81,7 +80,6 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
         <ul className="grid grid-cols-2 gap-2 md:grid-cols-3 xl:grid-cols-4">
           {videos.map((video, index) => {
             const featured = creator.featuredVideoId === video.id;
-            const arabic = isArabic(video.lang);
             return (
               <li key={video.id} className="y-tile flex flex-col gap-2 p-2">
                 <button
@@ -104,7 +102,7 @@ export function PortfolioManager({ creator }: { creator: Creator }) {
                   <p className="y-small y-clamp-2 font-semibold">{video.title}</p>
                   <p className="y-micro y-fg-2">
                     {formatById[video.format].name} ·{" "}
-                    {arabic ? <Ar>{languageById[video.lang].native}</Ar> : languageById[video.lang].short} ·{" "}
+                    {languageById[video.lang].name} ·{" "}
                     <span className="y-num">{clock(video.durationSec)}</span>
                     {video.stats ? ` · ${compact(video.stats.views)} views` : ""}
                   </p>

@@ -23,7 +23,7 @@ export function BlockHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-2">
-      <h2 id={id} className="y-display y-title">
+      <h2 id={id} className="y-head">
         {title} {count ? <span className="y-fg-3 y-num">{count}</span> : null}
       </h2>
       <PillButton

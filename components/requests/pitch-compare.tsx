@@ -1,6 +1,6 @@
 "use client";
 
-import { Star } from "lucide-react";
+import { Sparkles, Star } from "lucide-react";
 
 import { PitchBadge } from "@/components/domain/status-badge";
 import { Rating } from "@/components/domain/stars";
@@ -9,7 +9,7 @@ import { Block } from "@/components/ui/block";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { money, weekdayDate } from "@/lib/format";
+import { money, quoted, weekdayDate } from "@/lib/format";
 import { cityById, videoById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { creatorKindById } from "@/lib/taxonomy";
@@ -139,7 +139,8 @@ export function PitchCompare({
               {items.map(({ pitch, fit }) => (
                 <td key={pitch.id} className={cell}>
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-(--y-lavender) px-2.5 py-0.5 text-(--y-on-color)">
+                    <span className="inline-flex items-center rounded-full bg-(--b-chip) px-2.5 py-0.5">
+                      <Sparkles size={13} aria-hidden className="me-1 flex-none" />
                       <span className="y-display y-num text-[17px] font-semibold">{fit.score}</span>
                       <span className="y-micro">% fit</span>
                     </span>
@@ -182,7 +183,7 @@ export function PitchCompare({
               </th>
               {items.map(({ pitch }) => (
                 <td key={pitch.id} className={`${cell} y-small`} dir="auto">
-                  &ldquo;{pitch.angle}&rdquo;
+                  {quoted(pitch.angle)}
                 </td>
               ))}
             </tr>

@@ -53,8 +53,8 @@ export const DEFAULT_ACCOUNT_ID = "nour";
 
 /** Saved creators per account. */
 export const savedCreatorIds: Record<string, string[]> = {
-  nour: ["cr-layla", "cr-omar", "cr-noura", "cr-lina", "cr-sara"],
-  layla: ["cr-noura", "cr-hana"],
+  nour: ["cr-layla", "cr-omar", "cr-nina", "cr-lina", "cr-sara"],
+  layla: ["cr-nina", "cr-hana"],
 };
 
 const baseSettings: Settings = {

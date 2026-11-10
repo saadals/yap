@@ -10,13 +10,14 @@ import {
   mySlot,
   openSlotCount,
 } from "./campaigns";
-import { DAY, NOW } from "./clock";
+import { DAY, NOW, localDay } from "./clock";
 import { cities, payouts as seedPayouts } from "./data";
-import { daysFromNow, priceBreakdown } from "./format";
+import { daysFromNow, plural, priceBreakdown } from "./format";
 import type { DemoState } from "./store";
 import { activeAccount, activeIds } from "./store";
 import { countries, formatById, languageById, nicheById } from "./taxonomy";
 import type {
+  Business,
   Commission,
   CommissionStatus,
   ContentRequest,
@@ -35,9 +36,11 @@ export {
   campaignSlots,
   eligibility,
   isCampaign,
+  keepLiveUntil,
   mySlot,
   openSlotCount,
   slotHistory,
+  withCampaignFee,
 } from "./campaigns";
 export type { Eligibility, IneligibleReason, SlotView } from "./campaigns";
 
@@ -57,7 +60,7 @@ export const threadById = (s: DemoState, id: string) => s.threads.find((t) => t.
 export const reviewById = (s: DemoState, id: string) => s.reviews.find((r) => r.id === id);
 export const memberById = (s: DemoState, id: string) => s.team.find((m) => m.id === id);
 export const cityById = (id: string) => cities.find((c) => c.id === id);
-/** "Dubai, UAE" */
+/** "Toronto, Canada" */
 export function cityLabel(id: string): string {
   const city = cityById(id);
   return city ? `${city.name}, ${countries[city.countryId].name}` : id;
@@ -198,36 +201,33 @@ export function fit(s: DemoState, creator: Creator, request: ContentRequest): Fi
   const langMatches = brief.languages.filter((l) => creator.languages.includes(l));
   if (langMatches.length === brief.languages.length) {
     score += 30;
-    reasons.push(`Speaks ${langMatches.map((l) => languageById[l].short).join(" and ")}`);
+    reasons.push(`Speaks ${langMatches.map((l) => languageById[l].name).join(" and ")}`);
   } else if (langMatches.length) {
     score += 18;
-    reasons.push(`Speaks ${langMatches.map((l) => languageById[l].short).join(", ")}`);
+    reasons.push(`Speaks ${langMatches.map((l) => languageById[l].name).join(", ")}`);
     gaps.push(
       `Doesn't list ${brief.languages
         .filter((l) => !creator.languages.includes(l))
-        .map((l) => languageById[l].short)
+        .map((l) => languageById[l].name)
         .join(", ")}`,
     );
   } else {
-    gaps.push(`Doesn't list ${brief.languages.map((l) => languageById[l].short).join(" or ")}`);
+    gaps.push(`Doesn't list ${brief.languages.map((l) => languageById[l].name).join(" or ")}`);
   }
 
   if (creator.formats.includes(brief.format)) {
     score += 22;
     const made = portfolio(s, creator).filter((v) => v.format === brief.format).length;
-    reasons.push(
-      made
-        ? `${made} ${formatById[brief.format].name.toLowerCase()}${made === 1 ? "" : "s"} in portfolio`
-        : `Offers ${formatById[brief.format].name.toLowerCase()}s`,
-    );
+    const [one, many] = formatById[brief.format].noun;
+    reasons.push(made ? `${made} ${made === 1 ? one : many} in portfolio` : `Offers ${many}`);
   } else {
-    gaps.push(`Hasn't listed ${formatById[brief.format].name.toLowerCase()}s`);
+    gaps.push(`Hasn't listed ${formatById[brief.format].noun[1]}`);
   }
 
   const product = s.products.find((p) => p.id === brief.productId);
   if (product && creator.niches.includes(product.niche)) {
     score += 12;
-    reasons.push(`Works with ${nicheById[product.niche].name.toLowerCase()} products`);
+    reasons.push(`Works with ${nicheById[product.niche].noun}`);
   }
 
   const from = startingPrice(creator);
@@ -498,11 +498,20 @@ export function creatorEarnings(s: DemoState, creatorId: string | undefined = ac
   const held = mine
     .filter((c) => c.payment.status === "held")
     .reduce((sum, c) => sum + earned(c), 0);
-  /** Approved campaign work: in the wallet, withdrawable at month end if the post stays up. */
-  const pendingItems = mine.filter((c) => c.payment.status === "pending");
+  /**
+   * Approved campaign work, still held: released 7 days after the post is verified
+   * (`withdrawableFrom`), if it's still live. Dated items first, soonest first.
+   */
+  const pendingItems = mine
+    .filter((c) => c.payment.status === "pending")
+    .sort(
+      (a, b) =>
+        Date.parse(a.withdrawableFrom ?? "9999-12-31") - Date.parse(b.withdrawableFrom ?? "9999-12-31") ||
+        Date.parse(b.completedAt ?? b.createdAt) - Date.parse(a.completedAt ?? a.createdAt),
+    );
   const pending = pendingItems.reduce((sum, c) => sum + earned(c), 0);
-  const pendingLocked = pendingItems
-    .filter((c) => c.post?.status !== "live")
+  const pendingWaiting = pendingItems
+    .filter((c) => !(c.post?.status === "live" && c.withdrawableFrom))
     .reduce((sum, c) => sum + earned(c), 0);
   const seededPayoutIds = new Set(seedPayouts.map((p) => p.id));
   const newPayouts = s.payouts.filter((p) => p.creatorId === creatorId && !seededPayoutIds.has(p.id));
@@ -512,12 +521,12 @@ export function creatorEarnings(s: DemoState, creatorId: string | undefined = ac
   const earlierCount = Math.max(0, (creator?.completed ?? 0) - released.length);
   const lifetime = Math.round((earlierCount * typical + releasedTotal) / 10) * 10;
 
-  // last 6 calendar months, oldest first
-  const monthKey = (iso: string) => iso.slice(0, 7);
+  // last 6 calendar months in display time, oldest first
+  const monthKey = (iso: string) => localDay(Date.parse(iso)).slice(0, 7);
   const months: string[] = [];
-  const now = new Date(NOW);
+  const [year, month] = monthKey(new Date(NOW).toISOString()).split("-").map(Number);
   for (let i = 5; i >= 0; i--) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const d = new Date(Date.UTC(year, month - 1 - i, 1));
     months.push(d.toISOString().slice(0, 7));
   }
   const seed = (creatorId ?? "").split("").reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
@@ -532,14 +541,14 @@ export function creatorEarnings(s: DemoState, creatorId: string | undefined = ac
     return fromCommissions + baseline;
   });
   const monthLabels = months.map((key) =>
-    new Date(`${key}-01T00:00:00Z`).toLocaleString("en-GB", { month: "short", timeZone: "UTC" }),
+    new Date(`${key}-01T00:00:00Z`).toLocaleString("en-US", { month: "short", timeZone: "UTC" }),
   );
   return {
     available,
     held,
     pending,
-    /** Part of `pending` whose post isn't live (yet), so it won't unlock at month end as things stand. */
-    pendingLocked,
+    /** Part of `pending` with no release date yet: the post isn't verified, or it came down. */
+    pendingWaiting,
     pendingItems,
     lifetime,
     thisMonth: monthly[monthly.length - 1],
@@ -550,8 +559,9 @@ export function creatorEarnings(s: DemoState, creatorId: string | undefined = ac
 }
 
 /**
- * Business money: currently protected, spent, and fees. Campaigns count through their own hold
- * (`campaignMoney`); their slot commissions are left out so nothing is counted twice.
+ * Business money: currently protected, spent, and fees, all with the service fee included (it's
+ * charged and held with each payment). Campaigns count through their own hold (`campaignMoney`);
+ * their slot commissions are left out so nothing is counted twice. Spent = released to creators.
  */
 export function businessSpend(s: DemoState, businessId: string = activeIds(s).businessId) {
   const mine = s.commissions.filter((c) => c.businessId === businessId && c.source !== "campaign");
@@ -559,7 +569,7 @@ export function businessSpend(s: DemoState, businessId: string = activeIds(s).bu
     .filter((r) => r.businessId === businessId && isCampaign(r))
     .map((r) => campaignMoney(s, r));
   const campaignHeld = campaigns.reduce((sum, m) => sum + m.held, 0);
-  const campaignPaid = campaigns.reduce((sum, m) => sum + m.paidOut, 0);
+  const campaignSpent = campaigns.reduce((sum, m) => sum + m.spent, 0);
   const total = (c: Commission) => commissionTotals(c).total;
   const held = mine.filter((c) => c.payment.status === "held").reduce((a, c) => a + total(c), 0);
   const authorized = mine
@@ -567,17 +577,17 @@ export function businessSpend(s: DemoState, businessId: string = activeIds(s).bu
     .reduce((a, c) => a + total(c), 0);
   const released = mine.filter((c) => c.payment.status === "released");
   const spent = released.reduce((a, c) => a + total(c), 0);
-  const fees = released.reduce((a, c) => a + commissionTotals(c).fee, 0);
   const thisMonthKey = new Date(NOW).toISOString().slice(0, 7);
-  const campaignThisMonth = s.commissions
-    .filter(
-      (c) =>
-        c.businessId === businessId &&
-        c.source === "campaign" &&
-        (c.payment.status === "pending" || c.payment.status === "released") &&
-        (c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey,
-    )
-    .reduce((a, c) => a + c.price, 0);
+  // Campaign slots released this month (their release date, or approval for older data).
+  const campaignReleased = s.commissions.filter(
+    (c) => c.businessId === businessId && c.source === "campaign" && c.payment.status === "released",
+  );
+  const fees =
+    released.reduce((a, c) => a + commissionTotals(c).fee, 0) +
+    campaignReleased.reduce((a, c) => a + commissionTotals(c).fee, 0);
+  const campaignThisMonth = campaignReleased
+    .filter((c) => (c.withdrawableFrom ?? c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey)
+    .reduce((a, c) => a + total(c), 0);
   const thisMonth =
     released
       .filter((c) => (c.completedAt ?? c.createdAt).slice(0, 7) === thisMonthKey)
@@ -587,7 +597,7 @@ export function businessSpend(s: DemoState, businessId: string = activeIds(s).bu
     /** Of `held`, the part sitting in campaign holds. */
     campaignHeld,
     authorized,
-    spent: spent + campaignPaid,
+    spent: spent + campaignSpent,
     fees,
     thisMonth,
     completedCount: released.length,
@@ -609,22 +619,43 @@ export function receipts(s: DemoState, businessId: string = activeIds(s).busines
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
 }
 
-/** Campaign money movements (hold, top-ups, refunds) as receipt lines, newest first. */
+/**
+ * Campaign money movements (charge, top-ups, refunds) as receipt lines, newest first. Signed:
+ * refunds are negative. `amount` is what moved on the card; `subtotal` + `fee` = `amount`.
+ */
 export function campaignReceipts(s: DemoState, businessId: string = activeIds(s).businessId) {
   return s.requests
     .filter((r): r is ContentRequest & { campaign: NonNullable<ContentRequest["campaign"]> } =>
       r.businessId === businessId && Boolean(r.campaign),
     )
     .flatMap((request) =>
-      request.campaign.ledger.map((entry) => ({
-        id: `INV-${request.id.toUpperCase()}-${entry.id.slice(-4).toUpperCase()}`,
-        request,
-        entry,
-        date: entry.at,
-        amount: entry.kind === "refund" ? -entry.amount : entry.amount,
-      })),
+      request.campaign.ledger.map((entry, index) => {
+        const sign = entry.kind === "refund" ? -1 : 1;
+        return {
+          // "INV-R-150-2": the campaign, then the line's place in its ledger.
+          id: `INV-${request.id.toUpperCase()}-${index + 1}`,
+          request,
+          entry,
+          date: entry.at,
+          amount: sign * entry.amount,
+          fee: sign * entry.fee,
+          subtotal: sign * (entry.amount - entry.fee),
+        };
+      }),
     )
     .sort((a, b) => Date.parse(b.date) - Date.parse(a.date));
+}
+
+/**
+ * A brand's reliability for creators, in one line ("Reviews in about 14h · 2% approved by the
+ * timer · 7 hires"), or undefined for a brand with no history yet.
+ */
+export function reliabilityLine(business: Business): string | undefined {
+  const r = business.reliability;
+  if (!r || business.hires === 0) return undefined;
+  const speed = r.reviewHours < 24 ? `${r.reviewHours}h` : plural(Math.round(r.reviewHours / 24), "day");
+  const timer = r.timerApprovedPct > 0 ? `${r.timerApprovedPct}% approved by the timer` : "Always reviews before the timer";
+  return [`Reviews in about ${speed}`, timer, plural(business.hires, "hire")].join(" · ");
 }
 
 /* -------------------------------------------------------------------------- */

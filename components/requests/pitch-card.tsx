@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BadgeCheck, Bell, ChevronDown, MessageCircle, Star, Undo2, X } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Bell, ChevronDown, MessageCircle, Sparkles, Star, Undo2, X } from "lucide-react";
 import { useState } from "react";
 
 import { PitchBadge } from "@/components/domain/status-badge";
@@ -13,7 +13,7 @@ import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { at } from "@/lib/clock";
-import { daysFromNow, money, num, timeAgo, weekdayDate } from "@/lib/format";
+import { daysFromNow, money, num, quoted, timeAgoInline, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { cityById, videoById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
@@ -145,7 +145,7 @@ export function PitchRow({
           {days}
         </p>
         <p dir="auto" className="y-small y-fg-2 mt-0.5 line-clamp-1">
-          &ldquo;{pitch.angle}&rdquo;
+          {quoted(pitch.angle)}
         </p>
       </div>
       <p className="y-small y-num hidden flex-none items-center font-semibold md:flex">
@@ -247,7 +247,7 @@ export function PitchSheet({
       open
       onClose={onClose}
       title={creator.name}
-      description={`${creatorKindById[creator.kind].name} · ${city?.name} · pitched ${timeAgo(pitch.sentAt)}${invited ? " · you invited them" : ""}`}
+      description={`${creatorKindById[creator.kind].name} · ${city?.name} · pitched ${timeAgoInline(pitch.sentAt)}${invited ? " · you invited them" : ""}`}
       width="md"
       footer={
         <div className="flex gap-2">
@@ -292,8 +292,9 @@ export function PitchSheet({
               onClick={() => setShowFit((v) => !v)}
               aria-expanded={showFit}
               aria-controls={fitId}
-              className="flex flex-none items-center gap-1 rounded-full bg-(--y-lavender) px-3 py-1.5 text-(--y-on-color) transition-transform active:scale-95"
+              className="flex flex-none items-center gap-1 rounded-full bg-(--b-chip) px-3 py-1.5 transition-transform hover:shadow-[inset_0_0_0_1px_var(--b-line-strong)] active:scale-95"
             >
+              <Sparkles size={14} aria-hidden className="flex-none" />
               <span className="y-display y-num text-[17px] leading-none font-semibold">{fit.score}%</span>
               <span className="y-micro">fit</span>
               <ChevronDown size={14} aria-hidden className={showFit ? "rotate-180" : ""} />
@@ -301,7 +302,7 @@ export function PitchSheet({
             </button>
           </div>
           {showFit ? (
-            <div id={fitId} data-tone="lavender" className="y-block flex flex-col gap-3 !rounded-(--y-r-tile) p-4">
+            <div id={fitId} className="y-tile flex flex-col gap-3 p-4">
               <p className="y-small font-semibold">Why {fit.score}% fit</p>
               <MatchExplain reasons={fit.reasons} gaps={fit.gaps} />
             </div>
@@ -313,7 +314,7 @@ export function PitchSheet({
         {/* The idea */}
         <div className="flex flex-col gap-3">
           <p dir="auto" className="y-display text-[22px] leading-snug">
-            &ldquo;{pitch.angle}&rdquo;
+            {quoted(pitch.angle)}
           </p>
           <p dir="auto" className="y-body y-fg-2 whitespace-pre-line">
             {pitch.message}

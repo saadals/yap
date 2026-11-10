@@ -15,7 +15,7 @@ import { money } from "@/lib/format";
 import { paths, type OrderType } from "@/lib/paths";
 import { isCampaign, requestById } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
-import { SERVICE_FEE_RATE, followerTiers } from "@/lib/taxonomy";
+import { CAMPAIGN_FEE_RATE, SERVICE_FEE_RATE, followerTiers } from "@/lib/taxonomy";
 
 import { RequestWizardPage } from "./wizard";
 import { ChoiceTile } from "./wizard-parts";
@@ -78,14 +78,14 @@ const CHOICES: {
     type: "campaign",
     title: "UGC campaign",
     body: "10+ videos, each from a different creator. Fixed price per video by follower tier. Creators take slots first come, first served.",
-    meta: `From ${money(Math.min(...followerTiers.map((t) => t.pricePerVideo)))} a video · No service fee`,
+    meta: `From ${money(Math.min(...followerTiers.map((t) => t.pricePerVideo)))} a video · ${Math.round(CAMPAIGN_FEE_RATE * 100)}% fee, held with the budget`,
     icon: <Megaphone size={22} aria-hidden />,
   },
   {
     type: "custom",
     title: "Custom request",
     body: "Creators pitch with ideas and samples. You pick who to hire.",
-    meta: `You set the budget · ${Math.round(SERVICE_FEE_RATE * 100)}% fee only when work completes`,
+    meta: `You set the budget · ${Math.round(SERVICE_FEE_RATE * 100)}% fee, held with the payment`,
     icon: <MessagesSquare size={22} aria-hidden />,
   },
 ];
@@ -132,7 +132,7 @@ function TypePicker({ params }: { params: URLSearchParams }) {
                 <span className="y-round mb-2" data-tone-btn="soft" aria-hidden>
                   {item.icon}
                 </span>
-                <span className="y-display y-title">{item.title}</span>
+                <span className="y-head">{item.title}</span>
                 <span className="y-body y-fg-2">{item.body}</span>
                 <span className="y-micro y-fg-2 mt-3 border-t border-(--b-line) pt-3">{item.meta}</span>
               </ChoiceTile>

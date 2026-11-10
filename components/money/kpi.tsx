@@ -1,5 +1,6 @@
 import { Block, type BlockTone } from "@/components/ui/block";
 import { Skeleton } from "@/components/ui/skeleton";
+import { localDay } from "@/lib/clock";
 
 /** A money KPI: label, chunky numeral, one line of context. */
 export function KpiBlock({
@@ -43,9 +44,9 @@ export function KpiBlock({
   );
 }
 
-/** Calendar date in Riyadh time as YYYY-MM-DD (for CSV files). */
+/** Calendar date in display time as YYYY-MM-DD (for CSV files). */
 export function isoDay(iso: string): string {
-  return new Date(Date.parse(iso) + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return localDay(Date.parse(iso));
 }
 
 /** Build a CSV string with proper quoting. */

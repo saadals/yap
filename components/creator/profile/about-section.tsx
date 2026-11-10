@@ -90,7 +90,7 @@ export function AboutSection({ creator }: { creator: Creator }) {
         value={draft.headline}
         onChange={(e) => set((d) => ({ ...d, headline: e.target.value }))}
         onBlur={() => setTouched((t) => ({ ...t, headline: true }))}
-        hint={`${draft.headline.length}/${HEADLINE_MAX} · e.g. "Selfie demos that sound like your smart friend"`}
+        hint={`${draft.headline.length}/${HEADLINE_MAX} · e.g. "App demos that sound like your smart friend"`}
         error={show("headline")}
       />
       <TextArea

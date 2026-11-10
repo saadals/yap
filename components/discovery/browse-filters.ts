@@ -143,7 +143,7 @@ export function toQuery(f: BrowseFilters, { includeQ = true } = {}): string {
   if (f.posts) params.set("posts", "1");
   if (f.topRated) params.set("top", "1");
   if (f.sort !== "recommended") params.set("sort", f.sort);
-  // Keep list values readable in the address bar (lang=ar-saudi,ar-gulf).
+  // Keep list values readable in the address bar (lang=en,es).
   return params.toString().replace(/%2C/gi, ",");
 }
 
@@ -162,9 +162,9 @@ function matchesQuery(c: Creator, q: string): boolean {
   if (!needle) return true;
   const haystack = [
     c.name,
-    c.nameAr ?? "",
     c.handle,
     c.headline,
+    ...c.languages.map((l) => languageById[l].name),
     ...c.niches.map((n) => nicheById[n].name),
     ...c.formats.map((f) => formatById[f].name),
   ]
@@ -191,7 +191,7 @@ export function matches(c: Creator, f: BrowseFilters): boolean {
   return true;
 }
 
-/** Quality plus match to what the viewer asked for (dialect, format). */
+/** Quality plus match to what the viewer asked for (language, format). */
 function recommendScore(s: DemoState, c: Creator, f: BrowseFilters): number {
   let score = c.rating * 20 + c.repeatClientRate * 0.25 + c.onTimeRate * 0.2;
   if (c.topRated) score += 3;
@@ -270,7 +270,7 @@ export function priceLabel(f: Pick<BrowseFilters, "priceMin" | "priceMax">): str
   return `$${f.priceMin}–${f.priceMax.toLocaleString("en-US")}`;
 }
 
-export type ActiveChip = { key: string; label: string; native?: string; remove: (f: BrowseFilters) => BrowseFilters };
+export type ActiveChip = { key: string; label: string; remove: (f: BrowseFilters) => BrowseFilters };
 
 /** Every active filter as a removable chip (search and format included). */
 export function activeChips(f: BrowseFilters): ActiveChip[] {
@@ -282,8 +282,7 @@ export function activeChips(f: BrowseFilters): ActiveChip[] {
   for (const id of f.langs)
     chips.push({
       key: `lang-${id}`,
-      label: languageById[id].short,
-      native: id === "en" ? undefined : languageById[id].native,
+      label: languageById[id].name,
       remove: (x) => ({ ...x, langs: x.langs.filter((l) => l !== id) }),
     });
   for (const id of f.kinds)

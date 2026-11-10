@@ -7,6 +7,7 @@ import {
   Ban,
   Check,
   CircleCheck,
+  Clock,
   EyeOff,
   Megaphone,
   ShieldCheck,
@@ -24,16 +25,22 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import type { IneligibleReason } from "@/lib/campaigns";
-import { money } from "@/lib/format";
+import { money, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, eligibility, me, mySlot, openSlotCount, productById } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { campaignPlatformById, languageById } from "@/lib/taxonomy";
+import {
+  CAMPAIGN_KEEP_LIVE_DAYS,
+  CAMPAIGN_RELEASE_DAYS,
+  CAMPAIGN_RESTORE_HOURS,
+  campaignPlatformById,
+  languageById,
+} from "@/lib/taxonomy";
 
 import { ExplainerTile } from "./explainer";
 import type { CampaignRequest } from "./owner-sheets";
 import { Bullets, Spinner } from "./parts";
-import { disclosureName, ineligibleCopy, postingRule, requirementLine, seatsLine } from "./shared";
+import { deadlineLine, disclosureName, ineligibleCopy, postingRule, requirementLine, seatsLine } from "./shared";
 
 const knownReasons: IneligibleReason[] = [
   "own",
@@ -178,10 +185,16 @@ export function TakeView({ request }: { request: CampaignRequest }) {
           <h1 id="campaign-h" className="y-display y-t-display max-w-[24ch]">
             {request.title}
           </h1>
-          <p className="y-small flex items-start gap-2">
-            <ShieldCheck size={18} aria-hidden className="mt-px flex-none" />
-            {requirementLine(terms)}
-          </p>
+          <div className="flex flex-col gap-1.5">
+            <p className="y-small flex items-start gap-2">
+              <ShieldCheck size={18} aria-hidden className="mt-px flex-none" />
+              {requirementLine(terms)}
+            </p>
+            <p className="y-small flex items-start gap-2">
+              <Clock size={18} aria-hidden className="mt-px flex-none" />
+              {deadlineLine(terms, business?.name)}
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-col gap-4 lg:w-[380px] lg:flex-none">
@@ -195,6 +208,7 @@ export function TakeView({ request }: { request: CampaignRequest }) {
             {request.status === "closed" ? null : (
               <p className={`y-small ${open > 0 && open <= 3 ? "font-semibold" : "y-fg-2"}`}>
                 {seatsLine(full ? 0 : open, request.slots, check.ok && !raced)}
+                {full ? "" : ` · open until ${shortDate(terms.closesAt)}`}
               </p>
             )}
           </div>
@@ -224,7 +238,7 @@ export function TakeView({ request }: { request: CampaignRequest }) {
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12 lg:items-start [&>*]:min-w-0">
         {/* What to say */}
         <Block as="section" aria-labelledby="say-h" tone="paper" pad="md" className="flex flex-col gap-6 lg:col-span-7">
-          <h2 id="say-h" className="y-display y-title">
+          <h2 id="say-h" className="y-head">
             What to say
           </h2>
           {request.brief.keyMessage ? <p className="y-body max-w-[62ch]">{request.brief.keyMessage}</p> : null}
@@ -255,23 +269,27 @@ export function TakeView({ request }: { request: CampaignRequest }) {
             </p>
             {request.brief.languages.length ? (
               <p className="y-small y-fg-2">
-                In {request.brief.languages.map((id) => languageById[id].short).join(" or ")}
+                In {request.brief.languages.map((id) => languageById[id].name).join(" or ")}
               </p>
             ) : null}
           </div>
         </Block>
 
-        {/* How you're paid (sky = trust) */}
-        <Block as="section" aria-labelledby="paid-h" tone="sky" pad="md" className="flex flex-col gap-3 lg:col-span-5">
+        {/* How you're paid */}
+        <Block as="section" aria-labelledby="paid-h" tone="paper" pad="md" className="flex flex-col gap-3 lg:col-span-5">
           <h2 id="paid-h" className="y-head flex items-center gap-2">
             <ShieldCheck size={20} aria-hidden />
             How you&apos;re paid
           </h2>
           <p className="y-small">
-            The budget is already held by Yapp. When your video is approved, {money(terms.pricePerVideo)} lands in
-            your wallet as pending and becomes withdrawable at month end if your post is still up.
+            The budget is already held by Yapp. Once your video is approved, post it: your{" "}
+            {money(terms.pricePerVideo)} is released {CAMPAIGN_RELEASE_DAYS} days after we verify the post, if
+            it&apos;s still up.
           </p>
-          <p className="y-small">If the business doesn&apos;t approve your video, the slot goes to another creator.</p>
+          <p className="y-small">
+            Keep the post up for {CAMPAIGN_KEEP_LIVE_DAYS} days. If it comes down, you have {CAMPAIGN_RESTORE_HOURS}{" "}
+            hours to put it back. If the business doesn&apos;t approve your video, the slot goes to another creator.
+          </p>
         </Block>
       </div>
 
@@ -336,6 +354,7 @@ export function TakeSlotSheet({
   onClose: () => void;
   onFull: () => void;
 }) {
+  const s = useDemo();
   const router = useRouter();
   const toast = useToast();
   const [agreed, setAgreed] = useState(false);
@@ -344,6 +363,7 @@ export function TakeSlotSheet({
   const timer = useRef(0);
   const terms = request.campaign;
   const platform = campaignPlatformById[terms.platform];
+  const brandName = businessById(s, request.businessId)?.name;
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
@@ -373,10 +393,17 @@ export function TakeSlotSheet({
   };
 
   const rows = [
-    { label: "You earn", value: `${money(terms.pricePerVideo)}, pending until month end` },
+    {
+      label: "You earn",
+      value: `${money(terms.pricePerVideo)}, released ${CAMPAIGN_RELEASE_DAYS} days after your post is verified`,
+    },
+    {
+      label: "Upload",
+      value: `Within ${plural(terms.deadlineDays, "day")} of taking a slot${brandName ? `, set by ${brandName}` : ""}`,
+    },
     { label: "Post on", value: `Your ${platform.name}, tagging ${terms.brandHandle}` },
     { label: "Disclosure", value: `Turn on the ${disclosureName(terms.platform)}` },
-    { label: "Keep it up", value: "Until month end" },
+    { label: "Keep it up", value: `${CAMPAIGN_KEEP_LIVE_DAYS} days from verification` },
   ];
 
   return (

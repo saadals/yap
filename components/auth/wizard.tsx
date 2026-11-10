@@ -225,12 +225,9 @@ export function WizardLayout({
 
           {aside ? <div className="flex flex-col gap-2 lg:hidden">{aside}</div> : null}
 
+          {/* Phones: the glass action bar floating over the page. Desktop: a white card under the step. */}
           <div className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+10px)] lg:static lg:p-0">
-            <Block
-              tone="paper"
-              pad="none"
-              className="mx-auto flex max-w-md items-center gap-2 !rounded-full p-2 shadow-(--y-shadow-float) lg:max-w-none lg:!rounded-(--y-r-block) lg:p-4 lg:shadow-none"
-            >
+            <div className="y-bar mx-auto flex max-w-md items-center gap-2 rounded-full p-2 lg:max-w-none lg:rounded-(--y-r-block) lg:border-transparent lg:bg-(--y-paper) lg:p-4 lg:shadow-(--y-shadow-card) lg:[-webkit-backdrop-filter:none] lg:[backdrop-filter:none]">
               {onBack ? (
                 <>
                   <RoundIconButton
@@ -267,7 +264,7 @@ export function WizardLayout({
               >
                 {nextLabel}
               </PillButton>
-            </Block>
+            </div>
           </div>
         </form>
       </div>

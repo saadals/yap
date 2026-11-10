@@ -5,8 +5,8 @@
 # Usage: scripts/qa/sweep.sh [base_url]   (default http://localhost:3123)
 BASE=${1:-http://localhost:3123}
 BODY=$(mktemp)
-routes=(/ /about /how-it-works /for-creators /signin /signup /onboarding "/onboarding?start=make"
-  /creators "/creators?format=selfie-demo&lang=ar-saudi" /creators/laylatalks /creators/omarfahad.studio
+routes=(/ /about /how-it-works /for-creators /legal /signin /signup /onboarding "/onboarding?start=make"
+  /creators "/creators?format=app-demo&lang=es" /creators/laylatalks /creators/omarfahad.studio
   /creators/laylatalks/commission "/creators/laylatalks/commission?again=c-198"
   /home "/home?reel=r-150" /explore "/explore?tab=orders"
   /work "/work?tab=making" /work/c-201 /work/c-204 /work/c-205 /work/c-203 /work/c-150-3 /work/c-150-2

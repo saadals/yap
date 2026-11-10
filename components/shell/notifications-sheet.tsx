@@ -93,7 +93,7 @@ export function NotificationList({ onNavigate }: { onNavigate?: () => void }) {
                   </span>
                 </span>
                 {note.unread ? (
-                  <span aria-hidden className="mt-2 size-2.5 flex-none rounded-full bg-(--y-neon) shadow-[0_0_0_2px_var(--y-ink)]" />
+                  <span aria-hidden className="mt-2 size-2.5 flex-none rounded-full bg-(--b-fg)" />
                 ) : null}
               </button>
             </li>

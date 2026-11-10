@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, CircleCheck, CircleX, LoaderCircle } from "lucide-react";
+import { AtSign, CircleCheck, CircleX, Lightbulb, LoaderCircle, Wallet } from "lucide-react";
 import { useEffect, useId, useState } from "react";
 
 import {
@@ -13,20 +13,23 @@ import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { FieldShell, SelectField, TextField } from "@/components/ui/field";
-import { Ar } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
+import { ACCOUNT_HINT, accountNumberError, BANK_CODE_HINT, bankCodeError } from "@/components/money/payout-methods";
 import { cities } from "@/lib/data";
 import { money, priceBreakdown } from "@/lib/format";
 import { hashString } from "@/lib/hash";
 import {
   creatorKindById,
   creatorKinds,
+  DEFAULT_LANGUAGE,
   formatById,
   formats,
   languageById,
   languages,
   niches,
+  PRICE_MAX_PER_YAPP,
+  PRICE_MIN_PER_YAPP,
 } from "@/lib/taxonomy";
 import type { CreatorKind, FormatId, LanguageId, NicheId, PackageTier } from "@/lib/types";
 
@@ -55,8 +58,8 @@ export type MakeData = {
   pricesSet: boolean;
   payout: "bank" | "wallet";
   holder: string;
-  iban: string;
-  walletProvider: string;
+  account: string;
+  bankCode: string;
   walletAccount: string;
   idStatus: IdStatus;
 };
@@ -64,7 +67,7 @@ export type MakeData = {
 export const initialMakeData = (name: string): MakeData => ({
   handle: suggestHandle(name),
   kind: "",
-  languages: [],
+  languages: [DEFAULT_LANGUAGE],
   formats: [],
   niches: [],
   samples: [],
@@ -74,8 +77,8 @@ export const initialMakeData = (name: string): MakeData => ({
   pricesSet: false,
   payout: "bank",
   holder: name,
-  iban: "",
-  walletProvider: "",
+  account: "",
+  bankCode: "",
   walletAccount: "",
   idStatus: "none",
 });
@@ -86,14 +89,10 @@ const tierLabel: Record<PackageTier, string> = {
   premium: "Three videos",
 };
 
-const walletProviders = ["STC Pay", "Payoneer", "Wise", "PayPal"];
 const handlePattern = /^[a-z0-9_.]{3,20}$/;
 /** Stable generated face for the new creator (doesn't change as the handle is typed). */
 export const NEW_FACE = "cr-new-profile";
 const reservedHandles = ["yapp", "admin", "support", "help", "team", "creators"];
-const ibanPattern = /^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/;
-const compactIban = (value: string) => value.replace(/\s+/g, "").toUpperCase();
-const groupIban = (value: string) => compactIban(value).replace(/(.{4})/g, "$1 ").trim();
 
 export function suggestHandle(name: string) {
   return name
@@ -152,7 +151,7 @@ export function validateProfile(d: MakeData & { name: string; cityId: string }, 
 
 export function validateWork(d: MakeData): Errors {
   const e: Errors = {};
-  if (d.languages.length === 0) e.languages = "Pick at least one language or dialect you present in.";
+  if (d.languages.length === 0) e.languages = "Pick at least one language you make videos in.";
   if (d.formats.length === 0) e.formats = "Pick at least one format you make.";
   if (d.niches.length === 0) e.niches = "Pick at least one kind of product.";
   return e;
@@ -185,18 +184,19 @@ export function validatePaid(d: MakeData): Errors {
   for (const tier of tiers) {
     const value = d.prices[tier];
     const price = Number(value);
-    if (!value || !Number.isFinite(price) || price < 20) e[`price-${tier}`] = "At least $20.";
-    else if (price > 10000) e[`price-${tier}`] = "Keep it under $10,000.";
+    if (!value || !Number.isFinite(price) || price < PRICE_MIN_PER_YAPP) e[`price-${tier}`] = `At least $${PRICE_MIN_PER_YAPP}.`;
+    else if (price > PRICE_MAX_PER_YAPP) e[`price-${tier}`] = `At most $${PRICE_MAX_PER_YAPP.toLocaleString("en-US")}.`;
     else if (price <= previous) e[`price-${tier}`] = "More than the one before.";
     if (Number.isFinite(price)) previous = price;
   }
   if (d.payout === "bank") {
     if (d.holder.trim().length < 3) e.holder = "Enter the name on the account.";
-    if (!ibanPattern.test(compactIban(d.iban)))
-      e.iban = "That IBAN doesn't look right. It starts with a country code, like AE07 0331…";
-  } else {
-    if (!d.walletProvider) e.walletProvider = "Choose your wallet.";
-    if (d.walletAccount.trim().length < 5) e.walletAccount = "Enter the email or phone number on your wallet.";
+    const account = accountNumberError(d.account);
+    if (account) e.account = account;
+    const code = bankCodeError(d.bankCode);
+    if (code) e.bankCode = code;
+  } else if (d.walletAccount.trim().length < 5) {
+    e.walletAccount = "Enter the email or phone number your wallet uses.";
   }
   if (d.idStatus === "none") e.idStatus = "Verify your ID so you can get paid.";
   return e;
@@ -204,7 +204,7 @@ export function validatePaid(d: MakeData): Errors {
 
 export function validateMakeLite(d: MakeData): Errors {
   const e: Errors = {};
-  if (d.languages.length === 0) e.languages = "Pick at least one language or dialect.";
+  if (d.languages.length === 0) e.languages = "Pick at least one language.";
   if (d.formats.length === 0) e.formats = "Pick at least one format.";
   return e;
 }
@@ -220,7 +220,7 @@ function LanguagePicker({ value, set, error }: { value: LanguageId[]; set: SetMa
   return (
     <div className="flex flex-col gap-3">
       <GroupLabel id={id} required>
-        Languages and dialects you present in
+        Languages you make videos in
       </GroupLabel>
       <div role="group" aria-labelledby={id} data-invalid={error ? true : undefined} className="flex flex-wrap gap-2">
         {languages.map((lang) => (
@@ -229,16 +229,7 @@ function LanguagePicker({ value, set, error }: { value: LanguageId[]; set: SetMa
             pressed={value.includes(lang.id)}
             onClick={() => set({ languages: toggleIn(value, lang.id) })}
           >
-            {lang.short}
-            {lang.id !== "en" ? (
-              <>
-                {" "}
-                <span aria-hidden className="opacity-60">
-                  ·
-                </span>{" "}
-                <Ar className="opacity-80">{lang.native}</Ar>
-              </>
-            ) : null}
+            {lang.name}
           </FilterChip>
         ))}
       </div>
@@ -643,7 +634,7 @@ export function GetPaid({
           onChange={(payout) => set({ payout })}
           options={[
             { value: "bank", label: "Bank account" },
-            { value: "wallet", label: "Wallet" },
+            { value: "wallet", label: "Digital wallet" },
           ]}
           className="w-fit"
         />
@@ -660,29 +651,31 @@ export function GetPaid({
             onChange={(event) => set({ holder: event.target.value })}
           />
           <TextField
-            label="IBAN"
+            label="Account number"
             required
             dir="ltr"
             autoComplete="off"
             spellCheck={false}
-            placeholder="AE07 0331 2345 6789 0123 456"
-            hint="Payouts arrive in 1–3 business days."
-            value={data.iban}
-            error={errors.iban}
-            onChange={(event) => set({ iban: event.target.value.toUpperCase().slice(0, 42) })}
-            onBlur={() => data.iban && set({ iban: groupIban(data.iban) })}
+            hint={ACCOUNT_HINT}
+            value={data.account}
+            error={errors.account}
+            onChange={(event) => set({ account: event.target.value.toUpperCase().slice(0, 42) })}
           />
+          <TextField
+            label="Routing or transit number"
+            dir="ltr"
+            inputMode="numeric"
+            autoComplete="off"
+            spellCheck={false}
+            hint={BANK_CODE_HINT}
+            value={data.bankCode}
+            error={errors.bankCode}
+            onChange={(event) => set({ bankCode: event.target.value.slice(0, 16) })}
+          />
+          <p className="y-micro y-fg-2 md:col-span-2">Payouts arrive in 1–2 business days.</p>
         </div>
       ) : (
         <div className="grid gap-5 md:grid-cols-2">
-          <SelectField
-            label="Wallet"
-            required
-            value={data.walletProvider}
-            error={errors.walletProvider}
-            onChange={(event) => set({ walletProvider: event.target.value })}
-            options={[{ value: "", label: "Choose a wallet" }, ...walletProviders.map((w) => ({ value: w, label: w }))]}
-          />
           <TextField
             label="Email or phone on the wallet"
             required
@@ -690,7 +683,7 @@ export function GetPaid({
             autoComplete="email"
             value={data.walletAccount}
             error={errors.walletAccount}
-            hint="Payouts arrive within a day."
+            hint="Any digital wallet that takes US dollars. Payouts arrive in 1–2 business days."
             onChange={(event) => set({ walletAccount: event.target.value })}
           />
         </div>
@@ -733,13 +726,13 @@ export function ProfilePreview({
   const city = cities.find((c) => c.id === data.cityId);
   const meta = [
     data.kind ? creatorKindById[data.kind].name : null,
-    data.languages.map((id) => languageById[id].short).join(", ") || null,
+    data.languages.map((id) => languageById[id].name).join(", ") || null,
     data.formats.map((id) => formatById[id].name).join(", ") || null,
   ]
     .filter(Boolean)
     .join(" · ");
   return (
-    <Block as="section" tone="lavender" pad="md" className="flex flex-col gap-3" aria-label="Profile preview">
+    <Block as="section" tone="paper" pad="md" className="flex flex-col gap-3" aria-label="Profile preview">
       <p className="y-micro y-fg-2">How people will see you</p>
       <div className="flex items-center gap-3">
         <FaceAvatar id={NEW_FACE} name="" size={52} />
@@ -760,8 +753,9 @@ export function PortfolioTips() {
   const titleId = useId();
   const tips = ["Hook in the first 2 seconds", "Film the real app on your own phone", "Captions on, and one clear ask at the end"];
   return (
-    <Block as="section" tone="sky" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
-      <h2 id={titleId} className="y-head">
+    <Block as="section" tone="paper" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
+      <h2 id={titleId} className="y-head flex items-center gap-2">
+        <Lightbulb size={18} aria-hidden className="flex-none" />
         What converts
       </h2>
       <ol className="flex flex-col gap-2">
@@ -785,8 +779,9 @@ export function KeepAll({ standardPrice }: { standardPrice: number }) {
   const titleId = useId();
   const breakdown = priceBreakdown(standardPrice);
   return (
-    <Block as="section" tone="butter" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
-      <h2 id={titleId} className="y-head">
+    <Block as="section" tone="paper" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
+      <h2 id={titleId} className="y-head flex items-center gap-2">
+        <Wallet size={18} aria-hidden className="flex-none" />
         You keep 100%
       </h2>
       <dl className="flex flex-col gap-2">
@@ -799,7 +794,7 @@ export function KeepAll({ standardPrice }: { standardPrice: number }) {
           <dd className="y-num y-small y-fg-2">{money(breakdown.total)}</dd>
         </div>
       </dl>
-      <p className="y-micro y-fg-2">Campaign videos have no fee: you earn the tier price.</p>
+      <p className="y-micro y-fg-2">On campaign videos you earn the full tier price; the brand pays the fee.</p>
     </Block>
   );
 }

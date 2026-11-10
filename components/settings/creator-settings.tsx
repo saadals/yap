@@ -22,7 +22,7 @@ import { FieldShell, TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { addDays, at } from "@/lib/clock";
+import { addDays, at, atLocal, localDay } from "@/lib/clock";
 import { longDate, money } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
@@ -35,8 +35,8 @@ import type { Creator, FormatId, LanguageId } from "@/lib/types";
 import { ConfirmSheet } from "./confirm-sheet";
 import { RowList, SwitchRow } from "./controls";
 
-/** "2026-11-20" in Riyadh time. */
-const dayOf = (iso: string) => new Date(Date.parse(iso) + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+/** "2026-11-20" in display time. */
+const dayOf = (iso: string) => localDay(Date.parse(iso));
 const tomorrow = dayOf(at(1));
 
 /* -------------------------------------------------------------------------- */
@@ -51,7 +51,7 @@ export function AvailabilityControls({ creator }: { creator: Creator }) {
   const returnDay = creator.availableFrom ? dayOf(creator.availableFrom) : "";
   const [dateError, setDateError] = useState<string | null>(null);
   const [reply, setReply] = useState(
-    "Thanks for reaching out! I'm away right now and will reply as soon as I'm back. Active projects are on track.",
+    "Thanks for reaching out. I'm away right now and will reply as soon as I'm back. Active projects are on track.",
   );
   const [savedReply, setSavedReply] = useState(reply);
 
@@ -114,7 +114,7 @@ export function AvailabilityControls({ creator }: { creator: Creator }) {
           <FieldShell
             label="Back on"
             required
-            hint={returnDay ? `Your profile says “Back ${longDate(`${returnDay}T09:00:00+03:00`)}”.` : "Buyers see this on your profile."}
+            hint={returnDay ? `Your profile says “Back ${longDate(atLocal(returnDay, "09:00"))}”.` : "Buyers see this on your profile."}
             error={dateError}
           >
             {({ id, describedBy }) => (
@@ -133,7 +133,7 @@ export function AvailabilityControls({ creator }: { creator: Creator }) {
                     return;
                   }
                   setDateError(null);
-                  actions.updateCreator(creator.id, { availableFrom: `${value}T06:00:00.000Z` });
+                  actions.updateCreator(creator.id, { availableFrom: atLocal(value, "09:00") });
                 }}
               />
             )}
@@ -176,7 +176,7 @@ export function AvailabilityControls({ creator }: { creator: Creator }) {
 /* Opportunity alerts                                                          */
 /* -------------------------------------------------------------------------- */
 
-/** Match alerts for new custom orders, with a minimum budget, formats and dialects. */
+/** Match alerts for new custom orders, with a minimum budget, formats and languages. */
 export function AlertControls({ creator }: { creator: Creator }) {
   const s = useDemo();
   const toast = useToast();
@@ -208,7 +208,7 @@ export function AlertControls({ creator }: { creator: Creator }) {
         <SwitchRow
           label="Match alerts"
           icon={<BellRing size={18} />}
-          description="New custom orders that fit your formats, dialects and budget. Campaigns you qualify for always notify you."
+          description="New custom orders that fit your formats, languages and budget. Campaigns you qualify for always notify you."
           checked={prefs.matchAlerts}
           onChange={(on) => {
             actions.updateSettings("creator", { matchAlerts: on });
@@ -272,22 +272,17 @@ export function AlertControls({ creator }: { creator: Creator }) {
         </div>
 
         <div className="flex flex-col gap-2">
-          <p className="y-label" id="alert-dialects">
-            Dialects and languages
+          <p className="y-label" id="alert-languages">
+            Languages
           </p>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="alert-dialects">
+          <div className="flex flex-wrap gap-1.5" role="group" aria-labelledby="alert-languages">
             {languages.map((lang) => (
               <FilterChip
                 key={lang.id}
                 pressed={alertLangs.includes(lang.id)}
-                onClick={() => setAlertLangs(toggle(alertLangs, lang.id, "dialect"))}
+                onClick={() => setAlertLangs(toggle(alertLangs, lang.id, "language"))}
               >
-                {lang.short}
-                {lang.id !== "en" ? (
-                  <span dir="rtl" lang="ar" className="ms-1 opacity-70">
-                    {lang.native}
-                  </span>
-                ) : null}
+                {lang.name}
               </FilterChip>
             ))}
           </div>
@@ -334,7 +329,7 @@ export function IdVerificationRow({ creator }: { creator: Creator }) {
           Verified
         </Badge>
       ) : pending ? (
-        <Badge tone="info" icon={<LoaderCircle size={14} aria-hidden className="animate-spin" />}>
+        <Badge tone="neutral" icon={<LoaderCircle size={14} aria-hidden className="animate-spin" />}>
           In review
         </Badge>
       ) : (
@@ -355,7 +350,7 @@ type Device = { id: string; name: string; detail: string; icon: React.ReactNode;
 const deviceList = (city: string): Device[] => [
   { id: "d-1", name: "iPhone 15", detail: `Safari · ${city} · Active now`, icon: <Smartphone size={18} />, current: true },
   { id: "d-2", name: "MacBook Air", detail: `Chrome · ${city} · Yesterday`, icon: <Laptop size={18} /> },
-  { id: "d-3", name: "iPad", detail: `Safari · ${city} · 12 Oct`, icon: <Tablet size={18} /> },
+  { id: "d-3", name: "iPad", detail: `Safari · ${city} · Oct 12`, icon: <Tablet size={18} /> },
 ];
 
 export function AccountControls() {

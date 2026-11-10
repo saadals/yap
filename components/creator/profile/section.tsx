@@ -85,7 +85,7 @@ export function ProfileSection({
     >
       <header className="relative flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <h2 id={`${id}-title`} className="y-display y-title">
+          <h2 id={`${id}-title`} className="y-head">
             {accordion ? (
               <button
                 type="button"

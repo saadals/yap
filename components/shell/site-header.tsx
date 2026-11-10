@@ -21,7 +21,7 @@ import { homeFor, isActive, primaryNav } from "./nav";
 import { NotificationsSheet } from "./notifications-sheet";
 
 /**
- * Floating white pill header. Adapts to the session (signed in: one nav for every account). Below
+ * Floating glass pill header. Adapts to the session (signed in: one nav for every account). Below
  * 1024px, signed in, it's the logo and "+" only: the bell and avatar live in the tab bar.
  * `desktopOnly` hides it on phones (the reels feed draws its own floating controls).
  */
@@ -43,7 +43,8 @@ export function SiteHeader({ signedIn, desktopOnly = false }: { signedIn: boolea
     <header className={`sticky top-0 z-40 px-(--y-gutter) pt-2 ${desktopOnly ? "max-lg:hidden" : ""}`}>
       <div
         data-tone="paper"
-        className="y-block mx-auto flex h-16 max-w-[1360px] items-center gap-2 !rounded-full ps-4 pe-2 shadow-[0_1px_0_var(--y-line)] md:ps-5"
+        data-glass="strong"
+        className="y-block y-glass mx-auto flex h-16 max-w-[1360px] items-center gap-2 !rounded-full ps-4 pe-2 md:ps-5"
       >
         <Brand href={homeFor(signedIn)} />
 
@@ -101,7 +102,7 @@ export function SiteHeader({ signedIn, desktopOnly = false }: { signedIn: boolea
                 {unreadNotes > 0 ? (
                   <span
                     aria-hidden
-                    className="absolute end-2.5 top-2.5 size-2.5 rounded-full bg-(--y-danger) ring-2 ring-(--y-paper)"
+                    className="absolute end-2.5 top-2.5 size-2.5 rounded-full bg-(--y-red) ring-2 ring-(--y-paper)"
                   />
                 ) : null}
               </button>

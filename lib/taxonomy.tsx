@@ -1,19 +1,22 @@
 import {
+  ArrowLeftRight,
   BadgeCheck,
   Banknote,
   Captions,
   Clapperboard,
   Clock,
   Film,
-  GraduationCap,
   Layers,
   type LucideIcon,
   Megaphone,
   MessageSquareQuote,
+  Mic,
   MonitorPlay,
+  PackageOpen,
   Repeat2,
   Scissors,
   Smartphone,
+  Speech,
   Video,
   Zap,
 } from "lucide-react";
@@ -32,19 +35,24 @@ import type {
   PitchStatus,
   PlatformId,
   RequestStatus,
+  Role,
 } from "./types";
 
 /* -------------------------------------------------------------------------- */
-/* Content formats: the manageable launch set, tuned for software demos.       */
+/* Content formats: the launch set, tuned for tech products.                  */
 /* -------------------------------------------------------------------------- */
 
 export type FormatInfo = {
   id: FormatId;
   name: string;
+  /** Lowercase nouns for sentences: one and many ("2 app demos"). */
+  noun: [string, string];
   short: string;
   description: string;
   /** Typical length range in seconds. */
   typical: [number, number];
+  /** Usually made with nobody on camera (a voice over the screen or footage). */
+  voiceOnly?: boolean;
   icon: LucideIcon;
   /** Example structure shown in briefs and on the landing page. */
   beats: string[];
@@ -52,11 +60,12 @@ export type FormatInfo = {
 
 export const formats: FormatInfo[] = [
   {
-    id: "selfie-demo",
-    name: "Selfie demo",
+    id: "app-demo",
+    name: "App demo",
+    noun: ["app demo", "app demos"],
     short: "Talk to camera, then show the app",
     description:
-      "A creator films themselves explaining a relatable problem, demos your app on their phone, and tells viewers to try it.",
+      "A creator films themselves with a relatable problem, demos your app on their phone, and tells viewers to try it.",
     typical: [30, 60],
     icon: Smartphone,
     beats: ["Relatable hook", "The problem", "Phone demo", "Try it today"],
@@ -64,46 +73,86 @@ export const formats: FormatInfo[] = [
   {
     id: "screen-walkthrough",
     name: "Screen walkthrough",
+    noun: ["screen walkthrough", "screen walkthroughs"],
     short: "Voiceover over a clean screen recording",
     description:
       "A tidy screen recording of your product with a natural voiceover. No face required, great for features and onboarding.",
     typical: [45, 120],
+    voiceOnly: true,
     icon: MonitorPlay,
     beats: ["What you'll learn", "Step by step", "The result", "Where to start"],
   },
   {
-    id: "ugc-review",
-    name: "Honest review",
+    id: "unboxing",
+    name: "Unboxing",
+    noun: ["unboxing", "unboxings"],
+    short: "Out of the box, set up, first impressions",
+    description:
+      "The creator opens your device on camera, sets it up with its companion app and shares honest first impressions.",
+    typical: [30, 90],
+    icon: PackageOpen,
+    beats: ["The box", "First look", "Setup", "First impressions"],
+  },
+  {
+    id: "problem-solution",
+    name: "Problem → solution",
+    noun: ["problem → solution video", "problem → solution videos"],
+    short: "The pain first, then your product fixes it",
+    description:
+      "A quick scene that plays out an everyday problem, then shows your product solving it in seconds.",
+    typical: [15, 40],
+    icon: Clapperboard,
+    beats: ["The situation", "It gets worse", "The fix", "Call to action"],
+  },
+  {
+    id: "comparison",
+    name: "Comparison",
+    noun: ["comparison", "comparisons"],
+    short: "Your product next to the usual way",
+    description:
+      "Side by side with the old way or the tool people use today, told fairly, so viewers see the difference for themselves.",
+    typical: [30, 60],
+    icon: ArrowLeftRight,
+    beats: ["The question", "The usual way", "Your product", "The verdict"],
+  },
+  {
+    id: "testimonial",
+    name: "Testimonial",
+    noun: ["testimonial", "testimonials"],
     short: "Why they switched and what they love",
     description:
-      "A real-feeling testimonial: the creator shares how they used your product and what changed. Built for trust.",
+      "A real-feeling story: the creator shares how they used your product and what changed. Built for trust.",
     typical: [20, 45],
     icon: MessageSquareQuote,
     beats: ["Before", "What I tried", "What changed", "My verdict"],
   },
   {
-    id: "problem-skit",
-    name: "Problem skit",
-    short: "A short, funny sketch about the pain",
+    id: "talking-head",
+    name: "Talking head",
+    noun: ["talking head video", "talking head videos"],
+    short: "Straight to camera, one clear idea",
     description:
-      "A quick sketch that dramatises the everyday problem your app removes, ending with the app saving the day.",
-    typical: [15, 40],
-    icon: Clapperboard,
-    beats: ["The situation", "It gets worse", "The fix", "Punchline + CTA"],
+      "The creator speaks straight to camera about one feature, tip or workflow, clearly enough that viewers can follow along.",
+    typical: [30, 120],
+    icon: Speech,
+    beats: ["The point", "Why it matters", "How to do it", "Recap"],
   },
   {
-    id: "tutorial",
-    name: "How-to tutorial",
-    short: "Step-by-step guide to one workflow",
+    id: "voiceover",
+    name: "Voiceover",
+    noun: ["voiceover video", "voiceover videos"],
+    short: "Narration over product footage, no face",
     description:
-      "A friendly, step-by-step guide to one feature or workflow, filmed so viewers can follow along.",
-    typical: [60, 180],
-    icon: GraduationCap,
-    beats: ["Goal", "Steps", "Tips", "Recap"],
+      "A narrated story over screen recordings, product shots or b-roll. Nobody on camera: the voice and the edit carry it.",
+    typical: [15, 45],
+    voiceOnly: true,
+    icon: Mic,
+    beats: ["Hook line", "The story", "Product moment", "Call to action"],
   },
   {
     id: "hook-pack",
     name: "Ad hook pack",
+    noun: ["ad hook pack", "ad hook packs"],
     short: "3–5 openings for paid ad testing",
     description:
       "Several short alternative openings filmed for one ad body, so you can test which hook performs best.",
@@ -137,54 +186,18 @@ export const platformById = Object.fromEntries(platforms.map((p) => [p.id, p])) 
 >;
 
 /* -------------------------------------------------------------------------- */
-/* Languages and dialects                                                      */
+/* Video languages (English first; the default everywhere)                     */
 /* -------------------------------------------------------------------------- */
 
-export const languages: {
-  id: LanguageId;
-  name: string;
-  short: string;
-  native: string;
-  region: string;
-}[] = [
-  { id: "ar-saudi", name: "Saudi Arabic", short: "Saudi", native: "سعودي", region: "Saudi Arabia" },
-  {
-    id: "ar-gulf",
-    name: "Gulf Arabic (Khaleeji)",
-    short: "Khaleeji",
-    native: "خليجي",
-    region: "UAE, Kuwait, Qatar, Bahrain, Oman",
-  },
-  {
-    id: "ar-egyptian",
-    name: "Egyptian Arabic",
-    short: "Egyptian",
-    native: "مصري",
-    region: "Egypt",
-  },
-  {
-    id: "ar-levantine",
-    name: "Levantine Arabic",
-    short: "Levantine",
-    native: "شامي",
-    region: "Jordan, Lebanon, Syria, Palestine",
-  },
-  { id: "ar-iraqi", name: "Iraqi Arabic", short: "Iraqi", native: "عراقي", region: "Iraq" },
-  {
-    id: "ar-maghrebi",
-    name: "Maghrebi Arabic (Darija)",
-    short: "Darija",
-    native: "دارجة",
-    region: "Morocco, Algeria, Tunisia",
-  },
-  {
-    id: "ar-msa",
-    name: "Modern Standard Arabic",
-    short: "Fusha",
-    native: "فصحى",
-    region: "Pan-Arab, formal",
-  },
-  { id: "en", name: "English", short: "English", native: "English", region: "Global" },
+export const languages: { id: LanguageId; name: string }[] = [
+  { id: "en", name: "English" },
+  { id: "es", name: "Spanish" },
+  { id: "fr", name: "French" },
+  { id: "ar", name: "Arabic" },
+  { id: "pt", name: "Portuguese" },
+  { id: "hi", name: "Hindi" },
+  { id: "ko", name: "Korean" },
+  { id: "zh", name: "Chinese" },
 ];
 
 export const languageById = Object.fromEntries(languages.map((l) => [l.id, l])) as Record<
@@ -192,23 +205,28 @@ export const languageById = Object.fromEntries(languages.map((l) => [l.id, l])) 
   (typeof languages)[number]
 >;
 
-export const isArabic = (id: LanguageId) => id !== "en";
+export const DEFAULT_LANGUAGE: LanguageId = "en";
+
+/** Videos in any language but English carry an English translation of their captions. */
+export const isTranslated = (id: LanguageId) => id !== "en";
+
+/** Writing direction for text in this language (the ids double as `lang` attributes). */
+export const textDir = (id: LanguageId): "rtl" | "ltr" => (id === "ar" ? "rtl" : "ltr");
 
 /* -------------------------------------------------------------------------- */
-/* Niches                                                                      */
+/* Categories (product niches)                                                 */
 /* -------------------------------------------------------------------------- */
 
-export const niches: { id: NicheId; name: string }[] = [
-  { id: "fintech", name: "Fintech" },
-  { id: "productivity", name: "Productivity" },
-  { id: "ecommerce", name: "E-commerce" },
-  { id: "edtech", name: "Education" },
-  { id: "health", name: "Health & fitness" },
-  { id: "ai", name: "AI tools" },
-  { id: "b2b", name: "B2B & SaaS" },
-  { id: "consumer", name: "Consumer apps" },
-  { id: "gaming", name: "Gaming" },
-  { id: "travel", name: "Travel" },
+/** `noun` reads mid-sentence: "Works with health tech". */
+export const niches: { id: NicheId; name: string; noun: string }[] = [
+  { id: "ai", name: "AI tools", noun: "AI tools" },
+  { id: "consumer", name: "Consumer apps", noun: "consumer apps" },
+  { id: "b2b", name: "SaaS & B2B", noun: "SaaS and B2B products" },
+  { id: "fintech", name: "Fintech", noun: "fintech" },
+  { id: "gadgets", name: "Gadgets & audio", noun: "gadgets and audio" },
+  { id: "gaming", name: "Gaming", noun: "gaming" },
+  { id: "health", name: "Health tech", noun: "health tech" },
+  { id: "ecommerce", name: "E-commerce tech", noun: "e-commerce tech" },
 ];
 
 export const nicheById = Object.fromEntries(niches.map((n) => [n.id, n])) as Record<
@@ -276,7 +294,7 @@ export const addons: {
   {
     id: "subtitles",
     name: "Burned-in subtitles",
-    description: "Arabic and English captions styled for silent autoplay.",
+    description: "Captions in the video's language, styled for silent autoplay.",
     icon: Captions,
   },
   {
@@ -331,42 +349,60 @@ export const aspects: { id: Aspect; name: string; use: string }[] = [
   { id: "16:9", name: "Landscape 16:9", use: "YouTube, websites, onboarding" },
 ];
 
+/** Countries of the seed cities (lib/data/cities.ts), US and Canada first. */
 export const countries: Record<CountryId, { name: string; flag: string }> = {
-  sa: { name: "Saudi Arabia", flag: "SA" },
-  ae: { name: "UAE", flag: "AE" },
+  us: { name: "United States", flag: "US" },
+  ca: { name: "Canada", flag: "CA" },
+  br: { name: "Brazil", flag: "BR" },
   eg: { name: "Egypt", flag: "EG" },
-  jo: { name: "Jordan", flag: "JO" },
-  lb: { name: "Lebanon", flag: "LB" },
-  iq: { name: "Iraq", flag: "IQ" },
-  kw: { name: "Kuwait", flag: "KW" },
-  qa: { name: "Qatar", flag: "QA" },
-  ma: { name: "Morocco", flag: "MA" },
-  bh: { name: "Bahrain", flag: "BH" },
-  om: { name: "Oman", flag: "OM" },
+  ng: { name: "Nigeria", flag: "NG" },
+  sa: { name: "Saudi Arabia", flag: "SA" },
+  ae: { name: "United Arab Emirates", flag: "AE" },
+  gb: { name: "United Kingdom", flag: "GB" },
 };
 
-/** Platform economics. */
+/**
+ * Platform economics (the legal pack's numbers table). The business pays the service fee on top of
+ * the creator's price; it is charged with the payment (at hire, or when a campaign is posted), held
+ * with it, and refunded with it (in full, or in the same proportion as a partial refund).
+ */
 export const SERVICE_FEE_RATE = 0.1;
 export const AUTO_APPROVE_DAYS = 3;
 
+/** Price limits per Yapp (one video): packages, pitches and campaign tiers stay inside them. */
+export const PRICE_MIN_PER_YAPP = 30;
+export const PRICE_MAX_PER_YAPP = 5_000;
+/** The lowest price a pitch can name. */
+export const PITCH_MIN = 30;
+
 /* -------------------------------------------------------------------------- */
-/* UGC campaigns (PM spec "UGC Campaign Flow")                                 */
+/* UGC campaigns (PM spec "UGC Campaign Flow", legal pack Brand Terms §3–7)    */
 /* -------------------------------------------------------------------------- */
 
-/** No service fee on campaigns for now (owner decision); the business pays videos × price. */
-export const CAMPAIGN_FEE_RATE = 0;
+/** Campaigns carry the same 10% fee: charged with the budget when the campaign is posted. */
+export const CAMPAIGN_FEE_RATE = 0.1;
 /** Minimum videos per campaign, each from a different creator. */
 export const CAMPAIGN_MIN_VIDEOS = 10;
 /** Video counts go up in steps of 5: 10, 15, 20, … */
 export const CAMPAIGN_STEP = 5;
 export const CAMPAIGN_MAX_VIDEOS = 50;
 
+/** Days the brand can give a creator to upload version 1 after taking a slot (fixed once posted). */
+export const CAMPAIGN_DEADLINE_OPTIONS = [2, 3, 5, 7, 10] as const;
+export const CAMPAIGN_DEADLINE_DEFAULT = 5;
+/** A campaign stays open for this many days unless the brand closes it earlier. */
+export const CAMPAIGN_OPEN_DAYS = 14;
+/** A slot's pay is released this many days after the creator's post is verified, if it's still live. */
+export const CAMPAIGN_RELEASE_DAYS = 7;
+/** The post must stay up this long from verification (checked daily). */
+export const CAMPAIGN_KEEP_LIVE_DAYS = 30;
+/** A post that comes down has this long to be restored before the slot goes back to the brand. */
+export const CAMPAIGN_RESTORE_HOURS = 48;
+
 /*
- * Deferred by the PM ("leave as placeholders"). null = not set; the UI says "Not set yet" or
- * stays quiet, and nothing is enforced.
+ * Deferred by the PM ("leave as placeholders"). null = not set; the UI stays quiet and nothing is
+ * enforced.
  */
-/** Days a creator has to upload a review copy after taking a slot (and what happens if late). */
-export const CAMPAIGN_DEADLINE_DAYS: number | null = null;
 /** Penalty for repeated rejections, and who it applies to. */
 export const CAMPAIGN_REJECTION_PENALTY: string | null = null;
 /** Most times one slot can be reassigned within a campaign. */
@@ -383,7 +419,7 @@ export type FollowerTier = {
   placeholder?: boolean;
 };
 
-/** The business picks a tier; the tier sets the price per video. */
+/** The business picks a tier; the tier sets the price per video (inside the per-Yapp limits). */
 export const followerTiers: FollowerTier[] = [
   { id: "t10", min: 10_000, max: 20_000, label: "10K–20K", pricePerVideo: 30 },
   { id: "t20", min: 20_000, max: 50_000, label: "20K–50K", pricePerVideo: 40 },
@@ -415,35 +451,46 @@ export const campaignPlatformById = Object.fromEntries(
 /* Status labels (always paired with an icon in <StatusBadge>)                 */
 /* -------------------------------------------------------------------------- */
 
-export type Tone = "neutral" | "success" | "warning" | "danger" | "info" | "ink" | "neon";
+/**
+ * Chip looks for a status (see `Badge`): neutral = waiting on someone, active = moving, success =
+ * done, warning = needs attention, danger = negative or closed. `info`, `ink` and `neon` are for
+ * non-status labels.
+ */
+export type Tone = "neutral" | "active" | "success" | "warning" | "danger" | "info" | "ink" | "neon";
 
+/**
+ * `tone` is the look without a side; `toneFor` overrides it for the side that has to act (a
+ * delivery needs the business, requested changes need the creator).
+ */
 export const commissionStatus: Record<
   CommissionStatus,
-  { label: string; business: string; creator: string; tone: Tone }
+  { label: string; business: string; creator: string; tone: Tone; toneFor?: Partial<Record<Role, Tone>> }
 > = {
   offered: {
     label: "Offer sent",
     business: "Waiting for the creator to accept",
     creator: "New offer — accept or decline",
-    tone: "info",
+    tone: "neutral",
   },
   in_progress: {
     label: "In production",
     business: "The creator is working on it",
     creator: "Make and deliver the first version",
-    tone: "neutral",
+    tone: "active",
   },
   delivered: {
     label: "Ready for review",
     business: "Review the delivery and approve or ask for changes",
     creator: "Waiting for the client's review",
     tone: "warning",
+    toneFor: { creator: "neutral" },
   },
   revision: {
     label: "Changes requested",
     business: "The creator is working on your changes",
     creator: "Make the requested changes",
-    tone: "warning",
+    tone: "active",
+    toneFor: { creator: "warning" },
   },
   completed: {
     label: "Completed",
@@ -455,13 +502,13 @@ export const commissionStatus: Record<
     label: "Declined",
     business: "The creator declined this offer",
     creator: "You declined this offer",
-    tone: "neutral",
+    tone: "danger",
   },
   cancelled: {
     label: "Cancelled",
     business: "Cancelled and refunded",
     creator: "Cancelled",
-    tone: "neutral",
+    tone: "danger",
   },
   disputed: {
     label: "In resolution",
@@ -473,18 +520,18 @@ export const commissionStatus: Record<
 
 export const requestStatus: Record<RequestStatus, { label: string; tone: Tone }> = {
   draft: { label: "Draft", tone: "neutral" },
-  open: { label: "Open for pitches", tone: "success" },
-  hired: { label: "Hired", tone: "ink" },
-  closed: { label: "Closed", tone: "neutral" },
+  open: { label: "Open for pitches", tone: "active" },
+  hired: { label: "Hired", tone: "success" },
+  closed: { label: "Closed", tone: "danger" },
 };
 
 export const pitchStatus: Record<PitchStatus, { label: string; tone: Tone }> = {
   sent: { label: "Sent", tone: "neutral" },
-  viewed: { label: "Viewed", tone: "info" },
-  shortlisted: { label: "Shortlisted", tone: "success" },
-  declined: { label: "Not selected", tone: "neutral" },
-  hired: { label: "Hired", tone: "ink" },
-  withdrawn: { label: "Withdrawn", tone: "neutral" },
+  viewed: { label: "Viewed", tone: "neutral" },
+  shortlisted: { label: "Shortlisted", tone: "active" },
+  declined: { label: "Not selected", tone: "danger" },
+  hired: { label: "Hired", tone: "success" },
+  withdrawn: { label: "Withdrawn", tone: "danger" },
 };
 
 /** Icons used for trust signals across the product. */

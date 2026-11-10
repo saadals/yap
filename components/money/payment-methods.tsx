@@ -17,7 +17,7 @@ import type { PaymentMethod } from "@/lib/types";
 const brandName: Record<PaymentMethod["brand"], string> = {
   visa: "Visa",
   mastercard: "Mastercard",
-  mada: "mada",
+  amex: "American Express",
   applepay: "Apple Pay",
 };
 
@@ -155,10 +155,10 @@ function luhn(digits: string) {
 
 function detectBrand(digits: string): PaymentMethod["brand"] | null {
   if (!digits) return null;
-  if (/^(4464|4406|4847|5297|5888|9682)/.test(digits)) return "mada";
   if (digits.startsWith("4")) return "visa";
   if (/^(5[1-5]|2[2-7])/.test(digits)) return "mastercard";
-  return "mada";
+  if (/^3[47]/.test(digits)) return "amex";
+  return null;
 }
 
 const [nowYear, nowMonth] = [Number(NOW_ISO.slice(2, 4)), Number(NOW_ISO.slice(5, 7))];
@@ -177,7 +177,9 @@ function validateCard(form: CardForm) {
         ? "Enter the full card number."
         : !luhn(digits)
           ? "That number doesn't look right. Check it against your card."
-          : null,
+          : !detectBrand(digits)
+            ? "We take Visa, Mastercard and American Express."
+            : null,
     expiry,
     cvc: /^\d{3,4}$/.test(form.cvc) ? null : "Enter the 3 or 4 digits on the back.",
     holder: form.holder.trim().length < 2 ? "Enter the name as it appears on the card." : null,
@@ -225,7 +227,7 @@ export function AddCardSheet({ open, onClose }: { open: boolean; onClose: () => 
       open={open}
       onClose={close}
       title="Add a card"
-      description="Used to hold payment when a creator accepts. You're only charged the service fee when you approve the work."
+      description="Charged when you hire or post a campaign. Yapp holds the payment, service fee included, until it's released or refunded."
       width="sm"
       footer={
         <div className="flex flex-wrap gap-2">
@@ -251,7 +253,7 @@ export function AddCardSheet({ open, onClose }: { open: boolean; onClose: () => 
           label="Card number"
           required
           error={show("number")}
-          hint={brand ? `${brandName[brand]} card` : "Visa, Mastercard or mada"}
+          hint={brand ? `${brandName[brand]} card` : "Visa, Mastercard or American Express"}
         >
           {({ id, describedBy }) => (
             <input

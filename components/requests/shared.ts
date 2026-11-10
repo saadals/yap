@@ -5,9 +5,9 @@
 
 import { NOW, TZ_OFFSET, at } from "@/lib/clock";
 import { daysFromNow, lengthLabel, plural } from "@/lib/format";
-import { cityById, fit, me, type Fit } from "@/lib/selectors";
+import { fit, type Fit } from "@/lib/selectors";
 import { activeIds, type DemoState, type RequestDraft } from "@/lib/store";
-import { formatById, languageById } from "@/lib/taxonomy";
+import { DEFAULT_LANGUAGE, formatById, languageById } from "@/lib/taxonomy";
 import type {
   AddonId,
   Aspect,
@@ -73,27 +73,6 @@ export const MAX_DEADLINE_DAYS = 90;
 export const BUDGET_FLOOR = 50;
 export const BUDGET_CEILING = 3000;
 
-const countryDialect: Record<string, LanguageId> = {
-  sa: "ar-saudi",
-  ae: "ar-gulf",
-  kw: "ar-gulf",
-  qa: "ar-gulf",
-  bh: "ar-gulf",
-  om: "ar-gulf",
-  eg: "ar-egyptian",
-  jo: "ar-levantine",
-  lb: "ar-levantine",
-  iq: "ar-iraqi",
-  ma: "ar-maghrebi",
-};
-
-/** The dialect most businesses in this city ask for (a starting point, always editable). */
-export function homeDialect(s: DemoState): LanguageId {
-  const business = me.business(s);
-  const city = business ? cityById(business.cityId) : undefined;
-  return (city && countryDialect[city.countryId]) || "ar-saudi";
-}
-
 export function defaultForm(s: DemoState, product?: Product): WizardForm {
   return {
     productId: product?.id ?? "",
@@ -103,7 +82,7 @@ export function defaultForm(s: DemoState, product?: Product): WizardForm {
     aspect: "9:16",
     platforms: ["tiktok", "instagram"],
     onCamera: true,
-    languages: [homeDialect(s)],
+    languages: [DEFAULT_LANGUAGE],
     preferredKinds: [],
     title: "",
     titleTouched: false,
@@ -152,33 +131,25 @@ export function lengthOptions(format: FormatId | null): { value: number; longer:
   ];
 }
 
-const formatPlural: Record<FormatId, [string, string]> = {
-  "selfie-demo": ["selfie demo", "selfie demos"],
-  "screen-walkthrough": ["screen walkthrough", "screen walkthroughs"],
-  "ugc-review": ["honest review", "honest reviews"],
-  "problem-skit": ["problem skit", "problem skits"],
-  tutorial: ["how-to tutorial", "how-to tutorials"],
-  "hook-pack": ["ad hook pack", "ad hook packs"],
-};
-
 /** For hook packs the count is hooks (one pack holds up to five); otherwise videos. */
 export function deliverableLabel(format: FormatId | null, count: number): string {
   return format === "hook-pack" ? plural(count, "hook") : plural(count, "video");
 }
 
-/** "Saudi selfie demo for Daftar Invoices", "3 Khaleeji honest reviews", "5 Khaleeji ad hooks". */
+/** "App demo for Daftar Invoices", "3 Spanish testimonials", "5 ad hooks for Roundleaf". */
 export function autoTitle(form: WizardForm, product?: Product): string {
   if (!form.format) return product ? `New video for ${product.name}` : "";
-  const arabic = form.languages.filter((l) => l !== "en");
-  const dialect = arabic.length === 1 ? `${languageById[arabic[0]].short} ` : "";
+  // Name the language only when the video isn't in English (English is the default).
+  const other = form.languages.filter((l) => l !== DEFAULT_LANGUAGE);
+  const language = other.length === 1 && form.languages.length === 1 ? `${languageById[other[0]].name} ` : "";
   const forProduct = product ? ` for ${product.name}` : "";
   let text: string;
   if (form.format === "hook-pack") {
-    text = `${form.videoCount} ${dialect}ad hooks${forProduct}`;
+    text = `${form.videoCount} ${language}ad hooks${forProduct}`;
   } else {
-    const [one, many] = formatPlural[form.format];
+    const [one, many] = formatById[form.format].noun;
     const count = form.videoCount > 1 ? `${form.videoCount} ` : "";
-    text = `${count}${dialect}${form.videoCount > 1 ? many : one}${forProduct}`;
+    text = `${count}${language}${form.videoCount > 1 ? many : one}${forProduct}`;
   }
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
@@ -186,17 +157,17 @@ export function autoTitle(form: WizardForm, product?: Product): string {
 export const effectiveTitle = (form: WizardForm, product?: Product) =>
   form.titleTouched ? form.title : autoTitle(form, product);
 
-/** Due timestamp (18:00 Riyadh) `days` from now; falls back to two weeks for an unset date. */
+/** Due timestamp (6 PM display time) `days` from now; falls back to two weeks for an unset date. */
 export function dueDateFor(days: number): string {
   return at(Number.isFinite(days) ? days : 14, "18:00");
 }
 
-/** yyyy-mm-dd (Riyadh) for a day offset, for <input type="date">. */
+/** yyyy-mm-dd (display time) for a day offset, for <input type="date">. */
 export function isoDay(dayOffset: number): string {
   return new Date(Date.parse(at(dayOffset, "12:00")) + TZ_OFFSET).toISOString().slice(0, 10);
 }
 
-/** Days from NOW for a yyyy-mm-dd value (Riyadh calendar). */
+/** Days from NOW for a yyyy-mm-dd value (display-time calendar). */
 export function daysForIsoDay(value: string): number {
   const ms = Date.parse(`${value}T12:00:00.000Z`) - TZ_OFFSET;
   if (Number.isNaN(ms)) return NaN;
@@ -206,7 +177,7 @@ export function daysForIsoDay(value: string): number {
 export function formToBrief(form: WizardForm): Brief {
   return {
     productId: form.productId,
-    format: form.format ?? "selfie-demo",
+    format: form.format ?? "app-demo",
     platforms: form.platforms,
     languages: form.languages,
     aspect: form.aspect,
@@ -367,7 +338,7 @@ export function validateStep(
   if (step === 2 && form.platforms.length === 0)
     errors.platforms = "Pick at least one platform you'll post on.";
   if (step === 3 && form.languages.length === 0)
-    errors.languages = "Pick at least one language or dialect.";
+    errors.languages = "Pick at least one language.";
   if (step === 4) {
     if (form.audience.trim().length < 10)
       errors.audience = "Describe who it's for in a sentence (at least 10 characters).";
@@ -402,7 +373,7 @@ export function firstInvalidStep(form: WizardForm, product?: Product): number {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Brief strength (lavender = brief help)                                      */
+/* Brief strength (brief help)                                                 */
 /* -------------------------------------------------------------------------- */
 
 export const wordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length;
@@ -456,30 +427,36 @@ export function briefStrength(form: WizardForm, product?: Product) {
 
 /** "Help me write this": a sensible first draft from the product and format. */
 export function draftCopy(form: WizardForm, product: Product) {
-  const format = form.format ?? "selfie-demo";
+  const format = form.format ?? "app-demo";
   const feature = (product.features[0] ?? product.oneLiner).replace(/\.$/, "");
   const cta = product.cta.replace(/\.$/, "");
   const goals: Record<FormatId, string> = {
-    "selfie-demo": `Make ${product.name} feel like the obvious fix for a problem viewers have every week, show it working on a real phone, and end with: "${cta}".`,
+    "app-demo": `Make ${product.name} feel like the obvious fix for a problem viewers have every week, show it working on a real phone, and end with: "${cta}".`,
     "screen-walkthrough": `Show, step by step, how to ${feature.charAt(0).toLowerCase()}${feature.slice(1)}, so a new user gets it right on the first try. End with: "${cta}".`,
-    "ugc-review": `Build trust with a real-feeling story of switching to ${product.name} and what changed, ending with: "${cta}".`,
-    "problem-skit": `Make viewers laugh at a pain they recognise, then show ${product.name} fixing it in seconds. End with: "${cta}".`,
-    tutorial: `Teach one complete workflow in ${product.name} so viewers can follow along and finish it themselves. End with: "${cta}".`,
+    unboxing: `Capture the first few minutes with ${product.name}: out of the box, set up with the app, and an honest first impression. End with: "${cta}".`,
+    "problem-solution": `Open on a pain viewers recognize, then show ${product.name} fixing it in seconds. End with: "${cta}".`,
+    comparison: `Put ${product.name} next to the way people do it today and let viewers see the difference for themselves. End with: "${cta}".`,
+    testimonial: `Build trust with a real-feeling story of switching to ${product.name} and what changed, ending with: "${cta}".`,
+    "talking-head": `Explain one thing ${product.name} does, straight to camera, so viewers can follow along and try it themselves. End with: "${cta}".`,
+    voiceover: `Tell a short story over ${product.name} footage that makes the product the turning point. End with: "${cta}".`,
     "hook-pack": `Find the opening that stops the scroll: several different hooks for one ad body about ${product.name}, ready for paid testing.`,
   };
   const keyMessages: Record<FormatId, string> = {
-    "selfie-demo": product.oneLiner,
+    "app-demo": product.oneLiner,
     "screen-walkthrough": `${feature}.`,
-    "ugc-review": product.oneLiner,
-    "problem-skit": product.oneLiner,
-    tutorial: `${feature}.`,
+    unboxing: product.oneLiner,
+    "problem-solution": product.oneLiner,
+    comparison: product.oneLiner,
+    testimonial: product.oneLiner,
+    "talking-head": `${feature}.`,
+    voiceover: product.oneLiner,
     "hook-pack": product.oneLiner,
   };
   return { goal: goals[format], keyMessage: keyMessages[format] };
 }
 
 /* -------------------------------------------------------------------------- */
-/* Market guidance (butter = money)                                            */
+/* Market guidance (money)                                                     */
 /* -------------------------------------------------------------------------- */
 
 /**

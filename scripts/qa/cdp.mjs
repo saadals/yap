@@ -20,7 +20,7 @@
 // starts from the seed. Screenshots go to .qa/shots/ (gitignored). Exits 1 if any step fails or the
 // page throws.
 import { spawn } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const OUT = join(process.cwd(), ".qa");
@@ -30,6 +30,8 @@ const CHROME =
 const BASE = process.env.BASE_URL ?? "http://localhost:3123";
 const script = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const port = 9300 + Math.floor(Math.random() * 500);
+// One profile per process so several runs can work in parallel (profiles live in .qa/, gitignored).
+const profileDir = join(OUT, "profiles", String(process.pid));
 
 const chrome = spawn(
   CHROME,
@@ -38,14 +40,29 @@ const chrome = spawn(
     "--disable-gpu",
     "--hide-scrollbars",
     `--remote-debugging-port=${port}`,
-    // One profile per process so several runs can work in parallel (profiles live in .qa/, gitignored).
-    `--user-data-dir=${join(OUT, "profiles", String(process.pid))}`,
+    `--user-data-dir=${profileDir}`,
     "about:blank",
   ],
   { stdio: "ignore" },
 );
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Stops Chrome and deletes this run's profile. A profile is about 35 MB and is never reused (it is
+ * named after this process), so leaving them behind fills the disk: hundreds of runs add up to GBs.
+ */
+async function shutdown(code) {
+  const exited = new Promise((resolve) => chrome.once("exit", resolve));
+  chrome.kill();
+  await Promise.race([exited, sleep(3000)]);
+  try {
+    rmSync(profileDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch {
+    /* Chrome may still hold a file for a moment; a later run's cleanup is not needed, it is small. */
+  }
+  process.exit(code);
+}
 let wsUrl;
 for (let i = 0; i < 50 && !wsUrl; i++) {
   try {
@@ -58,8 +75,7 @@ for (let i = 0; i < 50 && !wsUrl; i++) {
 }
 if (!wsUrl) {
   console.error("Could not connect to Chrome. Set CHROME_PATH if Chrome lives elsewhere.");
-  chrome.kill();
-  process.exit(1);
+  await shutdown(1);
 }
 
 const ws = new WebSocket(wsUrl);
@@ -228,5 +244,4 @@ for (const step of script.steps) {
 
 console.log(errors.length ? `FAILED:\n- ${errors.join("\n- ")}` : "PASS: all steps ok, no page errors");
 ws.close();
-chrome.kill();
-process.exit(errors.length ? 1 : 0);
+await shutdown(errors.length ? 1 : 0);

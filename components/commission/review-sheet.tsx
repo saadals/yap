@@ -70,7 +70,7 @@ export function ReviewSheet({ ws, open, onClose }: { ws: Workspace; open: boolea
     toast({
       message: learnings.length
         ? `Review posted. ${plural(learnings.length, "learning")} saved to ${product?.name ?? "your product"} for next time.`
-        : `Review posted to ${creatorName}'s profile. Thank you!`,
+        : `Review posted to ${creatorName}'s profile.`,
     });
     onClose();
   };

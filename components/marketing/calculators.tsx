@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, ShieldCheck } from "lucide-react";
+import { Info, ReceiptText, ShieldCheck, Wallet } from "lucide-react";
 import { useId, useState } from "react";
 
 import { PriceSummary } from "@/components/domain/money";
@@ -73,7 +73,7 @@ function RangeField({
   );
 }
 
-/** For creators: videos per month × average price → monthly estimate (butter = money). */
+/** For creators: videos per month × average price → monthly estimate (the wallet icon marks money). */
 export function EarningsEstimator() {
   const s = useDemo();
   const stats = platformStats(s);
@@ -111,18 +111,19 @@ export function EarningsEstimator() {
         />
       </Block>
       <Block
-        tone="butter"
+        tone="paper"
         pad="lg"
         className="flex flex-col justify-between gap-8 lg:col-span-5"
         aria-labelledby="estimate-label"
       >
         <div className="flex flex-col gap-2">
-          <p id="estimate-label" className="y-small font-semibold">
+          <p id="estimate-label" className="y-small flex items-center gap-2 font-semibold">
+            <Wallet size={16} aria-hidden className="flex-none" />
             You could earn each month
           </p>
           <output
             aria-live="polite"
-            className="y-display y-num block text-[64px] leading-[0.9] font-semibold tracking-[-0.045em] md:text-[88px]"
+            className="y-display y-num block text-[52px] leading-[0.95] tracking-[-0.04em] md:text-[64px]"
           >
             {money(monthly)}
           </output>
@@ -265,8 +266,11 @@ export function FeeCalculator() {
         </fieldset>
       </Block>
 
-      <Block tone="butter" pad="lg" className="flex flex-col gap-6 lg:col-span-5">
-        <h3 className="y-head">What you&apos;d pay</h3>
+      <Block tone="paper" pad="lg" className="flex flex-col gap-6 lg:col-span-5">
+        <h3 className="y-head flex items-center gap-2">
+          <ReceiptText size={18} aria-hidden className="flex-none" />
+          What you&apos;d pay
+        </h3>
         <div aria-live="polite">
           <PriceSummary price={price} addons={chosen} />
         </div>

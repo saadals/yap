@@ -10,7 +10,7 @@ import { FilterChip } from "@/components/ui/chip";
 import { SelectField, TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
-import { lengthLabel, money, plural, shortDate } from "@/lib/format";
+import { lengthLabel, money, plural, shortDate, timeOf } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import type { DemoState } from "@/lib/store";
 import { addonById, aspects, formatById, languageById, platforms } from "@/lib/taxonomy";
@@ -282,7 +282,7 @@ export function ProductEditor({ s, creator, d, x, set, errorFor }: EditorProps) 
       ) : null}
 
       {x.product && x.product.learnings.length ? (
-        <Block tone="lavender" pad="sm" className="flex flex-col gap-3 !rounded-(--y-r-tile) !p-4">
+        <Block tone="mist" pad="sm" className="flex flex-col gap-3 !rounded-(--y-r-tile) !p-4">
           <div className="flex items-start gap-2.5">
             <Sparkles size={18} aria-hidden className="mt-0.5 flex-none" />
             <div className="flex flex-col gap-0.5">
@@ -365,7 +365,7 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
                 onClick={() =>
                   set({
                     format: id,
-                    onCamera: id === "screen-walkthrough" ? false : d.format === "screen-walkthrough" ? true : d.onCamera,
+                    onCamera: format.voiceOnly ? false : formatById[d.format].voiceOnly ? true : d.onCamera,
                   })
                 }
               >
@@ -381,9 +381,9 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
       <div className="flex flex-col gap-2">
         <GroupLabel
           id={ids.lang}
-          label="Dialect"
+          label="Language"
           required
-          hint={d.languages.length > 1 && d.videoCount === 1 ? "One video in several dialects? The creator will mix them, or pick a multi-video package for one each." : undefined}
+          hint={d.languages.length > 1 && d.videoCount === 1 ? "One video in several languages? The creator will mix them, or pick a multi-video package for one each." : undefined}
         />
         <div role="group" aria-labelledby={ids.lang} className="flex flex-wrap gap-2" data-field="languages" tabIndex={-1}>
           {creator.languages.map((id) => (
@@ -395,12 +395,7 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
                 touch("languages");
               }}
             >
-              {languageById[id].short}
-              {id !== "en" ? (
-                <span dir="rtl" lang="ar" className="ms-1.5 font-normal opacity-75">
-                  {languageById[id].native}
-                </span>
-              ) : null}
+              {languageById[id].name}
             </FilterChip>
           ))}
         </div>
@@ -467,7 +462,7 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
           value={String(d.durationSec)}
           onChange={(event) => set({ durationSec: Number(event.target.value) })}
           options={lengths.map((sec) => ({ value: String(sec), label: `Up to ${lengthLabel(sec)}` }))}
-          hint={`Typical ${formatById[d.format].name.toLowerCase()}: ${formatById[d.format].typical[0]}–${formatById[d.format].typical[1]}s.`}
+          hint={`Typical ${formatById[d.format].noun[0]}: ${formatById[d.format].typical[0]}–${formatById[d.format].typical[1]}s.`}
         />
       </div>
 
@@ -571,7 +566,7 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
         hint="Tone, setting, props, anything else. Your product's tone is filled in for you."
       />
 
-      <Block tone="lavender" pad="sm" className="flex flex-col gap-3 !rounded-(--y-r-tile) !p-4" aria-live="polite">
+      <Block tone="mist" pad="sm" className="flex flex-col gap-3 !rounded-(--y-r-tile) !p-4" aria-live="polite">
         <div className="flex items-center justify-between gap-3">
           <span className="y-small inline-flex items-center gap-2 font-semibold">
             <Lightbulb size={18} aria-hidden /> Brief strength: {strength.label}
@@ -584,7 +579,7 @@ export function BriefEditor({ creator, d, x, set, errorFor, touch }: EditorProps
           {Array.from({ length: strength.total }, (_, i) => (
             <span
               key={i}
-              className={`h-1.5 flex-1 rounded-full ${i < strength.score ? "bg-(--b-fg)" : "bg-(--b-line)"}`}
+              className={`h-1.5 flex-1 rounded-full ${i < strength.score ? "bg-(--b-fg)" : "bg-(--b-line-strong)"}`}
             />
           ))}
         </span>
@@ -700,7 +695,7 @@ export function TimingEditor({ creator, d, x, set }: EditorProps) {
         })}
       </div>
       <p className="y-small y-fg-2 max-w-[62ch]">
-        Due by 18:00 Riyadh time. {tierName[x.pkg.tier]} takes {plural(x.pkg.deliveryDays, "day")}
+        Due by {timeOf(x.dueDate)} Eastern time. {tierName[x.pkg.tier]} takes {plural(x.pkg.deliveryDays, "day")}
         {x.addonDays < 0 ? `, ${-x.addonDays} faster with rush delivery` : ""}
         {x.startOffset ? `, starting when ${creator.firstName} is free in ${plural(x.startOffset, "day")}` : ""}.
         A little slack usually means a calmer first version.

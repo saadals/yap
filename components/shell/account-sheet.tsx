@@ -77,15 +77,18 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
     router.push(paths.landing);
   };
 
-  const jumpToMonthEnd = () => {
-    const result = actions.closeMonth();
+  // The demo clock is fixed, so this stands in for a week passing (see `actions.skipSevenDays`).
+  const skipSevenDays = () => {
+    const result = actions.skipSevenDays();
     onClose();
     toast({
-      message: result.released
-        ? `Month closed. ${money(result.released)} of campaign earnings is now withdrawable.`
-        : result.locked
-          ? "Month closed. Pending earnings stay locked until their posts are live."
-          : "Month closed. No pending campaign earnings.",
+      message: result.mine
+        ? `7 days skipped. ${money(result.mine)} of your campaign pay is now withdrawable.`
+        : result.released
+          ? "7 days skipped. Campaign pay for verified posts that are still up was released."
+          : result.waiting
+            ? "7 days skipped. Pending pay gets its date once its post is verified."
+            : "7 days skipped. No pending campaign pay.",
       tone: "info",
     });
   };
@@ -164,13 +167,13 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
       <div className="mt-3 flex flex-col gap-2">
         <button
           type="button"
-          onClick={jumpToMonthEnd}
+          onClick={skipSevenDays}
           className="flex min-h-12 items-center gap-3 rounded-full px-3 font-medium hover:bg-(--b-chip)"
         >
           <CalendarCheck size={20} aria-hidden />
           <span className="flex flex-col text-start">
-            <span>Jump to month end (demo)</span>
-            <span className="y-micro y-fg-2 font-normal">Unlocks pending campaign earnings whose posts are live</span>
+            <span>Skip 7 days (demo)</span>
+            <span className="y-micro y-fg-2 font-normal">Releases campaign pay whose posts are verified and still up</span>
           </span>
         </button>
         {confirmReset ? (

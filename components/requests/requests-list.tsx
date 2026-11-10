@@ -141,7 +141,7 @@ function RequestsList() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder="Search by title"
-            className="h-12 w-full min-w-0 bg-transparent text-[15px] outline-none placeholder:text-(--y-ink-3)"
+            className="h-12 w-full min-w-0 bg-transparent text-[15px] outline-none placeholder:text-(--y-ink-2)"
           />
           {query ? (
             <button

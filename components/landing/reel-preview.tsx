@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useSimulatedPlayback } from "@/components/domain/video-player";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { FaceAvatar } from "@/components/ui/face-avatar";
-import { isArabic, nicheById } from "@/lib/taxonomy";
+import { isTranslated, nicheById, textDir } from "@/lib/taxonomy";
 import type { Creator, Video } from "@/lib/types";
 
 /** How long each of the creator's two videos plays before the next one. */
@@ -135,21 +135,21 @@ function Caption({ video, since, reduced }: { video: Video; since: number; reduc
     autoplay: { active: true, since, play: !reduced },
     loop: true,
   });
-  const arabic = isArabic(video.lang);
+  const translated = isTranslated(video.lang);
   const text = started ? line.text : video.hook;
   const translation = started ? line.translation : video.hookTranslation;
   if (!text) return null;
   return (
     <div className="mb-3 flex flex-col items-center gap-1.5 text-center">
       <span
-        dir={arabic ? "rtl" : "ltr"}
-        lang={arabic ? "ar" : "en"}
-        className={`y-thumb-caption ${arabic ? "y-display" : ""}`}
+        dir={textDir(video.lang)}
+        lang={video.lang}
+        className={`y-thumb-caption ${textDir(video.lang) === "rtl" ? "y-display" : ""}`}
         style={{ fontSize: "clamp(14px, 1.9vh, 17px)" }}
       >
         {text}
       </span>
-      {arabic && translation ? (
+      {translated && translation ? (
         <span className="rounded-lg bg-black/70 px-2 py-0.5 text-xs font-medium text-white">{translation}</span>
       ) : null}
     </div>

@@ -217,7 +217,7 @@ function ThreadRow({
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="flex items-baseline justify-between gap-2">
             <span className="flex min-w-0 items-baseline gap-1.5">
-              <span className={`y-small truncate ${isUnread ? "font-bold" : "font-semibold"}`}>
+              <span className={`y-small truncate ${isUnread ? "font-semibold" : "font-medium"}`}>
                 {other.name}
                 <span className="sr-only">, {thread.subject}</span>
               </span>
@@ -225,7 +225,7 @@ function ThreadRow({
                 <span className={`y-micro flex-none ${selected ? "opacity-70" : "y-fg-3"}`}>· {sideLabel(side)}</span>
               ) : null}
             </span>
-            <span className={`y-micro y-num flex-none ${isUnread ? "font-bold" : "y-fg-3"}`}>
+            <span className={`y-micro y-num flex-none ${isUnread ? "font-semibold" : "y-fg-3"}`}>
               {last ? stamp(last.at) : ""}
             </span>
           </span>

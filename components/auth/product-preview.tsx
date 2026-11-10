@@ -36,7 +36,7 @@ export function ProductPreview({ draft, skipped }: { draft: ProductDraft; skippe
   return (
     <Block
       as="section"
-      tone="lavender"
+      tone="paper"
       pad="md"
       className="flex flex-col gap-4"
       aria-label="Product profile preview"

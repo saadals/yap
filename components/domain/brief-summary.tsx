@@ -1,7 +1,7 @@
-import { Check, Link2, Minus, Video as VideoIcon, VideoOff } from "lucide-react";
+import { Check, Link2, Minus, Sparkles, Video as VideoIcon, VideoOff } from "lucide-react";
 
 import { MatchScore } from "@/components/ui/match-score";
-import { lengthLabel, plural } from "@/lib/format";
+import { lengthLabel, plural, quoted } from "@/lib/format";
 import type { Fit } from "@/lib/selectors";
 import { addonById, aspects, formatById, languageById, platformById } from "@/lib/taxonomy";
 import type { Brief, Product } from "@/lib/types";
@@ -45,7 +45,7 @@ export function BriefSummary({
         <div className="flex items-start gap-3">
           <span
             aria-hidden
-            className="y-display grid size-11 flex-none place-items-center rounded-[14px] text-lg font-semibold text-white"
+            className="y-display grid size-11 flex-none place-items-center rounded-(--y-r-field) text-lg font-semibold text-white"
             style={{ background: product.brandColor }}
           >
             {product.name.slice(0, 1)}
@@ -83,7 +83,7 @@ export function BriefSummary({
         <Prose label="Who it's for">{brief.audience}</Prose>
         <Prose label="Goal">{brief.goal}</Prose>
         <Prose label="Key message">
-          <p className="y-display text-[20px] leading-snug">&ldquo;{brief.keyMessage}&rdquo;</p>
+          <p className="y-display text-[20px] leading-snug">{quoted(brief.keyMessage)}</p>
         </Prose>
       </div>
 
@@ -179,12 +179,15 @@ export function BriefSummary({
   );
 }
 
-/** Explained fit (lavender = match). Never a black box: reasons and gaps are listed. */
+/** Explained fit. Never a black box: reasons and gaps are listed. */
 export function FitPanel({ fit, title = "Your fit" }: { fit: Fit; title?: string }) {
   return (
-    <div data-tone="lavender" className="y-block y-pad-md flex flex-col gap-4">
+    <div data-tone="paper" className="y-block y-pad-md flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
-        <h2 className="y-head">{title}</h2>
+        <h2 className="y-head flex items-center gap-2">
+          <Sparkles size={18} aria-hidden className="flex-none" />
+          {title}
+        </h2>
         <MatchScore value={fit.score} label="fit" />
       </div>
       <ul className="flex flex-col gap-2">

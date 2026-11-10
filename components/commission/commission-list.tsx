@@ -155,7 +155,7 @@ export function CommissionList({ side, wide = false }: { side: Role; /** Full-wi
         <Block tone="paper" pad="md">
           <EmptyState
             title={`Nothing matches “${trimmed}”`}
-            body={`Try a ${side === "business" ? "creator's" : "client's"} name, a product or a format like “selfie demo”.`}
+            body={`Try a ${side === "business" ? "creator's" : "client's"} name, a product or a format like “app demo”.`}
             shape="bean"
             tint="sun"
             action={

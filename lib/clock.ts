@@ -1,22 +1,34 @@
 /**
  * Fixed demo clock. Every seed timestamp is relative to NOW so the prototype always reads the same
- * and server/client renders never disagree. Display uses Riyadh time (UTC+3, no DST).
+ * and server/client renders never disagree. Display uses a fixed Eastern offset (UTC−5, no
+ * daylight saving), so `at()` and the calendar-day helpers need no DST logic.
  *
- * NOW = Wednesday 4 November 2026, 10:00 Riyadh.
+ * NOW = Wednesday 4 November 2026, 10:00 Eastern.
  */
 
-export const NOW_ISO = "2026-11-04T07:00:00.000Z";
+export const NOW_ISO = "2026-11-04T15:00:00.000Z";
 export const NOW = Date.parse(NOW_ISO);
 
 export const MINUTE = 60_000;
 export const HOUR = 60 * MINUTE;
 export const DAY = 24 * HOUR;
-/** Riyadh offset from UTC. */
-export const TZ_OFFSET = 3 * HOUR;
-export const TIME_ZONE = "Asia/Riyadh";
+/** Display offset from UTC (Eastern standard time, all year). */
+export const TZ_OFFSET = -5 * HOUR;
+/** IANA name for the same fixed offset (the sign is inverted in Etc/ names: GMT+5 is UTC−5). */
+export const TIME_ZONE = "Etc/GMT+5";
+
+/** "2026-11-04": the calendar day of `ms` in display time. */
+export function localDay(ms: number): string {
+  return new Date(ms + TZ_OFFSET).toISOString().slice(0, 10);
+}
+
+/** A timestamp at `time` ("HH:MM", display time) on the calendar day `day` ("2026-11-20"). */
+export function atLocal(day: string, time = "00:00"): string {
+  return new Date(Date.parse(`${day}T${time}:00.000Z`) - TZ_OFFSET).toISOString();
+}
 
 /**
- * A timestamp `dayOffset` days from NOW (negative = past). With `time` ("HH:MM", Riyadh local),
+ * A timestamp `dayOffset` days from NOW (negative = past). With `time` ("HH:MM", display time),
  * the time of day is set explicitly; otherwise it keeps NOW's time of day (10:00).
  *
  *   at(-2, "14:30")  // two days ago at 14:30
@@ -40,19 +52,4 @@ export function minutesAgo(minutes: number): string {
 
 export function addDays(iso: string, days: number): string {
   return new Date(Date.parse(iso) + days * DAY).toISOString();
-}
-
-/** "2026-11": the Riyadh calendar month of a timestamp. */
-export function monthKey(iso: string): string {
-  return new Date(Date.parse(iso) + TZ_OFFSET).toISOString().slice(0, 7);
-}
-
-/**
- * First moment of the next Riyadh month: when pending campaign earnings from `iso`'s month become
- * withdrawable (if the post is still up).
- */
-export function endOfMonth(iso: string): string {
-  const local = new Date(Date.parse(iso) + TZ_OFFSET);
-  const next = Date.UTC(local.getUTCFullYear(), local.getUTCMonth() + 1, 1);
-  return new Date(next - TZ_OFFSET).toISOString();
 }

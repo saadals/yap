@@ -44,7 +44,7 @@ const sortOptions: { value: Sort; label: string; needsProfile?: boolean }[] = [
 /**
  * Explore → Orders: open UGC campaigns (take a slot) and custom requests (pitch), as quiet cards.
  * Campaigns the viewer can take come first; the rest stay visible with one line on who they're
- * for. Format, dialect and budget filters narrow custom requests.
+ * for. Format, language and budget filters narrow custom requests.
  */
 export function OrdersFeed() {
   const hydrated = useHydrated();
@@ -71,7 +71,7 @@ function Feed() {
   const [sort, setSort] = useState<Sort>(creator ? "fit" : "newest");
   const [query, setQuery] = useState("");
   const [formats, setFormats] = useState<FormatId[]>([]);
-  const [dialects, setDialects] = useState<LanguageId[]>([]);
+  const [langs, setLangs] = useState<LanguageId[]>([]);
   /** null = follow the saved default from settings. */
   const [minBudgetOverride, setMinBudgetOverride] = useState<number | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -79,10 +79,10 @@ function Feed() {
 
   const savedMinBudget = me.settings(s).creator.minBudget;
   const minBudget = minBudgetOverride ?? savedMinBudget;
-  const filters: OpportunityFilterState = { formats, dialects, minBudget };
+  const filters: OpportunityFilterState = { formats, languages: langs, minBudget };
   const setFilters = (next: OpportunityFilterState) => {
     setFormats(next.formats);
-    setDialects(next.dialects);
+    setLangs(next.languages);
     setMinBudgetOverride(next.minBudget);
   };
   // "Best fit" needs a creator profile to measure against.
@@ -107,7 +107,7 @@ function Feed() {
 
   const baseRequests = showRequests ? inView(allRequests) : [];
   const formatCounts = withSelected(countBy(baseRequests.map((o) => [o.request.brief.format])), formats);
-  const dialectCounts = withSelected(countBy(baseRequests.map((o) => o.request.brief.languages)), dialects);
+  const languageCounts = withSelected(countBy(baseRequests.map((o) => o.request.brief.languages)), langs);
 
   const q = query.trim().toLowerCase();
   const matchesQuery = (request: ContentRequest) => {
@@ -122,7 +122,7 @@ function Feed() {
   const campaigns = (showCampaigns ? inView(allCampaigns) : []).filter((c) => matchesQuery(c.request));
   const requests = baseRequests
     .filter((o) => !formats.length || formats.includes(o.request.brief.format))
-    .filter((o) => !dialects.length || o.request.brief.languages.some((l) => dialects.includes(l)))
+    .filter((o) => !langs.length || o.request.brief.languages.some((l) => langs.includes(l)))
     .filter((o) => o.request.budget.max >= minBudget)
     .filter((o) => matchesQuery(o.request))
     .sort((a, b) => {
@@ -139,13 +139,13 @@ function Feed() {
       }
     });
 
-  const requestFilterCount = formats.length + dialects.length + (minBudget !== savedMinBudget ? 1 : 0);
-  const loadingKey = JSON.stringify([view, activeSort, formats, dialects, minBudget]);
+  const requestFilterCount = formats.length + langs.length + (minBudget !== savedMinBudget ? 1 : 0);
+  const loadingKey = JSON.stringify([view, activeSort, formats, langs, minBudget]);
   const loading = useSimulatedLoading(loadingKey, 380);
 
   const clearFilters = () => {
     setFormats([]);
-    setDialects([]);
+    setLangs([]);
     setMinBudgetOverride(null);
     setQuery("");
   };
@@ -216,7 +216,7 @@ function Feed() {
   return (
     <div className="flex flex-col gap-2">
       {!creator ? (
-        <Block tone="sky" pad="sm" className="flex flex-wrap items-center gap-3 !py-3 !ps-5">
+        <Block tone="paper" pad="sm" className="flex flex-wrap items-center gap-3 !py-3 !ps-5">
           <UserRound size={18} aria-hidden className="flex-none" />
           <p className="y-small min-w-0 flex-1 font-medium">Set up a creator profile to pitch or take slots</p>
           <PillButton size="sm" variant="contrast" onClick={() => setSetupOpen(true)}>
@@ -382,7 +382,7 @@ function Feed() {
           value={filters}
           onChange={setFilters}
           formatCounts={formatCounts}
-          dialectCounts={dialectCounts}
+          languageCounts={languageCounts}
           savedMinBudget={savedMinBudget}
           onSaveMinBudget={saveDefault}
         />
@@ -419,7 +419,7 @@ function FeedEmpty({
     return (
       <EmptyState
         title="Nothing matches these filters"
-        body={`Try fewer formats or dialects${minBudget > 0 ? `, or a minimum budget below ${money(minBudget)}` : ""}. New orders are posted every day.`}
+        body={`Try fewer formats or languages${minBudget > 0 ? `, or a minimum budget below ${money(minBudget)}` : ""}. New orders are posted every day.`}
         shape="ball"
         tint="sea"
         action={

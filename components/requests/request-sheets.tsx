@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Check, Globe, MailOpen, Send } from "lucide-react";
+import { BadgeCheck, Check, Globe, MailOpen, Send, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { languageList } from "@/components/domain/chips";
@@ -118,14 +118,15 @@ export function InviteSheet({ request, onClose }: { request: ContentRequest; onC
                       </span>
                     </span>
                     <span
-                      className="flex-none rounded-full bg-(--y-lavender) px-2.5 py-1 text-(--y-on-color)"
+                      className="flex flex-none items-center rounded-full bg-(--b-bg) px-2.5 py-1"
                       aria-label={`${f.score}% fit`}
                     >
+                      <Sparkles size={13} aria-hidden className="me-1 flex-none" />
                       <span className="y-display y-num text-[17px] font-semibold" aria-hidden>
                         {f.score}
                       </span>
                       <span className="y-micro" aria-hidden>
-                        %
+                        % fit
                       </span>
                     </span>
                   </span>

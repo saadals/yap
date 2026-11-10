@@ -6,3 +6,6 @@ next-env.d.ts
 .env*.local
 .DS_Store
 .qa
+
+# Round 3 legal pack: unreviewed drafts, includes a file marked do-not-publish
+feedback_docs_2/Yapping_Legal_Docs_v1.0.zip

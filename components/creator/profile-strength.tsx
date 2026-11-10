@@ -23,7 +23,8 @@ export const BIO_MIN = 80;
 /** What makes a creator profile convincing to a buyer, as a checklist. */
 export function profileChecklist(s: DemoState, creator: Creator): StrengthItem[] {
   const videos = portfolio(s, creator);
-  const dialects = new Set(videos.map((v) => v.lang));
+  const sampled = new Set(videos.map((v) => v.lang));
+  const covered = creator.languages.filter((l) => sampled.has(l)).length;
   const priced = creator.packages.filter((p) => p.price > 0).length;
   const bioLength = creator.bio.trim().length;
   const connected = (creator.socials ?? []).filter((x) => x.verified);
@@ -64,10 +65,10 @@ export function profileChecklist(s: DemoState, creator: Creator): StrengthItem[]
       href: paths.editProfile("accounts"),
     },
     {
-      id: "dialects",
-      label: "Samples in 3+ dialects",
-      detail: `${Math.min(dialects.size, 3)} of 3`,
-      done: dialects.size >= 3,
+      id: "languages",
+      label: "A sample in every language you list",
+      detail: `${covered} of ${creator.languages.length}`,
+      done: covered >= creator.languages.length,
       href: paths.editProfile("portfolio"),
     },
     {

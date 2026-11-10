@@ -217,7 +217,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
 
           {/* Brief */}
           <Block tone="paper" pad="md" className="flex flex-col gap-6">
-            <h2 className="y-display y-title">The brief</h2>
+            <h2 className="y-head">The brief</h2>
             <BriefSummary brief={request.brief} product={product} />
             {product ? <ProductDetails product={product} /> : null}
           </Block>
@@ -228,7 +228,7 @@ export function OpportunityView({ request }: { request: ContentRequest }) {
               <Celebrate className="h-32 w-52" />
               <div className="flex flex-col gap-2" role="status">
                 <h2 className="y-display y-title">
-                  Sent! {businessName} usually replies {replyWindow(business)}.
+                  Pitch sent. {businessName} usually replies {replyWindow(business)}.
                 </h2>
                 <p className="y-body y-fg-2 mx-auto max-w-[52ch]">
                   We&apos;ll tell you when they open it. You can edit or withdraw your pitch until they

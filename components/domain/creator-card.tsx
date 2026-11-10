@@ -2,11 +2,14 @@
 
 import { BadgeCheck, Heart } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { useToast } from "@/components/ui/toast";
 import { compact, money } from "@/lib/format";
-import { cityById, featuredVideo, isSaved, startingPrice } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { usePrefs } from "@/lib/prefs";
+import { cityById, featuredVideo, isSaved, me, startingPrice } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { creatorKindById, languageById } from "@/lib/taxonomy";
 import type { Creator } from "@/lib/types";
@@ -14,7 +17,7 @@ import type { Creator } from "@/lib/types";
 import { Rating } from "./stars";
 import { VideoThumb } from "./video-thumb";
 
-/** Save/unsave a creator (heart). Works anywhere; shows an undo toast. */
+/** Save/unsave a creator (heart) with an undo toast. Hidden on your own profile; signed out it opens sign-in. */
 export function SaveCreatorButton({
   creator,
   className = "",
@@ -26,16 +29,25 @@ export function SaveCreatorButton({
 }) {
   const s = useDemo();
   const toast = useToast();
-  const saved = isSaved(s, creator.id);
+  const router = useRouter();
+  const { account } = usePrefs();
+  const signedIn = Boolean(account);
+  // Nobody saves themselves; signed out, nothing is saved yet and the heart asks you to sign in.
+  if (signedIn && me.creator(s)?.id === creator.id) return null;
+  const saved = signedIn && isSaved(s, creator.id);
   return (
     <button
       type="button"
       aria-pressed={saved}
       aria-label={saved ? `Remove ${creator.name} from saved` : `Save ${creator.name}`}
-      title={saved ? "Saved" : "Save"}
+      title={saved ? "Saved" : signedIn ? "Save" : "Sign in to save"}
       onClick={(event) => {
         event.preventDefault();
         event.stopPropagation();
+        if (!signedIn) {
+          router.push(paths.signIn({ next: paths.creator(creator.handle) }));
+          return;
+        }
         const nowSaved = actions.toggleSavedCreator(creator.id);
         toast({
           message: nowSaved ? `Saved ${creator.firstName}` : `Removed ${creator.firstName} from saved`,
@@ -50,7 +62,7 @@ export function SaveCreatorButton({
       data-tone-btn={variant === "soft" ? "soft" : undefined}
       data-size={variant === "soft" ? "sm" : undefined}
     >
-      <Heart size={20} aria-hidden className={saved ? "fill-[#ff5a5f] text-[#ff5a5f]" : ""} />
+      <Heart size={20} aria-hidden className={saved ? "fill-current" : ""} />
     </button>
   );
 }
@@ -66,7 +78,7 @@ export function CreatorCard({ creator, className = "" }: { creator: Creator; cla
   const city = cityById(creator.cityId);
   const languages = creator.languages
     .slice(0, 2)
-    .map((id) => languageById[id].short)
+    .map((id) => languageById[id].name)
     .join(", ");
   const meta = [
     city?.name,
@@ -102,7 +114,7 @@ export function CreatorCard({ creator, className = "" }: { creator: Creator; cla
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="y-head flex min-w-0 items-center gap-1.5">
             <Link
-              href={`/creators/${creator.handle}`}
+              href={paths.creator(creator.handle)}
               className="truncate after:absolute after:inset-0 after:z-[2] after:content-['']"
             >
               {creator.name}

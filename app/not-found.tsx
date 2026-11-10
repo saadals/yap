@@ -50,7 +50,7 @@ export default function NotFound() {
             </div>
           </Block>
           <Block
-            tone="lavender"
+            tone="paper"
             pad="lg"
             className="flex min-h-[320px] items-center justify-center overflow-hidden lg:col-span-5"
           >

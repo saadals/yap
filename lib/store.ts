@@ -16,16 +16,27 @@
 
 import { useSyncExternalStore } from "react";
 
-import { campaignMoney, eligibility, isCampaign, occupiesSlot, openSlotNumbers, slotHistory } from "./campaigns";
-import { HOUR, NOW, at, endOfMonth, monthKey } from "./clock";
+import {
+  campaignMoney,
+  eligibility,
+  isCampaign,
+  occupiesSlot,
+  openSlotNumbers,
+  slotHistory,
+  withCampaignFee,
+} from "./campaigns";
+import { HOUR, NOW, addDays, at } from "./clock";
 import { maskContacts } from "./contact";
 import * as seedData from "./data";
-import { money, priceBreakdown } from "./format";
+import { money, priceBreakdown, shortDate } from "./format";
 import { hashString } from "./hash";
 import { paths } from "./paths";
 import {
   AUTO_APPROVE_DAYS,
   CAMPAIGN_FEE_RATE,
+  CAMPAIGN_OPEN_DAYS,
+  CAMPAIGN_RELEASE_DAYS,
+  DEFAULT_LANGUAGE,
   SERVICE_FEE_RATE,
   formatById,
   tierById,
@@ -68,7 +79,7 @@ const STORAGE_KEY = "yapp-demo-v1";
 /** Tab-local signed-in account (sessionStorage) and the cross-tab default (cookie). */
 const SESSION_KEY = "yapp-account";
 export const ACCOUNT_COOKIE = "yapp_account";
-const VERSION = 3;
+const VERSION = 6;
 
 export type RequestDraft = {
   step: number;
@@ -114,8 +125,6 @@ export type DemoState = {
   requestDrafts: Record<string, RequestDraft | null>;
   /** Orders an account dismissed from its feed and Explore, per account. */
   hidden: Record<string, string[]>;
-  /** Months closed with the demo "Jump to month end" control ("2026-11"). */
-  closedMonths: string[];
 };
 
 function fromSeed(): DemoState {
@@ -144,7 +153,6 @@ function fromSeed(): DemoState {
     settings: clone(seedData.settings),
     requestDrafts: {},
     hidden: {},
-    closedMonths: [],
   };
 }
 
@@ -504,12 +512,12 @@ const creatorReplies: [RegExp, string][] = [
   [/price|budget|cost|\$|discount/i, "Happy to make that work. If you need it cheaper I can drop the extra hooks and keep the main cut."],
   [/script|hook|line|say|wording/i, "Good call. I'll draft the opening two ways and you can pick the one you like in the next version."],
   [/access|login|account|demo/i, "Got it, I'm in. The demo account has everything I need for the screen part."],
-  [/thank|great|love|perfect|amazing/i, "Thank you! That means a lot. Really enjoyed working on this one."],
+  [/thank|great|love|perfect|amazing/i, "Thank you, that means a lot. Really enjoyed working on this one."],
   [/\?/, "Good question. Short answer: yes. I'll show you in the next version so it's easier to judge."],
 ];
 const businessReplies: [RegExp, string][] = [
   [/deliver|draft|version|uploaded|ready/i, "Amazing, thank you. We'll review it today and come back with notes."],
-  [/access|login|account|demo/i, "Sent the demo login to your email. Shout if anything doesn't work."],
+  [/access|login|account|demo/i, "The demo login is in the brief's product assets. Shout if anything doesn't work."],
   [/deadline|date|extra day|extension/i, "No problem, a day or two is fine. Quality matters more than speed for us."],
   [/\?/, "Good question. Let's keep it casual, like you're telling a friend. The app should feel easy."],
 ];
@@ -552,7 +560,7 @@ function simulateDelivery(commissionId: string, delayMs: number) {
       commissionId,
       note:
         version === 1
-          ? "Version 1 is ready! I kept the opening tight and showed the app within the first few seconds. Let me know what you think."
+          ? "Version 1 is ready. I kept the opening tight and showed the app within the first few seconds. Let me know what you think."
           : `Version ${version} is up. I worked through every note you left; each one is marked resolved.`,
       files: [
         { name: `${slug || "video"}_v${version}_${c.brief.aspect.replace(":", "x")}.mp4`, size: `${(38 + version * 3.4).toFixed(1)} MB` },
@@ -591,6 +599,8 @@ export type CampaignInput = {
   brief: Partial<Brief> & { mustInclude: string[]; avoid: string[] };
   videos: number;
   tierId: FollowerTierId;
+  /** Days a creator has to upload version 1 after taking a slot (CAMPAIGN_DEADLINE_OPTIONS). */
+  deadlineDays: number;
   platform: CampaignPlatformId;
   brandHandle: string;
   explainer?: { name: string; durationSec: number };
@@ -640,9 +650,9 @@ const mask = (text: string, allow: string[] = []) => maskContacts(text, allow).t
 function campaignBrief(input: CampaignInput, product: Product | undefined): Brief {
   return {
     productId: input.productId,
-    format: "ugc-review",
+    format: "testimonial",
     platforms: [input.platform],
-    languages: input.brief.languages?.length ? input.brief.languages : ["ar-saudi", "ar-gulf"],
+    languages: input.brief.languages?.length ? input.brief.languages : [DEFAULT_LANGUAGE],
     aspect: "9:16",
     videoCount: 1,
     durationSec: input.brief.durationSec ?? 30,
@@ -658,18 +668,30 @@ function campaignBrief(input: CampaignInput, product: Product | undefined): Brie
   };
 }
 
+/**
+ * A ledger entry for `subtotal` of creators' money plus the campaign fee on it (negative = a
+ * refund, which returns the matching share of the fee).
+ */
+function ledgerEntry(subtotal: number, note: string, kind?: LedgerEntry["kind"]): LedgerEntry {
+  const { fee, total } = withCampaignFee(Math.abs(subtotal));
+  return {
+    id: uid("lg"),
+    at: nowStamp(),
+    kind: kind ?? (subtotal < 0 ? "refund" : "top_up"),
+    amount: total,
+    fee,
+    note,
+  };
+}
+
 /** Ledger entry when a slot reopens and its old price differs from the current tier price. */
 function repriceOnReopen(request: ContentRequest, oldPrice: number): LedgerEntry | undefined {
   const terms = request.campaign;
   if (!terms || terms.pricePerVideo === oldPrice) return undefined;
-  const diff = terms.pricePerVideo - oldPrice;
-  return {
-    id: uid("lg"),
-    at: nowStamp(),
-    kind: diff > 0 ? "top_up" : "refund",
-    amount: Math.abs(diff),
-    note: `Slot reopened at the current tier price (${money(terms.pricePerVideo)})`,
-  };
+  return ledgerEntry(
+    terms.pricePerVideo - oldPrice,
+    `Slot reopened at the current tier price (${money(terms.pricePerVideo)}), with its fee`,
+  );
 }
 
 /** Re-derive "hired" (full) vs "open" after slots change. */
@@ -681,6 +703,70 @@ function syncCampaignStatus(s: DemoState, requestId: string): DemoState {
       return { ...r, status: openSlotNumbers(s, r).length === 0 ? "hired" : "open" };
     }),
   };
+}
+
+/**
+ * Money moves when a taken slot ends unpaid. On an open campaign the slot reopens: its money stays
+ * held (repriced if the tier changed). On a closed campaign nobody can take it again, so its price
+ * is refunded to the card with its fee.
+ */
+function slotEndedEntries(request: ContentRequest, c: Commission, why: string): LedgerEntry[] {
+  if (request.status === "closed") return [ledgerEntry(-c.price, `Slot ${c.campaignSlot}: ${why}, refunded with the fee`)];
+  const reprice = repriceOnReopen(request, c.price);
+  return reprice ? [reprice] : [];
+}
+
+/**
+ * A pending slot whose post came down and wasn't restored within 48 hours: it ends unpaid, its
+ * money goes back to the campaign hold and the slot reopens (refunded if the campaign is closed).
+ */
+function returnRemovedSlot(s: DemoState, commissionId: string): DemoState {
+  const c = s.commissions.find((x) => x.id === commissionId);
+  const request = c?.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
+  if (!c || !request?.campaign) return s;
+  const closed = request.status === "closed";
+  const entries = slotEndedEntries(request, c, "the post came down and wasn't restored");
+  let next: DemoState = {
+    ...s,
+    commissions: replaceById(s.commissions, c.id, (x) => ({
+      ...x,
+      status: "cancelled",
+      cancelCode: "post_removed",
+      payment: { ...x.payment, status: closed ? "refunded" : "returned" },
+      events: [
+        ...x.events,
+        event(
+          "cancelled",
+          "system",
+          `The post stayed down for more than 48 hours. ${closed ? "Its money was refunded to the business." : "The slot reopened for another creator."}`,
+        ),
+      ],
+    })),
+    requests: replaceById(s.requests, request.id, (r) => ({
+      ...r,
+      campaign: {
+        ...r.campaign!,
+        excludedCreatorIds: [...new Set([...r.campaign!.excludedCreatorIds, c.creatorId])],
+        ledger: [...r.campaign!.ledger, ...entries],
+      },
+    })),
+  };
+  next = syncCampaignStatus(next, request.id);
+  next = notifyParty(
+    next,
+    { creatorId: c.creatorId },
+    "campaign",
+    `Your post for "${c.title}" stayed down, so the slot and its pay went back to ${nameOfBusiness(s, c.businessId)}.`,
+    paths.commission(c.id),
+  );
+  next = notifyParty(
+    next,
+    { businessId: c.businessId },
+    "campaign",
+    `${nameOfCreator(s, c.creatorId)}'s post for "${c.title}" stayed down. ${closed ? "Its money is on its way back to your card." : "The slot reopened, and its money is back in your campaign."}`,
+    paths.order(request.id),
+  );
+  return next;
 }
 
 export const actions = {
@@ -728,7 +814,8 @@ export const actions = {
         name: input.name || account.name,
         firstName: (input.name || account.name).split(" ")[0],
         kind: "presenter",
-        cityId: input.cityId ?? "riyadh",
+        // Where the account already orders from, unless the setup said otherwise.
+        cityId: input.cityId ?? s.businesses.find((b) => b.id === account.businessId)?.cityId ?? "toronto",
         headline: input.headline || "New on Yapp",
         bio: "",
         languages: input.languages,
@@ -837,7 +924,7 @@ export const actions = {
     }));
   },
 
-  /** Turn a personal buyer profile into a business account (company details, VAT, team). */
+  /** Turn a personal buyer profile into a business account (company details, tax ID, team). */
   upgradeToBusinessAccount(input: { name: string; website?: string; industry?: Business["industry"]; teamSize?: string }) {
     load();
     const account = activeAccount(state);
@@ -1241,7 +1328,7 @@ export const actions = {
       if (input.note?.trim()) {
         next = appendMessage(next, threadId, { from: "business", text: input.note.trim() }, "creator");
       }
-      next = notifyParty(next, { creatorId: pitch.creatorId }, "offer", `You're hired! ${nameOfBusiness(s, request.businessId)} accepted your pitch`, paths.commission(commissionId));
+      next = notifyParty(next, { creatorId: pitch.creatorId }, "offer", `You're hired. ${nameOfBusiness(s, request.businessId)} accepted your pitch`, paths.commission(commissionId));
       return next;
     });
     const hired = state.commissions.find((c) => c.id === commissionId);
@@ -1291,7 +1378,7 @@ export const actions = {
       };
       commission.events = [
         event("offer_sent", "business", `Offer sent to ${nameOfCreator(s, input.creatorId)}`),
-        event("funded", "system", `${money(totals.total, true)} authorised on your card. You're only charged if they accept.`),
+        event("funded", "system", `${money(totals.total, true)} authorized on your card. You're only charged if they accept.`),
       ];
       next = { ...next, commissions: [commission, ...next.commissions] };
       next = appendMessage(
@@ -1342,7 +1429,7 @@ export const actions = {
           from: by === "creator-auto" ? "creator" : "system",
           text:
             by === "creator-auto"
-              ? `Thanks for the offer! I'm in. I'll read through the brief tonight and send any questions before I start filming.`
+              ? `Thanks for the offer, I'm in. I'll read through the brief tonight and send any questions before I start filming.`
               : `${creator?.firstName ?? "The creator"} accepted the offer. Work has started.`,
         },
         "business",
@@ -1366,7 +1453,7 @@ export const actions = {
           events: [...x.events, event("offer_declined", "creator", `Offer declined: ${reason}`)],
         })),
       };
-      next = appendMessage(next, c.threadId, { from: "system", text: `Offer declined. The authorisation on your card was released.` }, "business");
+      next = appendMessage(next, c.threadId, { from: "system", text: `Offer declined. The authorization on your card was released.` }, "business");
       next = notifyParty(next, { businessId: c.businessId }, "offer", `${nameOfCreator(s, c.creatorId)} declined your offer: ${c.title}`, paths.commission(commissionId));
       return next;
     });
@@ -1381,7 +1468,7 @@ export const actions = {
         status: "cancelled",
         cancelReason: "Offer withdrawn",
         payment: { ...x.payment, status: "refunded" },
-        events: [...x.events, event("cancelled", "business", "Offer withdrawn. Card authorisation released.")],
+        events: [...x.events, event("cancelled", "business", "Offer withdrawn. Card authorization released.")],
       })),
     }));
   },
@@ -1545,7 +1632,7 @@ export const actions = {
       next = appendMessage(
         next,
         c.threadId,
-        { from: "business", text: note || `Left ${count} note${count === 1 ? "" : "s"} on version ${latest.version}. Thank you!` },
+        { from: "business", text: note || `Left ${count} note${count === 1 ? "" : "s"} on version ${latest.version}. Thank you.` },
         "creator",
       );
       if (isDemoCreator(s, c.creatorId)) {
@@ -1561,8 +1648,8 @@ export const actions = {
 
   /**
    * Approve the latest delivery. Custom and direct work: payment is released to the creator.
-   * Campaign slots: the full-quality file unlocks for the business and the price moves to the
-   * creator's wallet as pending until month end (and only if the post stays up).
+   * Campaign slots: the full-quality file unlocks for the business and the creator moves on to
+   * posting; the price stays held (pending, no date yet) until 7 days after the post is verified.
    */
   approve(commissionId: string, options: { rating?: number } = {}) {
     update((s) => {
@@ -1583,7 +1670,7 @@ export const actions = {
           deliveries: latest ? replaceById(x.deliveries, latest.id, (d) => ({ ...d, status: "approved" })) : x.deliveries,
           ...(campaign
             ? {
-                withdrawableFrom: endOfMonth(completedAt),
+                withdrawableFrom: undefined,
                 post: { status: "due" as const },
                 quickRating: options.rating,
               }
@@ -1603,7 +1690,7 @@ export const actions = {
               "paid",
               "system",
               campaign
-                ? `${money(c.price)} added to ${nameOfCreator(s, x.creatorId)}'s wallet as pending`
+                ? `${money(c.price)} for ${nameOfCreator(s, x.creatorId)} stays held until ${CAMPAIGN_RELEASE_DAYS} days after the post is verified`
                 : `${money(totals.creatorEarns)} released to ${nameOfCreator(s, x.creatorId)}`,
             ),
           ],
@@ -1615,7 +1702,7 @@ export const actions = {
           next,
           { creatorId: c.creatorId },
           "payment",
-          `Approved! ${money(c.price)} is in your wallet as pending. Post it with ${request?.campaign?.brandHandle ?? "the brand tag"} to unlock it at month end.`,
+          `Approved. Post it with ${request?.campaign?.brandHandle ?? "the brand tag"}: your ${money(c.price)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
           paths.commission(c.id),
         );
       } else {
@@ -1755,14 +1842,17 @@ export const actions = {
 
   /* ---------------------------------------------------------- campaigns */
 
-  /** Hold the full budget and publish a UGC campaign. Returns the new campaign id. */
+  /**
+   * Charge and hold the full budget plus the service fee, and publish a UGC campaign. It stays open
+   * for 14 days unless the business closes it. Returns the new campaign id.
+   */
   publishCampaign(input: CampaignInput): string {
     const id = uid("r");
     update((s) => {
       const me = activeIds(s);
       const tier = tierById[input.tierId];
       const product = s.products.find((p) => p.id === input.productId);
-      const total = input.videos * tier.pricePerVideo;
+      const postedAt = nowStamp();
       const request: ContentRequest = {
         id,
         businessId: me.businessId,
@@ -1770,7 +1860,7 @@ export const actions = {
         brief: campaignBrief(input, product),
         budget: { min: tier.pricePerVideo, max: tier.pricePerVideo },
         dueDate: at(30, "18:00"),
-        postedAt: nowStamp(),
+        postedAt,
         status: "open",
         visibility: "public",
         invitedCreatorIds: [],
@@ -1784,15 +1874,15 @@ export const actions = {
           platform: input.platform,
           brandHandle: input.brandHandle.startsWith("@") ? input.brandHandle : `@${input.brandHandle}`,
           explainer: input.explainer,
+          deadlineDays: input.deadlineDays,
+          closesAt: addDays(postedAt, CAMPAIGN_OPEN_DAYS),
           paymentMethodId: input.paymentMethodId,
           ledger: [
-            {
-              id: uid("lg"),
-              at: nowStamp(),
-              kind: "charge",
-              amount: total,
-              note: `${input.videos} videos × ${money(tier.pricePerVideo)} held`,
-            },
+            ledgerEntry(
+              input.videos * tier.pricePerVideo,
+              `${input.videos} videos × ${money(tier.pricePerVideo)}, plus the ${Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee`,
+              "charge",
+            ),
           ],
           excludedCreatorIds: [],
           simulate: true,
@@ -1818,6 +1908,7 @@ export const actions = {
     const commissionId = uid("c");
     update((s) => {
       const terms = request.campaign!;
+      const takenAt = nowStamp();
       const ensured = ensureThread(s, {
         businessId: request.businessId,
         creatorId: creator!.id,
@@ -1840,9 +1931,10 @@ export const actions = {
         revisionsIncluded: 2,
         revisionsUsed: 0,
         status: "in_progress",
-        createdAt: nowStamp(),
-        acceptedAt: nowStamp(),
-        dueDate: at(14, "18:00"),
+        createdAt: takenAt,
+        acceptedAt: takenAt,
+        // Version 1 is due within the deadline the brand set (fixed once the campaign was posted).
+        dueDate: addDays(takenAt, terms.deadlineDays),
         deliveries: [],
         events: [event("slot_accepted", "creator", `Took slot ${slot}`)],
         threadId: ensured[1],
@@ -1863,13 +1955,17 @@ export const actions = {
     return { ok: true, commissionId, slot };
   },
 
-  /** Business removes an accepted creator before filming; the slot reopens for others. */
+  /**
+   * Business removes an accepted creator before filming; the slot reopens for others (on a closed
+   * campaign its money is refunded with its fee instead).
+   */
   removeCampaignCreator(commissionId: string, reason = "") {
     update((s) => {
       const c = findCommission(s, commissionId);
       const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
       if (!request?.campaign || !occupiesSlot(c)) return s;
-      const reprice = repriceOnReopen(request, c.price);
+      const closed = request.status === "closed";
+      const entries = slotEndedEntries(request, c, "creator removed");
       let next: DemoState = {
         ...s,
         commissions: replaceById(s.commissions, commissionId, (x) => ({
@@ -1878,15 +1974,24 @@ export const actions = {
           cancelCode: "replaced",
           cancelReason: reason || undefined,
           autoApproveAt: undefined,
-          payment: { ...x.payment, status: "returned" },
-          events: [...x.events, event("creator_replaced", "business", "Removed from the campaign. The slot reopened for other creators.")],
+          payment: { ...x.payment, status: closed ? "refunded" : "returned" },
+          events: [
+            ...x.events,
+            event(
+              "creator_replaced",
+              "business",
+              closed
+                ? "Removed from the campaign. It's closed, so the slot's money was refunded."
+                : "Removed from the campaign. The slot reopened for other creators.",
+            ),
+          ],
         })),
         requests: replaceById(s.requests, request.id, (r) => ({
           ...r,
           campaign: {
             ...r.campaign!,
             excludedCreatorIds: [...new Set([...r.campaign!.excludedCreatorIds, c.creatorId])],
-            ledger: reprice ? [...r.campaign!.ledger, reprice] : r.campaign!.ledger,
+            ledger: [...r.campaign!.ledger, ...entries],
           },
         })),
       };
@@ -1902,14 +2007,18 @@ export const actions = {
     });
   },
 
-  /** Business rejects a review copy: the slot goes to another creator; the money stays held. */
+  /**
+   * Business rejects a review copy: the slot goes to another creator and the money stays held (on a
+   * closed campaign it is refunded with its fee instead).
+   */
   rejectCampaignVideo(commissionId: string, reason = "") {
     update((s) => {
       const c = findCommission(s, commissionId);
       const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
       if (!request?.campaign || !occupiesSlot(c)) return s;
       const latest = c.deliveries[c.deliveries.length - 1];
-      const reprice = repriceOnReopen(request, c.price);
+      const closed = request.status === "closed";
+      const entries = slotEndedEntries(request, c, "video not approved");
       let next: DemoState = {
         ...s,
         commissions: replaceById(s.commissions, commissionId, (x) => ({
@@ -1918,11 +2027,15 @@ export const actions = {
           cancelCode: "video_rejected",
           cancelReason: mask(reason) || undefined,
           autoApproveAt: undefined,
-          payment: { ...x.payment, status: "returned" },
+          payment: { ...x.payment, status: closed ? "refunded" : "returned" },
           deliveries: latest ? replaceById(x.deliveries, latest.id, (d) => ({ ...d, status: "rejected" })) : x.deliveries,
           events: [
             ...x.events,
-            event("video_rejected", "business", `Review copy rejected${reason ? `: ${reason}` : ""}. The slot reopened for another creator.`),
+            event(
+              "video_rejected",
+              "business",
+              `Review copy rejected${reason ? `: ${reason}` : ""}. ${closed ? "The campaign is closed, so the slot's money was refunded." : "The slot reopened for another creator."}`,
+            ),
           ],
         })),
         requests: replaceById(s.requests, request.id, (r) => ({
@@ -1930,7 +2043,7 @@ export const actions = {
           campaign: {
             ...r.campaign!,
             excludedCreatorIds: [...new Set([...r.campaign!.excludedCreatorIds, c.creatorId])],
-            ledger: reprice ? [...r.campaign!.ledger, reprice] : r.campaign!.ledger,
+            ledger: [...r.campaign!.ledger, ...entries],
           },
         })),
       };
@@ -1946,29 +2059,38 @@ export const actions = {
     });
   },
 
-  /** Creator posts the approved video on their own account; verification runs on the next tick. */
+  /**
+   * Creator posts the approved video on their own account; verification runs on the next tick. A
+   * restored post keeps its first verification (the 7 and 30 days don't restart).
+   */
   submitPost(commissionId: string, url: string) {
     update((s) => ({
       ...s,
       commissions: replaceById(s.commissions, commissionId, (x) => ({
         ...x,
-        post: { status: "checking", url: url.trim(), at: nowStamp() },
+        post: { status: "checking", url: url.trim(), at: nowStamp(), verifiedAt: x.post?.verifiedAt },
         events: [...x.events, event("posted", "creator", "Posted on their account. Checking the tag and disclosure…")],
       })),
     }));
   },
 
-  /** Demo control: pretend the creator took the post down (pending money stays locked). */
+  /**
+   * Demo control (no UI yet): pretend the creator took the post down. The pay stays held; if the
+   * post isn't back within 48 hours ("Skip 7 days"), the slot goes back to the campaign.
+   */
   markPostRemoved(commissionId: string) {
     update((s) => ({
       ...s,
       commissions: replaceById(s.commissions, commissionId, (x) =>
-        x.post ? { ...x, post: { ...x.post, status: "removed" } } : x,
+        x.post ? { ...x, post: { ...x.post, status: "removed", removedAt: nowStamp() } } : x,
       ),
     }));
   },
 
-  /** Change the follower tier once after publishing. Taken slots keep their price. */
+  /**
+   * Change the follower tier once after publishing. Taken slots keep their price; open slots are
+   * topped up or refunded, with their share of the fee. Returns the card difference, fee included.
+   */
   changeCampaignTier(requestId: string, tierId: FollowerTierId): { ok: boolean; diff: number } {
     load();
     const request = state.requests.find((r) => r.id === requestId);
@@ -1976,7 +2098,8 @@ export const actions = {
     if (!request || !terms || terms.tierChangedAt || terms.tierId === tierId) return { ok: false, diff: 0 };
     const tier = tierById[tierId];
     const open = openSlotNumbers(state, request).length;
-    const diff = (tier.pricePerVideo - terms.pricePerVideo) * open;
+    const subtotal = (tier.pricePerVideo - terms.pricePerVideo) * open;
+    const diff = Math.sign(subtotal) * withCampaignFee(Math.abs(subtotal)).total;
     update((s) => ({
       ...s,
       requests: replaceById(s.requests, requestId, (r) => ({
@@ -1989,17 +2112,14 @@ export const actions = {
           pricePerVideo: tier.pricePerVideo,
           tierChangedAt: nowStamp(),
           ledger:
-            diff === 0
+            subtotal === 0
               ? r.campaign!.ledger
               : [
                   ...r.campaign!.ledger,
-                  {
-                    id: uid("lg"),
-                    at: nowStamp(),
-                    kind: diff > 0 ? "top_up" : "refund",
-                    amount: Math.abs(diff),
-                    note: `Tier changed to ${tier.label}: ${open} open slot${open === 1 ? "" : "s"} × ${money(Math.abs(tier.pricePerVideo - terms.pricePerVideo))}`,
-                  },
+                  ledgerEntry(
+                    subtotal,
+                    `Tier changed to ${tier.label}: ${open} open slot${open === 1 ? "" : "s"} × ${money(Math.abs(tier.pricePerVideo - terms.pricePerVideo))}, with the fee`,
+                  ),
                 ],
         },
       })),
@@ -2007,7 +2127,11 @@ export const actions = {
     return { ok: true, diff };
   },
 
-  /** Stop new acceptances. Open slots are refunded; slots in progress carry on. */
+  /**
+   * Stop new acceptances. Open slots are refunded with their fee; slots in progress carry on. A
+   * campaign also closes 14 days after posting, but the demo clock is fixed, so here closing is
+   * always the business's own action.
+   */
   closeCampaign(requestId: string) {
     load();
     const request = state.requests.find((r) => r.id === requestId);
@@ -2024,7 +2148,7 @@ export const actions = {
           ledger: refund
             ? [
                 ...r.campaign!.ledger,
-                { id: uid("lg"), at: nowStamp(), kind: "refund", amount: refund, note: `Closed with ${open} open slot${open === 1 ? "" : "s"}: refunded` },
+                ledgerEntry(-refund, `Closed with ${open} open slot${open === 1 ? "" : "s"}: refunded with the fee`),
               ]
             : r.campaign!.ledger,
         },
@@ -2033,39 +2157,54 @@ export const actions = {
   },
 
   /**
-   * Demo control ("Jump to month end"): pending campaign earnings whose post is still live become
-   * withdrawable. Earnings whose post was taken down stay locked.
+   * Demo control ("Skip 7 days"). The demo clock is fixed (lib/clock.ts `NOW`), so this button
+   * stands in for a week passing on every pending campaign slot:
+   * - a verified post that is still live: its pay is released (7 days after verification);
+   * - a post that came down and wasn't restored within 48 hours: the slot ends, its money (with the
+   *   fee) goes back to the campaign and the slot reopens (refunded to the card if the campaign is
+   *   closed);
+   * - a post not made or not verified yet: still pending, it has no date until it's verified.
    */
-  closeMonth(): { released: number; locked: number } {
+  skipSevenDays(): { released: number; returned: number; waiting: number; mine: number } {
     load();
-    const key = monthKey(new Date(peekNow()).toISOString());
     let released = 0;
-    let locked = 0;
+    let returned = 0;
+    let waiting = 0;
+    /** Released to the signed-in account's own creator profile. */
+    let mine = 0;
     update((s) => {
-      let next: DemoState = { ...s, closedMonths: [...new Set([...s.closedMonths, key])] };
-      const due = s.commissions.filter((c) => c.payment.status === "pending");
+      let next: DemoState = s;
+      const me = activeIds(s);
+      const due = s.commissions.filter((c) => c.source === "campaign" && c.payment.status === "pending");
       for (const c of due) {
-        if (c.post?.status === "live") {
+        if (c.post?.status === "live" && c.post.verifiedAt) {
           released += c.price;
+          if (c.creatorId === me.creatorId) mine += c.price;
           next = {
             ...next,
             commissions: replaceById(next.commissions, c.id, (x) => ({
               ...x,
               payment: { ...x.payment, status: "released" },
-              events: [...x.events, event("payout_available", "system", `Month closed with the post still up: ${money(x.price)} is ready to withdraw`)],
+              events: [
+                ...x.events,
+                event("payout_available", "system", `${CAMPAIGN_RELEASE_DAYS} days since the post was verified, and it's still up: ${money(x.price)} released`),
+              ],
             })),
           };
           next = notifyParty(next, { creatorId: c.creatorId }, "payment", "", paths.wallet, {
-            key: `month:${key}:released`,
+            key: "campaign:released",
             text: (n) => (n === 1 ? `${money(c.price)} from "${c.title}" is ready to withdraw` : `${n} campaign payments are ready to withdraw`),
           });
+        } else if (c.post?.status === "removed") {
+          returned += c.price;
+          next = returnRemovedSlot(next, c.id);
         } else {
-          locked += c.price;
+          waiting += c.price;
         }
       }
       return next;
     });
-    return { released, locked };
+    return { released, returned, waiting, mine };
   },
 
   /* ----------------------------------------------------------- messages */
@@ -2419,22 +2558,28 @@ function simulatedUpload(c: Commission) {
   }
 }
 
-/** Simulated read-only check of the post: tag and paid-partnership disclosure found. */
+/**
+ * Simulated read-only check of the post: tag and paid-partnership disclosure found. The first
+ * verification sets the release date (7 days later); a restored post keeps it.
+ */
 function verifyPost(commissionId: string) {
   update((s) => {
     const c = s.commissions.find((x) => x.id === commissionId);
     if (!c?.post) return s;
     const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
     const handle = request?.campaign?.brandHandle ?? "the brand";
+    const verifiedAt = c.post.verifiedAt ?? nowStamp();
+    const releaseOn = c.withdrawableFrom ?? addDays(verifiedAt, CAMPAIGN_RELEASE_DAYS);
     let next: DemoState = {
       ...s,
       commissions: replaceById(s.commissions, commissionId, (x) => ({
         ...x,
-        post: { ...x.post!, status: "live", tagFound: true, disclosureFound: true },
+        post: { ...x.post!, status: "live", verifiedAt, removedAt: undefined, tagFound: true, disclosureFound: true },
+        withdrawableFrom: releaseOn,
         events: [...x.events, event("post_verified", "system", `Post verified: ${handle} tagged, paid partnership label on`)],
       })),
     };
-    next = notifyParty(next, { creatorId: c.creatorId }, "campaign", `Your post for "${c.title}" is verified. ${money(c.price)} unlocks at month end if it stays up.`, paths.commission(c.id));
+    next = notifyParty(next, { creatorId: c.creatorId }, "campaign", `Your post for "${c.title}" is verified. ${money(c.price)} is released on ${shortDate(releaseOn)} if it's still up.`, paths.commission(c.id));
     if (c.requestId) {
       next = notifyParty(next, { businessId: c.businessId }, "campaign", "", paths.order(c.requestId), {
         key: `campaign:${c.requestId}:posted`,

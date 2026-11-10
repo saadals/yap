@@ -2,9 +2,12 @@
  * Pure helpers for the campaign UI (wizard and order page). No React, no store writes.
  */
 
-import { compact, money } from "@/lib/format";
-import type { IneligibleReason } from "@/lib/campaigns";
+import { compact, money, plural } from "@/lib/format";
+import { type IneligibleReason, withCampaignFee } from "@/lib/campaigns";
 import {
+  CAMPAIGN_DEADLINE_DEFAULT,
+  CAMPAIGN_DEADLINE_OPTIONS,
+  CAMPAIGN_KEEP_LIVE_DAYS,
   CAMPAIGN_MAX_VIDEOS,
   CAMPAIGN_MIN_VIDEOS,
   campaignPlatformById,
@@ -46,6 +49,8 @@ export type CampaignForm = {
   avoid: string[];
   languages: LanguageId[];
   videos: number;
+  /** Days a creator has to upload version 1 after taking a slot. */
+  deadlineDays: number;
   tierId: FollowerTierId;
   paymentMethodId: string;
 };
@@ -146,8 +151,16 @@ export function firstInvalidStep(form: CampaignForm, hasProducts: boolean): numb
   return STEPS.findIndex((_, index) => Object.keys(validateStep(index, form, hasProducts)).length > 0);
 }
 
-export const totalFor = (form: Pick<CampaignForm, "videos" | "tierId">) =>
-  form.videos * tierById[form.tierId].pricePerVideo;
+/** The budget: videos × price (to creators), the service fee on it, and the total charged and held. */
+export const budgetFor = (form: Pick<CampaignForm, "videos" | "tierId">) =>
+  withCampaignFee(form.videos * tierById[form.tierId].pricePerVideo);
+
+/** What publishing charges and holds, fee included. */
+export const totalFor = (form: Pick<CampaignForm, "videos" | "tierId">) => budgetFor(form).total;
+
+/** A deadline from the allowed options (an earlier campaign's, or the default). */
+export const deadlineOrDefault = (days?: number) =>
+  CAMPAIGN_DEADLINE_OPTIONS.find((d) => d === days) ?? CAMPAIGN_DEADLINE_DEFAULT;
 
 /* -------------------------------------------------------------------------- */
 /* Copy                                                                        */
@@ -159,7 +172,11 @@ export const disclosureName = (platform: CampaignPlatformId) =>
 
 /** The posting rule creators agree to. */
 export const postingRule = (terms: Pick<CampaignTerms, "platform" | "brandHandle">) =>
-  `Post it on your ${campaignPlatformById[terms.platform].name}, tag ${terms.brandHandle}, turn on the ${disclosureName(terms.platform)}, and keep it up until month end.`;
+  `Post it on your ${campaignPlatformById[terms.platform].name}, tag ${terms.brandHandle}, turn on the ${disclosureName(terms.platform)}, and keep it up for ${CAMPAIGN_KEEP_LIVE_DAYS} days.`;
+
+/** "Upload within 5 days of taking a slot, set by Daftar" */
+export const deadlineLine = (terms: Pick<CampaignTerms, "deadlineDays">, brandName?: string) =>
+  `Upload within ${plural(terms.deadlineDays, "day")} of taking a slot${brandName ? `, set by ${brandName}` : ""}`;
 
 /** "10K–20K verified real followers on TikTok" */
 export const requirementLine = (terms: Pick<CampaignTerms, "tierId" | "platform">) =>

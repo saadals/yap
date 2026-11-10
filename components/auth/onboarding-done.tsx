@@ -46,7 +46,7 @@ export function OnboardingDone({
     <Page>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-12">
         <Block
-          tone="lavender"
+          tone="paper"
           pad="lg"
           className="y-enter flex flex-col items-start gap-6 lg:col-span-7"
         >

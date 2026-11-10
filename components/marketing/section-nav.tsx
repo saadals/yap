@@ -53,7 +53,7 @@ export function SectionNav({
       aria-label={label}
       className={`z-30 -mx-(--y-gutter) px-(--y-gutter) lg:pointer-events-none lg:sticky lg:top-[80px] lg:mx-0 lg:px-0 ${className}`}
     >
-      <ul className="y-scroll-x pointer-events-auto flex gap-2 py-1.5 lg:w-fit lg:rounded-full lg:bg-(--y-canvas) lg:p-1.5 lg:shadow-(--y-shadow-float)">
+      <ul className="y-scroll-x pointer-events-auto flex gap-2 py-1.5 lg:w-fit lg:rounded-full lg:border lg:border-(--y-glass-border) lg:bg-(--y-glass-strong) lg:p-1.5 lg:shadow-(--y-glass-shadow) lg:[-webkit-backdrop-filter:var(--y-glass-blur)] lg:[backdrop-filter:var(--y-glass-blur)]">
         {items.map((item) => (
           <li key={item.id} className="flex-none">
             <a

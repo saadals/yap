@@ -98,8 +98,8 @@ export function WorkPage() {
 function MoneyLine({ tab }: { tab: WorkTab }) {
   const s = useDemo();
   if (tab === "ordered") {
-    const spend = businessSpend(s);
-    const held = spend.held + spend.authorized;
+    // Charged and held only, the same figure as Billing's "Protected right now" (an offer's authorization isn't held yet).
+    const held = businessSpend(s).held;
     if (!held) return null;
     return (
       <p className="y-small y-fg-2 inline-flex items-center gap-2">

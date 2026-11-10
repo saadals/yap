@@ -4,17 +4,26 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Inter carries only 400, 500 and 600 (brand book), so the heavier weight utilities resolve to 600
+   instead of a synthesised bold. */
+@theme {
+  --font-weight-bold: 600;
+  --font-weight-extrabold: 600;
+  --font-weight-black: 600;
+}
+
 html,
 body {
   margin: 0;
-  background: #eeeeea;
+  background: #f7f7f9;
 }
 html.dark,
 html.dark body {
-  background: #0a0a0b;
+  background: #0b0b0c;
 }
 
-/* Yapp design system (colour + styling from the "Stack" language).
+/* Yapp design system: the Yapping brand package (round 3) on the structure of the "Stack" system.
+   About 70% light, 20% dark, 10% green; green is a signal, never a wallpaper.
    Every custom rule is scoped under .yapp. Tokens are unlayered; component classes live in
    @layer components so Tailwind utilities can override them. */
 
@@ -23,25 +32,39 @@ html.dark body {
 /* -------------------------------------------------------------------------- */
 
 .yapp {
-  /* structure */
-  --y-canvas: #eeeeea;
+  /* Surfaces. --y-paper stays opaque (the package's 90% let content show through sheets, sticky
+     bars and sticky table columns). --y-mist is translucent: chips, tracks, quiet fills. */
+  --y-canvas: #f7f7f9;
   --y-paper: #ffffff;
-  --y-mist: #e4e4df;
-  --y-night: #0e0e10;
-  --y-night-fg: #f4f4f0;
-  --y-ink: #0e0e10;
-  --y-ink-2: #46464c;
-  --y-ink-3: #616167;
-  --y-line: rgb(14 14 16 / 0.12);
-  --y-line-strong: rgb(14 14 16 / 0.22);
+  --y-mist: rgb(29 29 31 / 0.05);
+  --y-night: #0b0b0c;
+  --y-night-fg: #f5f5f7;
+  --y-footer: #141416;
+  --y-field: #ffffff;
 
-  /* pastel trio + neon (always dark text) */
+  /* Text. --y-ink-2 is the secondary text colour (4.7:1 on the canvas). --y-ink-3 is 2.6:1:
+     decorative marks only (chevrons, axis ticks, dividers), never text people must read.
+     --y-ink-2-mist keeps secondary text at 4.5:1 on a mist block over the canvas. */
+  --y-ink: #1d1d1f;
+  --y-ink-2: #6e6e73;
+  --y-ink-2-mist: #5f5f64;
+  --y-ink-3: #9a9aa0;
+  --y-line: rgb(29 29 31 / 0.06);
+  --y-line-strong: rgb(29 29 31 / 0.12);
+
+  /* Brand green: fills and the one primary action. Text on green is always --y-on-color; green
+     text on light surfaces is --y-green-text; chart lines --y-green-line. */
+  --y-neon: #34f06c;
+  --y-neon-press: #22d95a;
+  --y-on-color: #0b0b0c;
+  --y-green-text: #0a7a33;
+  --y-green-line: #1fc75a;
+  --y-green-tint: #d3fbe0;
+
+  /* Illustration palette: characters, avatars, reel covers. Never a page, card or button fill. */
   --y-lavender: #cfc8fa;
   --y-butter: #f7e39b;
   --y-sky: #bfe3f5;
-  --y-neon: #34f06c;
-  --y-neon-press: #22d95a;
-  --y-on-color: #0e0e10;
 
   /* illustration tints (characters, avatars; never behind text) */
   --y-c-violet: #8e7cf6;
@@ -52,27 +75,55 @@ html.dark body {
   --y-c-blush: #f6a8d8;
   --y-face: #0e0e10;
 
-  /* semantic */
-  --y-success: #137a3f;
-  --y-success-soft: #d8f3e1;
-  --y-warning: #965400;
-  --y-warning-soft: #fbeac6;
-  --y-danger: #bf2e28;
-  --y-danger-soft: #fadbd7;
+  /* Status. Text colours reach 4.5:1 on their own -soft fill, on white and on the canvas, so
+     small chip text stays legible: the package's #16a34a and #e5483b (3.3:1 and 3.9:1) become
+     the darker greens and reds below, and amber goes one step darker. The brand red stays for the
+     notification dot and urgent marks only (--y-red). --y-active-soft fills "moving" chips. */
+  --y-success: #0a7a33;
+  --y-success-soft: rgb(52 240 108 / 0.14);
+  --y-active-fg: #0b0b0c;
+  --y-active-soft: rgb(52 240 108 / 0.2);
+  --y-warning: #a14a08;
+  --y-warning-soft: rgb(245 158 11 / 0.14);
+  --y-danger: #c22a1e;
+  --y-danger-soft: rgb(229 72 59 / 0.1);
+  --y-red: #e5483b;
   --y-info: #1f55c9;
-  --y-info-soft: #dce6fb;
+  --y-info-soft: rgb(31 85 201 / 0.1);
   --y-whatsapp: #128c4a;
 
-  /* shape */
+  /* Shape: soft corners 12 / 18 / 28, sheets 30, fields 14, every button and chip a pill. */
   --y-r-block: 28px;
-  --y-r-tile: 20px;
+  --y-r-sheet: 30px;
+  --y-r-tile: 18px;
+  --y-r-field: 14px;
   --y-r-sm: 12px;
   --y-r-pill: 999px;
 
-  /* elevation (floating UI only) */
-  --y-shadow-float: 0 1px 2px rgb(14 14 16 / 0.08), 0 12px 32px -8px rgb(14 14 16 / 0.28);
-  --y-shadow-sheet: 0 -2px 6px rgb(14 14 16 / 0.06), 0 24px 64px -12px rgb(14 14 16 / 0.36);
-  --y-scrim: rgb(14 14 16 / 0.42);
+  /* Elevation. White cards on a near-white canvas: the hairline ring and the soft drop shadow are
+     what define a card. --y-shadow-float is for menus and fixed bars that sit over content. */
+  --y-shadow-card:
+    0 0 0 1px rgb(29 29 31 / 0.05), inset 0 1px 0 #ffffff, 0 24px 48px -22px rgb(20 20 40 / 0.14),
+    0 2px 6px rgb(20 20 40 / 0.03);
+  --y-shadow-card-hover:
+    0 0 0 1px rgb(29 29 31 / 0.1), inset 0 1px 0 #ffffff, 0 28px 52px -22px rgb(20 20 40 / 0.2),
+    0 2px 6px rgb(20 20 40 / 0.04);
+  --y-shadow-float:
+    0 0 0 1px rgb(29 29 31 / 0.06), inset 0 1px 0 #ffffff, 0 24px 48px -20px rgb(20 20 40 / 0.22),
+    0 4px 12px rgb(20 20 40 / 0.06);
+  --y-shadow-sheet: 0 0 0 1px rgb(29 29 31 / 0.04), 0 24px 64px -12px rgb(11 11 12 / 0.3);
+  --y-shadow-toast: 0 12px 32px -8px rgb(11 11 12 / 0.45);
+  --y-shadow-glow: 0 10px 28px rgb(52 240 108 / 0.4);
+  --y-scrim: rgb(11 11 12 / 0.42);
+  --y-scrim-blur: blur(4px);
+
+  /* Buttons. --y-btn-dark and --y-btn-light are fixed; --y-btn-primary is the primary dark button
+     for the theme (it turns light in dark mode). Blocks set --b-btn for their own surface. */
+  --y-btn-dark: linear-gradient(180deg, #2a2a2c, #0b0b0c);
+  --y-btn-light: linear-gradient(180deg, #ffffff, #e8e8eb);
+  --y-btn-primary: var(--y-btn-dark);
+  --y-btn-primary-fg: #ffffff;
+  --y-toast: #1d1d1f;
 
   /* motion */
   --y-dur-1: 140ms;
@@ -81,13 +132,10 @@ html.dark body {
   --y-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
   --y-ease-pop: cubic-bezier(0.34, 1.4, 0.64, 1);
 
-  /* type stacks: each Arabic face is loaded with the Arabic subset only (unicode-range),
-     so Latin glyphs fall through to Funnel and Arabic glyphs to Zain / Rubik. */
+  /* Inter, and nothing else. It has no Arabic glyphs, so Arabic snippets fall through to the
+     system's Arabic face. */
   --y-stack-text:
-    var(--y-font-text), var(--y-font-ar-text), ui-sans-serif, system-ui, sans-serif;
-  --y-stack-display:
-    var(--y-font-display), var(--y-font-ar-display), var(--y-font-text), ui-sans-serif,
-    system-ui, sans-serif;
+    var(--y-font-text), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* reels feed: the light canvas behind order and campaign reels, picked by id. These pages are
      media, so they stay light in dark mode and always use the fixed ink set on .y-reel. */
@@ -120,14 +168,15 @@ html.dark body {
      --y-canvas and solid blocks. --y-soft-rgb is for fades that must melt into --y-soft. */
   --y-soft: #f7f7f9;
   --y-soft-rgb: 247 247 249;
-  --y-glass: rgb(255 255 255 / 0.55);
+  --y-glass: rgb(255 255 255 / 0.6);
   --y-glass-clear: rgb(255 255 255 / 0.3);
-  --y-glass-strong: rgb(255 255 255 / 0.75);
+  --y-glass-strong: rgb(255 255 255 / 0.78);
   --y-glass-border: rgb(255 255 255 / 0.7);
   --y-glass-border-clear: rgb(255 255 255 / 0.45);
-  --y-glass-blur: blur(20px) saturate(180%);
-  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.08), inset 0 1px 0 rgb(255 255 255 / 0.85);
-  --y-glossy-black: linear-gradient(180deg, #2a2a2c, #0b0b0c);
+  --y-glass-blur: blur(24px) saturate(180%);
+  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.07), inset 0 1px 0 rgb(255 255 255 / 0.9);
+  /* Fixed dark gradient (the tab bar's active pill on video stays dark in both themes). */
+  --y-glossy-black: var(--y-btn-dark);
   --y-detail-card: rgb(255 255 255 / 0.82);
   --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.8);
 
@@ -143,17 +192,27 @@ html.dark body {
   text-rendering: optimizeLegibility;
 }
 
+/* Dark mode: the package has no dark values, so this is a matching neutral set. Cards are a step
+   above the canvas, text keeps 4.5:1 (secondary #a1a1a6 is 7:1 on a card), ink-3 stays decorative,
+   status colours lighten to read on their tinted fills. Green and the brand red don't change. */
 html.dark .yapp {
-  --y-canvas: #0a0a0b;
-  --y-paper: #18181b;
-  --y-mist: #26262a;
-  --y-night: #26262b;
-  --y-night-fg: #f4f4f0;
-  --y-ink: #f2f2ee;
-  --y-ink-2: #b9b9b4;
-  --y-ink-3: #8f8f93;
-  --y-line: rgb(255 255 255 / 0.1);
-  --y-line-strong: rgb(255 255 255 / 0.2);
+  --y-canvas: #0b0b0c;
+  --y-paper: #161618;
+  --y-mist: rgb(255 255 255 / 0.07);
+  --y-night: #1c1c1f;
+  --y-night-fg: #f5f5f7;
+  --y-footer: #141416;
+  --y-field: #1c1c1f;
+  --y-ink: #f5f5f7;
+  --y-ink-2: #a1a1a6;
+  --y-ink-2-mist: #a1a1a6;
+  --y-ink-3: #6e6e73;
+  --y-line: rgb(255 255 255 / 0.08);
+  --y-line-strong: rgb(255 255 255 / 0.16);
+
+  --y-green-text: #4ade80;
+  --y-green-line: #34f06c;
+  --y-green-tint: rgb(52 240 108 / 0.16);
 
   --y-lavender: #b8aef2;
   --y-butter: #e6d184;
@@ -162,29 +221,42 @@ html.dark .yapp {
   --y-c-violet: #9c8cf7;
   --y-c-sea: #5cbfeb;
 
-  --y-success: #5bd98b;
-  --y-success-soft: rgb(91 217 139 / 0.14);
-  --y-warning: #f0b458;
-  --y-warning-soft: rgb(240 180 88 / 0.14);
+  --y-success: #4ade80;
+  --y-success-soft: rgb(52 240 108 / 0.14);
+  --y-active-fg: #f5f5f7;
+  --y-active-soft: rgb(52 240 108 / 0.2);
+  --y-warning: #f5b04c;
+  --y-warning-soft: rgb(245 158 11 / 0.16);
   --y-danger: #ff8077;
-  --y-danger-soft: rgb(255 128 119 / 0.14);
+  --y-danger-soft: rgb(229 72 59 / 0.16);
   --y-info: #8db1ff;
   --y-info-soft: rgb(141 177 255 / 0.14);
   --y-whatsapp: #1fae5e;
 
-  --y-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.08), 0 16px 40px -8px rgb(0 0 0 / 0.7);
+  --y-shadow-card:
+    inset 0 0 0 1px rgb(255 255 255 / 0.06), inset 0 1px 0 rgb(255 255 255 / 0.04),
+    0 24px 48px -22px rgb(0 0 0 / 0.7), 0 2px 6px rgb(0 0 0 / 0.3);
+  --y-shadow-card-hover:
+    inset 0 0 0 1px rgb(255 255 255 / 0.14), inset 0 1px 0 rgb(255 255 255 / 0.05),
+    0 28px 52px -22px rgb(0 0 0 / 0.8), 0 2px 6px rgb(0 0 0 / 0.35);
+  --y-shadow-float: 0 0 0 1px rgb(255 255 255 / 0.1), 0 16px 40px -8px rgb(0 0 0 / 0.7);
   --y-shadow-sheet: 0 0 0 1px rgb(255 255 255 / 0.08), 0 24px 64px -12px rgb(0 0 0 / 0.8);
-  --y-scrim: rgb(0 0 0 / 0.62);
+  --y-shadow-toast: 0 0 0 1px rgb(255 255 255 / 0.1), 0 12px 32px -8px rgb(0 0 0 / 0.7);
+  --y-scrim: rgb(0 0 0 / 0.6);
 
-  --y-soft: #0a0a0b;
-  --y-soft-rgb: 10 10 11;
-  --y-glass: rgb(38 38 42 / 0.55);
-  --y-glass-clear: rgb(38 38 42 / 0.38);
-  --y-glass-strong: rgb(24 24 27 / 0.78);
-  --y-glass-border: rgb(255 255 255 / 0.14);
-  --y-glass-border-clear: rgb(255 255 255 / 0.14);
-  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.1);
-  --y-detail-card: rgb(24 24 27 / 0.82);
+  --y-btn-primary: var(--y-btn-light);
+  --y-btn-primary-fg: #0b0b0c;
+  --y-toast: #2c2c2e;
+
+  --y-soft: #0b0b0c;
+  --y-soft-rgb: 11 11 12;
+  --y-glass: rgb(28 28 30 / 0.6);
+  --y-glass-clear: rgb(28 28 30 / 0.38);
+  --y-glass-strong: rgb(22 22 24 / 0.8);
+  --y-glass-border: rgb(255 255 255 / 0.1);
+  --y-glass-border-clear: rgb(255 255 255 / 0.12);
+  --y-glass-shadow: 0 8px 32px rgb(0 0 0 / 0.5), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  --y-detail-card: rgb(22 22 24 / 0.82);
   --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.06);
 
   color-scheme: dark;
@@ -192,18 +264,14 @@ html.dark .yapp {
 
 @media (min-width: 768px) {
   .yapp {
-    --y-r-block: 32px;
     --y-gutter: 24px;
   }
 }
 
-/* Fonts. Arabic glyphs fall through to Zain / Rubik via each face's unicode-range. */
+/* Fonts: Inter everywhere, headings included. */
 .yapp,
 .yapp :is(input, textarea, select, button) {
   font-family: var(--y-stack-text);
-}
-.yapp .y-display {
-  font-family: var(--y-stack-display);
 }
 /* Arabic content snippets inside the English UI (hooks, captions, names). */
 .yapp :lang(ar) {
@@ -222,11 +290,15 @@ html.dark .yapp {
   .yapp {
     min-height: 100dvh;
     font-size: 16px;
-    line-height: 1.5;
+    line-height: 1.55;
   }
   .yapp ::selection {
     background: var(--y-neon);
     color: var(--y-on-color);
+  }
+  /* The browser makes these bold (700); the brand stops at 600. */
+  .yapp :is(th, b, strong) {
+    font-weight: 600;
   }
 
   /* Focus: the ring takes the foreground colour of whatever block it sits on. */
@@ -239,34 +311,41 @@ html.dark .yapp {
   }
 
   /* ---------------------------------------------------------------- type */
+  /* Inter 400 / 500 / 600 only. Headings 600 with tight tracking. Scale: H1 52 (34 on phones),
+     H2 34 (26), H3 18, eyebrow 12 caps, body 15–16. A headline with a .y-strong part sets the rest
+     at 400 so the strong words still stand out. Big numbers: see the unlayered rule at the end. */
   .yapp .y-display {
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .yapp .y-display:has(.y-strong) {
     font-weight: 400;
-    letter-spacing: -0.025em;
-    font-feature-settings: "ss01" 0;
   }
   .yapp .y-hero {
-    font-size: clamp(3.25rem, 2.1rem + 5.2vw, 6.5rem);
-    line-height: 0.98;
-    letter-spacing: -0.035em;
+    font-size: clamp(2.375rem, 1.6rem + 3.3vw, 4rem);
+    line-height: 1.02;
+    letter-spacing: -0.04em;
   }
   .yapp .y-t-display {
-    font-size: clamp(2.5rem, 1.9rem + 2.4vw, 3.75rem);
-    line-height: 1.02;
+    font-size: clamp(2.125rem, 1.55rem + 2.4vw, 3.25rem);
+    line-height: 1.04;
+    letter-spacing: -0.038em;
   }
   .yapp .y-title {
-    font-size: clamp(1.5rem, 1.35rem + 0.5vw, 1.75rem);
-    line-height: 1.12;
+    font-size: clamp(1.625rem, 1.38rem + 1vw, 2.125rem);
+    line-height: 1.1;
     font-weight: 600;
-    letter-spacing: -0.015em;
+    letter-spacing: -0.032em;
   }
   .yapp .y-head {
     font-size: 1.125rem;
     line-height: 1.3;
     font-weight: 600;
+    letter-spacing: -0.017em;
   }
   .yapp .y-body {
     font-size: 1rem;
-    line-height: 1.5;
+    line-height: 1.55;
   }
   .yapp .y-lead {
     font-size: 1.0625rem;
@@ -281,11 +360,20 @@ html.dark .yapp {
     line-height: 1.35;
     font-weight: 500;
   }
+  /* Small caps label above a title or a group (12 / 500, +0.08em, secondary colour). */
+  .yapp .y-eyebrow {
+    font-size: 0.75rem;
+    line-height: 1.3;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
   .yapp .y-num {
     font-variant-numeric: tabular-nums;
   }
   .yapp .y-strong {
-    font-weight: 700;
+    font-weight: 600;
   }
 
   /* Arabic: bigger, taller, never tracked. Zain runs small, so display sizes get +4px. */
@@ -323,7 +411,11 @@ html.dark .yapp {
   }
   .yapp[dir="rtl"] .y-display .y-strong,
   .yapp[dir="rtl"] .y-display.y-strong {
-    font-weight: 800;
+    font-weight: 600;
+  }
+  .yapp[dir="rtl"] .y-eyebrow {
+    letter-spacing: 0;
+    text-transform: none;
   }
 
   /* --------------------------------------------------------------- blocks */
@@ -333,24 +425,38 @@ html.dark .yapp {
     color: var(--b-fg);
     border-radius: var(--y-r-block);
   }
+  /* White cards. The pastel tones (lavender, butter, sky) render as plain white cards too: the
+     brand allows no extra hues behind content. The tokens stay for characters and covers. */
+  .yapp .y-block:where([data-tone="paper"], [data-tone="lavender"], [data-tone="butter"], [data-tone="sky"]) {
+    box-shadow: var(--y-shadow-card);
+  }
   .yapp [data-tone] {
     --b-fg: var(--y-on-color);
-    --b-fg-2: rgb(14 14 16 / 0.72);
-    --b-fg-3: rgb(14 14 16 / 0.64);
-    --b-line: rgb(14 14 16 / 0.14);
+    --b-fg-2: rgb(11 11 12 / 0.72);
+    --b-fg-3: rgb(11 11 12 / 0.5);
+    --b-line: rgb(11 11 12 / 0.14);
+    --b-line-strong: rgb(11 11 12 / 0.22);
     --b-chip: rgb(255 255 255 / 0.55);
     --b-chip-fg: var(--y-on-color);
+    --b-btn: var(--y-btn-dark);
+    --b-btn-fg: #ffffff;
   }
   .yapp [data-tone="paper"],
   .yapp [data-tone="canvas"],
-  .yapp [data-tone="mist"] {
+  .yapp [data-tone="mist"],
+  .yapp [data-tone="lavender"],
+  .yapp [data-tone="butter"],
+  .yapp [data-tone="sky"] {
     --b-bg: var(--y-paper);
     --b-fg: var(--y-ink);
     --b-fg-2: var(--y-ink-2);
     --b-fg-3: var(--y-ink-3);
     --b-line: var(--y-line);
+    --b-line-strong: var(--y-line-strong);
     --b-chip: var(--y-mist);
     --b-chip-fg: var(--y-ink);
+    --b-btn: var(--y-btn-primary);
+    --b-btn-fg: var(--y-btn-primary-fg);
   }
   .yapp [data-tone="canvas"] {
     --b-bg: var(--y-canvas);
@@ -358,29 +464,24 @@ html.dark .yapp {
   }
   .yapp [data-tone="mist"] {
     --b-bg: var(--y-mist);
+    --b-fg-2: var(--y-ink-2-mist);
     --b-chip: var(--y-paper);
   }
   .yapp [data-tone="night"] {
     --b-bg: var(--y-night);
     --b-fg: var(--y-night-fg);
-    --b-fg-2: rgb(244 244 240 / 0.72);
-    --b-fg-3: rgb(244 244 240 / 0.6);
+    --b-fg-2: rgb(245 245 247 / 0.72);
+    --b-fg-3: rgb(245 245 247 / 0.45);
     --b-line: rgb(255 255 255 / 0.14);
+    --b-line-strong: rgb(255 255 255 / 0.26);
     --b-chip: rgb(255 255 255 / 0.1);
     --b-chip-fg: var(--y-night-fg);
-  }
-  .yapp [data-tone="lavender"] {
-    --b-bg: var(--y-lavender);
-  }
-  .yapp [data-tone="butter"] {
-    --b-bg: var(--y-butter);
-  }
-  .yapp [data-tone="sky"] {
-    --b-bg: var(--y-sky);
+    --b-btn: var(--y-btn-light);
+    --b-btn-fg: #0b0b0c;
   }
   .yapp [data-tone="neon"] {
     --b-bg: var(--y-neon);
-    --b-chip: rgb(14 14 16 / 0.08);
+    --b-chip: rgb(11 11 12 / 0.08);
   }
   html.dark .yapp [data-tone="night"] {
     box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.06);
@@ -407,7 +508,13 @@ html.dark .yapp {
   .yapp .y-fg-2 {
     color: var(--b-fg-2, var(--y-ink-2));
   }
+  /* Tertiary used to be a third, lighter text colour. The brand's tertiary (#9a9aa0, 2.6:1) can't
+     carry readable text, so text with .y-fg-3 takes the secondary colour; only icons (chevrons,
+     spinners: decorative marks) keep the tertiary tone. */
   .yapp .y-fg-3 {
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp svg.y-fg-3 {
     color: var(--b-fg-3, var(--y-ink-3));
   }
   .yapp .y-hairline {
@@ -468,34 +575,54 @@ html.dark .yapp {
   .yapp .y-pill[data-arrow="true"][data-size="sm"] {
     padding-inline-end: 4px;
   }
+  /* Primary green: solid neon, black text, never white. */
   .yapp .y-pill[data-variant="neon"] {
     background: var(--y-neon);
     color: var(--y-on-color);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35);
   }
   .yapp .y-pill[data-variant="neon"]:hover:not(:disabled) {
     background: var(--y-neon-press);
   }
+  /* Primary dark: a #2a2a2c → #0b0b0c gradient with white text (light on dark surfaces and in dark
+     mode). On devices with hover it turns green with black text, lifts 1px and glows. */
   .yapp .y-pill[data-variant="contrast"] {
-    background: var(--b-fg, var(--y-ink));
-    color: var(--b-bg, var(--y-paper));
+    background: var(--b-btn, var(--y-btn-primary));
+    color: var(--b-btn-fg, var(--y-btn-primary-fg));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14);
   }
-  .yapp .y-pill[data-variant="contrast"]:hover:not(:disabled) {
-    opacity: 0.86;
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .y-pill[data-variant="contrast"]:hover:not(:disabled, [aria-disabled="true"]) {
+      background: var(--y-neon);
+      color: var(--y-on-color);
+      transform: translateY(-1px);
+      box-shadow: var(--y-shadow-glow);
+    }
+    .yapp .y-pill[data-variant="contrast"]:hover:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .yapp .y-pill[data-variant="contrast"]:hover:not(:disabled) .y-arrow {
+      background: var(--y-on-color);
+      color: var(--y-neon);
+    }
   }
+  /* Secondary: the ghost pills. Soft is a quiet fill, outline a white pill with a hairline. */
   .yapp .y-pill[data-variant="soft"] {
     background: var(--b-chip, var(--y-mist));
     color: var(--b-chip-fg, var(--y-ink));
   }
   .yapp .y-pill[data-variant="soft"]:hover:not(:disabled) {
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
   }
   .yapp .y-pill[data-variant="outline"] {
-    background: transparent;
+    background: var(--b-bg, var(--y-paper));
     color: var(--b-fg, var(--y-ink));
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    box-shadow:
+      inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong)),
+      0 2px 6px rgb(20 20 40 / 0.03);
   }
   .yapp .y-pill[data-variant="outline"]:hover:not(:disabled) {
-    box-shadow: inset 0 0 0 1.5px var(--b-fg, var(--y-ink));
+    box-shadow: inset 0 0 0 1px var(--b-fg, var(--y-ink));
   }
   .yapp .y-pill[data-variant="ghost"] {
     background: transparent;
@@ -532,8 +659,8 @@ html.dark .yapp {
     height: 32px;
   }
   .yapp .y-pill[data-variant="contrast"] .y-arrow {
-    background: var(--b-bg, var(--y-paper));
-    color: var(--b-fg, var(--y-ink));
+    background: color-mix(in srgb, currentColor 16%, transparent);
+    color: inherit;
   }
   .yapp .y-pill[data-variant="soft"] .y-arrow,
   .yapp .y-pill[data-variant="outline"] .y-arrow {
@@ -580,19 +707,19 @@ html.dark .yapp {
     color: var(--b-chip-fg, var(--y-ink));
   }
   .yapp .y-round[data-tone-btn="soft"]:hover {
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
   }
   .yapp .y-round[data-tone-btn="contrast"] {
-    background: var(--b-fg, var(--y-ink));
-    color: var(--b-bg, var(--y-paper));
+    background: var(--b-btn, var(--y-btn-primary));
+    color: var(--b-btn-fg, var(--y-btn-primary-fg));
   }
   .yapp .y-round[data-tone-btn="outline"] {
-    background: transparent;
+    background: var(--b-bg, var(--y-paper));
     color: var(--b-fg, var(--y-ink));
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
   }
   .yapp .y-round[data-tone-btn="outline"]:hover {
-    box-shadow: inset 0 0 0 1.5px var(--b-fg, var(--y-ink));
+    box-shadow: inset 0 0 0 1px var(--b-fg, var(--y-ink));
   }
   .yapp .y-round[data-tone-btn="neon"] {
     background: var(--y-neon);
@@ -604,19 +731,21 @@ html.dark .yapp {
   }
 
   /* ------------------------------------------------------------ segmented */
+  /* A quiet track with the selected option as a dark pill (selection is black and white, never
+     green). */
   .yapp .y-seg {
     display: inline-flex;
     padding: 3px;
     gap: 2px;
     border-radius: 999px;
-    box-shadow: inset 0 0 0 1.5px var(--b-fg, var(--y-ink));
+    background: var(--b-chip, var(--y-mist));
   }
   .yapp .y-seg button {
     min-height: 34px;
     padding-inline: 14px;
     border-radius: 999px;
     font-size: 0.8125rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--b-fg, var(--y-ink));
     transition:
       background-color var(--y-dur-2) var(--y-ease),
@@ -633,9 +762,11 @@ html.dark .yapp {
   .yapp .y-seg button[aria-checked="true"] {
     background: var(--b-fg, var(--y-ink));
     color: var(--b-bg, var(--y-paper));
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgb(11 11 12 / 0.16);
   }
   .yapp .y-seg button[aria-checked="false"]:hover {
-    background: var(--b-chip, var(--y-mist));
+    background: var(--b-line, var(--y-line));
   }
 
   /* ---------------------------------------------------------------- chips */
@@ -665,7 +796,8 @@ html.dark .yapp {
     border-radius: 999px;
     background: var(--b-chip, var(--y-paper));
     color: var(--b-chip-fg, var(--y-ink));
-    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--b-line, var(--y-line));
+    font-weight: 500;
     font-size: 0.875rem;
     white-space: nowrap;
     cursor: pointer;
@@ -679,7 +811,7 @@ html.dark .yapp {
     font-size: 0.9375rem;
   }
   .yapp .y-filter:hover {
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
   }
   .yapp .y-filter:active {
     transform: scale(0.97);
@@ -689,6 +821,8 @@ html.dark .yapp {
   .yapp .y-filter[aria-current="true"] {
     background: var(--b-fg, var(--y-ink));
     color: var(--b-bg, var(--y-paper));
+    box-shadow: none;
+    font-weight: 600;
   }
   .yapp .y-filter .y-count {
     display: inline-grid;
@@ -710,15 +844,17 @@ html.dark .yapp {
   }
 
   /* ---------------------------------------------------------------- badge */
+  /* Status chips, 12.5 / 500 pills, five looks: waiting = neutral, moving = active (black on a
+     green tint), done = success, needs attention = warning, negative = danger. Always icon + label. */
   .yapp .y-badge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    min-height: 28px;
+    gap: 5px;
+    min-height: 26px;
     padding-inline: 10px;
     border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 600;
+    font-size: 0.78125rem;
+    font-weight: 500;
     line-height: 1.2;
     white-space: nowrap;
   }
@@ -728,6 +864,10 @@ html.dark .yapp {
   .yapp .y-badge[data-tone-badge="neutral"] {
     background: var(--b-chip, var(--y-mist));
     color: var(--b-chip-fg, var(--y-ink));
+  }
+  .yapp .y-badge[data-tone-badge="active"] {
+    background: var(--y-active-soft);
+    color: var(--y-active-fg);
   }
   .yapp .y-badge[data-tone-badge="success"] {
     background: var(--y-success-soft);
@@ -753,10 +893,11 @@ html.dark .yapp {
     background: var(--y-neon);
     color: var(--y-on-color);
   }
-  /* semantic badges sitting on colour blocks: use solid white so semantic text stays legible */
+  /* Semantic badges on a green block: solid white (dark in dark mode) so the text stays legible. */
   .yapp
-    :is([data-tone="lavender"], [data-tone="butter"], [data-tone="sky"], [data-tone="neon"])
+    [data-tone="neon"]
     .y-badge:is(
+      [data-tone-badge="active"],
       [data-tone-badge="success"],
       [data-tone-badge="warning"],
       [data-tone-badge="danger"],
@@ -766,14 +907,15 @@ html.dark .yapp {
   }
   html.dark
     .yapp
-    :is([data-tone="lavender"], [data-tone="butter"], [data-tone="sky"], [data-tone="neon"])
+    [data-tone="neon"]
     .y-badge:is(
+      [data-tone-badge="active"],
       [data-tone-badge="success"],
       [data-tone-badge="warning"],
       [data-tone-badge="danger"],
       [data-tone-badge="info"]
     ) {
-    background: #0e0e10;
+    background: #0b0b0c;
   }
 
   /* ---------------------------------------------------------------- forms */
@@ -789,22 +931,24 @@ html.dark .yapp {
   .yapp[dir="rtl"] .y-label {
     font-size: 0.9375rem;
   }
+  /* Inputs: 48px, radius 14, white fill, hairline border; focus is a dark green line with a soft
+     green halo (the line carries the 3:1, the halo is decoration); errors use the danger colour. */
   .yapp .y-input {
     width: 100%;
-    min-height: 52px;
-    padding-inline: 20px;
-    border-radius: 999px;
-    background: var(--b-chip, var(--y-mist));
-    color: var(--b-chip-fg, var(--y-ink));
-    border: 1.5px solid transparent;
+    min-height: 48px;
+    padding-inline: 16px;
+    border-radius: var(--y-r-field);
+    background-color: var(--y-field);
+    color: var(--y-ink);
+    border: 1px solid var(--y-line-strong);
     font-size: 1rem;
     transition:
       border-color var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease),
       background-color var(--y-dur-1) var(--y-ease);
   }
   .yapp textarea.y-input {
-    border-radius: var(--y-r-tile);
-    padding-block: 14px;
+    padding-block: 12px;
     line-height: 1.55;
     resize: vertical;
   }
@@ -818,41 +962,45 @@ html.dark .yapp {
       linear-gradient(45deg, transparent 50%, currentColor 50%),
       linear-gradient(135deg, currentColor 50%, transparent 50%);
     background-position:
-      calc(100% - 24px) 50%,
-      calc(100% - 19px) 50%;
+      calc(100% - 22px) 50%,
+      calc(100% - 17px) 50%;
     background-size: 5px 5px;
     background-repeat: no-repeat;
   }
   .yapp[dir="rtl"] select.y-input {
     background-position:
-      19px 50%,
-      24px 50%;
+      17px 50%,
+      22px 50%;
   }
   .yapp .y-input::placeholder {
-    color: var(--b-fg-3, var(--y-ink-3));
+    color: var(--y-ink-2);
     opacity: 1;
   }
-  /* Inputs sitting on a tile (whose fill equals the chip colour) use the block background. */
-  .yapp .y-tile .y-input {
-    background: var(--b-bg, var(--y-paper));
-  }
   .yapp .y-input:hover {
-    border-color: var(--b-line, var(--y-line-strong));
+    border-color: color-mix(in srgb, var(--y-ink) 24%, transparent);
   }
   .yapp .y-input:focus-visible {
     outline: none;
-    border-color: var(--b-fg, var(--y-ink));
+    border-color: var(--y-green-text);
+    box-shadow:
+      0 0 0 1px var(--y-green-text),
+      0 0 0 4px rgb(52 240 108 / 0.25);
   }
   .yapp .y-input[aria-invalid="true"] {
     border-color: var(--y-danger);
+  }
+  .yapp .y-input[aria-invalid="true"]:focus-visible {
+    box-shadow:
+      0 0 0 1px var(--y-danger),
+      0 0 0 4px var(--y-danger-soft);
   }
   .yapp .y-check {
     appearance: none;
     flex: none;
     width: 22px;
     height: 22px;
-    border-radius: 8px;
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    border-radius: 7px;
+    box-shadow: inset 0 0 0 1.5px var(--b-line-strong, var(--y-line-strong));
     background: var(--b-bg, var(--y-paper));
     display: inline-grid;
     place-items: center;
@@ -922,20 +1070,25 @@ html.dark .yapp {
   }
 
   /* ---------------------------------------------------------- navigation */
+  /* Sticky phone action bars: glass that floats over the page. The stronger fill keeps the bar's
+     own text legible whatever scrolls behind it. */
   .yapp .y-bar {
-    background: #0e0e10;
-    color: #f4f4f0;
-    box-shadow:
-      0 0 0 4px var(--y-canvas),
-      var(--y-shadow-float);
-    --b-bg: #0e0e10;
-    --b-fg: #f4f4f0;
-    --b-chip: rgb(255 255 255 / 0.1);
-    --b-chip-fg: #f4f4f0;
-  }
-  html.dark .yapp .y-bar {
-    background: #232327;
-    --b-bg: #232327;
+    background: var(--y-glass-strong);
+    -webkit-backdrop-filter: var(--y-glass-blur);
+    backdrop-filter: var(--y-glass-blur);
+    border: 1px solid var(--y-glass-border);
+    box-shadow: var(--y-glass-shadow);
+    color: var(--y-ink);
+    --b-bg: var(--y-paper);
+    --b-fg: var(--y-ink);
+    --b-fg-2: var(--y-ink-2);
+    --b-fg-3: var(--y-ink-3);
+    --b-line: var(--y-line);
+    --b-line-strong: var(--y-line-strong);
+    --b-chip: var(--y-mist);
+    --b-chip-fg: var(--y-ink);
+    --b-btn: var(--y-btn-primary);
+    --b-btn-fg: var(--y-btn-primary-fg);
   }
   .yapp .y-rail-item {
     display: flex;
@@ -979,7 +1132,10 @@ html.dark .yapp {
   }
   .yapp .y-navlink[aria-current="page"] {
     color: var(--y-ink);
-    background: var(--y-mist);
+    background: var(--y-paper);
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 2px 6px rgb(20 20 40 / 0.05);
     font-weight: 600;
   }
 
@@ -1002,6 +1158,8 @@ html.dark .yapp {
   /* ------------------------------------------------------- sheet/dialog */
   .yapp .y-scrim {
     background: var(--y-scrim);
+    -webkit-backdrop-filter: var(--y-scrim-blur);
+    backdrop-filter: var(--y-scrim-blur);
     animation: y-fade var(--y-dur-3) var(--y-ease) both;
   }
   .yapp .y-sheet {
@@ -1056,7 +1214,10 @@ html.dark .yapp {
   }
 
   /* -------------------------------------------------------------- toast */
+  /* A dark pill in both themes (a step lighter than the canvas in dark mode). */
   .yapp .y-toast {
+    --b-bg: var(--y-toast);
+    box-shadow: var(--y-shadow-toast);
     animation: y-toast-in var(--y-dur-2) var(--y-ease) both;
   }
   @keyframes y-toast-in {
@@ -1173,14 +1334,18 @@ html.dark .yapp {
 /* -------------------------------------------------------------------------- */
 
 @layer components {
-  /* Clickable blocks/tiles: a hairline ring on hover instead of a shadow. */
+  /* Clickable tiles: a hairline ring on hover. Clickable white cards deepen their shadow instead,
+     so they don't lose the edge that defines them. */
   .yapp .y-hoverable {
     transition:
       box-shadow var(--y-dur-1) var(--y-ease),
       transform var(--y-dur-1) var(--y-ease);
   }
   .yapp .y-hoverable:hover {
-    box-shadow: inset 0 0 0 1.5px var(--b-line, var(--y-line-strong));
+    box-shadow: inset 0 0 0 1px var(--b-line-strong, var(--y-line-strong));
+  }
+  .yapp .y-block.y-hoverable:where([data-tone="paper"], [data-tone="lavender"], [data-tone="butter"], [data-tone="sky"]):hover {
+    box-shadow: var(--y-shadow-card-hover);
   }
   .yapp .y-hoverable:active {
     transform: scale(0.995);
@@ -1207,8 +1372,8 @@ html.dark .yapp {
     padding: 2px 8px;
     border-radius: 8px;
     background: #fff;
-    color: #0e0e10;
-    font-weight: 700;
+    color: #0b0b0c;
+    font-weight: 600;
     -webkit-box-decoration-break: clone;
     box-decoration-break: clone;
     line-height: 1.55;
@@ -1377,7 +1542,6 @@ html.dark .yapp {
      With no reel in view (details, the end card, every other page) it follows the theme. */
   --reel-ink: var(--y-ink);
   --reel-shadow: none;
-  --reel-mark-dot: var(--y-paper);
   --reel-glass: var(--y-glass);
   --reel-glass-line: var(--y-glass-border);
   --reel-fade: var(--y-soft-rgb);
@@ -1386,20 +1550,19 @@ html.dark .yapp {
 }
 /* The tab bar's white glass is thinner on video than the spec's 30%: over a bright frame, 30% left
    white icons below 3:1. */
+/* On video the top fade is the logo's scrim (the brand book: never on busy video without one). */
 html[data-reel-tone="dark"] .yapp {
   --reel-ink: #ffffff;
   --reel-shadow: 0 1px 3px rgb(0 0 0 / 0.38), 0 0 1px rgb(0 0 0 / 0.2);
-  --reel-mark-dot: #0e0e10;
   --reel-glass: rgb(255 255 255 / 0.18);
   --reel-glass-line: rgb(255 255 255 / 0.28);
   --reel-fade: 0 0 0;
-  --reel-fade-top: 0.22;
+  --reel-fade-top: 0.42;
   --reel-fade-bottom: 0.28;
 }
 html[data-reel-tone="light"] .yapp {
   --reel-ink: #1d1d1f;
   --reel-shadow: 0 1px 1px rgb(255 255 255 / 0.6);
-  --reel-mark-dot: #ffffff;
   --reel-glass: rgb(255 255 255 / 0.3);
   --reel-glass-line: rgb(255 255 255 / 0.45);
   --reel-fade: 247 247 249;
@@ -1537,25 +1700,38 @@ html[data-reel-tone="light"] .yapp {
 
   /* Video reels: dark, white text over a soft bottom scrim. */
   .yapp .y-reel[data-kind="video"] {
-    background: #0e0e10;
+    background: #0b0b0c;
     color: #fff;
-    --b-bg: #0e0e10;
+    --b-bg: #0b0b0c;
     --b-fg: #fff;
+    --b-line-strong: rgb(255 255 255 / 0.3);
     --b-chip: rgb(255 255 255 / 0.16);
     --b-chip-fg: #fff;
+    --b-btn: var(--y-btn-light);
+    --b-btn-fg: #0b0b0c;
   }
   /* Taller than the spec's 22%: at 22% the gradient has already faded out under the description. */
+  /* The top part sits behind the name and the Mix · Yapps · Orders stack: white text needs it on a
+     bright frame (the covers are light illustrations, not dark footage). */
   .yapp .y-reel-scrim {
     position: absolute;
     inset: 0;
     z-index: 3;
     pointer-events: none;
-    background: linear-gradient(
-      to top,
-      rgb(14 14 16 / 0.62) 0%,
-      rgb(14 14 16 / 0.45) 24%,
-      rgb(14 14 16 / 0) 42%
-    );
+    background:
+      linear-gradient(
+        to bottom,
+        rgb(14 14 16 / 0.46) 0,
+        rgb(14 14 16 / 0.34) calc(var(--reel-top) + 56px),
+        rgb(14 14 16 / 0.14) calc(var(--reel-top) + 116px),
+        rgb(14 14 16 / 0) calc(var(--reel-top) + 180px)
+      ),
+      linear-gradient(
+        to top,
+        rgb(14 14 16 / 0.62) 0%,
+        rgb(14 14 16 / 0.45) 24%,
+        rgb(14 14 16 / 0) 42%
+      );
   }
   .yapp .y-reel-shadow {
     text-shadow: 0 1px 2px rgb(14 14 16 / 0.6);
@@ -1571,16 +1747,19 @@ html[data-reel-tone="light"] .yapp {
     --y-ink-2: #48484d;
     --y-ink-3: #636366;
     --y-paper: #ffffff;
-    --y-mist: #e4e4df;
-    --y-line: rgb(14 14 16 / 0.12);
-    --y-line-strong: rgb(14 14 16 / 0.22);
+    --y-mist: rgb(29 29 31 / 0.06);
+    --y-line: rgb(29 29 31 / 0.1);
+    --y-line-strong: rgb(29 29 31 / 0.18);
     --b-bg: #ffffff;
     --b-fg: #1d1d1f;
     --b-fg-2: #48484d;
     --b-fg-3: #636366;
-    --b-line: rgb(14 14 16 / 0.12);
-    --b-chip: rgb(14 14 16 / 0.07);
+    --b-line: rgb(29 29 31 / 0.1);
+    --b-line-strong: rgb(29 29 31 / 0.18);
+    --b-chip: rgb(29 29 31 / 0.07);
     --b-chip-fg: #1d1d1f;
+    --b-btn: var(--y-btn-dark);
+    --b-btn-fg: #ffffff;
   }
   .yapp .y-reel[data-reel="1"] {
     --r-from: var(--y-reel-1-from);
@@ -1681,7 +1860,7 @@ html[data-reel-tone="light"] .yapp {
     gap: 4px;
     min-width: 0;
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     line-height: 1.15;
   }
   .yapp .y-reel-who-sub {
@@ -1706,7 +1885,7 @@ html[data-reel-tone="light"] .yapp {
   }
   .yapp .y-reel-title {
     font-size: clamp(24px, min(7.05cqw, 4.4cqh), 34px);
-    font-weight: 800;
+    font-weight: 600;
     line-height: 1.08;
     letter-spacing: -0.035em;
   }
@@ -1785,9 +1964,10 @@ html[data-reel-tone="light"] .yapp {
     gap: 12px;
     margin-block-end: 14px;
   }
+  /* A big number: light on purpose (the brand's KPI style). */
   .yapp .y-reel-big {
     font-size: 34px;
-    font-weight: 800;
+    font-weight: 400;
     line-height: 1;
     letter-spacing: -0.03em;
   }
@@ -1858,7 +2038,7 @@ html[data-reel-tone="light"] .yapp {
     border-radius: 999px;
     background: rgb(11 11 12 / 0.12);
     font-size: 12.5px;
-    font-weight: 700;
+    font-weight: 600;
     white-space: nowrap;
   }
   .yapp .y-reel-count[data-last="true"] {
@@ -1879,10 +2059,11 @@ html[data-reel-tone="light"] .yapp {
   }
   .yapp .y-reel-fade[data-edge="top"] {
     top: 0;
-    height: calc(env(safe-area-inset-top, 0px) + 62px);
+    height: calc(env(safe-area-inset-top, 0px) + 84px);
     background: linear-gradient(
       to bottom,
       rgb(var(--reel-fade) / var(--reel-fade-top)),
+      rgb(var(--reel-fade) / calc(var(--reel-fade-top) * 0.6)) 45%,
       rgb(var(--reel-fade) / 0)
     );
   }
@@ -1907,7 +2088,6 @@ html[data-reel-tone="light"] .yapp {
     color: var(--reel-ink);
     pointer-events: none;
     transition: color var(--y-dur-2) var(--y-ease);
-    --b-bg: var(--reel-mark-dot);
   }
   .yapp .y-reel-top > * {
     pointer-events: auto;
@@ -1915,10 +2095,8 @@ html[data-reel-tone="light"] .yapp {
   .yapp .y-reel-logo {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
     min-height: 40px;
     border-radius: var(--y-r-sm);
-    text-shadow: var(--reel-shadow);
   }
   .yapp .y-reel-plus {
     position: relative;
@@ -1967,9 +2145,12 @@ html[data-reel-tone="light"] .yapp {
     text-shadow: inherit;
     cursor: pointer;
   }
+  .yapp .y-reel-tabs button:hover,
   .yapp .y-reel-tabs button[aria-selected="true"] {
-    font-weight: 700;
     opacity: 1;
+  }
+  .yapp .y-reel-tabs button[aria-selected="true"] {
+    font-weight: 600;
   }
   .yapp .y-reel-tabs button[aria-selected="true"]::before {
     content: "";
@@ -2120,11 +2301,20 @@ html[data-reel-tone="light"] .yapp {
     gap: 14px;
     width: 100%;
     padding: 14px;
-    border-radius: 20px;
+    border-radius: var(--y-r-tile);
     background: var(--y-paper);
     color: var(--y-ink);
     text-align: start;
     cursor: pointer;
+    box-shadow:
+      0 0 0 1px var(--y-line),
+      0 2px 6px rgb(20 20 40 / 0.04);
+    transition: box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .y-create-option:hover {
+    box-shadow:
+      0 0 0 1px var(--y-line-strong),
+      0 6px 16px -6px rgb(20 20 40 / 0.12);
   }
 
   /* The phone's glass tab bar. Icons follow the reel in view on the feed. */
@@ -2179,8 +2369,8 @@ html[data-reel-tone="light"] .yapp {
     color: #fff;
   }
   html.dark:not([data-reel-tone]) .yapp .y-tab[aria-current="page"] {
-    background: #f4f4f0;
-    color: #0e0e10;
+    background: var(--y-btn-light);
+    color: #0b0b0c;
   }
   .yapp .y-tab[aria-current="page"] .y-tab-label {
     animation: y-tab-label 220ms var(--y-ease);
@@ -2192,7 +2382,7 @@ html[data-reel-tone="light"] .yapp {
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: #e5383b;
+    background: var(--y-red);
     box-shadow: 0 0 0 1.5px #fff;
   }
   .yapp .y-tab[aria-current="page"] .y-tab-dot {
@@ -2205,6 +2395,35 @@ html[data-reel-tone="light"] .yapp {
     border-radius: 999px;
     box-shadow: 0 0 0 1.5px #fff;
   }
+
+  /* The logo (components/ui/brand.tsx): a pinned tone renders one file; "auto" renders the light
+     and the on-dark file and shows one. It follows the theme, and inside the feed's floating top
+     it follows the reel in view. html.dark is set before paint, data-reel-tone by the feed. */
+  .yapp .y-logo {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+  }
+  .yapp .y-logo > img {
+    display: block;
+  }
+  .yapp .y-logo[data-logo="auto"] > .y-logo-dark,
+  html.dark .yapp .y-logo[data-logo="auto"] > .y-logo-light,
+  html[data-reel-tone="dark"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-light,
+  html[data-reel-tone="light"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-dark {
+    display: none;
+  }
+  html.dark .yapp .y-logo[data-logo="auto"] > .y-logo-dark,
+  html[data-reel-tone="dark"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-dark,
+  html[data-reel-tone="light"] .yapp .y-reel-top .y-logo[data-logo="auto"] > .y-logo-light {
+    display: block;
+  }
+}
+
+/* Big numbers are light on purpose (brand book: KPIs, prices and money at 400). Unlayered, so it
+   wins over a weight utility written next to it: `y-display y-num` always renders at 400. */
+.yapp .y-display.y-num {
+  font-weight: 400;
 }
 
 /* Short and narrow screens (unlayered, so it beats the display and line-clamp utilities). */

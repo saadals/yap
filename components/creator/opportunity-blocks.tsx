@@ -1,23 +1,25 @@
 "use client";
 
-import { BadgeCheck, Check, Minus, Users } from "lucide-react";
+import { BadgeCheck, Check, Minus, Sparkles, Users } from "lucide-react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { Block } from "@/components/ui/block";
 import { MatchScore } from "@/components/ui/match-score";
-import { money, plural, timeAgo } from "@/lib/format";
-import type { Fit } from "@/lib/selectors";
+import { money, plural, timeAgoInline } from "@/lib/format";
+import { reliabilityLine, type Fit } from "@/lib/selectors";
 import type { Business, ContentRequest, Pitch, Product } from "@/lib/types";
 
 import { median } from "./pitch-helpers";
 
-/** Who's asking, as one quiet row: logo, name and trust signals in a plain meta line. */
+/**
+ * Who's asking, as one quiet row: logo, name and trust signals in a plain meta line. Creators see
+ * how reliably the brand reviews work (not a star rating: feedback about brands is private).
+ */
 export function BusinessRow({ business, request }: { business: Business; request: ContentRequest }) {
   const meta = [
     business.paymentVerified ? "Payment verified" : "Payment not verified yet",
-    plural(business.hires, "hire"),
-    `Rated ${business.clientRating.toFixed(1)} by creators`,
-    `Posted ${timeAgo(request.postedAt)}`,
+    reliabilityLine(business) ?? "New on Yapp",
+    `Posted ${timeAgoInline(request.postedAt)}`,
   ].join(" · ");
   return (
     <div className="flex items-center gap-3">
@@ -137,9 +139,12 @@ export function FitAside({
     );
   }
   return (
-    <Block tone="lavender" pad="md" className="flex flex-col gap-4">
+    <Block tone="paper" pad="md" className="flex flex-col gap-4">
       <div className="flex items-end justify-between gap-3">
-        <h2 className="y-head">Your fit</h2>
+        <h2 className="y-head flex items-center gap-2">
+          <Sparkles size={18} aria-hidden className="flex-none" />
+          Your fit
+        </h2>
         <MatchScore value={fit.score} label="fit" showBar={false} />
       </div>
       <ul className="flex flex-col gap-1.5">

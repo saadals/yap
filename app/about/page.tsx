@@ -33,7 +33,7 @@ import { money, moneyRange, num } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, creatorById, featuredVideo, isCampaign, me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { formatById, formats } from "@/lib/taxonomy";
+import { formatById, formats, languages } from "@/lib/taxonomy";
 import type { Creator, Video } from "@/lib/types";
 
 /** The creator whose featured video fronts the hero. */
@@ -73,15 +73,12 @@ function Hero({ creator, video }: { creator?: Creator; video?: Video }) {
         className="flex flex-col justify-between gap-10 lg:col-span-7 lg:min-h-[560px]"
       >
         <div className="flex flex-col gap-6 md:gap-8">
-          <h1
-            id="hero-title"
-            className="y-display y-hero max-sm:!text-[2.75rem] lg:!text-[4.25rem] xl:!text-[5.25rem]"
-          >
+          <h1 id="hero-title" className="y-display y-hero">
             Get your app <span className="y-strong whitespace-nowrap">talked about</span>
           </h1>
           <p className="y-lead y-fg-2 max-w-[50ch]">
-            Order demos and honest reviews of your app from creators, at a fixed price. Payment is
-            held until you&apos;ve approved the video.
+            Order demos, unboxings and testimonials of your product from creators, at a fixed price.
+            Payment is held until you&apos;ve approved the video.
           </p>
         </div>
         <div className="flex flex-col gap-4">
@@ -95,7 +92,7 @@ function Hero({ creator, video }: { creator?: Creator; video?: Video }) {
           </div>
           <p className="y-small y-fg-2 flex items-start gap-2">
             <Languages size={16} aria-hidden className="mt-0.5 flex-none" />
-            In Saudi, Khaleeji, Egyptian and Levantine Arabic, and English.
+            In English, or in {languages.length - 1} more languages from Spanish to Korean.
           </p>
         </div>
       </Block>
@@ -108,7 +105,7 @@ function Hero({ creator, video }: { creator?: Creator; video?: Video }) {
 function HeroVisual({ creator, video }: { creator?: Creator; video?: Video }) {
   return (
     <Block
-      tone="lavender"
+      tone="paper"
       pad="none"
       className="relative isolate flex min-h-[520px] items-center justify-center overflow-hidden px-6 py-16 lg:col-span-5 lg:min-h-0"
     >
@@ -171,7 +168,7 @@ function Stats() {
       ),
       label: "approved without a revision",
     },
-    { value: stats.dialects, label: "Arabic dialects, plus English" },
+    { value: stats.languages, label: "video languages, English first" },
   ];
   return (
     <Block tone="paper" pad="md" as="section" aria-label="Yapp in numbers">
@@ -200,7 +197,7 @@ function Formats() {
         id="formats-title"
         title={
           <>
-            Six formats that <span className="y-strong">sell software</span>
+            Formats that <span className="y-strong">sell tech</span>
           </>
         }
       />
@@ -244,7 +241,7 @@ function Formats() {
 const steps = [
   {
     title: "Describe what you need",
-    body: "Pick a format, a dialect and a budget. Your product details fill in the rest.",
+    body: "Pick a format, a language and a budget. Your product details fill in the rest.",
   },
   {
     title: "Pick a creator",
@@ -277,7 +274,7 @@ function HowItWorks() {
         <ol className="grid gap-10 md:grid-cols-3 md:gap-8">
           {steps.map((step, index) => (
             <li key={step.title} className="flex flex-col gap-4">
-              <StepNumber n={index + 1} className="text-[56px] md:text-[72px]" />
+              <StepNumber n={index + 1} />
               <div className="flex flex-col gap-2">
                 <h3 className="y-display y-title">
                   <span className="sr-only">Step {index + 1}: </span>
@@ -295,8 +292,8 @@ function HowItWorks() {
             </span>{" "}
             <span className="y-fg-2">
               A fixed price per video set by follower tier, from {money(campaign.fromPrice)}. Creators take
-              slots first come, first served, and every video comes from a different creator. No
-              service fee.
+              slots first come, first served, and every video comes from a different creator. The
+              budget and the {campaign.feePct}% service fee are held up front.
             </span>
           </p>
           <Link
@@ -377,19 +374,19 @@ function FeaturedCreators() {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Why Yapp: dialects, protection, repeat business                             */
+/* Why Yapp: protection, language, repeat business                             */
 /* -------------------------------------------------------------------------- */
 
 const reasons = [
   {
     icon: <ShieldCheck size={22} />,
     title: "Paid only when you approve",
-    body: "Payment is held while they work, with a full refund if the video isn't delivered. Our fee is charged only when work completes.",
+    body: "Payment and our fee are held while they work, and refunded in full if the video isn't delivered.",
   },
   {
     icon: <Languages size={22} />,
-    title: "Your customers' dialect",
-    body: "Creators who sound like your audience, from Riyadh to Cairo to Casablanca.",
+    title: "Sounds like your customers",
+    body: "Creators from Toronto to Lagos, filming in English or in your audience's own language.",
   },
   {
     icon: <Repeat2 size={22} />,
@@ -448,12 +445,12 @@ function CreatorLane() {
     <section aria-labelledby="creators-lane-title" className="mt-16 md:mt-24">
       <Block tone="night" pad="lg" className="grid grid-cols-1 gap-10 overflow-hidden lg:grid-cols-12">
         <div className="flex flex-col gap-6 lg:col-span-6">
-          <span className="y-chip w-fit">
-            <Mic size={14} aria-hidden />
+          <span className="y-chip w-fit max-w-full py-1.5 whitespace-normal">
+            <Mic size={14} aria-hidden className="flex-none" />
             One account to order videos and to make them
           </span>
           <h2 id="creators-lane-title" className="y-display y-t-display">
-            Make videos for apps, <span className="y-strong">get paid reliably</span>
+            Make videos for tech brands, <span className="y-strong">get paid reliably</span>
           </h2>
           <p className="y-lead y-fg-2 max-w-[46ch]">
             Keep 100% of your price on custom orders, with payment secured before you film. Have{" "}
@@ -474,7 +471,7 @@ function CreatorLane() {
                 return (
                   <li
                     key={request.id}
-                    className="y-tile flex items-center gap-3 !rounded-[22px] p-3 pe-4 md:pe-5"
+                    className="y-tile flex items-center gap-3 p-3 pe-4 md:pe-5"
                   >
                     {business ? <BusinessLogo business={business} size={40} /> : null}
                     <div className="min-w-0 flex-1">
@@ -505,7 +502,7 @@ function CreatorLane() {
 
 function FinalCta() {
   return (
-    <Block tone="butter" pad="none" className="grid overflow-hidden lg:grid-cols-12">
+    <Block tone="paper" pad="none" className="grid overflow-hidden lg:grid-cols-12">
       <div className="flex flex-col gap-8 p-6 md:p-10 lg:col-span-7">
         <div className="flex flex-col gap-3">
           <h2 className="y-display y-t-display max-w-[15ch]">

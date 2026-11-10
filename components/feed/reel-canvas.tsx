@@ -150,9 +150,9 @@ const topicByNiche: Partial<Record<NicheId, Topic>> = {
   fintech: "receipt",
   b2b: "receipt",
   ecommerce: "boxes",
-  travel: "route",
+  gadgets: "boxes",
+  consumer: "route",
   health: "heart",
-  edtech: "book",
   ai: "spark",
 };
 
