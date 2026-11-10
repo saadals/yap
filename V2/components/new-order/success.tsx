@@ -1,17 +1,21 @@
 "use client";
 
 import { Block } from "@/components/ui/block";
-import { Celebrate } from "@/components/ui/celebrate";
 import { Page } from "@/components/ui/page";
 
-/** The calm "it's live" moment after an order or campaign goes out: one green action, then details. */
+/**
+ * The calm "it's live" moment after an order or campaign goes out: a line icon at most (no
+ * characters in confirmations, round 3 answers item 15), the title, one green action, then details.
+ */
 export function SuccessScreen({
+  icon,
   title,
   lead,
   primary,
   secondary,
   children,
 }: {
+  icon?: React.ReactNode;
   title: string;
   lead: React.ReactNode;
   primary: React.ReactNode;
@@ -22,7 +26,11 @@ export function SuccessScreen({
     <Page width="narrow">
       <Block tone="paper" pad="lg" className="mx-auto flex max-w-[600px] flex-col gap-6">
         <div className="flex flex-col items-center gap-4 text-center">
-          <Celebrate className="h-28 w-44" />
+          {icon ? (
+            <span className="grid size-14 place-items-center rounded-full bg-(--y-mist)" aria-hidden>
+              {icon}
+            </span>
+          ) : null}
           <h1
             className="y-display y-t-display outline-none"
             tabIndex={-1}

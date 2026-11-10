@@ -1,6 +1,20 @@
 "use client";
 
-import { ArrowLeft, Eye, EyeOff, Lightbulb, Lock, MailOpen, MessageCircle, Minus, Check, Sparkles, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Eye,
+  EyeOff,
+  Lightbulb,
+  Lock,
+  MailOpen,
+  MessageCircle,
+  Minus,
+  Check,
+  Sparkles,
+  Type,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -13,18 +27,28 @@ import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { KeyValues } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/toast";
-import { money, moneyRange, plural, shortDate, timeAgoInline, weekdayDate } from "@/lib/format";
+import { money, moneyRange, netRange, plural, timeAgoInline, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { businessById, fit as fitFor, me, myPitchFor, pitchesForRequest, portfolio, productById } from "@/lib/selectors";
+import {
+  businessById,
+  deadlineDaysOf,
+  fit as fitFor,
+  isAdCopy,
+  me,
+  myPitchFor,
+  pitchesForRequest,
+  portfolio,
+  productById,
+} from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { aspects, formatById, languageById, pitchStatus } from "@/lib/taxonomy";
+import { FEE_PCT, aspects, formatById, jobTypeById, languageById, orderKinds, pitchStatus } from "@/lib/taxonomy";
 import type { ContentRequest, Product } from "@/lib/types";
 
 import { deliverables, voiced } from "@/components/find-work/work-items";
 
 import { AskBrandSheet, threadAbout } from "./ask-brand-sheet";
 import { MyPitch } from "./my-pitch";
-import { ActionBar, Bullets, BrandLine, MoreMenu, Section, Unavailable } from "./parts";
+import { ActionBar, BrandLine, BrandRecord, BriefFiles, Bullets, MoreMenu, Section, Unavailable } from "./parts";
 import { PitchComposer } from "./pitch-composer";
 import { commissionForPitch, median } from "./pitch-helpers";
 
@@ -32,10 +56,12 @@ const scrollToId = (id: string) =>
   window.requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "center" }));
 
 /**
- * Someone else's custom request, as a creator sees it: the brief and the product context in the
- * main column; the budget, your fit and your pitch in the rail (a sticky bar on phones). Accounts
- * without a creator profile set one up first and carry straight on to the composer. The owner
- * never gets here (the order page shows them the pitches), so nobody pitches on their own order.
+ * Someone else's custom order, as a creator sees it: the brief (usage, the brand's deadline, the
+ * closing date, files, the hook line; for ad copy the pieces and placements) and the product
+ * context in the main column; the budget with your net, your fit, your pitch and the brand's five
+ * reliability figures in the rail (the action in a sticky bar on phones). Accounts without a
+ * creator profile set one up first and carry straight on to the composer. The owner never gets
+ * here (the order page shows them the pitches), so nobody pitches on their own order.
  */
 export function RequestOpportunity({ request }: { request: ContentRequest }) {
   const s = useDemo();
@@ -70,7 +96,7 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
   const business = businessById(s, request.businessId);
   const brandName = business?.name ?? "The brand";
   const product = productById(s, request.brief.productId);
-  const fit = creator ? voiced(fitFor(s, creator, request)) : undefined;
+  const fit = creator ? voiced(fitFor(s, creator, request), request) : undefined;
   const pitches = pitchesForRequest(s, request.id);
   const typical = median(pitches.map((p) => p.price));
   const videos = creator ? portfolio(s, creator) : [];
@@ -78,6 +104,18 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
   const job = myPitch?.status === "hired" ? commissionForPitch(s, myPitch) : undefined;
   const thread = threadAbout(s, request);
   const format = formatById[request.brief.format];
+  const adCopy = isAdCopy(request);
+  const days = deadlineDaysOf(request);
+  const budget = moneyRange(request.budget.min, request.budget.max);
+  const budgetNet = netRange(request.budget.min, request.budget.max);
+  // Yapp doesn't ship products yet (round 3 answers, item 24), unless the brief already says how.
+  const physical =
+    !adCopy &&
+    (product?.niche === "gadgets" || request.brief.format === "unboxing") &&
+    ![request.brief.notes ?? "", ...request.brief.mustInclude].some((t) => /\bship/i.test(t));
+  const deadlineLine = days
+    ? `You'll have ${plural(days, "day")} to deliver after you're hired`
+    : `Due ${weekdayDate(request.dueDate)}`;
 
   const hide = () => {
     actions.hideRequest(request.id);
@@ -105,11 +143,11 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
   const action = myPitch ? null : isOpen ? (
     <div className="flex flex-col gap-2">
       <PillButton variant="neon" size="lg" arrow className="w-full justify-between ps-6" onClick={startPitch}>
-        {creator ? "Pitch" : "Set up and pitch"}
+        {creator ? "Pitch now" : "Set up and pitch"}
       </PillButton>
       <p className="y-micro y-fg-2 px-1">
         {creator
-          ? "You keep 100% of your price. Payment is held before you start."
+          ? `You set the price and earn it less Yapp's ${FEE_PCT}%. Payment is held before you start.`
           : "A creator profile takes a minute. Then you're straight back here."}
       </p>
     </div>
@@ -122,15 +160,23 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
 
   const deal = (
     <Block tone="paper" pad="md" className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
-        <p className="y-micro y-fg-2">Budget for {plural(request.brief.videoCount, "video")}</p>
-        <p className="y-display y-num text-[32px] leading-none tracking-[-0.03em]">
-          {moneyRange(request.budget.min, request.budget.max)}
+      <div className="flex flex-col gap-1.5">
+        <p className="y-micro y-fg-2">
+          Budget{adCopy ? "" : ` for ${plural(request.brief.videoCount, "video")}`}
+        </p>
+        <p className="y-display y-num text-[32px] leading-none tracking-[-0.03em]">{budget}</p>
+        <p className="y-small y-num">
+          You&apos;d earn <span className="font-semibold">{budgetNet}</span>
+          <span className="y-fg-2"> after the {FEE_PCT}% Yapp fee</span>
         </p>
       </div>
+      <p className="y-small flex items-start gap-2">
+        <CalendarDays size={16} aria-hidden className="mt-0.5 flex-none" />
+        <span>{deadlineLine}</span>
+      </p>
       <KeyValues
         rows={[
-          { label: "Due", value: weekdayDate(request.dueDate) },
+          { label: isOpen ? "Pitch by" : "Closed", value: weekdayDate(request.closesAt) },
           { label: "Posted", value: timeAgoInline(request.postedAt) },
         ]}
       />
@@ -217,15 +263,24 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
         </div>
         <h1 className="y-display y-t-display max-w-[30ch]">{request.title}</h1>
         <p className="y-body y-fg-2">
-          {[
-            format.name,
-            request.brief.languages.map((l) => languageById[l].name).join(" or "),
-            deliverables(request),
-            aspects.find((a) => a.id === request.brief.aspect)?.name ?? request.brief.aspect,
-          ].join(" · ")}
+          {(adCopy
+            ? [orderKinds.custom.name, request.brief.languages.map((l) => languageById[l].name).join(" or "), deliverables(request)]
+            : [
+                orderKinds.custom.name,
+                format.name,
+                request.brief.languages.map((l) => languageById[l].name).join(" or "),
+                deliverables(request),
+                aspects.find((a) => a.id === request.brief.aspect)?.name ?? request.brief.aspect,
+              ]
+          ).join(" · ")}
         </p>
-        {(invited && !myPitch) || hidden ? (
+        {(invited && !myPitch) || hidden || adCopy ? (
           <div className="flex flex-wrap items-center gap-2">
+            {adCopy ? (
+              <Badge tone="ink" icon={<Type size={14} aria-hidden />}>
+                {jobTypeById["ad-copy"].name}
+              </Badge>
+            ) : null}
             {invited && !myPitch ? (
               <Badge tone="ink" icon={<MailOpen size={14} aria-hidden />}>
                 {brandName} invited you
@@ -248,12 +303,25 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
           <div className="y-rail flex flex-col gap-3">
             {deal}
             {fitCard}
+            {business ? <BrandRecord business={business} /> : null}
           </div>
         </aside>
 
         <div className="flex flex-col gap-3 lg:order-1 lg:col-span-8">
           <Section title="The brief" id="brief-h">
+            {request.brief.hook ? (
+              <div className="y-tile flex flex-col gap-1 p-4">
+                <p className="y-micro y-fg-2">{adCopy ? "Opening line from " : "Hook from "}{brandName}</p>
+                <p className="y-body font-medium">{request.brief.hook}</p>
+              </div>
+            ) : null}
             <BriefSummary brief={request.brief} product={product} />
+            {physical ? (
+              <p className="y-small y-fg-2">
+                Yapp doesn&apos;t ship products yet: use one you already own, or work from the companion app.
+              </p>
+            ) : null}
+            <BriefFiles files={request.brief.attachments ?? []} brandName={brandName} />
           </Section>
           {product ? <ProductContext product={product} /> : null}
           <Section title="Questions about the brief?" id="ask-h">
@@ -297,11 +365,11 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
       ) : isOpen && !myPitch ? (
         <ActionBar label="Pitch on this order">
           <p className="y-small min-w-0 flex-1 truncate">
-            <span className="y-num font-semibold">{moneyRange(request.budget.min, request.budget.max)}</span>
-            <span className="y-fg-2"> · due {shortDate(request.dueDate)}</span>
+            <span className="y-num font-semibold">{budget}</span>
+            <span className="y-fg-2"> · you earn {budgetNet}</span>
           </p>
           <PillButton variant="neon" arrow onClick={startPitch}>
-            {creator ? "Pitch" : "Set up and pitch"}
+            {creator ? "Pitch now" : "Set up and pitch"}
           </PillButton>
         </ActionBar>
       ) : null}

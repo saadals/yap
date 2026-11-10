@@ -1,19 +1,20 @@
 "use client";
 
-import { AlertTriangle, Check, FileVideo, UploadCloud, X } from "lucide-react";
+import { AlertTriangle, Check, FileText, FileVideo, UploadCloud, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Celebrate } from "@/components/ui/celebrate";
 import { TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
+import { checkCopyDocument } from "@/lib/files";
 import { clock, plural, weekdayDate } from "@/lib/format";
-import { actions } from "@/lib/store";
+import { openComments, requestedComments } from "@/lib/selectors";
+import { actions, sampleAdCopy } from "@/lib/store";
 import { AUTO_APPROVE_DAYS, CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
 
-import { cash, sizeLabel, type Job } from "./helpers";
+import { cash, deliveryFileKind, sizeLabel, type Job } from "./helpers";
 
 type Upload = {
   id: string;
@@ -32,9 +33,11 @@ const slug = (text: string) =>
     .slice(0, 40) || "video";
 
 /**
- * The creator uploads the next version: files (drag and drop, the picker, or a generated sample;
- * the upload is simulated), a note, the brief checklist and, for changes, the client's open notes
- * to tick off. Campaign slots upload a review copy, which the brand sees watermarked.
+ * The creator sends the next version. Video jobs: files (drag and drop, the picker, or a generated
+ * sample; the upload is simulated). Ad copy: the copy typed in and/or a document (PDF, DOC, DOCX,
+ * TXT). Then a note and a checklist: the comments the brand sent with its change request, or the
+ * brief. Campaign slots upload a review copy, which the brand sees watermarked. The store marks
+ * what was still open on the previous version resolved.
  */
 export function DeliverSheet({
   job,
@@ -48,28 +51,43 @@ export function DeliverSheet({
   onActed: () => void;
 }) {
   const toast = useToast();
-  const { commission: c, businessName, latest, product, totals, slot } = job;
+  const { commission: c, businessName, latest, product, totals, slot, adCopy } = job;
   const version = c.deliveries.length + 1;
-  const earns = slot ? c.price : totals.creatorEarns;
-  const what = slot ? (version === 1 ? "your review copy" : `review copy ${version}`) : `version ${version}`;
+  const earns = totals.creatorEarns;
+  const what = slot
+    ? version === 1
+      ? "your review copy"
+      : `review copy ${version}`
+    : adCopy && version === 1
+      ? "the copy"
+      : `version ${version}`;
   const What = what.charAt(0).toUpperCase() + what.slice(1);
-  const mustInclude = c.brief.mustInclude;
-  const openNotes = c.status === "revision" && latest ? latest.comments.filter((m) => !m.resolved && m.author === "business") : [];
+  const brief = c.brief;
+  const briefItems = adCopy ? [...(brief.copy?.pieces ?? []), ...brief.mustInclude] : brief.mustInclude;
+  // On a revision: the comments the brand sent with its request (older data: its open ones).
+  const stillOpen = c.status === "revision" && latest ? openComments(latest) : [];
+  const sent = c.status === "revision" && latest ? requestedComments(latest).filter((m) => !m.resolved) : [];
+  const asked = sent.length ? sent : stillOpen.filter((m) => m.author === "business");
 
   const [uploads, setUploads] = useState<Upload[]>([]);
   const [over, setOver] = useState(false);
   const [note, setNote] = useState("");
+  const [copy, setCopy] = useState("");
+  const [fileError, setFileError] = useState<string | null>(null);
   const [ticked, setTicked] = useState<string[]>([]);
-  const [notesDone, setNotesDone] = useState<string[]>([]);
   const [warned, setWarned] = useState(false);
   const [done, setDone] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const checklistId = useId();
+  const copyId = useId();
 
   const uploading = uploads.some((u) => u.progress < 100);
-  const ready = uploads.length > 0 && !uploading;
-  const missing = mustInclude.filter((item) => !ticked.includes(item)).length + openNotes.filter((m) => !notesDone.includes(m.id)).length;
-  const missingNotes = openNotes.filter((m) => !notesDone.includes(m.id)).length;
+  const hasFile = uploads.some((u) => u.progress >= 100);
+  const hasWork = adCopy ? copy.trim().length > 0 || hasFile : hasFile;
+  const ready = hasWork && !uploading;
+  const missingBrief = briefItems.filter((item) => !ticked.includes(item)).length;
+  const missingAsked = asked.filter((m) => !ticked.includes(m.id)).length;
+  const missing = missingBrief + missingAsked;
 
   useEffect(() => {
     if (!uploading) return;
@@ -79,7 +97,12 @@ export function DeliverSheet({
     return () => window.clearInterval(timer);
   }, [uploading]);
 
-  const add = (files: { name: string; bytes: number }[]) => {
+  const add = (incoming: { name: string; bytes: number }[]) => {
+    if (!incoming.length) return;
+    // Ad copy takes documents only: PDF, DOC, DOCX or TXT, up to 10 MB.
+    const problems = adCopy ? incoming.map(checkCopyDocument).filter((p): p is string => Boolean(p)) : [];
+    const files = adCopy ? incoming.filter((f) => !checkCopyDocument(f)) : incoming;
+    setFileError(problems.length ? `${problems.join(". ")}.` : null);
     if (!files.length) return;
     setUploads((list) => [
       ...list,
@@ -94,15 +117,22 @@ export function DeliverSheet({
     ]);
   };
 
-  const addSample = () =>
+  const addSample = () => {
+    const base = slug(product?.name ?? c.title);
+    if (adCopy) {
+      setCopy((text) => text || sampleAdCopy(product?.name ?? c.title, version));
+      add([{ name: `${base}-ad-copy-v${version}.docx`, bytes: 34_000 }]);
+      return;
+    }
     add([
       {
-        name: `${slug(product?.name ?? c.title)}-${slot ? "review-copy-" : ""}v${version}_${c.brief.aspect.replace(":", "x")}.mp4`,
+        name: `${base}-${slot ? "review-copy-" : ""}v${version}_${brief.aspect.replace(":", "x")}.mp4`,
         bytes: (slot ? 11_200_000 : 48_600_000) + version * 1_300_000,
       },
     ]);
+  };
 
-  const toggle = (list: string[], value: string) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]);
+  const toggle = (value: string) => setTicked((list) => (list.includes(value) ? list.filter((v) => v !== value) : [...list, value]));
 
   const submit = () => {
     if (!ready) return;
@@ -110,8 +140,19 @@ export function DeliverSheet({
       setWarned(true);
       return;
     }
-    if (latest) for (const id of notesDone) actions.updateComment(c.id, latest.id, id, { resolved: true });
-    actions.deliver({ commissionId: c.id, note: note.trim(), files: uploads.map((u) => ({ name: u.name, size: u.size })) });
+    const files = uploads
+      .filter((u) => u.progress >= 100)
+      .map((u) => ({ name: u.name, size: u.size, kind: adCopy ? ("document" as const) : deliveryFileKind(u.name) }));
+    const id = actions.deliver({
+      commissionId: c.id,
+      note: note.trim(),
+      files,
+      ...(adCopy ? { kind: "text" as const, text: copy.trim() } : {}),
+    });
+    if (!id) {
+      setFileError("That didn't send. Check the files and try again.");
+      return;
+    }
     toast({ message: `${What} sent to ${businessName}` });
     setDone(version);
   };
@@ -121,7 +162,7 @@ export function DeliverSheet({
       <Sheet
         open={open}
         onClose={onClose}
-        title={slot ? "Review copy uploaded" : `Version ${done} delivered`}
+        title={slot ? "Review copy uploaded" : adCopy ? "Copy sent" : `Version ${done} delivered`}
         hideTitle
         side="center"
         width="sm"
@@ -139,10 +180,9 @@ export function DeliverSheet({
           </PillButton>
         }
       >
-        <div className="flex flex-col items-center gap-4 pb-2 text-center" role="status">
-          <Celebrate className="h-28 w-48" />
+        <div className="flex flex-col items-center gap-3 pt-2 pb-2 text-center" role="status">
           <p className="y-display y-title" aria-hidden>
-            {slot ? "Your review copy" : `Version ${done}`} is with {businessName}
+            {slot ? "Your review copy" : adCopy && done === 1 ? "The copy" : `Version ${done}`} is with {businessName}
           </p>
           <p className="y-body y-fg-2 max-w-[40ch]">
             We&apos;ve let them know. They have {AUTO_APPROVE_DAYS} days to review it.{" "}
@@ -155,11 +195,68 @@ export function DeliverSheet({
     );
   }
 
+  const dropzone = (
+    <div
+      className="y-dropzone flex flex-col items-center gap-3 px-5 py-7 text-center"
+      data-over={over ? "true" : undefined}
+      onDragEnter={(event) => {
+        event.preventDefault();
+        setOver(true);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        if (!over) setOver(true);
+      }}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOver(false);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        setOver(false);
+        add(Array.from(event.dataTransfer.files).map((f) => ({ name: f.name, bytes: f.size })));
+      }}
+    >
+      {adCopy ? <FileText size={28} aria-hidden /> : <UploadCloud size={28} aria-hidden />}
+      <div className="flex flex-col gap-1">
+        <p className="y-small font-medium">
+          {over ? "Drop to upload" : adCopy ? "Or attach it as a document" : "Drag your video and files here"}
+        </p>
+        <p className="y-micro y-fg-2">
+          {adCopy ? "PDF, DOC, DOCX or TXT, up to 10 MB." : "MP4 or MOV up to 2 GB. Add subtitles, hooks and the raw footage too."}
+        </p>
+        {!adCopy && brief.aspect === "9:16" ? (
+          <p className="y-micro y-fg-2">Filming 1080 × 1920? Keep faces and captions inside the middle 880 × 1600.</p>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap justify-center gap-2">
+        <PillButton size="sm" variant="contrast" onClick={() => inputRef.current?.click()}>
+          {adCopy ? "Choose a document" : "Choose files"}
+        </PillButton>
+        <PillButton size="sm" variant="ghost" onClick={addSample}>
+          No file handy? Use a sample
+        </PillButton>
+      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        multiple
+        accept={adCopy ? ".pdf,.doc,.docx,.txt" : "video/*,image/*,.zip,.srt,.vtt,.pdf"}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden
+        onChange={(event) => {
+          add(Array.from(event.target.files ?? []).map((f) => ({ name: f.name, bytes: f.size })));
+          event.target.value = "";
+        }}
+      />
+    </div>
+  );
+
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title={`Upload ${what}`}
+      title={adCopy ? (version === 1 ? "Send the copy" : `Send ${what}`) : `Upload ${what}`}
       description={
         slot
           ? `${businessName} sees a watermarked, low-quality copy until they approve it. Due ${weekdayDate(c.dueDate)}.`
@@ -170,7 +267,7 @@ export function DeliverSheet({
         <div className="flex flex-col gap-2">
           {!ready ? (
             <p className="y-micro y-fg-2 text-center sm:text-end" aria-live="polite">
-              {uploading ? "Uploading… you can keep filling this in." : "Add your video to continue."}
+              {uploading ? "Uploading… you can keep filling this in." : adCopy ? "Paste the copy or attach a document to continue." : "Add your video to continue."}
             </p>
           ) : null}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
@@ -185,63 +282,32 @@ export function DeliverSheet({
       }
     >
       <div className="flex flex-col gap-7">
-        <div className="flex flex-col gap-3">
-          <div
-            className="y-dropzone flex flex-col items-center gap-3 px-5 py-7 text-center"
-            data-over={over ? "true" : undefined}
-            onDragEnter={(event) => {
-              event.preventDefault();
-              setOver(true);
-            }}
-            onDragOver={(event) => {
-              event.preventDefault();
-              if (!over) setOver(true);
-            }}
-            onDragLeave={(event) => {
-              if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOver(false);
-            }}
-            onDrop={(event) => {
-              event.preventDefault();
-              setOver(false);
-              add(Array.from(event.dataTransfer.files).map((f) => ({ name: f.name, bytes: f.size })));
-            }}
-          >
-            <UploadCloud size={28} aria-hidden />
-            <div className="flex flex-col gap-1">
-              <p className="y-small font-medium">{over ? "Drop to upload" : "Drag your video and files here"}</p>
-              <p className="y-micro y-fg-2">MP4 or MOV up to 2 GB. Add subtitles, raw footage or hooks too.</p>
-              {c.brief.aspect === "9:16" ? (
-                <p className="y-micro y-fg-2">Filming 1080 × 1920? Keep faces and captions inside the middle 880 × 1600.</p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              <PillButton size="sm" variant="contrast" onClick={() => inputRef.current?.click()}>
-                Choose files
-              </PillButton>
-              <PillButton size="sm" variant="ghost" onClick={addSample}>
-                No file handy? Use a sample
-              </PillButton>
-            </div>
-            <input
-              ref={inputRef}
-              type="file"
-              multiple
-              accept="video/*,image/*,.zip,.srt,.vtt,.pdf"
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden
-              onChange={(event) => {
-                add(Array.from(event.target.files ?? []).map((f) => ({ name: f.name, bytes: f.size })));
-                event.target.value = "";
-              }}
+        {adCopy ? (
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor={copyId} className="y-label">
+              <span>The copy</span>
+            </label>
+            <textarea
+              id={copyId}
+              name="deliver-copy"
+              className="y-input min-h-48"
+              rows={9}
+              value={copy}
+              onChange={(event) => setCopy(event.target.value)}
+              placeholder={"Headlines\n1. …\n\nPrimary text\n1. …\n\nCalls to action\n…"}
             />
+            <p className="y-micro y-fg-2 px-1">Paste it the way you&apos;d hand it over. {businessName} reads it here and comments.</p>
           </div>
+        ) : null}
+
+        <div className="flex flex-col gap-3">
+          {dropzone}
 
           {uploads.length ? (
             <ul className="flex flex-col gap-1.5" aria-label={`Files in ${what}`}>
               {uploads.map((upload) => (
                 <li key={upload.id} className="y-tile flex items-center gap-3 py-2 ps-4 pe-2">
-                  <FileVideo size={18} aria-hidden className="flex-none" />
+                  {adCopy ? <FileText size={18} aria-hidden className="flex-none" /> : <FileVideo size={18} aria-hidden className="flex-none" />}
                   <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <div className="flex items-baseline justify-between gap-2">
                       <span className="y-small truncate font-medium">{upload.name}</span>
@@ -278,6 +344,11 @@ export function DeliverSheet({
               ))}
             </ul>
           ) : null}
+          {fileError ? (
+            <p role="alert" className="y-small px-1 font-medium text-(--y-danger)">
+              {fileError}
+            </p>
+          ) : null}
           <p className="sr-only" aria-live="polite">
             {uploads.length && !uploading ? `${plural(uploads.length, "file")} uploaded` : ""}
           </p>
@@ -291,46 +362,40 @@ export function DeliverSheet({
           value={note}
           onChange={(event) => setNote(event.target.value)}
           placeholder={
-            openNotes.length
-              ? "e.g. Slowed the WhatsApp moment down and re-recorded the ending as you asked."
-              : "e.g. Here's version 1. I went with the shop-counter setting and kept it under 45 seconds."
+            asked.length
+              ? adCopy
+                ? "e.g. Dropped 'stress-free' and tightened headline 3."
+                : "e.g. Held the send screen longer and re-recorded the ending as you asked."
+              : adCopy
+                ? "e.g. Five headlines and five primary texts, all under the Meta limits."
+                : "e.g. Here's version 1. I went with the shop-counter setting and kept it under 45 seconds."
           }
         />
 
-        {openNotes.length ? (
+        {asked.length ? (
           <fieldset className="flex flex-col gap-1.5">
             <legend className="y-label mb-1">Changes {businessName} asked for</legend>
-            <p className="y-micro y-fg-2 mb-1 px-1">Tick each one you&apos;ve addressed. They&apos;re marked done for {businessName}.</p>
-            {openNotes.map((comment) => (
+            <p className="y-micro y-fg-2 mb-1 px-1">Tick each one this version covers. Sending marks them done for {businessName}.</p>
+            {asked.map((comment) => (
               <label key={comment.id} className="y-tile flex cursor-pointer items-start gap-3 p-3">
-                <input
-                  type="checkbox"
-                  className="y-check mt-0.5"
-                  checked={notesDone.includes(comment.id)}
-                  onChange={() => setNotesDone((list) => toggle(list, comment.id))}
-                />
+                <input type="checkbox" className="y-check mt-0.5" checked={ticked.includes(comment.id)} onChange={() => toggle(comment.id)} />
                 <span className="y-small">
-                  <span className="y-num font-semibold">{clock(comment.atSec)}</span> · {comment.text}
+                  <span className="y-num font-semibold">{comment.atSec === null ? "General" : clock(comment.atSec)}</span> · {comment.text}
                 </span>
               </label>
             ))}
           </fieldset>
         ) : null}
 
-        {mustInclude.length ? (
+        {briefItems.length ? (
           <fieldset className="flex flex-col gap-1.5" aria-describedby={`${checklistId}-hint`}>
-            <legend className="y-label mb-1">{slot ? "Talking points" : "Brief checklist"}</legend>
+            <legend className="y-label mb-1">{slot ? "Talking points" : adCopy ? "What to write" : "Brief checklist"}</legend>
             <p id={`${checklistId}-hint`} className="y-micro y-fg-2 mb-1 px-1">
               Tick what&apos;s in this version. {businessName} checks these first.
             </p>
-            {mustInclude.map((item) => (
+            {briefItems.map((item) => (
               <label key={item} className="y-tile flex cursor-pointer items-start gap-3 p-3">
-                <input
-                  type="checkbox"
-                  className="y-check mt-0.5"
-                  checked={ticked.includes(item)}
-                  onChange={() => setTicked((list) => toggle(list, item))}
-                />
+                <input type="checkbox" className="y-check mt-0.5" checked={ticked.includes(item)} onChange={() => toggle(item)} />
                 <span className="y-small">{item}</span>
               </label>
             ))}
@@ -342,7 +407,7 @@ export function DeliverSheet({
             <AlertTriangle size={18} aria-hidden className="mt-0.5 flex-none" />
             <p className="y-small font-medium">
               {plural(missing, "item")} {missing === 1 ? "isn't" : "aren't"} ticked yet
-              {missingNotes ? ` (${plural(missingNotes, "requested change")})` : ""}. Versions that miss the brief usually come
+              {missingAsked ? ` (${plural(missingAsked, "requested change")})` : ""}. Versions that miss the brief usually come
               back for changes. Tick them, or send it anyway.
             </p>
           </div>

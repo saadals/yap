@@ -9,7 +9,7 @@ import { useSimulatedPlayback } from "@/components/domain/video-player";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { money } from "@/lib/format";
+import { creatorNet, money, moneyExact } from "@/lib/format";
 import { useReducedMotion } from "@/lib/hooks";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
@@ -128,10 +128,18 @@ export function CreatorTile({
         <p className="y-small y-fg-2 truncate max-sm:hidden">{meta}</p>
         <p className="y-small mt-1 truncate">
           {Number.isFinite(from) ? <span className="font-semibold">From {money(from)}</span> : null}
-          <span className="y-fg-2 max-sm:hidden">
-            {Number.isFinite(from) ? " · " : ""}
-            {creatorKindById[creator.kind].name}
-          </span>
+          {/* Your own tile: what you earn from that price, in place of the kind of creator. */}
+          {own && Number.isFinite(from) ? (
+            // Phones (narrow tiles): on its own line, so the amount is never cut off.
+            <span className="y-fg-2 max-sm:block">
+              <span className="max-sm:hidden"> · </span>you earn {moneyExact(creatorNet(from))}
+            </span>
+          ) : (
+            <span className="y-fg-2 max-sm:hidden">
+              {Number.isFinite(from) ? " · " : ""}
+              {creatorKindById[creator.kind].name}
+            </span>
+          )}
         </p>
       </div>
     </article>

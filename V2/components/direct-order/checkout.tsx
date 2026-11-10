@@ -20,17 +20,18 @@ import { moneyExact, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { featuredVideo } from "@/lib/selectors";
 import { accountOwning, actions, useDemo } from "@/lib/store";
+import { usageById } from "@/lib/taxonomy";
 import type { Commission, Creator, Video } from "@/lib/types";
 
 import { derive, deliverablesLabel, detailFields, fieldTodo, initDraft, toOffer, validate, type Draft, type FieldId } from "./model";
 import {
-  AddonsSection,
   BriefSection,
   DetailsSection,
   MessageSection,
   PackageSection,
   PaymentSection,
   ProductSection,
+  UsageSection,
   type SectionProps,
 } from "./sections";
 
@@ -142,6 +143,7 @@ export function Checkout({
           { label: "Deliverables", value: deliverablesLabel(d) },
           { label: "Due", value: weekdayDate(x.dueDate) },
           { label: "Revisions", value: x.revisions },
+          { label: "Usage", value: usageById[d.usage].name },
         ]}
       />
       <PriceSummary
@@ -169,8 +171,8 @@ export function Checkout({
       <p className="y-micro y-fg-2 flex items-start gap-2">
         <ShieldCheck size={15} aria-hidden className="mt-px flex-none" />
         <span>
-          Your card is authorized now, not charged. When {creator.firstName} accepts, it&apos;s charged and held until you
-          approve the video. If {creator.firstName} declines, nothing is charged.
+          Your card is authorized now, not charged. When {creator.firstName} accepts, the total is held until you approve
+          the video. If {creator.firstName} declines, nothing is charged. Full refund if it isn&apos;t delivered.
         </span>
       </p>
     </Block>
@@ -211,7 +213,7 @@ export function Checkout({
             <ProductSection {...props} />
             <BriefSection {...props} video={video} />
             <DetailsSection {...props} open={detailsOpen} onToggle={setDetailsOpen} />
-            <AddonsSection {...props} />
+            <UsageSection {...props} />
             <MessageSection {...props} />
             <PaymentSection {...props} />
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, ChevronDown, PencilLine, Repeat2, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Film, PencilLine, Repeat2, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -9,9 +9,9 @@ import { Block } from "@/components/ui/block";
 import { PillButton } from "@/components/ui/pill-button";
 import { KeyValues } from "@/components/ui/progress";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
-import { lengthLabel, money, plural } from "@/lib/format";
+import { creatorNet, lengthLabel, money, moneyExact, plural, priceWithNet } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { addonById } from "@/lib/taxonomy";
+import { RAW_FOOTAGE_INCLUDED, addonById, usageOptions } from "@/lib/taxonomy";
 import type { Creator, Package } from "@/lib/types";
 
 import { extraDaysLabel, packagesInOrder, popularPackage, tierName } from "./utils";
@@ -22,11 +22,18 @@ export function orderHref(creator: Creator, pkg: Package | undefined, signedIn: 
   return signedIn ? href : paths.signIn({ next: href });
 }
 
+/** A package's own list, without raw footage (it comes with every order, said once below). */
+const packageExtras = (pkg: Package) => pkg.includes.filter((item) => !/raw footage/i.test(item));
+
 /**
  * The booking card: pick Basic, Standard or Premium, see what's included, order. Sits in the
  * sticky rail on desktop and in the page on phones (where the sticky bottom bar holds the order
- * button, so `hideOrderOnPhones` keeps one green per view). Your own profile shows the packages
- * without an order button.
+ * button, so `hideOrderOnPhones` keeps one green per view).
+ *
+ * Prices are listed prices: what the brand pays, nothing on top. Usage rights (one of four options,
+ * chosen when ordering) and raw footage come with every order, so they're stated once as included,
+ * never as add-ons. Your own profile shows the packages without an order button and with what you
+ * earn beside each price (Yapp's 20% comes out of the creator's side).
  */
 export function BookingCard({
   creator,
@@ -49,10 +56,12 @@ export function BookingCard({
   id?: string;
 }) {
   const [addonsOpen, setAddonsOpen] = useState(false);
+  const [usageOpen, setUsageOpen] = useState(false);
   const packages = packagesInOrder(creator);
   const popular = popularPackage(creator);
-  const adRights = creator.addons.filter((a) => a.id === "ad-rights-90" || a.id === "ad-rights-365");
-  const adFrom = adRights.length ? Math.min(...adRights.map((a) => a.price)) : null;
+  // Only add-ons that still exist (usage rights and raw footage stopped being add-ons).
+  const addons = creator.addons.filter((addon) => addon.id in addonById);
+  const key = id ?? "booking";
 
   if (!selected) {
     return (
@@ -98,14 +107,21 @@ export function BookingCard({
             </Badge>
           ) : null}
         </div>
-        <p className="y-display y-num text-[34px] leading-none tracking-[-0.03em]">{money(selected.price)}</p>
+        <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <span className="y-display y-num text-[34px] leading-none tracking-[-0.03em]">{money(selected.price)}</span>
+          {own ? (
+            <span className="y-small y-fg-2">
+              you earn <span className="y-num font-medium text-(--b-fg)">{moneyExact(creatorNet(selected.price))}</span>
+            </span>
+          ) : null}
+        </p>
         <p className="y-small y-fg-2">{selected.summary}</p>
       </div>
 
       <KeyValues
         rows={[
           { label: "Delivery", value: plural(selected.deliveryDays, "day") },
-          { label: "Revisions", value: plural(selected.revisions, "round") },
+          { label: "Revisions", value: `${selected.revisions} included` },
           {
             label: "Videos",
             value: `${selected.videos} · up to ${lengthLabel(selected.maxSeconds)}`,
@@ -113,9 +129,9 @@ export function BookingCard({
         ]}
       />
 
-      {selected.includes.length ? (
+      {packageExtras(selected).length ? (
         <ul className="flex flex-col gap-1.5 border-t border-(--b-line) pt-4">
-          {selected.includes.map((item) => (
+          {packageExtras(selected).map((item) => (
             <li key={item} className="y-small flex items-start gap-2">
               <Check size={15} strokeWidth={2.5} aria-hidden className="mt-0.5 flex-none" />
               {item}
@@ -145,52 +161,90 @@ export function BookingCard({
         </div>
       )}
 
-      <div className="flex flex-col border-t border-(--b-line) pt-3">
-        <p className="y-small y-fg-2 flex items-start gap-2">
+      <div className="flex flex-col gap-2 border-t border-(--b-line) pt-3">
+        <div className="y-small y-fg-2 flex items-start gap-2">
           <ShieldCheck size={16} aria-hidden className="mt-0.5 flex-none" />
-          <span>
-            <span className="font-medium text-(--b-fg)">Organic use on your own accounts is included.</span>{" "}
-            {adFrom ? `Paid ads usage is an add-on, from ${money(adFrom)}.` : "Paid ads usage is an add-on."}
-          </span>
-        </p>
-        {creator.addons.length ? (
-          <>
+          <div className="flex min-w-0 flex-col items-start">
+            <p>
+              <span className="font-medium text-(--b-fg)">Usage rights included:</span>{" "}
+              {own
+                ? "the brand chooses how they'll use the videos when they order."
+                : "you choose how you'll use the videos at checkout."}
+            </p>
             <button
               type="button"
-              className="y-small mt-1 flex min-h-11 items-center justify-between gap-3 rounded-(--y-r-sm) font-medium"
-              aria-expanded={addonsOpen}
-              aria-controls={`${id ?? "booking"}-addons`}
-              onClick={() => setAddonsOpen((v) => !v)}
+              className="y-link y-small inline-flex min-h-9 items-center gap-1 font-medium text-(--b-fg)"
+              aria-expanded={usageOpen}
+              aria-controls={`${key}-usage`}
+              onClick={() => setUsageOpen((v) => !v)}
             >
-              <span>
-                Add-ons <span className="y-fg-2 font-normal">· {creator.addons.length} available</span>
-              </span>
+              {usageOpen ? "Hide the options" : `See the ${usageOptions.length} options`}
               <ChevronDown
-                size={18}
+                size={15}
                 aria-hidden
-                className={`flex-none transition-transform duration-(--y-dur-2) ${addonsOpen ? "rotate-180" : ""}`}
+                className={`flex-none transition-transform duration-(--y-dur-2) ${usageOpen ? "rotate-180" : ""}`}
               />
             </button>
-            {addonsOpen ? (
-              <ul id={`${id ?? "booking"}-addons`} className="flex flex-col divide-y divide-(--b-line)">
-                {creator.addons.map((addon) => {
-                  const info = addonById[addon.id];
-                  const days = extraDaysLabel(addon.extraDays);
-                  return (
-                    <li key={addon.id} className="flex items-baseline gap-3 py-2">
-                      <span className="flex min-w-0 flex-1 flex-col">
-                        <span className="y-small font-medium">{info.name}</span>
-                        {days ? <span className="y-micro y-fg-2">{days}</span> : null}
-                      </span>
-                      <span className="y-small y-num flex-none font-medium">+{money(addon.price)}</span>
+            {usageOpen ? (
+              <div id={`${key}-usage`} className="flex flex-col gap-1.5 pb-1">
+                <ul className="flex flex-col gap-1">
+                  {usageOptions.map((option) => (
+                    <li key={option.id} className="flex items-start gap-2 text-(--b-fg)">
+                      <Check size={14} strokeWidth={2.5} aria-hidden className="mt-1 flex-none" />
+                      {option.name}
                     </li>
-                  );
-                })}
-              </ul>
+                  ))}
+                </ul>
+                <p className="y-micro">Every option includes posting on {own ? "the brand's" : "your"} own accounts.</p>
+              </div>
             ) : null}
-          </>
-        ) : null}
+          </div>
+        </div>
+        <p className="y-small y-fg-2 flex items-start gap-2">
+          <Film size={16} aria-hidden className="mt-0.5 flex-none" />
+          <span>{RAW_FOOTAGE_INCLUDED}</span>
+        </p>
       </div>
+
+      {addons.length ? (
+        <div className="flex flex-col border-t border-(--b-line) pt-1">
+          <button
+            type="button"
+            className="y-small flex min-h-11 items-center justify-between gap-3 rounded-(--y-r-sm) font-medium"
+            aria-expanded={addonsOpen}
+            aria-controls={`${key}-addons`}
+            onClick={() => setAddonsOpen((v) => !v)}
+          >
+            <span>
+              Add-ons <span className="y-fg-2 font-normal">· {addons.length} available</span>
+            </span>
+            <ChevronDown
+              size={18}
+              aria-hidden
+              className={`flex-none transition-transform duration-(--y-dur-2) ${addonsOpen ? "rotate-180" : ""}`}
+            />
+          </button>
+          {addonsOpen ? (
+            <ul id={`${key}-addons`} className="flex flex-col divide-y divide-(--b-line)">
+              {addons.map((addon) => {
+                const info = addonById[addon.id];
+                const days = extraDaysLabel(addon.extraDays);
+                return (
+                  <li key={addon.id} className="flex items-baseline gap-3 py-2">
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="y-small font-medium">{info.name}</span>
+                      {days ? <span className="y-micro y-fg-2">{days}</span> : null}
+                    </span>
+                    <span className="y-small y-num flex-none text-end font-medium">
+                      +{own ? priceWithNet(addon.price) : money(addon.price)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       {repeat ? (
         <p className="y-small flex flex-wrap items-center gap-x-1.5 border-t border-(--b-line) pt-3">

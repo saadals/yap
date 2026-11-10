@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, Globe, MailOpen, Sparkles } from "lucide-react";
+import { BadgeCheck, FileText, Film, Globe, ImageIcon, MailOpen, Sparkles } from "lucide-react";
 import { useState } from "react";
 
 import { BriefSummary } from "@/components/domain/brief-summary";
@@ -10,15 +10,16 @@ import { TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { at } from "@/lib/clock";
-import { daysFromNow, money, plural, weekdayDate } from "@/lib/format";
-import { cityById, fit, me, pitchesForRequest, savedCreatorIds } from "@/lib/selectors";
+import { addDays, at } from "@/lib/clock";
+import { daysFromNow, money, plural, quoted, weekdayDate } from "@/lib/format";
+import { attachmentMeta } from "@/lib/files";
+import { cityById, deadlineDaysOf, fit, isAdCopy, me, pitchesForRequest, savedCreatorIds } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { creatorKindById } from "@/lib/taxonomy";
-import type { ContentRequest, Product } from "@/lib/types";
+import { BUDGET_MIN, ORDER_DEADLINE_OPTIONS, creatorKindById } from "@/lib/taxonomy";
+import type { Brief, BriefAttachment, ContentRequest, Product } from "@/lib/types";
 
 import { ChoiceTile, GroupError } from "./parts";
-import { BUDGET_FLOOR, daysForIsoDay, isoDay } from "./shared";
+import { daysForIsoDay, isoDay } from "./shared";
 
 /** Two buttons at the bottom of a confirm sheet: the action, then a quiet way out. */
 function ConfirmFooter({
@@ -149,7 +150,7 @@ export function InviteSheet({ request, onClose }: { request: ContentRequest; onC
 }
 
 /* -------------------------------------------------------------------------- */
-/* Edit a live request: title, budget, due date, who can pitch                 */
+/* Edit a live order: title, budget, delivery deadline (or due date), who can pitch */
 /* -------------------------------------------------------------------------- */
 
 export function EditRequestSheet({ request, onClose }: { request: ContentRequest; onClose: () => void }) {
@@ -159,6 +160,9 @@ export function EditRequestSheet({ request, onClose }: { request: ContentRequest
   const [min, setMin] = useState(String(request.budget.min));
   const [max, setMax] = useState(String(request.budget.max));
   const [due, setDue] = useState(() => isoDay(Math.max(1, daysFromNow(request.dueDate))));
+  // Orders posted with a delivery deadline keep one (days after hire); older ones carry a date.
+  const setDeadline = deadlineDaysOf(request);
+  const [deadline, setDeadlineDays] = useState<number | undefined>(setDeadline);
   const [visibility, setVisibility] = useState(request.visibility);
   const [submitted, setSubmitted] = useState(false);
 
@@ -168,12 +172,15 @@ export function EditRequestSheet({ request, onClose }: { request: ContentRequest
   const errors = {
     title: title.trim().length < 6 ? "Give it a title of at least 6 characters." : undefined,
     budget:
-      !Number.isFinite(minN) || minN < BUDGET_FLOOR
-        ? `The lowest budget is ${money(BUDGET_FLOOR)}.`
+      !Number.isFinite(minN) || minN < BUDGET_MIN
+        ? `The lowest budget is ${money(BUDGET_MIN)}.`
         : !Number.isFinite(maxN) || maxN < minN
           ? "The most you'd pay must be at least the least."
           : undefined,
-    due: !Number.isFinite(days) || days < 1 || days > 90 ? "Pick a date between tomorrow and 90 days from now." : undefined,
+    due:
+      deadline !== undefined || (Number.isFinite(days) && days >= 1 && days <= 90)
+        ? undefined
+        : "Pick a date between tomorrow and 90 days from now.",
     visibility:
       visibility === "invite" && request.invitedCreatorIds.length === 0
         ? "Invite at least one creator before making it invite only."
@@ -190,7 +197,10 @@ export function EditRequestSheet({ request, onClose }: { request: ContentRequest
     actions.updateRequest(request.id, {
       title: title.trim(),
       budget: { min: minN, max: maxN },
-      dueDate: at(days, "18:00"),
+      // A deadline order's latest delivery is its closing date plus the deadline (as when posted).
+      ...(deadline !== undefined
+        ? { deadlineDays: deadline, dueDate: addDays(request.closesAt, deadline) }
+        : { dueDate: at(days, "18:00") }),
       visibility,
     });
     toast({ message: "Saved. Creators see the changes right away." });
@@ -241,17 +251,36 @@ export function EditRequestSheet({ request, onClose }: { request: ContentRequest
             </p>
           ) : null}
         </div>
-        <TextField
-          label="Due date"
-          type="date"
-          required
-          min={isoDay(1)}
-          max={isoDay(90)}
-          value={due}
-          onChange={(event) => setDue(event.target.value)}
-          error={submitted ? errors.due : undefined}
-          hint={Number.isFinite(days) && days >= 1 ? `${weekdayDate(at(days, "18:00"))} · ${plural(days, "day")} from today` : undefined}
-        />
+        {deadline !== undefined ? (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="y-label mb-2">Delivery deadline</legend>
+            <div role="group" aria-label="Days to deliver after hire" className="flex flex-wrap gap-1.5">
+              {ORDER_DEADLINE_OPTIONS.map((option) => (
+                <FilterChip key={option} pressed={deadline === option} onClick={() => setDeadlineDays(option)}>
+                  {plural(option, "day")}
+                </FilterChip>
+              ))}
+            </div>
+            <p className="y-micro y-fg-2 px-1">
+              The first version is due this many days after you hire.
+              {pitchesForRequest(s, request.id).length && deadline !== setDeadline
+                ? " Creators who already pitched see the new deadline before you hire them."
+                : ""}
+            </p>
+          </fieldset>
+        ) : (
+          <TextField
+            label="Due date"
+            type="date"
+            required
+            min={isoDay(1)}
+            max={isoDay(90)}
+            value={due}
+            onChange={(event) => setDue(event.target.value)}
+            error={submitted ? errors.due : undefined}
+            hint={Number.isFinite(days) && days >= 1 ? `${weekdayDate(at(days, "18:00"))} · ${plural(days, "day")} from today` : undefined}
+          />
+        )}
         <fieldset className="flex flex-col gap-2">
           <legend className="y-label mb-2">Who can pitch</legend>
           <ChoiceTile name="edit-visibility" checked={visibility === "public"} onChange={() => setVisibility("public")}>
@@ -341,6 +370,47 @@ export function DeleteDraftSheet({ onDelete, onClose }: { onDelete: () => void; 
 /* The full brief                                                              */
 /* -------------------------------------------------------------------------- */
 
+const attachmentIcon = (kind: BriefAttachment["kind"]) =>
+  kind === "video" ? <Film size={16} aria-hidden /> : kind === "image" ? <ImageIcon size={16} aria-hidden /> : <FileText size={16} aria-hidden />;
+
+/**
+ * The parts of a brief the shared summary leaves out: the opening (hook line) and the files the
+ * brand attached. Both are shown to creators before they pitch.
+ */
+export function BriefExtras({ brief }: { brief: Brief }) {
+  const files = brief.attachments ?? [];
+  if (!brief.hook && !files.length) return null;
+  const adCopy = isAdCopy({ brief });
+  return (
+    <div className="flex flex-col gap-5 border-t border-(--b-line) pt-4">
+      {brief.hook ? (
+        <div className="flex flex-col gap-1">
+          <h3 className="y-micro y-fg-2">{adCopy ? "Opening line" : "The hook"}</h3>
+          <p className="y-body max-w-[62ch]" dir="auto">
+            {quoted(brief.hook)}
+          </p>
+        </div>
+      ) : null}
+      {files.length ? (
+        <div className="flex flex-col gap-2">
+          <h3 className="y-micro y-fg-2">Files for creators · {files.length}</h3>
+          <ul className="flex flex-col gap-1.5">
+            {files.map((file) => (
+              <li key={file.id} className="y-tile flex items-center gap-3 px-3.5 py-2.5">
+                <span className="flex-none">{attachmentIcon(file.kind)}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="y-small block truncate font-medium">{file.name}</span>
+                  <span className="y-micro y-fg-2 block">{attachmentMeta(file)}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function BriefSheet({
   request,
   product,
@@ -354,6 +424,7 @@ export function BriefSheet({
     <Sheet open onClose={onClose} title="The brief" description={request.title} width="lg">
       <div className="flex flex-col gap-4">
         <BriefSummary brief={request.brief} product={product} />
+        <BriefExtras brief={request.brief} />
         {request.status !== "draft" ? (
           <p className="y-micro y-fg-2">Creators pitched on this brief, so it stays as is. Agree any changes in a message before you hire.</p>
         ) : null}

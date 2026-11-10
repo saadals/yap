@@ -42,7 +42,7 @@ function OwnerSkeleton() {
 
 /**
  * The owner's view of an order (rendered by app/orders/[id]/page.tsx inside <AppShell mode="order">
- * when the signed-in account placed it): a custom request's pitch board, or a UGC campaign's
+ * when the signed-in account placed it): a custom order's pitch board, or a UGC campaign's
  * review copies and slots. Reads the live record so it follows store updates.
  */
 export function OrderOwnerView({ request }: { request: ContentRequest }) {

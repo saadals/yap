@@ -17,6 +17,7 @@ import { usePrefs } from "@/lib/prefs";
 import { savedAccounts, useSavedAccounts, type SavedAccount, type SignInMethod } from "@/lib/saved-accounts";
 import { businessById } from "@/lib/selectors";
 import { useDemo, useHydrated, type DemoState } from "@/lib/store";
+import { FEE_PCT } from "@/lib/taxonomy";
 
 import { OrDivider, safeNext } from "./auth-bits";
 import { countries, countryById, defaultCountry, formatPhone, fullNumber, isPlausible, maskedNumber } from "./phone";
@@ -34,7 +35,7 @@ const toIntent = (value: string | null): SignInIntent | null =>
 
 const intentLine: Record<SignInIntent, string> = {
   order: "Get short videos made for your product, with payment held until you approve.",
-  make: "Make videos for tech brands. You keep 100% of your price.",
+  make: `Make videos for tech brands. You earn ${100 - FEE_PCT}% of every price, paid when the brand approves.`,
 };
 
 /** "Nour Haddad at Daftar" / "Layla Mansour". */
@@ -312,6 +313,10 @@ function Card({ intent, next, isNew }: { intent: SignInIntent | null; next: stri
   );
 }
 
+/**
+ * One saved account: tap to sign in, or remove it from this device. The sign-in screen is the only
+ * place an account comes off the device ("Log out" elsewhere keeps it saved); removing it offers Undo.
+ */
 function SavedRow({
   row,
   busy,
@@ -324,6 +329,7 @@ function SavedRow({
   onPick: (row: SavedAccount) => void;
 }) {
   const s = useDemo();
+  const toast = useToast();
   const account = s.accounts.find((a) => a.id === row.accountId);
   if (!account) return null;
   const business = businessById(s, account.businessId);
@@ -358,7 +364,13 @@ function SavedRow({
         data-size="sm"
         disabled={disabled}
         aria-label={`Remove ${account.name} from this device`}
-        onClick={() => savedAccounts.forget(row.accountId)}
+        onClick={() => {
+          savedAccounts.forget(row.accountId);
+          toast({
+            message: `Removed ${account.name} from this device`,
+            action: { label: "Undo", onClick: () => savedAccounts.remember(row) },
+          });
+        }}
       >
         <X size={16} aria-hidden />
       </button>

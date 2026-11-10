@@ -1,6 +1,7 @@
 "use client";
 
-import { addons } from "@/lib/taxonomy";
+import { creatorNet, moneyExact } from "@/lib/format";
+import { FEE_PCT, addons } from "@/lib/taxonomy";
 import type { AddonId, Creator } from "@/lib/types";
 
 import type { AddonDraft } from "./draft";
@@ -12,7 +13,11 @@ const toNum = (value: string) =>
 const showNum = (value: number) =>
   Number.isFinite(value) ? String(value) : "";
 
-/** Add-ons: extras brands can add to any package. A switch per add-on; its price shows when on. */
+/**
+ * Add-ons: extras brands can add to any package (the current `AddonId` list only). A switch per
+ * add-on; its price, and what you earn from it after Yapp's 20%, show when on. Usage and raw footage
+ * are never add-ons: the brand picks the usage on every order and it's included in the price.
+ */
 export function AddonsSection({
   creator,
   draft,
@@ -32,7 +37,7 @@ export function AddonsSection({
     <EditorSection
       id="addons"
       title="Add-ons"
-      description={`Extras brands can add to any package. Organic use on their own accounts is always included. ${on} on offer.`}
+      description={`Extras brands can add to any package; you earn each after Yapp's ${FEE_PCT}%. Usage is chosen by the brand and included in the price, and raw footage always comes with the video, so neither is an add-on. ${on} on offer.`}
       errorCount={errorCount}
     >
       <ul className="y-tile flex flex-col overflow-hidden !bg-transparent shadow-[inset_0_0_0_1px_var(--b-line)]">
@@ -57,7 +62,7 @@ export function AddonsSection({
                 </span>
                 <label
                   htmlFor={switchId}
-                  className="flex min-w-0 flex-1 basis-48 cursor-pointer flex-col"
+                  className="flex min-w-0 flex-1 basis-36 cursor-pointer flex-col"
                 >
                   <span className="y-small font-semibold">{addon.name}</span>
                   <span className="y-micro y-fg-2">
@@ -69,7 +74,7 @@ export function AddonsSection({
                   </span>
                 </label>
                 {row.on ? (
-                  <span className="order-last flex basis-full items-center gap-3 ps-12 sm:order-none sm:basis-auto sm:ps-0">
+                  <span className="order-last flex basis-full flex-wrap items-center gap-x-3 gap-y-1.5 ps-12 sm:order-none sm:basis-auto sm:flex-nowrap sm:ps-0">
                     <span className="sb-money w-24">
                       <span aria-hidden>$</span>
                       <input
@@ -119,6 +124,11 @@ export function AddonsSection({
                         {rush ? "days less" : "extra days"}
                       </span>
                     </span>
+                    {Number.isFinite(row.price) && row.price > 0 ? (
+                      <span className="y-micro y-fg-2 y-num basis-full sm:w-24 sm:basis-auto sm:text-end">
+                        you earn {moneyExact(creatorNet(row.price))}
+                      </span>
+                    ) : null}
                   </span>
                 ) : null}
                 <input

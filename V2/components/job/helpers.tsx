@@ -18,11 +18,12 @@ import type { BadgeTone } from "@/components/ui/badge";
 import type { PillVariant } from "@/components/ui/pill-button";
 import { autoApproveAt } from "@/lib/attention";
 import { moneyExact, timeAgo } from "@/lib/format";
-import { commissionTotals, creatorById, requestById } from "@/lib/selectors";
-import type { DemoState } from "@/lib/store";
-import { campaignPlatformById } from "@/lib/taxonomy";
+import { brandHandleFor, commissionTotals, creatorById, requestById, slotPlatform } from "@/lib/selectors";
+import type { CommentRefusal, DemoState } from "@/lib/store";
+import { campaignPlatformById, usageById } from "@/lib/taxonomy";
 import type {
   Business,
+  CampaignPlatformId,
   CampaignTerms,
   Commission,
   ContentRequest,
@@ -33,6 +34,12 @@ import type {
   Role,
   SocialAccount,
 } from "@/lib/types";
+
+/** "Usage: paid ads for 12 months, included in the price. Raw footage included." (ad copy: usage only) */
+export function includedLine(job: Pick<Job, "commission" | "adCopy">): string {
+  const usage = `Usage: ${usageById[job.commission.brief.usage].phrase}, included in the price.`;
+  return job.adCopy ? usage : `${usage} Raw footage included.`;
+}
 
 /** Whole dollars when the amount is whole, cents otherwise ("$286", "$313.50"). */
 export const cash = (amount: number) => moneyExact(amount);
@@ -64,28 +71,32 @@ export const FORM = {
 export type SlotContext = {
   request?: ContentRequest;
   terms?: CampaignTerms;
+  /** The one platform this creator posts on (chosen when they picked the slot). */
+  platform: CampaignPlatformId;
   /** "TikTok" */
   platformName: string;
   /** The paid-partnership setting to turn on, in the platform's words. */
   disclosure: string;
-  /** "@daftar.app" */
+  /** "@daftar.app": the brand's handle on that platform. */
   brandHandle: string;
-  /** The creator's own connected account on the campaign's platform. */
+  /** The creator's own connected account on that platform. */
   social?: SocialAccount;
 };
 
 export function slotContext(s: DemoState, commission: Commission): SlotContext {
   const request = commission.requestId ? requestById(s, commission.requestId) : undefined;
   const terms = request?.campaign;
-  const platform = terms ? campaignPlatformById[terms.platform] : undefined;
+  const platformId = slotPlatform(commission, request);
+  const platform = campaignPlatformById[platformId];
   const creator = creatorById(s, commission.creatorId);
   return {
     request,
     terms,
+    platform: platformId,
     platformName: platform?.name ?? "the campaign's platform",
     disclosure: platform?.disclosure ?? "Paid partnership label",
-    brandHandle: terms?.brandHandle ?? "the brand account",
-    social: terms ? creator?.socials?.find((a) => a.platform === terms.platform) : undefined,
+    brandHandle: terms ? brandHandleFor(terms, platformId) : "the brand account",
+    social: creator?.socials?.find((a) => a.platform === platformId),
   };
 }
 
@@ -109,14 +120,30 @@ export type Job = {
   selected?: Delivery;
   /** Set for UGC campaign slots. */
   slot?: SlotContext;
+  /** Ad copy writing: text deliveries, general comments only, no player, no posting. */
+  adCopy: boolean;
   /** "version" or "review copy" */
   noun: string;
+  /**
+   * Comments and replies that were unread for this side when the job opened (plus any that arrive
+   * while it's open): kept for the visit, so the "New" marks survive marking everything read.
+   */
+  fresh: ReadonlySet<string>;
+  /** Versions looked at on this visit (a version chip loses its dot once opened). */
+  viewed: ReadonlySet<string>;
+  /** A request to open one comment (from `?comment=`, a timeline line or a notification). */
+  focus?: CommentFocus;
   openSheet: (name: SheetName) => void;
   /** Scroll to the composer and focus it. */
   focusComposer: () => void;
   /** Show a version in the stage panel (from the timeline or the version switcher). */
   pickVersion: (deliveryId: string | null) => void;
+  /** Show a version's comments, optionally opening one comment. */
+  showComments: (deliveryId: string, commentId?: string) => void;
 };
+
+/** Open the comments of one version and highlight one comment; a new `key` repeats the request. */
+export type CommentFocus = { deliveryId: string; commentId?: string; key: number };
 
 /** The single next step for the viewer: the header (desktop), the sticky strip and the phone bar show it. */
 export type NextAction = {
@@ -227,12 +254,13 @@ export function paymentWords(status: PaymentStatus, side: Role): string {
 /** When the latest delivery approves itself (seed may omit it; falls back to delivery + 3 days). */
 export const autoApproveDate = (c: Commission) => (c.status === "delivered" ? autoApproveAt(c) : undefined);
 
-/** Unique, non-empty note texts across all versions (suggested learnings). */
+/** The brand's own comments across all versions, unique and not deleted (suggested learnings). */
 export function suggestedLearnings(commission: Commission): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const delivery of commission.deliveries) {
     for (const comment of delivery.comments) {
+      if (comment.deletedAt || comment.author !== "business") continue;
       const text = comment.text.trim();
       const key = text.toLowerCase();
       if (!text || seen.has(key)) continue;
@@ -244,6 +272,50 @@ export function suggestedLearnings(commission: Commission): string[] {
 }
 
 export const revisionsLeft = (c: Commission) => Math.max(0, c.revisionsIncluded - c.revisionsUsed);
+
+/** Ids of comments and replies this side hasn't seen yet, across every version. */
+export function unreadIds(deliveries: Delivery[], side: Role): string[] {
+  const out: string[] = [];
+  for (const d of deliveries) {
+    for (const m of d.comments) {
+      if (m.unread && m.author !== side && !m.deletedAt) out.push(m.id);
+      for (const r of m.replies) if (r.unread && r.author !== side && !r.deletedAt) out.push(r.id);
+    }
+  }
+  return out;
+}
+
+/** The store's reason for refusing a comment change, in plain words for a toast. */
+export function commentError(reason: CommentRefusal): string {
+  switch (reason) {
+    case "closed":
+      return "Comments on this job are closed. They stay readable.";
+    case "not_party":
+      return "Only the brand and the creator on this job can comment.";
+    case "not_found":
+      return "That comment isn't there any more.";
+    case "not_author":
+      return "You can only change your own comments.";
+    case "not_latest":
+      return "Comments can only be changed on the latest version.";
+    case "too_short":
+      return "Write a comment first.";
+    case "general_only":
+      return "Comments on ad copy are general, without a time.";
+    case "not_allowed":
+      return "Only the brand can re-open a comment.";
+  }
+}
+
+/** "Video", "Subtitles"…: the kind of a delivered file, from its name. */
+export function deliveryFileKind(name: string): NonNullable<Delivery["files"][number]["kind"]> {
+  const ext = name.split(".").pop()?.toLowerCase() ?? "";
+  if (["srt", "vtt"].includes(ext)) return "subtitles";
+  if (["zip", "rar", "7z"].includes(ext)) return "archive";
+  if (["png", "jpg", "jpeg", "gif", "webp", "heic"].includes(ext)) return "image";
+  if (["pdf", "doc", "docx", "txt", "md"].includes(ext)) return "document";
+  return "video";
+}
 
 /** Approximate file size label from bytes. */
 export function sizeLabel(bytes: number): string {

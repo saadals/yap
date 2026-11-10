@@ -1,14 +1,14 @@
 /**
  * Everything a buyer profile ordered, as one list of items: jobs (commissions you placed, campaign
- * slots left out), UGC campaigns, custom requests taking pitches, and drafts. Both Home ("In
+ * slots left out), UGC campaigns, custom orders taking pitches, and drafts. Both Home ("In
  * progress") and /orders read these. Pure: safe in render.
  *
  * Stages (the /orders tabs):
  * - progress: jobs being made or reviewed, running campaigns
- * - open: custom requests taking pitches, drafts
+ * - open: custom orders taking pitches, drafts
  * - done: finished, cancelled or declined jobs, closed campaigns and requests
  *
- * A custom request that hired someone is represented by its job, so it doesn't get a row of its own.
+ * A custom order that hired someone is represented by its job, so it doesn't get a row of its own.
  */
 import { unreadPitches } from "@/lib/attention";
 import { daysFromNow } from "@/lib/format";
@@ -24,7 +24,7 @@ import {
   productById,
   requestsForBusiness,
 } from "@/lib/selectors";
-import type { DemoState, RequestDraft } from "@/lib/store";
+import type { DemoState, OrderDraft } from "@/lib/store";
 import { formatById } from "@/lib/taxonomy";
 import type { Commission, ContentRequest, Creator } from "@/lib/types";
 
@@ -39,7 +39,8 @@ export type CampaignItem = Base & {
   progress: ReturnType<typeof campaignProgress>;
 };
 export type RequestItem = Base & { kind: "request"; request: ContentRequest; pitches: number; unread: number };
-export type DraftItem = Base & { kind: "draft"; request?: ContentRequest; autosave?: RequestDraft };
+/** A draft: a seeded request saved as `status: "draft"`, or the new-order form's saved draft (one per kind). */
+export type DraftItem = Base & { kind: "draft"; request?: ContentRequest; autosave?: OrderDraft };
 
 export type OrderItem = JobItem | CampaignItem | RequestItem | DraftItem;
 
@@ -80,7 +81,7 @@ export function orderItems(s: DemoState): OrderItem[] {
       });
       continue;
     }
-    // A hired request lives on as its job.
+    // A hired custom order lives on as its job.
     if (request.status === "hired" && jobs.some((c) => c.requestId === request.id)) continue;
     const unread = request.status === "open" ? unreadPitches(s, request.id).length : 0;
     items.push({
@@ -95,13 +96,12 @@ export function orderItems(s: DemoState): OrderItem[] {
     });
   }
 
-  // The order flow's autosave (an order started but never saved as a draft).
-  const autosave = me.draft(s);
-  if (autosave) {
+  // The new-order form's saved drafts: one per kind ("custom", "campaign"), never posted.
+  for (const autosave of me.orderDrafts(s)) {
     items.push({
       kind: "draft",
-      key: "autosave",
-      title: autosave.title.trim() || "Unfinished request",
+      key: `autosave-${autosave.kind}`,
+      title: autosave.title?.trim() || (autosave.kind === "campaign" ? "Unfinished UGC campaign" : "Unfinished custom order"),
       autosave,
       stage: "open",
       needsYou: false,
@@ -119,7 +119,7 @@ export function itemHref(item: OrderItem): string {
     case "request":
       return paths.order(item.request.id);
     case "draft":
-      if (item.autosave) return paths.newOrder({ type: "custom" });
+      if (item.autosave) return paths.newOrder({ type: item.autosave.kind });
       return isCampaign(item.request) ? paths.order(item.request!.id) : paths.newOrder({ draft: item.request!.id });
   }
 }
@@ -160,7 +160,7 @@ export function sortItems(items: OrderItem[]): OrderItem[] {
   });
 }
 
-/** Words a search can match: title, creator, product, format, kind. */
+/** Words a search can match: title, creator, product, format (ad copy: "Ad copy writing"), kind. */
 export function searchText(s: DemoState, item: OrderItem): string {
   const parts: (string | undefined)[] = [item.title];
   const brief =
@@ -178,8 +178,9 @@ export function searchText(s: DemoState, item: OrderItem): string {
     for (const c of s.commissions)
       if (c.requestId === item.request.id && c.source === "campaign") parts.push(creatorById(s, c.creatorId)?.name);
   }
-  if (item.kind === "request") parts.push("pitches custom request");
-  if (item.kind === "draft") parts.push("draft");
+  if (item.kind === "request") parts.push("pitches custom order");
+  if (item.kind === "draft")
+    parts.push("draft", (item.autosave?.kind ?? (isCampaign(item.request) ? "campaign" : "custom")) === "campaign" ? "ugc campaign" : "custom order");
   return parts.filter(Boolean).join(" ").toLowerCase();
 }
 

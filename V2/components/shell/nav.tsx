@@ -8,6 +8,7 @@ import {
   Library,
   MessageCircle,
   Search,
+  Sparkles,
   UserRound,
   Wallet,
 } from "lucide-react";
@@ -70,6 +71,7 @@ export const phoneNav: Record<Mode, NavItem[]> = {
 /** Signed-out header links. */
 export const publicNav: NavItem[] = [
   { href: paths.discover(), label: "Find creators", icon: i(Search), also: ["/creators"] },
+  { href: paths.services, label: "Services", icon: i(Sparkles), also: ["/services", "/for"] },
   { href: paths.howItWorks, label: "How it works", icon: i(LayoutGrid) },
   { href: paths.forCreators, label: "For creators", icon: i(UserRound) },
 ];

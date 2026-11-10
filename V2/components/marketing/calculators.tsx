@@ -7,9 +7,9 @@ import { PriceSummary } from "@/components/domain/money";
 import { Block } from "@/components/ui/block";
 import { FilterChip } from "@/components/ui/chip";
 import { TextField } from "@/components/ui/field";
-import { money, plural, priceBreakdown } from "@/lib/format";
+import { money, moneyExact, plural, priceBreakdown } from "@/lib/format";
 import { useDemo } from "@/lib/store";
-import { addonById, SERVICE_FEE_RATE } from "@/lib/taxonomy";
+import { addonById, FEE_PCT } from "@/lib/taxonomy";
 import type { AddonId } from "@/lib/types";
 
 import { platformStats, typicalAddonPrices } from "./platform";
@@ -73,14 +73,17 @@ function RangeField({
   );
 }
 
-/** For creators: videos per month × average price → monthly estimate (the wallet icon marks money). */
+/**
+ * For creators: videos per month × average price → what they earn each month, after Yapp's 20%
+ * (priceBreakdown). The price is what the buyer pays; the fee comes out of the creator's side.
+ */
 export function EarningsEstimator() {
   const s = useDemo();
   const stats = platformStats(s);
   const [videos, setVideos] = useState(4);
   const [price, setPrice] = useState(() => Math.round((stats.startingPrice || 200) / 10) * 10);
-  const monthly = videos * price;
-  const clientFee = priceBreakdown(monthly).fee;
+  const gross = videos * price;
+  const { fee, creatorEarns: monthly } = priceBreakdown(gross);
 
   return (
     <div className="grid gap-3 lg:grid-cols-12">
@@ -96,7 +99,7 @@ export function EarningsEstimator() {
           format={(value) => plural(value, "video")}
         />
         <RangeField
-          label="Average price per video"
+          label="Average price per video (what the buyer pays)"
           value={price}
           min={80}
           max={1500}
@@ -125,7 +128,7 @@ export function EarningsEstimator() {
             aria-live="polite"
             className="y-display y-num block text-[52px] leading-[0.95] tracking-[-0.04em] md:text-[64px]"
           >
-            {money(monthly)}
+            {moneyExact(monthly)}
           </output>
           <p className="y-small y-fg-2">
             That&apos;s <span className="y-num font-semibold text-(--b-fg)">{money(monthly * 12)}</span>{" "}
@@ -134,39 +137,34 @@ export function EarningsEstimator() {
         </div>
         <dl className="flex flex-col gap-2.5">
           <div className="flex items-baseline justify-between gap-4 border-t border-(--b-line) pt-2.5">
-            <dt className="y-small">You keep</dt>
-            <dd className="y-small y-num font-semibold">100% · {money(monthly)}</dd>
+            <dt className="y-small">Buyers pay</dt>
+            <dd className="y-small y-num font-semibold">{money(gross)}</dd>
           </div>
           <div className="flex items-baseline justify-between gap-4 border-t border-(--b-line) pt-2.5">
             <dt className="y-small y-fg-2">
-              Yapp&apos;s {Math.round(SERVICE_FEE_RATE * 100)}% fee
-              <span className="y-micro y-fg-2 block">Paid by the buyer on custom orders, on top of your price</span>
+              Yapp&apos;s {FEE_PCT}% fee
+              <span className="y-micro y-fg-2 block">Taken from what you&apos;re paid, never added for the buyer</span>
             </dt>
-            <dd className="y-small y-num y-fg-2">{money(clientFee)}</dd>
+            <dd className="y-small y-num y-fg-2">−{moneyExact(fee)}</dd>
           </div>
         </dl>
         <p className="y-micro y-fg-2 flex items-start gap-1.5">
           <Info size={14} aria-hidden className="mt-px flex-none" />
-          An estimate, not a promise. Add-ons add to what you earn.
+          An estimate, not a promise. Add-ons add to what you earn, less the same fee.
         </p>
       </Block>
     </div>
   );
 }
 
-const calculatorAddons: AddonId[] = [
-  "subtitles",
-  "extra-revision",
-  "extra-hooks",
-  "rush",
-  "raw-footage",
-  "ad-rights-90",
-  "ad-rights-365",
-];
+const calculatorAddons: AddonId[] = ["subtitles", "extra-revision", "extra-hooks", "rush"];
 
 const presets = [150, 260, 480, 900];
 
-/** For buyers: creator price + add-ons → service fee and total (priceBreakdown). Custom and direct orders. */
+/**
+ * For buyers: creator price + add-ons → the total (nothing on top) and what the creator receives
+ * (priceBreakdown). Custom and direct orders.
+ */
 export function FeeCalculator() {
   const s = useDemo();
   const typical = typicalAddonPrices(s);
@@ -182,15 +180,8 @@ export function FeeCalculator() {
   const chosen = selected.map((id) => ({ id, price: typical[id] }));
   const totals = priceBreakdown(price, chosen);
 
-  const toggle = (id: AddonId) => {
-    setSelected((current) => {
-      if (current.includes(id)) return current.filter((item) => item !== id);
-      // the two paid-ads licences are alternatives
-      const rival: AddonId | null =
-        id === "ad-rights-90" ? "ad-rights-365" : id === "ad-rights-365" ? "ad-rights-90" : null;
-      return [...current.filter((item) => item !== rival), id];
-    });
-  };
+  const toggle = (id: AddonId) =>
+    setSelected((current) => (current.includes(id) ? current.filter((item) => item !== id) : [...current, id]));
 
   const setFromInput = (value: string) => {
     setRaw(value);
@@ -202,9 +193,10 @@ export function FeeCalculator() {
     <div className="grid gap-3 lg:grid-cols-12">
       <Block tone="paper" pad="lg" className="flex flex-col gap-7 lg:col-span-7">
         <div className="flex flex-col gap-1.5">
-          <h3 className="y-display y-title">Fee calculator</h3>
+          <h3 className="y-display y-title">Price calculator</h3>
           <p className="y-small y-fg-2 max-w-[52ch]">
-            Add-on prices are typical rates. Each creator sets their own.
+            Add-on prices are typical rates. Each creator sets their own. Usage rights, raw footage and two
+            revisions are part of the price.
           </p>
         </div>
 
@@ -277,14 +269,15 @@ export function FeeCalculator() {
         <div className="y-tile flex flex-col gap-1 p-4">
           <span className="y-micro y-fg-2">The creator receives</span>
           <span className="y-display y-num text-[32px] leading-none font-semibold tracking-[-0.02em]">
-            {money(totals.creatorEarns)}
+            {moneyExact(totals.creatorEarns)}
           </span>
-          <span className="y-micro y-fg-2">100% of their price and add-ons. No cut taken.</span>
+          <span className="y-micro y-fg-2">
+            Your total less Yapp&apos;s {FEE_PCT}% ({moneyExact(totals.fee)}), which comes out of their side, not yours.
+          </span>
         </div>
         <p className="y-micro y-fg-2 mt-auto flex items-start gap-1.5">
           <ShieldCheck size={14} aria-hidden className="mt-px flex-none" />
-          Held when work starts, released when you approve. A cancelled or refunded order costs
-          you nothing.
+          Held when work starts, released when you approve. A refund returns everything you paid.
         </p>
       </Block>
     </div>

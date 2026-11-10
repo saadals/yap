@@ -27,7 +27,7 @@ export function ConnectSocialSheet({
   onClose: () => void;
   creatorId: string;
   platform: CampaignPlatformId;
-  /** Why it opened, e.g. "to take a slot on this campaign". */
+  /** Why it opened, e.g. "to pick a Yapp on this campaign". */
   reason?: string;
 }) {
   const name = platformName(platform);

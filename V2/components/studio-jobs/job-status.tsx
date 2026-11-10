@@ -13,16 +13,26 @@ import {
   LifeBuoy,
   Loader2,
   Megaphone,
+  PenLine,
   Repeat2,
   XCircle,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { autoApproveAt } from "@/lib/attention";
-import { dueLabel, money, shortDate, weekdayDate } from "@/lib/format";
-import { businessById, commissionTotals, isActive, reviewById } from "@/lib/selectors";
+import { unreadComments } from "@/lib/comments";
+import { dueLabel, money, moneyExact, plural, shortDate, weekdayDate } from "@/lib/format";
+import {
+  businessById,
+  commissionTotals,
+  isActive,
+  isAdCopy,
+  requestById,
+  reviewById,
+  slotPlatform,
+} from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { CAMPAIGN_RESTORE_HOURS, formatById, type Tone } from "@/lib/taxonomy";
+import { CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS, campaignPlatformById, formatById, type Tone } from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
 /**
@@ -58,8 +68,15 @@ export function inProgressOrder(a: Commission, b: Commission) {
   return rank(a) - rank(b) || Date.parse(a.dueDate) - Date.parse(b.dueDate);
 }
 
-/** What the creator earns on this job (they keep 100% of price and add-ons). */
-export const earns = (c: Commission) => (isSlot(c) ? c.price : commissionTotals(c).creatorEarns);
+/**
+ * The job's money from the creator's side: what the brand pays (price + add-ons, `total`) and what
+ * the creator receives after Yapp's 20% (`creatorEarns`). Campaign slots carry the campaign's price
+ * per Yapp. Always from `commissionTotals` (lib), never recomputed here.
+ */
+export const jobMoney = (c: Commission) => commissionTotals(c);
+
+/** What the creator earns on this job, after Yapp's 20%. */
+export const earns = (c: Commission) => jobMoney(c).creatorEarns;
 
 export function jobChip(c: Commission): Chip {
   if (isSlot(c)) {
@@ -92,7 +109,9 @@ export function jobChip(c: Commission): Chip {
     case "offered":
       return { label: "New offer", tone: "warning", icon: <Gift size={i} aria-hidden /> };
     case "in_progress":
-      return { label: "In production", tone: "active", icon: <CircleDashed size={i} aria-hidden /> };
+      return isAdCopy(c)
+        ? { label: "Writing", tone: "active", icon: <PenLine size={i} aria-hidden /> }
+        : { label: "In production", tone: "active", icon: <CircleDashed size={i} aria-hidden /> };
     case "delivered":
       return { label: "In review", tone: "neutral", icon: <Eye size={i} aria-hidden /> };
     case "revision":
@@ -136,7 +155,7 @@ function when(c: Commission): string {
       case "revision":
         return "Make the changes and upload again";
       case "completed":
-        if (c.post?.status === "due") return "Post it to start the 7 days to payment";
+        if (c.post?.status === "due") return `Post it to start the ${CAMPAIGN_RELEASE_DAYS} days to payment`;
         if (c.post?.status === "removed") return `Put it back up within ${CAMPAIGN_RESTORE_HOURS} hours`;
         if (c.post?.status === "checking") return "Checking your post";
         if (c.payment.status === "pending")
@@ -167,16 +186,58 @@ function when(c: Commission): string {
   }
 }
 
-/** "Daftar · App demo · Due Thu, Nov 5" or "Brindle · UGC campaign · Upload your review copy by Fri". */
-export function jobMeta(s: DemoState, c: Commission, options: { rating?: boolean } = {}): string {
-  const brand = businessById(s, c.businessId)?.name;
-  const kind = isSlot(c) ? "UGC campaign" : formatById[c.brief.format].name;
-  const rating = options.rating ? ratingFor(s, c) : undefined;
-  return [brand, kind, when(c), rating ? `Rated ${rating.toFixed(1)} ★` : null].filter(Boolean).join(" · ");
+/**
+ * What kind of job this is, in the creator's words: the video format ("App demo"), "Ad copy
+ * writing" (no video meta), or the campaign and the platform you post on ("UGC campaign on TikTok").
+ */
+export function jobKind(s: DemoState, c: Commission): string {
+  if (isSlot(c)) {
+    const platform = slotPlatform(c, c.requestId ? requestById(s, c.requestId) : undefined);
+    return `UGC campaign on ${campaignPlatformById[platform].name}`;
+  }
+  return formatById[c.brief.format].name;
 }
 
-/** "$260", or nothing for work that ended without pay. */
+/**
+ * "Daftar · App demo · Due Thu, Nov 5", "Brindle · UGC campaign on TikTok · Upload your review copy
+ * by Fri" or "Daftar · Ad copy writing · 2 new comments · Approves itself Sat, Nov 7".
+ */
+export function jobMeta(s: DemoState, c: Commission, options: { rating?: boolean } = {}): string {
+  const brand = businessById(s, c.businessId)?.name;
+  const unread = unreadComments(c, "creator");
+  const rating = options.rating ? ratingFor(s, c) : undefined;
+  return [
+    brand,
+    jobKind(s, c),
+    unread ? plural(unread, "new comment") : null,
+    when(c),
+    rating ? `Rated ${rating.toFixed(1)} ★` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/**
+ * The row's amount: the price the brand pays, then what you earn after Yapp's 20% ("$480 · you
+ * earn $384"). Nothing for work that ended without pay.
+ */
+export function JobAmount({ commission: c }: { commission: Commission }) {
+  if (c.status === "cancelled" || c.status === "declined") return null;
+  return <PriceAndNet price={jobMoney(c).total} net={earns(c)} />;
+}
+
+/** "$480 · you earn $384": the price quiet, the net (what the creator gets) in weight. */
+export function PriceAndNet({ price, net }: { price: number; net: number }) {
+  return (
+    <span className="y-num whitespace-nowrap">
+      <span className="y-fg-2 font-normal">{money(price)} · </span>
+      <span className="font-semibold">you earn {moneyExact(net)}</span>
+    </span>
+  );
+}
+
+/** "$384", or nothing for work that ended without pay (plain text, for labels). */
 export function jobAmount(c: Commission): string | undefined {
   if (c.status === "cancelled" || c.status === "declined") return undefined;
-  return money(earns(c));
+  return moneyExact(earns(c));
 }

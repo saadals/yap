@@ -8,7 +8,7 @@ import { Block } from "@/components/ui/block";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { compact, lengthLabel, money, num, plural } from "@/lib/format";
+import { compact, creatorNet, lengthLabel, money, moneyExact, num, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 import { cityById, isSaved } from "@/lib/selectors";
@@ -21,8 +21,8 @@ import type { WatchItem } from "./watch-items";
 import { orderFromVideoHref, useShareVideo, useToggleSave } from "./watch-reel";
 
 /**
- * Desktop: who made the video in view, what it was made for, their packages and the one green
- * button. Follows the reel as you scroll.
+ * Desktop: who made the video in view, what it was made for, their packages (listed prices; on
+ * your own videos, with what you earn) and the one green button. Follows the reel as you scroll.
  */
 export function WatchPanel({ item, own }: { item: WatchItem; own: boolean }) {
   const s = useDemo();
@@ -100,10 +100,15 @@ export function WatchPanel({ item, own }: { item: WatchItem; own: boolean }) {
                     {plural(pkg.deliveryDays, "day")}
                   </span>
                 </span>
-                <span className="y-small y-num flex-none font-medium">{money(pkg.price)}</span>
+                <span className="y-small y-num flex-none text-end font-medium">
+                  {money(pkg.price)}
+                  {/* Your own packages: what you earn from each listed price. */}
+                  {own ? <span className="y-micro y-fg-2 block font-normal">you earn {moneyExact(creatorNet(pkg.price))}</span> : null}
+                </span>
               </li>
             ))}
           </ul>
+          <p className="y-micro y-fg-2 pt-1">Usage rights and raw footage are included in every price.</p>
         </div>
       ) : null}
 

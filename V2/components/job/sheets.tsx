@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, CheckCircle2, Clock, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
 import { StarInput } from "@/components/domain/stars";
@@ -9,9 +9,17 @@ import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { addDays } from "@/lib/clock";
-import { clock, plural, weekdayDate } from "@/lib/format";
+import { clock, moneyExact, plural, weekdayDate } from "@/lib/format";
 import { actions } from "@/lib/store";
-import { addonById, CAMPAIGN_RELEASE_DAYS, includedRights } from "@/lib/taxonomy";
+import { openComments } from "@/lib/selectors";
+import {
+  addonById,
+  CAMPAIGN_RELEASE_DAYS,
+  CHANGE_NOTE_MIN_CHARS,
+  COMMENTS_OPEN_DAYS,
+  FEE_PCT,
+  usageById,
+} from "@/lib/taxonomy";
 
 import { DeliverSheet } from "./deliver-sheet";
 import { cash, revisionsLeft, type Job, type SheetName } from "./helpers";
@@ -139,20 +147,20 @@ function Point({ children }: { children: React.ReactNode }) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Ordering side: approve, ask for changes                                     */
+/* Ordering side: approve, request changes                                     */
 /* -------------------------------------------------------------------------- */
 
 function ApproveSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "onActed"> & { onApproved: () => void }) {
   const toast = useToast();
-  const { commission: c, creatorName, latest, totals } = job;
-  const unsent = latest ? latest.comments.filter((m) => !m.resolved).length : 0;
-  const adRights = c.addons.filter((a) => a.id === "ad-rights-90" || a.id === "ad-rights-365");
+  const { commission: c, creatorName, latest, totals, adCopy } = job;
+  const unsent = latest ? openComments(latest).length : 0;
+  const total = cash(totals.total);
   return (
     <Sheet
       open={open}
       onClose={onClose}
       title={`Approve version ${latest?.version ?? 1}?`}
-      description={`The payment held since you hired ${creatorName} is released to them straight away. This can't be undone.`}
+      description={`The payment held since you hired ${creatorName} is released straight away. This can't be undone.`}
       width="md"
       footer={
         <Footer
@@ -167,12 +175,12 @@ function ApproveSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "onAc
               size="lg"
               onClick={() => {
                 actions.approve(c.id);
-                toast({ message: `Approved. ${cash(totals.creatorEarns)} was released to ${creatorName}.` });
+                toast({ message: `Approved. The ${total} payment was released to ${creatorName}.` });
                 onApproved();
                 onClose();
               }}
             >
-              Approve and release {cash(totals.creatorEarns)} to {creatorName}
+              Approve and release {total}
             </PillButton>
           }
         />
@@ -180,28 +188,44 @@ function ApproveSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "onAc
     >
       <div className="flex flex-col gap-6">
         <div className="y-tile flex flex-col gap-3 p-5">
-          <Line label={`${creatorName} receives`} value={cash(totals.creatorEarns)} strong />
-          <Line label={`Yapp service fee (${Math.round(c.feeRate * 100)}%)`} value={cash(totals.fee)} />
-          <div className="border-t border-(--b-line) pt-3">
-            <Line label="Charged when you hired, held since" value={cash(totals.total)} />
-          </div>
+          {c.addons.length ? (
+            <>
+              <Line label={`${creatorName}'s price`} value={cash(c.price)} />
+              {c.addons.map((addon) => (
+                <Line key={addon.id} label={addonById[addon.id]?.name ?? "Add-on"} value={cash(addon.price)} />
+              ))}
+              <div className="border-t border-(--b-line) pt-3">
+                <Line label="You pay" value={total} strong />
+              </div>
+            </>
+          ) : (
+            <Line label="You pay" value={total} strong />
+          )}
+          {/* Round 3 answers, item 5: the approval summary shows the three amounts. The brand pays the
+              listed price; Yapp's 20% comes out of the creator's side. */}
+          <Line label={`${creatorName} receives`} value={moneyExact(totals.creatorEarns)} />
+          <Line label={`Yapp fee (${FEE_PCT}%)`} value={moneyExact(totals.fee)} />
+          <p className="y-micro y-fg-2">
+            Held since you hired {creatorName}. Nothing is added on top: Yapp&apos;s {FEE_PCT}% comes out of{" "}
+            {creatorName}&apos;s side.
+          </p>
         </div>
         <div className="flex flex-col gap-2">
           <h3 className="y-label">What you get</h3>
           <ul className="flex flex-col gap-2">
-            <Point>The final files for version {latest?.version ?? 1}, ready to post. They also go to your Library.</Point>
-            <Point>{includedRights}</Point>
-            {adRights.map((addon) => (
-              <Point key={addon.id}>
-                {addonById[addon.id].name}: {addonById[addon.id].description.toLowerCase()}
-              </Point>
-            ))}
+            <Point>
+              {adCopy
+                ? `The final copy and its documents for version ${latest?.version ?? 1}, ready to use.`
+                : `The final files for version ${latest?.version ?? 1}, ready to post, and the raw footage. They also go to your Library.`}
+            </Point>
+            <Point>Usage rights start today: {usageById[c.brief.usage].phrase}, included in the price.</Point>
+            <Point>Comments stay open for {COMMENTS_OPEN_DAYS} days, for final feedback and small questions.</Point>
           </ul>
         </div>
         {unsent ? (
           <Warning>
-            Your {plural(unsent, "open note")} on this version won&apos;t be sent as change requests. Approving finishes
-            the job as it is. Choose &ldquo;Ask for changes&rdquo; instead if you want them made.
+            {plural(unsent, "open comment")} on this version won&apos;t be sent as changes. Approving finishes the job as it
+            is. Choose &ldquo;Request changes&rdquo; instead if you want them made.
           </Warning>
         ) : null}
       </div>
@@ -211,9 +235,9 @@ function ApproveSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "onAc
 
 function ApproveSlotSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "onActed"> & { onApproved: () => void }) {
   const toast = useToast();
-  const { commission: c, creatorName, latest, slot } = job;
+  const { commission: c, creatorName, latest, slot, totals } = job;
   const [rating, setRating] = useState(0);
-  const unsent = latest ? latest.comments.filter((m) => !m.resolved).length : 0;
+  const unsent = latest ? openComments(latest).length : 0;
   return (
     <Sheet
       open={open}
@@ -249,28 +273,28 @@ function ApproveSlotSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "
         <div className="flex flex-col gap-2">
           <span className="y-label">
             <span>Rate {creatorName}</span>
-            <span className="y-micro y-fg-3 font-medium">Optional</span>
+            <span className="y-micro y-fg-2 font-medium">Optional</span>
           </span>
           <StarInput value={rating} onChange={setRating} label={`Rate ${creatorName}`} size={28} />
         </div>
         <div className="flex flex-col gap-2">
           <h3 className="y-label">What happens next</h3>
           <ul className="flex flex-col gap-2">
-            <Point>The full-quality file, without the watermark, is yours to download.</Point>
-            <Point>{includedRights}</Point>
+            <Point>The full-quality file, without the watermark, and the raw footage are yours to download.</Point>
+            <Point>Usage rights start today: {usageById[c.brief.usage].phrase}, included in the price.</Point>
             <Point>
               {creatorName} posts it on their {slot?.platformName ?? "own"} account, tagging {slot?.brandHandle ?? "you"}, with the
               paid-partnership label.
             </Point>
             <Point>
-              Their {cash(c.price)} stays held in your campaign until {CAMPAIGN_RELEASE_DAYS} days after we verify the post,
-              and is paid only if it&apos;s still up.
+              The {cash(totals.total)} for this slot stays held in your campaign until {CAMPAIGN_RELEASE_DAYS} days after we verify
+              the post, and is paid only if it&apos;s still up.
             </Point>
           </ul>
         </div>
         {unsent ? (
           <Warning>
-            Your {plural(unsent, "open note")} on this copy won&apos;t be sent. Approving accepts the video as it is.
+            {plural(unsent, "open comment")} on this copy won&apos;t be sent. Approving accepts the video as it is.
           </Warning>
         ) : null}
       </div>
@@ -278,37 +302,86 @@ function ApproveSlotSheet({ job, open, onClose, onApproved }: Omit<SheetProps, "
   );
 }
 
+type OutOfRevisions = "extra" | "approve" | "dispute";
+
+/**
+ * Request changes on the latest version: the open comments to send (the brand's own start ticked),
+ * an optional note, and what happens. With the included revisions used on a custom order, three
+ * ways on: approve, a paid extra revision by agreement, or a dispute (round 3 answers, item 39).
+ */
 function RequestChangesSheet({ job, open, onClose, onActed }: SheetProps) {
   const toast = useToast();
-  const { commission: c, creator, creatorName, latest, slot, noun } = job;
-  const notes = latest ? latest.comments.filter((m) => !m.resolved) : [];
+  const { commission: c, creator, creatorName, latest, slot, noun, adCopy } = job;
+  const comments = latest ? openComments(latest) : [];
   const left = revisionsLeft(c);
   const extraPrice = creator?.addons.find((a) => a.id === "extra-revision")?.price;
+  const out = left === 0 && !slot;
+  const next = (latest?.version ?? 0) + 1;
   const [message, setMessage] = useState("");
   const [tried, setTried] = useState(false);
-  const valid = notes.length > 0 || message.trim().length >= 10;
+  const [path, setPath] = useState<OutOfRevisions>("extra");
+  // The brand's own open comments start ticked; the creator's (questions, notes) start unticked.
+  const [ticked, setTicked] = useState<string[]>(() => comments.filter((m) => m.author === "business").map((m) => m.id));
+  const chosen = comments.filter((m) => ticked.includes(m.id));
+  const valid = chosen.length > 0 || message.trim().length >= CHANGE_NOTE_MIN_CHARS;
+  const pickOrNote = `Tick a comment, or write what to change in ${CHANGE_NOTE_MIN_CHARS} characters or more.`;
 
   const submit = () => {
     setTried(true);
+    if (out && path === "approve") {
+      onClose();
+      job.openSheet("approve");
+      return;
+    }
+    if (out && path === "dispute") {
+      onClose();
+      job.openSheet("dispute");
+      return;
+    }
     if (!valid || !latest) return;
-    const extraLine =
-      left === 0 && !slot
-        ? `This is an extra round beyond the ${plural(c.revisionsIncluded, "revision")} included${
-            extraPrice ? `. Happy to pay your ${cash(extraPrice)} extra-revision price` : ""
-          }.`
-        : "";
-    actions.requestRevision(c.id, [message.trim(), extraLine].filter(Boolean).join("\n\n"));
-    toast({ message: `Changes sent to ${creatorName}. ${noun.charAt(0).toUpperCase()}${noun.slice(1)} ${latest.version + 1} comes back here.` });
+    const extraLine = out
+      ? `This is an extra revision beyond the ${plural(c.revisionsIncluded, "included one")}${
+          extraPrice ? `. Happy to pay your ${cash(extraPrice)} extra-revision price` : ". Happy to agree a price for it"
+        }.`
+      : "";
+    const note = [message.trim(), extraLine].filter(Boolean).join("\n\n");
+    const result = actions.requestRevision(c.id, { commentIds: chosen.map((m) => m.id), note: note || undefined });
+    if (!result.ok) {
+      toast({
+        message:
+          result.reason === "pick_or_note"
+            ? pickOrNote
+            : result.reason === "not_in_review"
+              ? "This version isn't in review any more."
+              : "Only the brand on this job can request changes.",
+        tone: "info",
+      });
+      return;
+    }
+    toast({ message: `Changes sent to ${creatorName}. ${noun.charAt(0).toUpperCase()}${noun.slice(1)} ${next} comes back here.` });
     onClose();
     onActed();
   };
+
+  const primary =
+    out && path === "approve"
+      ? "Approve instead"
+      : out && path === "dispute"
+        ? "Open a dispute"
+        : chosen.length
+          ? `Send ${plural(chosen.length, "comment")} to ${creatorName}`
+          : `Send changes to ${creatorName}`;
 
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      title="Ask for changes"
-      description={`${creatorName} gets your notes with their timestamps and starts on ${noun} ${(latest?.version ?? 0) + 1}.`}
+      title="Request changes"
+      description={
+        out
+          ? `You've used the ${plural(c.revisionsIncluded, "included revision")} on this order.`
+          : `${creatorName} gets the comments you tick${adCopy ? "" : " with their timestamps"} and starts on ${noun} ${next}.`
+      }
       width="md"
       footer={
         <Footer
@@ -318,88 +391,114 @@ function RequestChangesSheet({ job, open, onClose, onActed }: SheetProps) {
             </PillButton>
           }
           primary={
-            <PillButton variant="contrast" size="lg" onClick={submit} disabled={tried && !valid}>
-              Send {notes.length ? plural(notes.length, "note") : "changes"} to {creatorName}
+            <PillButton variant="contrast" size="lg" onClick={submit} disabled={tried && !valid && !(out && path !== "extra")}>
+              {primary}
             </PillButton>
           }
         />
       }
     >
       <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-2">
-          <h3 className="y-label">
-            <span>
-              Notes on {noun} {latest?.version}
-            </span>
-            <span className="y-micro y-fg-2 font-medium">{notes.length}</span>
-          </h3>
-          {notes.length ? (
-            <ul className="flex flex-col gap-1.5">
-              {notes.map((note) => (
-                <li key={note.id} className="y-tile flex items-start gap-3 p-3">
-                  <span className="y-num y-small flex-none font-semibold">{clock(note.atSec)}</span>
-                  <span className="y-small">{note.text}</span>
-                </li>
-              ))}
+        {out ? (
+          <RadioTiles
+            legend="How do you want to go on?"
+            name="out-of-revisions"
+            value={path}
+            onChange={setPath}
+            options={[
+              { value: "approve", label: "Approve it as it is", detail: `The payment is released to ${creatorName}.` },
+              {
+                value: "extra",
+                label: "Agree a paid extra revision",
+                detail: extraPrice
+                  ? `${possessiveName(creatorName)} extra-revision price is ${cash(extraPrice)}. They confirm in the timeline before starting.`
+                  : `You agree the price with ${creatorName} in the timeline before they start.`,
+              },
+              {
+                value: "dispute",
+                label: "Open a dispute",
+                detail: "Yapp support looks at the brief and the versions. A person replies within 48 hours.",
+              },
+            ]}
+          />
+        ) : null}
+
+        {!out || path === "extra" ? (
+          <>
+            <fieldset className="flex flex-col gap-1.5">
+              <legend className="y-label mb-1">
+                <span>
+                  Comments to send on {noun} {latest?.version}
+                </span>
+                <span className="y-micro y-fg-2 font-medium">
+                  {chosen.length} of {comments.length}
+                </span>
+              </legend>
+              {comments.length ? (
+                comments.map((comment) => (
+                  <label key={comment.id} className="y-tile flex cursor-pointer items-start gap-3 p-3">
+                    <input
+                      type="checkbox"
+                      className="y-check mt-0.5"
+                      checked={ticked.includes(comment.id)}
+                      onChange={() =>
+                        setTicked((list) => (list.includes(comment.id) ? list.filter((id) => id !== comment.id) : [...list, comment.id]))
+                      }
+                    />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="y-small">
+                        <span className="y-num font-semibold">{comment.atSec === null ? "General" : clock(comment.atSec)}</span> ·{" "}
+                        {comment.text}
+                      </span>
+                      {comment.author === "creator" ? <span className="y-micro y-fg-2">{creatorName}&apos;s comment</span> : null}
+                    </span>
+                  </label>
+                ))
+              ) : (
+                <p className="y-small y-fg-2">
+                  No open comments on this {noun}.{" "}
+                  {adCopy ? "" : "Comments pinned to a moment are the clearest way to ask. "}Close this to add some, or write what
+                  to change below.
+                </p>
+              )}
+            </fieldset>
+            <TextArea
+              label={chosen.length ? "Anything else?" : "What should change?"}
+              required={chosen.length === 0}
+              rows={3}
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              error={tried && !valid ? pickOrNote : null}
+              hint={chosen.length ? "Anything that isn't tied to one comment." : undefined}
+              placeholder="e.g. Overall it's great. Mainly the pacing in the middle, and let's end on the app icon."
+            />
+            <ul className="flex flex-col gap-2">
+              <Point>The review timer stops until {noun} {next} arrives. The payment stays held.</Point>
+              {left > 0 ? (
+                <Point>
+                  This uses 1 of your {plural(left, "revision")} left.{slot ? "" : " Changes usually come back within 2 days."}
+                </Point>
+              ) : null}
             </ul>
-          ) : (
-            <p className="y-small y-fg-2">
-              No notes on the video yet. Notes pinned to the second are the clearest way to ask. Close this to add some, or
-              describe what to change below.
-            </p>
-          )}
-        </div>
-        <TextArea
-          label={`Message to ${creatorName}`}
-          required={notes.length === 0}
-          rows={4}
-          value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          error={tried && !valid ? "Add a note on the video or write at least a sentence about what to change." : null}
-          hint={notes.length ? "Anything that isn't tied to one moment." : "Tell them what to change."}
-          placeholder="e.g. Overall it's great. Mainly the pacing in the middle, and let's end on the app icon."
-        />
-        {left > 0 ? (
-          <p className="y-small inline-flex items-start gap-2">
-            <Clock size={17} aria-hidden className="mt-px flex-none" />
-            <span>
-              This uses 1 of your {plural(left, slot ? "change round" : "revision")} left.
-              {slot ? "" : " Changes usually come back within 2 days."}
-            </span>
-          </p>
-        ) : slot ? (
-          <Warning>
-            You&apos;ve used the {plural(c.revisionsIncluded, "included change round")}. You can still ask. If this copy still
-            isn&apos;t right after that, rejecting it gives the slot to another creator.
-          </Warning>
-        ) : (
-          <Warning>
-            <p>
-              You&apos;ve used all {plural(c.revisionsIncluded, "included revision")}. Another round costs{" "}
-              {extraPrice ? `${cash(extraPrice)} (${creatorName}'s extra-revision price)` : `an extra fee you agree with ${creatorName}`}.
-              You can still send this: we add a line saying you&apos;re happy to cover it, and {creatorName} confirms in the
-              timeline.
-            </p>
-            <p className="pt-2">
-              If the video doesn&apos;t match what you agreed,{" "}
-              <button
-                type="button"
-                className="underline underline-offset-2"
-                onClick={() => {
-                  onClose();
-                  job.openSheet("dispute");
-                }}
-              >
-                open a dispute
-              </button>{" "}
-              instead. The payment stays held while we look.
-            </p>
-          </Warning>
-        )}
+            {out ? (
+              <Warning>
+                We add a line saying you&apos;re happy to pay for the extra revision{extraPrice ? ` (${cash(extraPrice)})` : ""}, and{" "}
+                {creatorName} confirms in the timeline.
+              </Warning>
+            ) : slot && left === 0 ? (
+              <Warning>
+                You&apos;ve used the {plural(c.revisionsIncluded, "included revision")}. You can still ask. If it still isn&apos;t
+                right after that, rejecting it gives the slot to another creator.
+              </Warning>
+            ) : null}
+          </>
+        ) : null}
       </div>
     </Sheet>
   );
 }
+
+const possessiveName = (name: string) => (name.endsWith("s") ? `${name}'` : `${name}'s`);
 
 /* -------------------------------------------------------------------------- */
 /* Campaign slots: reject, remove                                              */
@@ -416,7 +515,7 @@ function RejectSheet({ job, open, onClose, onActed }: SheetProps) {
       title="Reject this video?"
       description={
         job.slot?.request?.status === "closed"
-          ? "The campaign is closed, so the slot's money is refunded to your card with its fee."
+          ? "The campaign is closed, so the slot's money is refunded to your card in full."
           : "The slot goes to another creator automatically, and its money stays held in your campaign."
       }
       width="md"
@@ -454,7 +553,7 @@ function RejectSheet({ job, open, onClose, onActed }: SheetProps) {
           placeholder="e.g. We needed the app on screen in the first five seconds."
         />
         <p className="y-small y-fg-2">
-          If a few changes would fix it, &ldquo;Ask for changes&rdquo; keeps {creatorName} on the slot. Once rejected,{" "}
+          If a few changes would fix it, &ldquo;Request changes&rdquo; keeps {creatorName} on the slot. Once rejected,{" "}
           {creatorName} can&apos;t take another slot on this campaign.
         </p>
       </div>
@@ -473,7 +572,7 @@ function RemoveCreatorSheet({ job, open, onClose, onActed }: SheetProps) {
       title={`Remove ${creatorName} from this slot?`}
       description={
         job.slot?.request?.status === "closed"
-          ? "The campaign is closed, so the slot's money is refunded to your card with its fee."
+          ? "The campaign is closed, so the slot's money is refunded to your card in full."
           : "The slot reopens for another creator automatically, and its money stays held in your campaign."
       }
       width="md"
@@ -732,7 +831,7 @@ function DisputeSheet({ job, open, onClose, onActed }: SheetProps) {
       open={open}
       onClose={onClose}
       title="Open a dispute"
-      description="Yapp support joins this job, reads the brief, the versions and the messages, and replies within 24 hours."
+      description="Yapp support joins this job, reads the brief, the versions and the messages, and replies within 48 hours."
       width="md"
       footer={
         <Footer
@@ -801,7 +900,7 @@ function CancelSheet({ job, open, onClose, onActed }: SheetProps) {
       open={open}
       onClose={onClose}
       title="Cancel this job?"
-      description={`${creatorName} hasn't delivered yet, so you get a full refund of ${cash(totals.total)}, service fee included.`}
+      description={`${creatorName} hasn't delivered yet, so the ${cash(totals.total)} you paid is refunded in full.`}
       width="md"
       footer={
         <Footer

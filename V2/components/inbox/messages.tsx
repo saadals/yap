@@ -1,13 +1,15 @@
 "use client";
 
-import { EyeOff, FileText, Info, Paperclip, SendHorizontal, X } from "lucide-react";
+import { EyeOff, FileText, Info, MessageSquareText, Paperclip, SendHorizontal, X } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { useToast } from "@/components/ui/toast";
 import { hasContactDetails } from "@/lib/contact";
 import { daysFromNow, timeOf, weekdayDate } from "@/lib/format";
-import { businessById, creatorById, requestById, threadById, videoById } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { allBrandHandles, businessById, creatorById, requestById, threadById, videoById } from "@/lib/selectors";
 import { actions, useDemo, useTyping } from "@/lib/store";
 import type { Attachment, Message, Role } from "@/lib/types";
 
@@ -55,11 +57,31 @@ function AttachmentView({ attachment, mine }: { attachment: Attachment; mine: bo
 
 function Bubble({ message, role, otherName, grouped }: { message: Message; role: Role; otherName: string; grouped: boolean }) {
   if (message.from === "system") {
+    // Comment lines ("3 new comments on Version 1") link to that version's comments on the job;
+    // the comments themselves live there, not here.
+    const comments = message.link?.kind === "comments" ? message.link : undefined;
     return (
       <li className="flex justify-center px-4 py-1">
         <p className="y-micro y-fg-2 inline-flex max-w-md items-start gap-1.5 text-center">
-          <Info size={14} aria-hidden className="mt-px flex-none" />
-          <span>{message.text}</span>
+          {comments ? (
+            <MessageSquareText size={14} aria-hidden className="mt-px flex-none" />
+          ) : (
+            <Info size={14} aria-hidden className="mt-px flex-none" />
+          )}
+          <span>
+            {message.text}
+            {comments ? (
+              <>
+                {" · "}
+                <Link
+                  href={paths.job(comments.commissionId, { version: comments.version })}
+                  className="font-semibold text-(--y-ink) underline underline-offset-2"
+                >
+                  View<span className="sr-only"> the comments on Version {comments.version}</span>
+                </Link>
+              </>
+            ) : null}
+          </span>
         </p>
       </li>
     );
@@ -118,8 +140,9 @@ export function Messages({ threadId, role }: { threadId: string; role: Role }) {
     role === "business"
       ? (creatorById(s, thread.creatorId)?.firstName ?? "Creator")
       : (businessById(s, thread.businessId)?.name ?? "Client");
-  const brandHandle = thread.requestId ? requestById(s, thread.requestId)?.campaign?.brandHandle : undefined;
-  const contactNotice = hasContactDetails(text, brandHandle ? [brandHandle] : []);
+  // A campaign's own brand handles are allowed through the masking, so they don't trigger the notice.
+  const campaign = thread.requestId ? requestById(s, thread.requestId)?.campaign : undefined;
+  const contactNotice = hasContactDetails(text, campaign ? allBrandHandles(campaign) : []);
   const canSend = Boolean(text.trim() || file);
 
   const send = () => {

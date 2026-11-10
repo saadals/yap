@@ -5,8 +5,8 @@
 
 import type { DemoState } from "@/lib/store";
 import { plural } from "@/lib/format";
-import { cityById } from "@/lib/selectors";
-import { creatorKindById, formatById, languageById } from "@/lib/taxonomy";
+import { cityById, isAdCopy } from "@/lib/selectors";
+import { PITCH_MIN, creatorKindById, formatById, languageById } from "@/lib/taxonomy";
 import type {
   Business,
   Commission,
@@ -26,6 +26,23 @@ export const ANGLE_MIN = 10;
 export const ANGLE_MAX = 140;
 export const MAX_SAMPLES = 3;
 export const DAY_CHOICES = [3, 5, 7, 10, 14];
+/** Ad-copy pitches: a short writing sample, sent at the end of the message. */
+export const WRITING_SAMPLE_MAX = 600;
+const WRITING_SAMPLE_MARK = "\n\nWriting sample:\n";
+
+/** The message as sent: the pitch, then the writing sample (when there is one) under its own label. */
+export function joinWritingSample(message: string, sample: string): string {
+  const body = message.trim();
+  const extra = sample.trim();
+  return extra ? `${body}${WRITING_SAMPLE_MARK}${extra}` : body;
+}
+
+/** Back into the composer's two fields when an ad-copy pitch is edited. */
+export function splitWritingSample(text: string): { message: string; sample: string } {
+  const at = text.indexOf(WRITING_SAMPLE_MARK);
+  if (at < 0) return { message: text, sample: "" };
+  return { message: text.slice(0, at), sample: text.slice(at + WRITING_SAMPLE_MARK.length) };
+}
 
 /* -------------------------------------------------------------------------- */
 /* Text helpers                                                                */
@@ -83,10 +100,17 @@ export function median(values: number[]): number | undefined {
   return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
-/** A starting price for a new pitch: the matching package, kept inside the brand's budget. */
+/**
+ * A starting price for a new pitch (the listed price, what the brand pays): the matching package,
+ * kept inside the brand's budget. Packages are priced for videos, so ad copy starts in the middle
+ * of the budget. Never under the $30 pitch floor.
+ */
 export function suggestedPrice(creator: Creator, request: ContentRequest): number {
-  const pkg = matchingPackage(creator, request);
-  return Math.min(Math.max(pkg?.price ?? request.budget.min, request.budget.min), request.budget.max);
+  const { min, max } = request.budget;
+  const start = isAdCopy(request)
+    ? Math.round((min + max) / 2 / 5) * 5
+    : Math.min(Math.max(matchingPackage(creator, request)?.price ?? min, min), max);
+  return Math.max(PITCH_MIN, start);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -150,8 +174,16 @@ export function angleSuggestions(request: ContentRequest, product?: Product): st
     "talking-head": `Straight to camera: why ${feature} matters, and how to do it in under a minute`,
     voiceover: `A short story told over ${name} footage, with the product as the turning point`,
     "hook-pack": `Three openings to test (the pain, the result, the surprise) on one shared demo`,
+    "ad-copy": `Write it the way ${name}'s customers talk, then cut every line to the platform's limit`,
   };
 
+  if (isAdCopy(request)) {
+    return [
+      `Lead with the moment everyone knows: ${problem}`,
+      `Make “${key}” the headline, and let the body text prove it`,
+      formatLed["ad-copy"],
+    ].map((idea) => fitLength(idea, ANGLE_MAX));
+  }
   return [
     `Open on the moment everyone knows: ${problem}`,
     `Say “${key}” straight to camera, then prove it in one take`,
@@ -166,12 +198,14 @@ export function pitchTemplate(input: {
   product?: Product;
   angle: string;
   days: number;
+  /** The package the pitch is based on (kept for callers; two revisions are always included). */
   pkg?: Package;
   sampleCount: number;
 }): string {
-  const { creator, request, business, product, angle, days, pkg, sampleCount } = input;
+  const { creator, request, business, product, angle, days, sampleCount } = input;
   const brief = request.brief;
-  const formatPlural = formatById[brief.format].noun[1];
+  const adCopy = isAdCopy(request);
+  const formatPlural = adCopy ? "ad copy" : formatById[brief.format].noun[1];
   const city = cityById(creator.cityId)?.name;
   const kind = creatorKindById[creator.kind].name.toLowerCase();
   const article = /^[aeiou]/.test(kind) ? "an" : "a";
@@ -184,13 +218,22 @@ export function pitchTemplate(input: {
   const idea = angle.trim()
     ? lowerFirst(angle.trim().replace(/\.$/, ""))
     : "open on the problem, show the app fast, and close on the call to action";
-  const revisions = pkg ? `, with ${plural(pkg.revisions, "round")} of changes included` : "";
+  // Two revisions are included on every order (round 3 answers, item 8), whatever the package says.
+  const revisions = ", with two rounds of changes included";
+  const pieces = brief.copy?.pieces.length ?? 0;
+  const delivery = adCopy
+    ? `I can deliver ${pieces ? `all ${plural(pieces, "piece")}` : "the copy"} in ${plural(days, "day")}${revisions}.`
+    : `I can deliver ${plural(brief.videoCount, "video")} in ${plural(days, "day")}${revisions}.`;
 
   return [
     `Hi ${business?.name ?? "there"} team,`,
-    `I'm ${creator.firstName}, ${article} ${kind}${city ? ` in ${city}` : ""}. I make ${formatPlural} in ${spoken}, and ${productName} is exactly the kind of product I love explaining.`,
-    `My idea: ${idea}. I'd speak to ${audience}, keep it ${tone}, and finish on "${cta}".`,
-    `${sampleCount ? `The ${plural(sampleCount, "sample")} attached ${sampleCount === 1 ? "is" : "are"} closest to this brief. ` : ""}I can deliver ${plural(brief.videoCount, "video")} in ${plural(days, "day")}${revisions}.`,
+    adCopy
+      ? `I'm ${creator.firstName}, ${article} ${kind}${city ? ` in ${city}` : ""}. I write ${formatPlural} in ${spoken}, and ${productName} is exactly the kind of product I love explaining.`
+      : `I'm ${creator.firstName}, ${article} ${kind}${city ? ` in ${city}` : ""}. I make ${formatPlural} in ${spoken}, and ${productName} is exactly the kind of product I love explaining.`,
+    adCopy
+      ? `My idea: ${idea}. I'd write for ${audience}, keep it ${tone}, and close on "${cta}".`
+      : `My idea: ${idea}. I'd speak to ${audience}, keep it ${tone}, and finish on "${cta}".`,
+    `${sampleCount ? `The ${plural(sampleCount, "sample")} attached ${sampleCount === 1 ? "is" : "are"} closest to this brief. ` : ""}${delivery}`,
     `${creator.firstName}`,
   ].join("\n\n");
 }
@@ -201,8 +244,9 @@ export function pitchTemplate(input: {
 
 /** Rough reply expectation from the brand's track record (shown after sending). */
 export function replyWindow(business?: Business): string {
-  if (!business?.reliability) return "within 2 days";
-  return business.reliability.reviewHours <= 24 ? "within a day" : "within 2 days";
+  const hours = business?.reliability?.reviewHours;
+  if (hours === null || hours === undefined) return "within 2 days";
+  return hours <= 24 ? "within a day" : "within 2 days";
 }
 
 export function pitchNextStep(status: PitchStatus, businessName: string): string {

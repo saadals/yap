@@ -12,13 +12,14 @@ import { SectionLabel } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { money, shortDate } from "@/lib/format";
+import { creatorNet, money, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { businessById, requestById } from "@/lib/selectors";
+import { businessById, isAdCopy, requestById } from "@/lib/selectors";
 import { actions, type DemoState, useDemo } from "@/lib/store";
 import type { Commission, Pitch } from "@/lib/types";
 
 import { ItemRow, RowMenu } from "./item-row";
+import { PriceAndNet } from "./job-status";
 
 /** Pitches the brand can still act on. */
 const OPEN = new Set<Pitch["status"]>(["sent", "viewed", "shortlisted"]);
@@ -42,7 +43,8 @@ const openOrder = (a: Pitch, b: Pitch) =>
 
 /**
  * The Pitches tab: open pitches (with a menu to withdraw), then the ones that were decided. A
- * hired pitch links to its job; everything else to the order.
+ * hired pitch links to its job; everything else to the order. Each shows your price (what the brand
+ * sees) with what you'd earn after Yapp's 20%.
  */
 export function PitchLists({ pitches }: { pitches: Pitch[] }) {
   const s = useDemo();
@@ -129,7 +131,12 @@ function PitchRow({ pitch, onWithdraw }: { pitch: Pitch; onWithdraw?: () => void
   const job = pitch.status === "hired" ? commissionForPitch(s, pitch) : undefined;
   const closedEarly = request && request.status !== "open" && OPEN.has(pitch.status);
   const href = job ? paths.job(job.id) : request ? paths.order(request.id) : undefined;
-  const meta = [business?.name ?? "Order no longer available", `Sent ${shortDate(pitch.sentAt)}`, job ? "Open the job" : null]
+  const meta = [
+    business?.name ?? "Order no longer available",
+    request && isAdCopy(request) ? "Ad copy writing" : null,
+    `Sent ${shortDate(pitch.sentAt)}`,
+    job ? "Open the job" : null,
+  ]
     .filter(Boolean)
     .join(" · ");
   const chip = closedEarly ? (
@@ -147,7 +154,14 @@ function PitchRow({ pitch, onWithdraw }: { pitch: Pitch; onWithdraw?: () => void
       title={request?.title ?? "Order no longer available"}
       meta={meta}
       chip={chip}
-      amount={money(pitch.price)}
+      amount={
+        // A pitch still in play (or hired) shows what you'd earn; one that ended shows the price you named.
+        (OPEN.has(pitch.status) && !closedEarly) || pitch.status === "hired" ? (
+          <PriceAndNet price={pitch.price} net={creatorNet(pitch.price)} />
+        ) : (
+          <span className="y-fg-2 font-normal">{money(pitch.price)}</span>
+        )
+      }
       menu={
         onWithdraw && request ? (
           <RowMenu

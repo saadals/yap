@@ -52,7 +52,7 @@ export function ProfileEditorPage() {
     <Page>
       <PageHeader
         title="Your profile"
-        description={creator ? "What brands see when they find you, read your pitch or check a campaign slot." : undefined}
+        description={creator ? "What brands see when they find you, read your pitch or check who picked their campaign." : undefined}
         actions={
           creator ? (
             <PillButton href={paths.creator(creator.handle)} variant="outline" icon={<ExternalLink size={16} aria-hidden />}>
@@ -68,7 +68,7 @@ export function ProfileEditorPage() {
       ) : (
         <SetupPrompt
           title="Show brands what you make"
-          body="Your public profile holds your portfolio, prices and connected accounts. Set one up to pitch on orders and take campaign slots, from this same account."
+          body="Your public profile holds your portfolio, prices and connected accounts. Set one up to pitch on custom orders and pick UGC campaign slots, from this same account."
           onSetUp={() => setSetupOpen(true)}
         />
       )}

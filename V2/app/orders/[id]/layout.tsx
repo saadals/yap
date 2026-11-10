@@ -4,7 +4,7 @@ import { requestIds } from "@/lib/static-params";
 
 export const metadata: Metadata = {
   title: "Order",
-  description: "One order: the owner manages pitches or campaign slots; creators pitch or take a slot.",
+  description: "One order: the owner manages pitches or campaign slots; creators pitch or pick a slot.",
 };
 
 /** Pre-renders known ids for the static export (GitHub Pages). See lib/static-params.ts. */

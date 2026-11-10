@@ -13,6 +13,7 @@ import {
   Info,
   LifeBuoy,
   Megaphone,
+  MessageCircle,
   Paperclip,
   Repeat2,
   Send,
@@ -33,16 +34,18 @@ import { Block } from "@/components/ui/block";
 import { useToast } from "@/components/ui/toast";
 import { hasContactDetails } from "@/lib/contact";
 import { clock, daysFromNow, plural, timeOf, weekdayDate } from "@/lib/format";
-import { threadById, videoById } from "@/lib/selectors";
+import { allBrandHandles, threadById, videoById } from "@/lib/selectors";
 import { actions, useDemo, useTyping } from "@/lib/store";
 import type { Attachment, CommissionEvent, Delivery, Message, Role, Thread } from "@/lib/types";
 
+import { commentSummary } from "./comments";
 import type { Job } from "./helpers";
 import { VersionBadge } from "./review-area";
 
 type Item =
   | { kind: "message"; at: string; key: string; message: Message }
   | { kind: "note"; at: string; key: string; text: string; icon: React.ReactNode }
+  | { kind: "comments"; at: string; key: string; text: string; deliveryId: string }
   | { kind: "version"; at: string; key: string; delivery: Delivery; message?: Message };
 
 const eventIcon: Record<CommissionEvent["kind"], React.ReactNode> = {
@@ -86,21 +89,37 @@ export function buildTimeline(
   const used = new Set<string>();
   const items: Item[] = [];
   for (const delivery of deliveries) {
-    const message = messages.find((m) => m.attachment?.videoId === delivery.video.id);
+    // The creator's message that came with the version: its video, or (ad copy) its document or note.
+    const message = messages.find((m) =>
+      delivery.video
+        ? m.attachment?.videoId === delivery.video.id
+        : m.from === "creator" &&
+          !used.has(m.id) &&
+          Math.abs(Date.parse(m.at) - Date.parse(delivery.deliveredAt)) < NEAR &&
+          (m.attachment?.name === delivery.files[0]?.name || m.text === delivery.note || !m.attachment),
+    );
     if (message) used.add(message.id);
     items.push({ kind: "version", at: delivery.deliveredAt, key: delivery.id, delivery, message });
   }
   const stamps = [...events.map((e) => Date.parse(e.at)), ...deliveries.map((d) => Date.parse(d.deliveredAt))];
   for (const event of events) {
     if (event.kind === "delivered") continue;
-    items.push({ kind: "note", at: event.at, key: event.id, text: event.text, icon: eventIcon[event.kind] ?? <Info size={14} aria-hidden /> });
+    const text = event.text;
+    items.push({ kind: "note", at: event.at, key: event.id, text, icon: eventIcon[event.kind] ?? <Info size={14} aria-hidden /> });
   }
   for (const message of messages) {
     if (used.has(message.id)) continue;
+    // "2 new comments on Version 1": a line that opens those comments (they aren't repeated here).
+    if (message.link?.kind === "comments") {
+      const target = deliveries.find((d) => d.id === message.link?.deliveryId);
+      if (target) items.push({ kind: "comments", at: message.at, key: message.id, text: message.text, deliveryId: target.id });
+      continue;
+    }
     if (message.from === "system") {
       const at = Date.parse(message.at);
       if (stamps.some((stamp) => Math.abs(stamp - at) < NEAR)) continue;
-      items.push({ kind: "note", at: message.at, key: message.id, text: message.text, icon: <Info size={14} aria-hidden /> });
+      const text = message.text;
+      items.push({ kind: "note", at: message.at, key: message.id, text, icon: <Info size={14} aria-hidden /> });
       continue;
     }
     items.push({ kind: "message", at: message.at, key: message.id, message });
@@ -173,6 +192,18 @@ export function Timeline({ job }: { job: Job }) {
                 <Bubble message={item.message} job={job} />
               ) : item.kind === "version" ? (
                 <VersionCard job={job} delivery={item.delivery} message={item.message} />
+              ) : item.kind === "comments" ? (
+                <li className="flex justify-center px-2">
+                  <p className="y-micro y-fg-2 inline-flex max-w-md flex-wrap items-center justify-center gap-x-1.5 text-center">
+                    <MessageCircle size={14} aria-hidden className="flex-none" />
+                    <span>
+                      {item.text} <span className="opacity-80">· {timeOf(item.at)}</span>
+                    </span>
+                    <button type="button" className="y-link min-h-8 font-medium text-(--b-fg) pointer-coarse:min-h-11" onClick={() => job.showComments(item.deliveryId)}>
+                      View
+                    </button>
+                  </p>
+                </li>
               ) : (
                 <li className="flex justify-center px-2">
                   <p className="y-micro y-fg-2 inline-flex max-w-md items-start gap-1.5 text-center">
@@ -262,19 +293,25 @@ function VersionCard({ job, delivery, message }: { job: Job; delivery: Delivery;
   const selected = job.selected?.id === delivery.id;
   const Noun = job.noun.charAt(0).toUpperCase() + job.noun.slice(1);
   const text = message?.text || delivery.note;
-  const notes = delivery.comments.length;
+  const comments = commentSummary(job, delivery);
   return (
     <li className={`flex ${mine ? "justify-end" : "justify-start"}`}>
       <button
         type="button"
         onClick={() => job.pickVersion(delivery.id === job.latest?.id ? null : delivery.id)}
-        aria-label={`${Noun} ${delivery.version}: show it in the player`}
+        aria-label={`${Noun} ${delivery.version}: ${delivery.video ? "show it in the player" : "show it above"}`}
         className={`y-tile y-hoverable flex w-full max-w-[85%] items-start gap-3 p-2.5 text-start sm:max-w-[440px] ${
           selected ? "shadow-[inset_0_0_0_2px_var(--b-fg)]" : ""
         }`}
       >
         <span className="w-16 flex-none">
-          <VideoThumb video={delivery.video} showHook={false} showMeta={false} playable decorative />
+          {delivery.video ? (
+            <VideoThumb video={delivery.video} showHook={false} showMeta={false} playable decorative />
+          ) : (
+            <span className="grid aspect-[4/5] place-items-center rounded-(--y-r-sm) bg-(--b-bg)" aria-hidden>
+              <FileText size={20} />
+            </span>
+          )}
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1.5 py-0.5">
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -285,9 +322,10 @@ function VersionCard({ job, delivery, message }: { job: Job; delivery: Delivery;
           </span>
           {text ? <span className="y-micro y-fg-2 line-clamp-2">{text}</span> : null}
           <span className="y-micro y-fg-2">
-            {mine ? "You" : job.creatorName} · {timeOf(delivery.deliveredAt)} · {clock(delivery.video.durationSec)}
-            {notes ? ` · ${plural(notes, "note")}` : ""}
-            {selected ? " · In the player" : ""}
+            {mine ? "You" : job.creatorName} · {timeOf(delivery.deliveredAt)}
+            {delivery.video ? ` · ${clock(delivery.video.durationSec)}` : delivery.kind === "text" ? " · Ad copy" : ""}
+            {comments ? ` · ${comments}` : ""}
+            {selected ? (delivery.video ? " · In the player" : " · Showing above") : ""}
           </span>
         </span>
       </button>
@@ -304,8 +342,8 @@ function Composer({ job, thread }: { job: Job; thread: Thread }) {
   const [text, setText] = useState("");
   const [file, setFile] = useState<Attachment | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
-  const brandHandle = job.slot?.terms?.brandHandle;
-  const contact = hasContactDetails(text, brandHandle ? [brandHandle] : []);
+  const handles = job.slot?.terms ? allBrandHandles(job.slot.terms) : [];
+  const contact = hasContactDetails(text, handles);
   const quiet = thread.messages.filter((m) => m.from !== "system").length === 0;
 
   const send = () => {

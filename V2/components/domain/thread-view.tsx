@@ -1,12 +1,14 @@
 "use client";
 
 import { EyeOff, FileText, Info, Paperclip, SendHorizontal, X } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 
 import { useToast } from "@/components/ui/toast";
 import { hasContactDetails } from "@/lib/contact";
 import { daysFromNow, timeOf, weekdayDate } from "@/lib/format";
-import { businessById, creatorById, requestById, threadById, videoById } from "@/lib/selectors";
+import { paths } from "@/lib/paths";
+import { allBrandHandles, businessById, creatorById, requestById, threadById, videoById } from "@/lib/selectors";
 import { actions, useDemo, useTyping } from "@/lib/store";
 import type { Attachment, Message, Role } from "@/lib/types";
 
@@ -60,7 +62,21 @@ function Bubble({ message, role, otherName }: { message: Message; role: Role; ot
       <li className="flex justify-center px-4">
         <p className="y-micro y-fg-2 inline-flex max-w-md items-start gap-1.5 rounded-(--y-r-field) bg-(--b-chip) px-3 py-2 text-center">
           <Info size={14} aria-hidden className="mt-px flex-none" />
-          <span>{message.text}</span>
+          <span>
+            {message.text}
+            {/* Comment lines link back to the version (the comments aren't repeated here). */}
+            {message.link?.kind === "comments" ? (
+              <>
+                {" · "}
+                <Link
+                  href={paths.commission(message.link.commissionId, { version: message.link.version })}
+                  className="font-semibold underline underline-offset-2"
+                >
+                  View
+                </Link>
+              </>
+            ) : null}
+          </span>
         </p>
       </li>
     );
@@ -131,8 +147,8 @@ export function ThreadView({
     role === "business"
       ? creatorById(s, thread.creatorId)?.firstName ?? "Creator"
       : businessById(s, thread.businessId)?.name ?? "Client";
-  const brandHandle = thread.requestId ? requestById(s, thread.requestId)?.campaign?.brandHandle : undefined;
-  const contactNotice = hasContactDetails(text, brandHandle ? [brandHandle] : []);
+  const campaign = thread.requestId ? requestById(s, thread.requestId)?.campaign : undefined;
+  const contactNotice = hasContactDetails(text, campaign ? allBrandHandles(campaign) : []);
 
   const send = () => {
     const body = text.trim();

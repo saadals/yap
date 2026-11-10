@@ -1,10 +1,11 @@
 /**
  * Plain-words copy for UGC campaigns as a creator sees them (from V1's components/campaigns/shared.ts),
- * plus V2's one-line eligibility used by Find work and the campaign page. Pure, safe in render.
+ * plus V2's one-line eligibility used by Find work and the campaign page. A campaign may list
+ * several platforms; each creator posts on one, chosen when they pick. Pure, safe in render.
  */
 
-import type { Eligibility, IneligibleReason } from "@/lib/campaigns";
-import { compact, money, plural } from "@/lib/format";
+import { brandHandleFor, platformList, type Eligibility, type IneligibleReason, type PlatformEligibility } from "@/lib/campaigns";
+import { compact, money, moneyExact, plural, creatorNet } from "@/lib/format";
 import { CAMPAIGN_KEEP_LIVE_DAYS, campaignPlatformById, tierById } from "@/lib/taxonomy";
 import type { CampaignPlatformId, CampaignTerms, ContentRequest } from "@/lib/types";
 
@@ -12,59 +13,69 @@ import type { CampaignPlatformId, CampaignTerms, ContentRequest } from "@/lib/ty
 export const disclosureName = (platform: CampaignPlatformId) =>
   campaignPlatformById[platform].disclosure.split(" (")[0].toLowerCase();
 
-/** The posting rule creators agree to. */
-export const postingRule = (terms: Pick<CampaignTerms, "platform" | "brandHandle">) =>
-  `Post it on your ${campaignPlatformById[terms.platform].name}, tag ${terms.brandHandle}, turn on the ${disclosureName(terms.platform)}, and keep it up for ${CAMPAIGN_KEEP_LIVE_DAYS} days.`;
+/** The posting rule creators agree to, on the platform they post on (default: the campaign's first). */
+export const postingRule = (
+  terms: Pick<CampaignTerms, "platforms" | "brandHandles">,
+  platform: CampaignPlatformId = terms.platforms[0],
+) =>
+  `Post it on your ${campaignPlatformById[platform].name}, tag ${brandHandleFor(terms, platform)}, turn on the ${disclosureName(platform)}, and keep it up for ${CAMPAIGN_KEEP_LIVE_DAYS} days.`;
 
-/** "10K–20K verified followers on TikTok" */
-export const requirementLine = (terms: Pick<CampaignTerms, "tierId" | "platform">) =>
-  `${tierById[terms.tierId].label} verified followers on ${campaignPlatformById[terms.platform].name}`;
+/** "10K–20K verified followers on TikTok" ("on TikTok or Instagram" for two platforms) */
+export const requirementLine = (terms: Pick<CampaignTerms, "tierId" | "platforms">) =>
+  `${tierById[terms.tierId].label} verified followers on ${platformList(terms.platforms)}`;
 
-export const perVideo = (price: number) => `${money(price)} per video`;
+/** "$120 a Yapp" */
+export const perYapp = (price: number) => `${money(price)} a Yapp`;
 
-/** "3 of 10 slots left" / "Only 1 slot left" / "All 10 slots taken" */
+/** "you earn $96" for one Yapp at this listed price. */
+export const yappNet = (price: number) => `you earn ${moneyExact(creatorNet(price))}`;
+
+/** "3 of 10 left" / "Only 1 left" / "All 10 slots taken" */
 export function slotsLine(open: number, total: number): string {
   if (open <= 0) return `All ${total} slots taken`;
-  if (open === 1) return "Only 1 slot left";
-  return `${open} of ${total} slots left`;
+  if (open === 1) return "Only 1 left";
+  return `${open} of ${total} left`;
 }
 
+/** "Pick now · 3 of 10 left" */
+export const pickLabel = (open: number, total: number) => `Pick now · ${slotsLine(open, total)}`;
+
 export type EligibilityLine = {
-  /** ok: can take a slot; fix: can't yet, but something on Yapp fixes it; no: can't. */
+  /** ok: can pick; fix: can't yet, but something on Yapp fixes it; no: can't. */
   state: "ok" | "fix" | "no";
   text: string;
 };
 
 /**
- * Eligibility in words, for a row or a header line:
- *   "You qualify: 18.4K verified followers on TikTok"
+ * Eligibility in words, across the campaign's platforms, for a row or a header line:
+ *   "You qualify on TikTok" / "You qualify on TikTok and Instagram"
  *   "Needs 20K–50K verified followers on Instagram (you have 9.1K)"
  */
 export function eligibilityLine(check: Eligibility, request: ContentRequest): EligibilityLine {
   const terms = request.campaign;
   if (!terms) return { state: "no", text: "Closed" };
-  const platform = campaignPlatformById[terms.platform].name;
   const tier = tierById[terms.tierId].label;
-  if (check.ok) return { state: "ok", text: `You qualify: ${compact(check.social.followers)} verified followers on ${platform}` };
+  const about = check.platform ? campaignPlatformById[check.platform].name : platformList(terms.platforms);
+  if (check.ok) return { state: "ok", text: `You qualify on ${platformList(check.platforms, "and")}` };
   switch (check.reason) {
     case "no_profile":
-      return { state: "fix", text: `For creators with ${tier} verified followers on ${platform}` };
+      return { state: "fix", text: `For ${tier} verified followers on ${platformList(terms.platforms)}` };
     case "no_account":
-      return { state: "fix", text: `Needs ${tier} verified followers on ${platform}: connect your ${platform}` };
+      return { state: "fix", text: `Needs ${tier} verified followers on ${platformList(terms.platforms)}: connect your account` };
     case "unverified":
-      return { state: "fix", text: `We're still checking your ${platform} followers` };
+      return { state: "fix", text: `We're still checking your ${about} followers` };
     case "below":
     case "above":
       return {
         state: "no",
-        text: `Needs ${tier} verified followers on ${platform}${check.social ? ` (you have ${compact(check.social.followers)})` : ""}`,
+        text: `Needs ${tier} verified followers on ${about}${check.social ? ` (you have ${compact(check.social.followers)})` : ""}`,
       };
     case "excluded":
       return { state: "no", text: "Not open to you on this campaign" };
     case "joined":
-      return { state: "ok", text: "You have a slot" };
+      return { state: "ok", text: "You picked a Yapp" };
     case "full":
-      return { state: "no", text: "Campaign full" };
+      return { state: "no", text: "All slots taken" };
     case "closed":
       return { state: "no", text: "Closed" };
     case "own":
@@ -73,27 +84,45 @@ export function eligibilityLine(check: Eligibility, request: ContentRequest): El
   }
 }
 
-/** Why this account can't take a slot, in plain words (title and the fix). Never blames. */
+/** One platform's check, in words: "18.4K verified followers · you qualify". */
+export function platformCheckLine(check: PlatformEligibility, terms: Pick<CampaignTerms, "tierId">): string {
+  const tier = tierById[terms.tierId].label;
+  if (check.ok) return `${compact(check.social.followers)} verified followers · you qualify`;
+  switch (check.reason) {
+    case "no_account":
+      return "Not connected yet";
+    case "unverified":
+      return "We're still checking your followers";
+    case "below":
+      return `${compact(check.social?.followers ?? 0)} verified followers, below ${tier}`;
+    case "above":
+      return `${compact(check.social?.followers ?? 0)} verified followers, above ${tier}`;
+  }
+}
+
+/** Why this account can't pick, in plain words (title and the fix). Never blames. */
 export function ineligibleCopy(
   reason: IneligibleReason,
   request: ContentRequest,
   followers?: number,
+  /** The platform the reason is about (from `eligibility`); default: every platform the campaign lists. */
+  on?: CampaignPlatformId,
 ): { title: string; body?: string } {
   const terms = request.campaign;
-  const platform = terms ? campaignPlatformById[terms.platform].name : "the platform";
+  const platform = on ? campaignPlatformById[on].name : terms ? platformList(terms.platforms) : "the platform";
   const tier = terms ? tierById[terms.tierId].label : "";
   switch (reason) {
     case "own":
-      return { title: "This is your own campaign", body: "You can't take a slot on a campaign you placed." };
+      return { title: "This is your own campaign", body: "You can't pick a Yapp on a campaign you placed." };
     case "closed":
       return { title: "This campaign is closed", body: "It isn't taking creators any more." };
     case "full":
       return {
-        title: "Campaign full",
-        body: "Every slot is taken. If one reopens, it goes to the first creator who qualifies and takes it.",
+        title: "All slots are taken",
+        body: "If one reopens, it goes to the first creator who qualifies and picks it.",
       };
     case "joined":
-      return { title: "You already have a slot" };
+      return { title: "You already picked a Yapp here" };
     case "excluded":
       return {
         title: "This campaign is closed to you",
@@ -101,7 +130,7 @@ export function ineligibleCopy(
       };
     case "no_profile":
       return {
-        title: "Set up your creator profile to take a slot",
+        title: "Set up your creator profile to pick",
         body: `It takes a minute. Then connect your ${platform} so we can check your followers.`,
       };
     case "no_account":
@@ -119,7 +148,7 @@ export function ineligibleCopy(
     case "above":
       return {
         title: "Your audience is above this tier",
-        body: `This campaign is for ${tier} verified followers on ${platform}${followers !== undefined ? `, and you have ${compact(followers)}` : ""}. Campaigns for bigger accounts pay more.`,
+        body: `This campaign is for ${tier} verified followers on ${platform}${followers !== undefined ? `, and you have ${compact(followers)}` : ""}. Campaigns for bigger accounts show up in Find work.`,
       };
   }
 }

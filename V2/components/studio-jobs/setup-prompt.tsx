@@ -1,7 +1,6 @@
 "use client";
 
 import { Block } from "@/components/ui/block";
-import type { CharacterShape, CharacterTint } from "@/components/ui/character";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PillButton } from "@/components/ui/pill-button";
 import { paths } from "@/lib/paths";
@@ -16,23 +15,16 @@ export function SetupPrompt({
   title,
   body,
   onSetUp,
-  shape = "bean",
-  tint = "violet",
 }: {
   title: string;
   body: string;
   onSetUp: () => void;
-  shape?: CharacterShape;
-  tint?: CharacterTint;
 }) {
   return (
     <Block tone="paper" pad="lg">
       <EmptyState
         title={title}
         body={body}
-        shape={shape}
-        tint={tint}
-        face="smile"
         action={
           <div className="flex flex-wrap justify-center gap-2">
             <PillButton variant="neon" arrow onClick={onSetUp}>

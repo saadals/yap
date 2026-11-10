@@ -2,7 +2,7 @@
 
 import "@/app/styles/inbox.css";
 
-import { MessagesSquare } from "lucide-react";
+import { MessagesSquare, SearchX } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -109,9 +109,7 @@ export function Inbox() {
                 <EmptyState
                   title="Conversation not found"
                   body="It may belong to another account, or the link is from another browser's demo data."
-                  shape="gem"
-                  tint="coral"
-                  face="wow"
+                  icon={<SearchX size={22} />}
                   className="my-auto"
                   action={
                     <PillButton href={paths.messages()} variant="contrast" size="sm">
@@ -125,7 +123,7 @@ export function Inbox() {
                   <p className="y-small max-w-[32ch]">
                     {items.length
                       ? "Pick a conversation to read it here."
-                      : "Messages about your orders and jobs will appear here."}
+                      : "Messages about your orders and jobs will appear here. Feedback on a delivered video lives in its comments."}
                   </p>
                 </div>
               )}

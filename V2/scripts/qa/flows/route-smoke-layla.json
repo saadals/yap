@@ -350,7 +350,83 @@
   },
   {
    "notText": "Application error"
+  },
+  {
+   "go": "/productivity",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/productivity?as=creator",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/services",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/services/ugc-ads",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/services/native-posts",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/services/hook-lab",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/services/go-to-market",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/for/tech-teams",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/jobs/c-206",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-251",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
+  },
+  {
+   "go": "/orders/r-213",
+   "after": 1800
+  },
+  {
+   "notText": "Application error"
   }
- ],
- "theme": "dark"
+ ]
 }

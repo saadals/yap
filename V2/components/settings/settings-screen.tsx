@@ -8,17 +8,16 @@ import { CreatorSetupSheet } from "@/components/account/creator-setup-sheet";
 import { AppShell } from "@/components/shell/app-shell";
 import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
-import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { useMode, type Mode } from "@/lib/mode";
 import { paths } from "@/lib/paths";
-import { usePrefs } from "@/lib/prefs";
 import { me } from "@/lib/selectors";
 import { actions, useDemo, useHydrated } from "@/lib/store";
 import { AUTO_APPROVE_DAYS } from "@/lib/taxonomy";
 
+import { BrandAccounts } from "./brand-accounts";
 import { CompanyProfileForm } from "./company-profile";
 import { ConfirmSheet } from "./confirm-sheet";
 import { SettingsSection, SwitchRow } from "./controls";
@@ -33,23 +32,27 @@ type Anchor = { id: string; label: string };
 
 /**
  * /settings: every setting on one page, in sections, with an anchored nav (a sticky column on
- * desktop, a row of chips on phones). Anchors: account, notifications, business (team inside it),
- * studio, security, appearance. V1's anchors still land in the right place: you → account,
- * team → business, making / availability / alerts → studio, danger → security.
+ * desktop, a row of chips on phones). Anchors: account, notifications, brand (the accounts creators
+ * tag on campaigns), business (team inside it), studio, security. V1's anchors still land in the
+ * right place: you → account, handles → brand, team → business, making / availability / alerts →
+ * studio, danger → security. There is no Appearance section: dark mode is paused (light only).
  */
 const sections: Anchor[] = [
   { id: "account", label: "Account" },
   { id: "notifications", label: "Notifications" },
+  { id: "brand", label: "Brand accounts" },
   { id: "business", label: "Business account" },
   { id: "studio", label: "Studio" },
   { id: "security", label: "Sign-in and security" },
-  { id: "appearance", label: "Appearance" },
 ];
 
 /** V1 anchors and where they live in V2 (`team` and `alerts` are headings inside their sections). */
 const aliases: Record<string, string> = {
   you: "account",
   approvals: "notifications",
+  handles: "brand",
+  "brand-accounts": "brand",
+  appearance: "account",
   company: "business",
   making: "studio",
   availability: "studio",
@@ -141,7 +144,7 @@ function SettingsNav() {
 
 function Sections({ mode }: { mode: Mode }) {
   const s = useDemo();
-  const { theme, setTheme } = usePrefs();
+  const account = me.account(s);
   const creator = me.creator(s);
 
   // The sections mount after hydration, too late for the browser's own jump to `#section`. V1's
@@ -163,6 +166,14 @@ function Sections({ mode }: { mode: Mode }) {
 
       <SettingsSection id="notifications" title="Notifications">
         <Notifications hasCreator={Boolean(creator)} startOn={mode} />
+      </SettingsSection>
+
+      <SettingsSection
+        id="brand"
+        title="Brand accounts"
+        description="The accounts creators tag when they post a UGC campaign video, one per platform. New campaigns start with these, and changing one there saves it here."
+      >
+        <BrandAccounts key={account.id} />
       </SettingsSection>
 
       <BusinessAccountSection />
@@ -196,20 +207,6 @@ function Sections({ mode }: { mode: Mode }) {
 
       <SettingsSection id="security" title="Sign-in and security">
         <SecurityControls />
-      </SettingsSection>
-
-      <SettingsSection id="appearance" title="Appearance" description="Applies on this device.">
-        <SegmentedToggle
-          label="Theme"
-          size="md"
-          value={theme}
-          onChange={setTheme}
-          options={[
-            { value: "light", label: "Light" },
-            { value: "dark", label: "Dark" },
-          ]}
-          className="w-fit"
-        />
       </SettingsSection>
     </div>
   );
@@ -301,7 +298,7 @@ function Notifications({ hasCreator, startOn }: { hasCreator: boolean; startOn: 
           <SwitchRow
             label="Remind me before a video approves itself"
             icon={<CheckCircle2 size={18} />}
-            description={`A video approves itself ${AUTO_APPROVE_DAYS} days after delivery if you don't respond. We'll remind you 24 hours and 2 hours before.`}
+            description={`A video approves itself ${AUTO_APPROVE_DAYS} days after delivery if you don't respond. We'll remind you 48 hours, 24 hours and 2 hours before.`}
             checked={prefs.autoApproveReminders}
             onChange={(on) => {
               actions.updateSettings("business", { autoApproveReminders: on });
@@ -329,7 +326,7 @@ function MakeVideosCta() {
       <div className="min-w-[200px] flex-1">
         <p className="y-head">Make videos on Yapp too</p>
         <p className="y-small y-fg-2">
-          Set up a creator profile on this account to pitch on briefs and take campaign slots.
+          Set up a creator profile on this account to pitch on custom orders and pick Yapps in UGC campaigns.
         </p>
       </div>
       <PillButton variant="contrast" onClick={() => setOpen(true)}>

@@ -8,7 +8,7 @@ import { VideoThumb } from "@/components/domain/video-thumb";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { money, plural, quoted, timeAgo } from "@/lib/format";
+import { money, plural, priceWithNet, quoted, timeAgo } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { videoById } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
@@ -109,7 +109,7 @@ export function MyPitch({
         <div className="flex flex-col gap-0.5">
           <h2 className="y-head">Your pitch</h2>
           <p className="y-small y-fg-2 y-num">
-            {money(pitch.price)} · first version in {plural(pitch.deliveryDays, "day")}
+            {priceWithNet(pitch.price)} · first version in {plural(pitch.deliveryDays, "day")}
           </p>
         </div>
         <PitchBadge status={pitch.status} />

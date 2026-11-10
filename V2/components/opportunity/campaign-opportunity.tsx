@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
   Megaphone,
+  Minus,
   ShieldCheck,
   Tag,
   Timer,
@@ -28,43 +29,58 @@ import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { KeyValues, ProgressBar } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/toast";
-import { compact, lengthLabel, money, plural, quoted, shortDate, weekdayDate } from "@/lib/format";
+import { creatorNet, lengthLabel, money, moneyExact, plural, quoted, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { businessById, eligibility, me, mySlot, openSlotCount, productById } from "@/lib/selectors";
+import {
+  brandHandleFor,
+  businessById,
+  eligibility,
+  me,
+  mySlot,
+  openSlotCount,
+  platformEligibility,
+  platformList,
+  productById,
+} from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import {
   CAMPAIGN_KEEP_LIVE_DAYS,
   CAMPAIGN_RELEASE_DAYS,
   CAMPAIGN_RESTORE_HOURS,
+  FEE_PCT,
+  RAW_FOOTAGE_INCLUDED,
   campaignPlatformById,
   languageById,
+  orderKinds,
+  tierById,
+  usageById,
 } from "@/lib/taxonomy";
-import type { CampaignTerms, ContentRequest } from "@/lib/types";
+import type { CampaignPlatformId } from "@/lib/types";
 
-import { disclosureName, ineligibleCopy, requirementLine, slotsLine } from "./campaign-copy";
-import { ActionBar, BrandLine, Bullets, ExplainerTile, MoreMenu, Section } from "./parts";
-import { TakeSlotSheet } from "./take-slot-sheet";
-
-type CampaignRequest = ContentRequest & { campaign: CampaignTerms };
+import { disclosureName, ineligibleCopy, pickLabel, platformCheckLine, slotsLine } from "./campaign-copy";
+import { ActionBar, BrandLine, BrandRecord, BriefFiles, Bullets, ExplainerTile, MoreMenu, Section } from "./parts";
+import { PickSheet, type CampaignRequest } from "./pick-sheet";
 
 /**
- * A UGC campaign, as anyone but its owner sees it: the fixed price and slots left, who can take a
- * slot (with the fix when you can't yet), what to say, the posting rules and how you're paid.
- * One action: take a slot (confirm sheet → `acceptCampaignSlot` → the job).
+ * A UGC campaign, as anyone but its owner sees it: the brand's price per Yapp with your net, slots
+ * left, which platforms count and whether you qualify on each (with the fix when you can't yet),
+ * what to say, the posting rules and how you're paid. One action: Pick now (confirm sheet →
+ * `acceptCampaignSlot` → "The slot is yours" → the job). Holding a slot, it's "Your Yapp · due".
  */
 export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
   const s = useDemo();
   const toast = useToast();
-  const [sheet, setSheet] = useState<"take" | "setup" | "connect" | null>(null);
+  const [sheet, setSheet] = useState<"pick" | "setup" | "connect" | null>(null);
+  const [connectOn, setConnectOn] = useState<CampaignPlatformId | null>(null);
   const [raced, setRaced] = useState(false);
 
   const terms = request.campaign;
   const business = businessById(s, request.businessId);
   const brandName = business?.name ?? "The brand";
   const product = productById(s, request.brief.productId);
-  const platform = campaignPlatformById[terms.platform];
   const creator = me.creator(s);
   const check = eligibility(s, creator, request);
+  const checks = platformEligibility(creator, request);
   const slot = mySlot(s, request.id, creator?.id);
   const open = raced ? 0 : openSlotCount(s, request);
   const taken = request.slots - openSlotCount(s, request);
@@ -72,10 +88,20 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
   const full = raced || (!check.ok && check.reason === "full");
   const closed = request.status === "closed";
   const reason = check.ok ? undefined : check.reason;
+  const where = platformList(terms.platforms);
+  const net = moneyExact(creatorNet(terms.pricePerVideo));
+  const unconnected = checks.find((c) => !c.ok && c.reason === "no_account")?.platform ?? terms.platforms[0];
+  const tier = tierById[terms.tierId].label;
+  // Holding a slot, the rules are about the one platform you chose; before that, every listed one.
+  const postOn: CampaignPlatformId[] = slot?.postPlatform ? [slot.postPlatform] : terms.platforms;
 
   const hide = () => {
     actions.hideRequest(request.id);
     toast({ message: "Hidden from Find work.", action: { label: "Undo", onClick: () => actions.unhideRequest(request.id) } });
+  };
+  const connect = (platform: CampaignPlatformId) => {
+    setConnectOn(platform);
+    setSheet("connect");
   };
 
   /* ---------------------------------------------------------- the one action */
@@ -83,17 +109,17 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
   const slotLabel =
     slot && (slot.status === "in_progress" || slot.status === "revision")
       ? `Your Yapp · due ${shortDate(slot.dueDate)}`
-      : "Open your job";
+      : "Open the job";
   const action: Action = slot
     ? { label: slotLabel, neon: true, href: paths.job(slot.id) }
     : full
-      ? { label: "Campaign full", neon: false, disabled: true }
+      ? { label: "All slots taken", neon: false, disabled: true }
       : check.ok
-        ? { label: "Take a slot", neon: true, onClick: () => setSheet("take") }
+        ? { label: pickLabel(open, request.slots), neon: true, onClick: () => setSheet("pick") }
         : reason === "no_profile"
-          ? { label: "Set up and take a slot", neon: true, onClick: () => setSheet("setup") }
+          ? { label: "Set up and pick", neon: true, onClick: () => setSheet("setup") }
           : reason === "no_account"
-            ? { label: `Connect your ${platform.name}`, neon: true, onClick: () => setSheet("connect") }
+            ? { label: `Connect your ${campaignPlatformById[unconnected].name}`, neon: true, onClick: () => connect(unconnected) }
             : null;
 
   const actionButton = (size: "md" | "lg", wide: boolean) =>
@@ -121,52 +147,45 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
     if (raced)
       return {
         icon: <Users size={18} aria-hidden />,
-        title: "The last slot was just taken",
-        body: "Someone got there first. If a slot reopens, it goes to the first creator who qualifies and takes it.",
+        title: "Someone just took the last slot",
+        body: "If a slot reopens, it goes to the first creator who qualifies and picks it.",
       };
     if (!reason || reason === "no_profile" || reason === "no_account") return null;
-    const copy = ineligibleCopy(reason, request, check.ok ? undefined : check.social?.followers);
+    const copy = ineligibleCopy(reason, request, check.ok ? undefined : check.social?.followers, check.ok ? undefined : check.platform);
     return {
       icon: reason === "unverified" ? <Timer size={18} aria-hidden /> : reason === "full" ? <Users size={18} aria-hidden /> : <AlertCircle size={18} aria-hidden />,
       ...copy,
     };
   })();
 
-  /* ------------------------------------------------------------- eligibility */
-  const social = creator?.socials?.find((a) => a.platform === terms.platform);
-  const yourStatus = !creator
-    ? { ok: false, text: "Set up a creator profile, then connect your account so we can check your followers." }
-    : slot
-      ? { ok: true, text: `You have slot ${slot.campaignSlot}.` }
-      : !social
-        ? { ok: false, text: `No ${platform.name} connected yet. Connect it read-only to check your followers.` }
-        : !social.verified
-          ? { ok: false, text: `We're still checking @${social.handle}.` }
-          : check.ok
-            ? { ok: true, text: `You qualify: ${compact(social.followers)} verified followers on ${platform.name} (@${social.handle}).` }
-            : reason === "below" || reason === "above"
-              ? { ok: false, text: `You have ${compact(social.followers)} verified followers on ${platform.name}, ${reason === "below" ? "below" : "above"} this tier.` }
-              : { ok: false, text: `${compact(social.followers)} verified followers on ${platform.name} (@${social.handle}).` };
-
+  /* ------------------------------------------------------------------ deal */
   const deal = (
     <Block tone="paper" pad="md" className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         <p className="flex items-baseline gap-2">
           <span className="y-display y-num text-[40px] leading-none tracking-[-0.03em]">{money(terms.pricePerVideo)}</span>
-          <span className="y-small y-fg-2">per video</span>
+          <span className="y-small y-fg-2">a Yapp, set by {brandName}</span>
         </p>
-        <p className="y-micro y-fg-2">You keep 100%. The budget is already held by Yapp.</p>
+        <p className="y-small y-num">
+          You earn <span className="font-semibold">{net}</span>
+          <span className="y-fg-2"> after the {FEE_PCT}% Yapp fee</span>
+        </p>
+        <p className="y-micro y-fg-2">The whole budget is already held by Yapp.</p>
       </div>
       {closed ? null : (
         <div className="flex flex-col gap-2">
-          <p className={`y-small ${open > 0 && open <= 3 ? "font-semibold" : ""}`}>{slotsLine(open, request.slots)}</p>
+          {/* The Pick now button carries the count left, so this line counts the other way. */}
+          <p className={`y-small ${open > 0 && open <= 3 ? "font-semibold" : ""}`}>
+            {check.ok && !slot && !full ? `${taken} of ${request.slots} picked` : slotsLine(open, request.slots)}
+          </p>
           <ProgressBar value={taken / request.slots} label={`${taken} of ${request.slots} slots taken`} />
         </div>
       )}
       <KeyValues
         rows={[
           { label: closed ? "Closed" : "Takes creators until", value: weekdayDate(terms.closesAt) },
-          { label: "Upload within", value: `${plural(terms.deadlineDays, "day")} of taking a slot` },
+          { label: `Deadline, set by ${brandName}`, value: `${plural(terms.deadlineDays, "day")} after you pick` },
+          { label: "Usage", value: usageById[request.brief.usage].name },
         ]}
       />
       <div className="hidden flex-col gap-3 lg:flex">
@@ -176,41 +195,72 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
     </Block>
   );
 
+  /* ----------------------------------------------------- who can pick, per platform */
   const requirements = (
     <Block as="section" aria-labelledby="who-h" tone="paper" pad="md" className="flex flex-col gap-4">
-      <h2 id="who-h" className="y-head flex items-center gap-2">
-        <ShieldCheck size={18} aria-hidden className="flex-none" />
-        Who can take a slot
-      </h2>
-      <ul className="flex flex-col gap-2">
-        <li className="y-small flex items-start gap-2">
-          <Users size={16} aria-hidden className="mt-0.5 flex-none" />
-          {requirementLine(terms)}
+      <div className="flex flex-col gap-1">
+        <h2 id="who-h" className="y-head flex items-center gap-2">
+          <ShieldCheck size={18} aria-hidden className="flex-none" />
+          Who can pick
+        </h2>
+        <p className="y-small y-fg-2">
+          Creators with {tier} verified followers on {where}
+          {terms.platforms.length > 1 ? ". You post on one of them, chosen when you pick." : "."}
+        </p>
+      </div>
+      <ul className="flex flex-col gap-2.5" aria-label="Your accounts on this campaign's platforms">
+        {checks.map((c) => {
+          const name = campaignPlatformById[c.platform].name;
+          return (
+            <li key={c.platform} className="flex items-start gap-2.5">
+              {!creator ? (
+                <Minus size={16} aria-hidden className="mt-0.5 flex-none" />
+              ) : c.ok ? (
+                <CircleCheck size={16} aria-hidden className="mt-0.5 flex-none text-(--y-success)" />
+              ) : (
+                <AlertCircle size={16} aria-hidden className="mt-0.5 flex-none" />
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="y-small block font-semibold">
+                  {name}
+                  {c.social ? <span className="y-fg-2 font-normal"> · @{c.social.handle}</span> : null}
+                </span>
+                <span className="y-micro y-fg-2 block">
+                  {creator ? platformCheckLine(c, terms) : "Set up a creator profile, then connect it read-only"}
+                </span>
+              </span>
+              {creator && !slot && !c.ok && c.reason === "no_account" ? (
+                <PillButton
+                  variant="outline"
+                  size="sm"
+                  className="flex-none"
+                  icon={<AtSign size={14} aria-hidden />}
+                  aria-label={`Connect ${name}`}
+                  onClick={() => connect(c.platform)}
+                >
+                  Connect
+                </PillButton>
+              ) : null}
+            </li>
+          );
+        })}
+      </ul>
+      <ul className="flex flex-col gap-2 border-t border-(--b-line) pt-4">
+        <li className="y-micro y-fg-2 flex items-start gap-2">
+          <BadgeCheck size={14} aria-hidden className="mt-0.5 flex-none" />
+          Followers are checked through a read-only connection: bots and inactive accounts don&apos;t count
         </li>
-        <li className="y-small flex items-start gap-2">
-          <BadgeCheck size={16} aria-hidden className="mt-0.5 flex-none" />
-          Followers are verified through a read-only connection: bots and inactive accounts don&apos;t count
-        </li>
-        <li className="y-small flex items-start gap-2">
-          <Clock size={16} aria-hidden className="mt-0.5 flex-none" />
-          First come, first served: one slot per creator
+        <li className="y-micro y-fg-2 flex items-start gap-2">
+          <Clock size={14} aria-hidden className="mt-0.5 flex-none" />
+          First come, first served: one Yapp per creator
         </li>
       </ul>
-      <p
-        className={`y-small flex items-start gap-2 border-t border-(--b-line) pt-4 ${yourStatus.ok ? "font-semibold" : ""}`}
-        aria-live="polite"
-      >
-        {yourStatus.ok ? (
+      {slot ? (
+        <p className="y-small flex items-start gap-2 font-semibold" aria-live="polite">
           <CircleCheck size={16} aria-hidden className="mt-0.5 flex-none text-(--y-success)" />
-        ) : (
-          <AlertCircle size={16} aria-hidden className="mt-0.5 flex-none" />
-        )}
-        {yourStatus.text}
-      </p>
-      {creator && !social && !slot ? (
-        <PillButton variant="outline" size="sm" className="w-fit" icon={<AtSign size={15} aria-hidden />} onClick={() => setSheet("connect")}>
-          Connect {platform.name}
-        </PillButton>
+          You hold slot {slot.campaignSlot}
+          {slot.postPlatform ? `, posting on ${campaignPlatformById[slot.postPlatform].name}` : ""}.
+        </p>
       ) : null}
     </Block>
   );
@@ -243,8 +293,8 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
         <h1 className="y-display y-t-display max-w-[30ch]">{request.title}</h1>
         <p className="y-body y-fg-2">
           {[
-            "UGC campaign",
-            `Posted on your ${platform.name}`,
+            orderKinds.campaign.name,
+            `Posted on your ${where}`,
             request.brief.languages.map((l) => languageById[l].name).join(" or "),
             `${lengthLabel(request.brief.durationSec)} video`,
           ].join(" · ")}
@@ -265,7 +315,7 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
       </header>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:gap-4 [&>*]:min-w-0">
-        <aside className="flex flex-col gap-3 lg:order-2 lg:col-span-4" aria-label="Price, slots and who can take one">
+        <aside className="flex flex-col gap-3 lg:order-2 lg:col-span-4" aria-label="Price, slots and who can pick">
           <div className="y-rail flex flex-col gap-3">
             {deal}
             {/* On phones the notice sits here, under the price (the action is in the bar). */}
@@ -275,6 +325,7 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
               </div>
             ) : null}
             {requirements}
+            {business ? <BrandRecord business={business} /> : null}
           </div>
         </aside>
 
@@ -282,6 +333,12 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
           <Section title="What to say" id="say-h">
             {request.brief.keyMessage ? (
               <p className="y-display text-[19px] leading-snug font-medium">{quoted(request.brief.keyMessage)}</p>
+            ) : null}
+            {request.brief.hook ? (
+              <p className="y-small">
+                <span className="font-semibold">Hook: </span>
+                {request.brief.hook}
+              </p>
             ) : null}
             {request.brief.goal ? <p className="y-body y-fg-2 max-w-[62ch]">{request.brief.goal}</p> : null}
             {terms.explainer ? <ExplainerTile name={terms.explainer.name} durationSec={terms.explainer.durationSec} /> : null}
@@ -316,7 +373,14 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
                   {lengthLabel(request.brief.durationSec)}
                 </dd>
               </div>
+              <div className="flex flex-col gap-1">
+                <dt className="y-micro y-fg-2">How {brandName} may use it</dt>
+                <dd className="y-small">
+                  {usageById[request.brief.usage].description} Included in the price. {RAW_FOOTAGE_INCLUDED}
+                </dd>
+              </div>
             </dl>
+            <BriefFiles files={request.brief.attachments ?? []} brandName={brandName} />
           </Section>
 
           <Section title="Posting rules" id="post-h" icon={<Megaphone size={18} aria-hidden className="flex-none" />}>
@@ -324,12 +388,22 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
               <li className="y-small flex items-start gap-2.5">
                 <AtSign size={16} aria-hidden className="mt-0.5 flex-none" />
                 <span>
-                  Post on your own {platform.name} and tag <span className="font-semibold">{terms.brandHandle}</span>
+                  Post on your own{" "}
+                  {postOn.map((p, index) => (
+                    <span key={p}>
+                      {index > 0 ? (index === postOn.length - 1 ? " or " : ", ") : ""}
+                      {campaignPlatformById[p].name}, tagging <span className="font-semibold">{brandHandleFor(terms, p)}</span>
+                    </span>
+                  ))}
+                  {postOn.length > 1 ? ". You choose one when you pick" : ""}
                 </span>
               </li>
               <li className="y-small flex items-start gap-2.5">
                 <Tag size={16} aria-hidden className="mt-0.5 flex-none" />
-                <span>Turn on the {disclosureName(terms.platform)}: it tells viewers the post is paid</span>
+                <span>
+                  Turn on the {postOn.length > 1 ? "platform's paid partnership label" : disclosureName(postOn[0])}: it tells
+                  viewers the post is paid
+                </span>
               </li>
               <li className="y-small flex items-start gap-2.5">
                 <Clock size={16} aria-hidden className="mt-0.5 flex-none" />
@@ -343,10 +417,10 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
           <Section title="How you're paid" id="paid-h" icon={<ShieldCheck size={18} aria-hidden className="flex-none" />}>
             <ol className="flex flex-col gap-3">
               {[
-                `${brandName} has already paid: the whole budget is held by Yapp before anyone takes a slot.`,
-                `Upload a review copy within ${plural(terms.deadlineDays, "day")}. It stays watermarked until ${brandName} approves it.`,
+                `${brandName} has already paid: the whole budget is held by Yapp before anyone picks.`,
+                `Upload a review copy within ${plural(terms.deadlineDays, "day")} of picking. It stays watermarked until ${brandName} approves it.`,
                 `Once it's approved, post it with the tag and the label. We check the post for you.`,
-                `Your ${money(terms.pricePerVideo)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post, if it's still up.`,
+                `Your ${net} (the ${money(terms.pricePerVideo)} price less Yapp's ${FEE_PCT}%) is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post, if it's still up.`,
               ].map((text, index) => (
                 <li key={text} className="flex items-start gap-3">
                   <span className="y-micro y-num grid size-6 flex-none place-items-center rounded-full bg-(--y-mist) font-semibold">
@@ -364,17 +438,17 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
       </div>
 
       {action ? (
-        <ActionBar label="Take a slot">
-          <p className="y-small min-w-0 flex-1 truncate">
-            <span className="y-num font-semibold">{money(terms.pricePerVideo)}</span>
-            <span className="y-fg-2"> · {slot ? `slot ${slot.campaignSlot}` : slotsLine(open, request.slots).toLowerCase()}</span>
+        <ActionBar label={slot ? "Your Yapp" : "Pick now"}>
+          <p className="y-small y-num min-w-0 flex-1 truncate">
+            <span className="y-fg-2">You earn </span>
+            <span className="font-semibold">{net}</span>
           </p>
           {actionButton("md", false)}
         </ActionBar>
       ) : null}
 
-      <TakeSlotSheet
-        open={sheet === "take"}
+      <PickSheet
+        open={sheet === "pick"}
         request={request}
         onClose={() => setSheet(null)}
         onFull={() => {
@@ -384,11 +458,12 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
       />
       <CreatorSetupSheet
         open={sheet === "setup"}
-        reason="to take a slot on this campaign"
+        reason="to pick a Yapp on this campaign"
         onClose={() => setSheet((current) => (current === "setup" ? null : current))}
         onDone={() => {
-          // Straight on to the next step: connect the account the campaign posts on (the sheet
+          // Straight on to the next step: connect an account the campaign posts on (the sheet
           // shows it as connected if the setup already did it).
+          setConnectOn(terms.platforms[0]);
           setSheet("connect");
         }}
       />
@@ -397,8 +472,8 @@ export function CampaignOpportunity({ request }: { request: CampaignRequest }) {
           open={sheet === "connect"}
           onClose={() => setSheet(null)}
           creatorId={creator.id}
-          platform={terms.platform}
-          reason="to take a slot on this campaign"
+          platform={connectOn ?? unconnected}
+          reason="to pick a Yapp on this campaign"
         />
       ) : null}
     </Page>

@@ -3,14 +3,24 @@
  * and the removable "active filter" chips. Pure; safe in render.
  *
  * Every filter lives in the URL so a filtered list is a shareable link:
- *   q, format, lang (comma list), niche (comma list), kind (comma list), min, max (starting price),
- *   days (fastest package), available=1, sort, product (with sort=fit), tab=saved.
+ *   q, format, lang (comma list), niche (comma list), platform (comma list), kind (comma list),
+ *   min, max (starting price), days (fastest package), available=1, sort, product (with sort=fit),
+ *   tab=saved.
  */
 
 import { paths } from "@/lib/paths";
-import { creatorById, fit, startingPrice } from "@/lib/selectors";
+import { creatorById, fit, isAdCopy, startingPrice } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { creatorKindById, formatById, languageById, nicheById } from "@/lib/taxonomy";
+import {
+  DEFAULT_LANGUAGE,
+  DEFAULT_USAGE,
+  creatorKindById,
+  formatById,
+  languageById,
+  nicheById,
+  platformById,
+  platforms,
+} from "@/lib/taxonomy";
 import type {
   ContentRequest,
   Creator,
@@ -18,8 +28,23 @@ import type {
   FormatId,
   LanguageId,
   NicheId,
+  PlatformId,
   Product,
 } from "@/lib/types";
+
+/**
+ * Ad placements: where a brand runs an ad, not a place a creator makes videos for. They're left out
+ * of the platform filter and of "Makes videos for" on a profile.
+ */
+const AD_PLACEMENTS: readonly PlatformId[] = ["meta-ads"];
+
+/** Platforms a creator makes videos for (the platform list without ad placements). */
+export const creatorPlatforms = platforms.filter((p) => !AD_PLACEMENTS.includes(p.id));
+
+const creatorPlatformById = Object.fromEntries(creatorPlatforms.map((p) => [p.id, p]));
+
+/** A creator's platforms as shown on their profile and searched by Discover. */
+export const madeForPlatforms = (c: Creator): PlatformId[] => c.platforms.filter((id) => id in creatorPlatformById);
 
 export type SortId = "recommended" | "fit" | "rating" | "price" | "fastest";
 export type DiscoverTabId = "all" | "saved";
@@ -38,6 +63,8 @@ export type Filters = {
   format: FormatId | null;
   langs: LanguageId[];
   niches: NicheId[];
+  /** Platforms they make videos for (any of these). */
+  platforms: PlatformId[];
   kinds: CreatorKind[];
   /** Starting-price bounds; null = open. */
   priceMin: number | null;
@@ -61,6 +88,7 @@ export const emptyFilters: Filters = {
   format: null,
   langs: [],
   niches: [],
+  platforms: [],
   kinds: [],
   priceMin: null,
   priceMax: null,
@@ -107,6 +135,7 @@ export function parseFilters(params: ParamSource): Filters {
     format: format && format in formatById ? (format as FormatId) : null,
     langs: list<LanguageId>(params.get("lang"), languageById),
     niches: list<NicheId>(params.get("niche"), nicheById),
+    platforms: list<PlatformId>(params.get("platform"), creatorPlatformById),
     kinds: list<CreatorKind>(params.get("kind"), creatorKindById),
     priceMin,
     priceMax,
@@ -127,6 +156,7 @@ export function toQuery(f: Filters, { includeQ = true } = {}): string {
   if (f.format) params.set("format", f.format);
   if (f.langs.length) params.set("lang", f.langs.join(","));
   if (f.niches.length) params.set("niche", f.niches.join(","));
+  if (f.platforms.length) params.set("platform", f.platforms.join(","));
   if (f.kinds.length) params.set("kind", f.kinds.join(","));
   if (f.priceMin !== null) params.set("min", String(f.priceMin));
   if (f.priceMax !== null) params.set("max", String(f.priceMax));
@@ -165,6 +195,7 @@ function matchesQuery(c: Creator, q: string): boolean {
     ...c.languages.map((l) => languageById[l].name),
     ...c.niches.map((n) => nicheById[n].name),
     ...c.formats.map((f) => formatById[f].name),
+    ...madeForPlatforms(c).map((p) => platformById[p].name),
   ]
     .join(" ")
     .toLowerCase();
@@ -176,6 +207,7 @@ export function matches(c: Creator, f: Filters): boolean {
   if (f.format && !c.formats.includes(f.format)) return false;
   if (f.langs.length && !f.langs.some((l) => c.languages.includes(l))) return false;
   if (f.niches.length && !f.niches.some((n) => c.niches.includes(n))) return false;
+  if (f.platforms.length && !f.platforms.some((p) => c.platforms.includes(p))) return false;
   if (f.kinds.length && !f.kinds.includes(c.kind)) return false;
   const from = fromPrice(c);
   if (f.priceMin !== null && from < f.priceMin) return false;
@@ -191,41 +223,80 @@ export function matches(c: Creator, f: Filters): boolean {
 
 export type ProductFit = { score: number; reasons: string[] };
 
+/** Middle value of a non-empty list. */
+const median = (values: number[]) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
+};
+
+/** Most common first; ties keep first-seen order. */
+function byCount<T>(values: T[]): T[] {
+  const counts = new Map<T, number>();
+  for (const v of values) counts.set(v, (counts.get(v) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([v]) => v);
+}
+
 /**
- * How well a creator fits one of your products. Builds a stand-in request from the product's own
- * history (the formats and languages of its earlier orders and jobs, English by default) and runs
- * the same `fit` that ranks pitches, plus a bonus for creators who already made work for it.
+ * How well a creator fits one of your products. Builds a stand-in video order from the product's
+ * own history and runs the same `fit` that ranks pitches, plus a bonus for creators who already
+ * made a video for it:
+ *
+ * - Each order counts once: a custom order and the job hired from it are one order, and a UGC
+ *   campaign is one order however many creators picked it.
+ * - Ad copy is left out (no format or on-camera language to match).
+ * - Format: the most common one. Languages: those used in two or more orders, else the most
+ *   common one (English when there's no history), so one Spanish video doesn't make everyone
+ *   else a partial match.
+ * - Budget: up to the most paid for one video job, "within your budget" at the usual (median)
+ *   price. Campaign slots are left out (their price is per creator, not per job).
  */
 export function productFit(s: DemoState, creator: Creator, product: Product): ProductFit {
+  const requests = s.requests.filter((r) => r.brief.productId === product.id && !isAdCopy(r));
+  const requestIds = new Set(requests.map((r) => r.id));
+  const jobs = s.commissions.filter(
+    (c) => c.brief.productId === product.id && !isAdCopy(c) && c.source !== "campaign",
+  );
   const briefs = [
-    ...s.commissions.filter((c) => c.brief.productId === product.id),
-    ...s.requests.filter((r) => r.brief.productId === product.id),
-  ].map((item) => item.brief);
-  const languages = [...new Set(briefs.flatMap((b) => b.languages))];
-  const formatCounts = new Map<FormatId, number>();
-  for (const b of briefs) formatCounts.set(b.format, (formatCounts.get(b.format) ?? 0) + 1);
-  const format = [...formatCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "app-demo";
-  const budgets = s.commissions.filter((c) => c.brief.productId === product.id).map((c) => c.price);
-  const typical = budgets.length ? Math.max(...budgets) : 300;
+    ...requests.map((r) => r.brief),
+    ...jobs.filter((c) => !c.requestId || !requestIds.has(c.requestId)).map((c) => c.brief),
+  ];
+
+  const format: FormatId = byCount(briefs.map((b) => b.format))[0] ?? "app-demo";
+  const languageUses = briefs.flatMap((b) => [...new Set(b.languages)]);
+  const common = byCount(languageUses).filter((l) => languageUses.filter((x) => x === l).length >= 2);
+  const languages: LanguageId[] = common.length ? common : [byCount(languageUses)[0] ?? DEFAULT_LANGUAGE];
+  const prices = jobs.map((c) => c.price);
+  const budget = prices.length ? { min: median(prices), max: Math.max(...prices) } : { min: 180, max: 300 };
 
   const stand: ContentRequest = {
     id: `fit-${product.id}`,
     businessId: product.businessId,
     title: product.name,
-    brief: { ...(briefs[0] ?? emptyBrief(product.id)), productId: product.id, format, languages: languages.length ? languages : ["en"] },
-    budget: { min: Math.round(typical * 0.6), max: typical },
+    brief: {
+      ...(briefs[0] ?? emptyBrief(product.id)),
+      productId: product.id,
+      jobType: "video",
+      format,
+      languages,
+    },
+    budget,
     dueDate: "",
     postedAt: "",
+    closesAt: "",
     status: "open",
     visibility: "public",
     invitedCreatorIds: [],
     preferredKinds: [],
     slots: 1,
     views: 0,
+    kind: "custom",
   };
   const base = fit(s, creator, stand);
+  // Finished video work for this product, campaign videos included.
   const before = s.commissions.filter(
-    (c) => c.brief.productId === product.id && c.creatorId === creator.id && c.status === "completed",
+    (c) =>
+      c.brief.productId === product.id && c.creatorId === creator.id && c.status === "completed" && !isAdCopy(c),
   ).length;
   // Most telling first: the category and the format they've made, then language (most speak English).
   const rank = (reason: string) =>
@@ -242,9 +313,10 @@ export function productFit(s: DemoState, creator: Creator, product: Product): Pr
 function emptyBrief(productId: string): ContentRequest["brief"] {
   return {
     productId,
+    jobType: "video",
     format: "app-demo",
     platforms: [],
-    languages: ["en"],
+    languages: [DEFAULT_LANGUAGE],
     aspect: "9:16",
     videoCount: 1,
     durationSec: 45,
@@ -255,6 +327,7 @@ function emptyBrief(productId: string): ContentRequest["brief"] {
     avoid: [],
     references: [],
     onCamera: true,
+    usage: DEFAULT_USAGE,
     addons: [],
   };
 }
@@ -337,6 +410,7 @@ export function sheetFilterCount(f: Filters): number {
   return (
     f.langs.length +
     f.niches.length +
+    f.platforms.length +
     f.kinds.length +
     (f.priceMin !== null || f.priceMax !== null ? 1 : 0) +
     (f.days ? 1 : 0) +
@@ -372,6 +446,12 @@ export function activeChips(f: Filters): ActiveChip[] {
       key: `niche-${id}`,
       label: nicheById[id].name,
       remove: (x) => ({ ...x, niches: x.niches.filter((n) => n !== id) }),
+    });
+  for (const id of f.platforms)
+    chips.push({
+      key: `platform-${id}`,
+      label: platformById[id].name,
+      remove: (x) => ({ ...x, platforms: x.platforms.filter((p) => p !== id) }),
     });
   for (const id of f.kinds)
     chips.push({

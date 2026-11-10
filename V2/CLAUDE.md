@@ -12,8 +12,9 @@ freedom to make changes that you think makes sense, change UI based on what you 
 better user experience/UI". V1 stays untouched as the reference; V2 is the same product, rethought.
 
 - Same product, market, data, money rules and brand as V1 (the brand package's logo and colours,
-  the legal pack's rules and numbers, invented names, contact masking, fixed demo clock, no
-  backend). Those are firm in V2 too.
+  the legal pack's rules and numbers, the round 3 answers file's rulings, invented names, contact
+  masking, fixed demo clock, no backend). Those are firm in V2 too. When V1 changes a product rule,
+  V2 follows it (see "Round 3 stage 2 port" below); V1's layouts and navigation are not copied.
 - Different information architecture, flows and UI wherever we judged V1 could be easier.
 - A separate Next.js app in `V2/` with no `node_modules` of its own (packages resolve from the
   repo root). Served at `/yap/V2/` on GitHub Pages, beside V1 at `/yap/`.
@@ -37,8 +38,9 @@ better user experience/UI". V1 stays untouched as the reference; V2 is the same 
 
 Kept from V1 on purpose: the domain model and store (`lib/`), seed data, simulation (auto replies,
 auto deliveries, campaign tick), money rules, the logo rules, contact masking, the fixed clock,
-saved accounts and phone-and-code sign-in, dark mode, the static export, "one green action per
-view", "calm first". Copy still says "Yapp"; the logo says "yapping".
+saved accounts and phone-and-code sign-in, the static export, "one green action per view", "calm
+first". Copy still says "Yapp"; the logo says "yapping". Since 11 Nov V2 is light only, like V1
+(dark mode is paused by owner decision; the dark CSS stays dormant).
 
 ## Decisions already made in V2 (don't relitigate without the owner)
 
@@ -57,11 +59,12 @@ view", "calm first". Copy still says "Yapp"; the logo says "yapping".
 
 ```
 Public:    /  /signin  /onboarding  /how-it-works  /for-creators  /legal  (404)
+           /services  /services/{ugc-ads,native-posts,hook-lab,go-to-market}  /for/tech-teams
 Ordering:  /home  /discover  /discover/watch  /creators/[handle]  /creators/[handle]/order
            /orders  /orders/new  /library  /products  /products/new  /products/[id]  /billing
 Shared:    /orders/[id]  (owner: manage · others: opportunity, in Studio)
            /jobs/[id]    (both sides; mode = your side)
-           /messages  /account  /settings
+           /messages  /account  /settings  /productivity (side follows the mode)
 Studio:    /studio  /studio/work  /studio/jobs  /studio/earnings  /studio/profile
 ```
 
@@ -261,6 +264,95 @@ desktop avatar sheet and the phone's Me page; demo tools are grouped in one quie
 - `app/styles/landing.css` was rewritten: V1's bubble-field rules (`.y-bubble`) had hidden V2's
   count bubbles everywhere.
 
+## Round 3 stage 2 port (11 Nov 2026)
+
+After V2 was built, V1 built round 3 stage 2: the spec's sender ruled on every open point in
+`feedback_docs_2/YAPPS_ROUND_3_ANSWERS.md` and V1 implemented the rulings (V1 CLAUDE.md, decisions
+table and status). The owner then asked to look at the base's changes and bring over what made
+sense. The rule used: **V2 adopts every product, money, legal, naming and brand ruling, and keeps
+its own information architecture and layouts.**
+
+**Adopted (firm in V2 now):**
+- **Money:** Yapp keeps 20% of every transaction, from the creator's side. The brand pays the
+  listed price, nothing on top; a creator sees their net beside every price ("$140 · you earn
+  $112"). The brand is told what the creator receives where V1 tells it (the approval summary shows
+  the three amounts, answers item 5: "You pay $300 · Layla receives $240 · Yapp fee (20%) $60"; the
+  campaign pay rule; receipts), never as a fee added to a total. Only lib computes money
+  (`priceBreakdown`, `creatorNet`, `priceWithNet`, `commissionTotals`, `campaignMoney`).
+- **Usage options** (four, chosen per order, included in the price), raw footage included, two
+  revisions included; no rights or raw-footage add-ons.
+- **UGC campaigns:** the brand sets the price per Yapp with a guidance range (`priceGuidance`);
+  tiers only decide who can pick; one or more platforms, each creator picks one; brand handles per
+  platform saved in Settings → Brand accounts; the price can only be raised after posting; the tier
+  can change once with no money moving.
+- **Custom orders:** job type video or **ad copy writing** (text and document deliveries, general
+  comments, no posting); a brand-set delivery deadline; a 14-day closing date; brief attachments;
+  a hook line; $50 minimum budget.
+- **Two-way comments** on every delivered version (replies, resolve, re-open by the brand, edit and
+  delete by the author, unread markers, deep links with `?comment=`), and **Request changes** with
+  the comments you tick.
+- **Brands shown by five reliability figures**, never stars. **Order drafts** per kind.
+- **Productivity** (`/productivity`): one page whose side follows the mode, built on
+  `lib/productivity.ts`; reached from the account menu, Ordering Home's figures card and Earnings.
+- **Services** (`/services`, four service pages, `/for/tech-teams`) with V1's draft copy, linked from
+  the footer and the signed-out nav.
+- **Names:** "Custom order", "UGC campaign", "Pick now" (with the count left), "Productivity",
+  "Request changes".
+- **Brand rulings:** light only (dark mode paused); no blob characters in confirmations or empty
+  states; the answers' chip colours; one "Log out" that asks first (a saved account is removed
+  only on the sign-in screen).
+
+**Kept as V2's own (V1's answers to these are V1's design):** the two modes; Today homes; Orders
+and Library; one job page with one timeline (V1 has tabs); V2's four-step new-order flows (V1 has
+one six-step wizard); V2's landing page (V1: bubbles); Discover as a browsing page, not the desktop
+home; Watch on desktop as a viewer opened from a video (answers item 59 makes V1's home feed
+phone-only); V2's five-tab phone bars per mode (V1: six tabs); no More page or Work sidebar.
+
+**How it was done.** The lead copied V1's new `lib/` (types, store, selectors, taxonomy, format,
+pricing, comments, productivity, files, campaigns, seed data) over V2's and re-applied V2's own
+pieces (`paths.ts`, `mode.ts`, `attention.ts`, `yapp2-` keys, `startThread`'s `businessId`), took
+V1's new `components/domain/*` and its character-free `EmptyState` and `Celebrate`, ported the
+"needs you" changes into `lib/attention.ts` (net amounts, ad-copy wording, unread comments for the
+brand, replies for the creator), updated the shell, and added placeholder routes. **V2's `lib/` is
+synced with V1 at commit `9e183d3`** (use it as the base of the next three-way merge). Eight agents (the
+same areas as the first build) then ported their pages. Store version 9 discards V2 demo state
+saved before the port.
+
+**Decisions per area in the port:**
+- *Shell (lead):* switching demo account starts the new account in its own default mode.
+- *Ordering Home, Orders, Library, Billing, Productivity:* Billing shows listed prices only; receipt
+  sheets say what the creator received after Yapp's 20%. Library has All / Videos / Copy: ad copy
+  appears as copy cards with "Copy text"; paid-ads end dates count from approval. Productivity's
+  side is `?as=` if the account has it, otherwise the tab's mode (and it sets the remembered mode so
+  the header agrees). Home gained a quiet "Last 30 days" figures card under Start an order, still
+  five blocks.
+- *New order and direct order:* the second chooser card is "Custom order" ("Write the brief"). Ad
+  copy asks for pieces and placements, leaves out the product's filming dos and earlier learnings
+  while unedited, and shows no usual price (no creator prices ad copy yet). A campaign's price
+  starts at the guidance low end; a price under the range shows "Use $115" and never blocks.
+  Campaigns autosave as drafts too.
+- *Order owner:* the delivery deadline and closing date appear once, in the header; pitch cards
+  don't repeat days. "Raise the price" (up only, top-up held for unpicked slots) and "Change who can
+  pick" (once, no money) are separate. Each slot shows "Posts on {platform} · tags {handle}";
+  consecutive open slots collapse into one row. On ad-copy orders a pitch's angle is its "Sample line".
+- *Job page:* comments sit beside the player (below it on phones); on finished jobs they fold under
+  the review and learnings steps. The brand's own open comments start ticked in Request changes.
+  During changes the creator sees "What {brand} asked you to change" at the top with "Mark done".
+- *Discover:* usage rights and raw footage are stated once in the booking card, the four options
+  behind a disclosure; a creator sees their net on their own profile, tile and Watch; a Platform
+  filter (ad placements excluded); "Best for" counts each order once and leaves out ad copy.
+- *Studio Home and Find work:* Find work has a Job type filter (`?job=`); campaign rows carry a green
+  "Pick now · 3 of 10 left" that opens the pick sheet in place; the pick sheet asks which platform
+  when you qualify on several. Ad-copy pitches can add a written sample (kept at the end of the
+  pitch message). Fixed: connecting an account during setup on Studio Home now saves.
+- *Studio Jobs, Earnings, Profile:* every amount is price plus "you earn"; earnings rows open a
+  sheet with the split (price, Yapp's 20%, what you got); withdrawals accept cents (nets can carry
+  cents); packages and add-ons show "you earn" as you type.
+- *Public pages, Services, Settings, Inbox:* How it works has a calculator with no fee or rights
+  add-ons and a per-tier guidance range; the Services index lists each service with the kind of
+  order it runs on; Settings has Brand accounts (`#brand`) and no Appearance; comment lines in
+  Messages link to the job at that version; removing a saved account on sign-in has Undo.
+
 ## QA
 
 ```bash
@@ -276,50 +368,58 @@ scripts/qa/sweep.sh http://localhost:4100/yap/V2
 for f in scripts/qa/flows/*.json; do BASE_URL=http://localhost:4100/yap/V2 node scripts/qa/cdp.mjs $f | tail -1; done
 ```
 
-The driver and sweep are V1's (see V1's CLAUDE.md "QA tooling"), pointed at V2's cookies. Flows in
-`scripts/qa/flows/`, one set per area (desktop, `-mobile` at 390px, some `-dark`):
-`brand-home`, `ordering-flows`, `order-owner`, `job` (+`job-dark`), `discover`, `studio-work`,
-`studio-business`, `public-account` (+`-dark`), and `route-smoke-nour` / `route-smoke-layla`
-(50 routes each in a real browser). Flows written for both hosts: URL checks tolerate the static
-export's trailing slash, and "not found" is tested with ids that are pre-rendered but not in the
-store (`/creators/nourhaddad` before Nour sets up a profile, `/404`), because a static host has no
-page for an unknown id. As in V1, a flow occasionally fails on its very first page load in a cold
-browser or under CPU load; rerun it before debugging.
+The driver and sweep are V1's (see V1's CLAUDE.md "QA tooling"), pointed at V2's cookies; the
+sweep runs signed out, as Nour and as Layla (light only). Flows in `scripts/qa/flows/`, one set per
+area (desktop and `-mobile` at 390px): `brand-home`, `productivity`, `ordering-flows`,
+`order-owner`, `job` (+`job-states`: ad copy for both sides, disputes, cancellations), `discover`,
+`studio-work`, `studio-business`, `public-account` (+`public-account-services`), and
+`route-smoke-nour` / `route-smoke-layla` (61 routes each in a real browser). Flows written for both
+hosts: URL checks tolerate the static export's trailing slash, and "not found" is tested with ids
+that are pre-rendered but not in the store (`/creators/nourhaddad` before Nour sets up a profile,
+`/404`), because a static host has no page for an unknown id. Some flows patch localStorage for a
+run where the seed has no suitable record (an open ad-copy order or a two-platform campaign of
+Nour's, an approved ad copy). As in V1, a flow occasionally fails on its very first page load in a
+cold browser or under CPU load; rerun it before debugging.
 
-## Status (10 Nov 2026, end of the V2 build)
+## Status (11 Nov 2026, after the round 3 stage 2 port)
 
-**Built and verified.** Every route in the table above, both modes, light and dark, desktop and
-phones. `typecheck`, `lint`, `build` and `build:pages` are clean; the static export (394 pages) was
-served under `/yap/V2`: `qa:sweep` passes (56 routes × 3 sessions + 404s), both route smokes pass,
-and all 22 flows pass against it (two needed a rerun for the first-page-load flake). V1 still
-type-checks and lints; outside `V2/` only the root `tsconfig.json` and `eslint.config.mjs`
-(exclude `V2`), the deploy workflow and the root CLAUDE.md changed.
+**Built and verified.** Every route in the table above plus `/productivity`, `/services` (and four
+service pages) and `/for/tech-teams`, both modes, desktop and phones, light only, on the stage 2
+rules. `typecheck` and `lint` are clean (V2 and V1); `build:pages` exports 407 pages; served under
+`/yap/V2` the sweep passes (67 routes × 3 sessions + 404s) and all 24 flows pass against the export
+(four needed a fix or a rerun on the export: a trailing-slash selector, the Watch swipe flake, and
+two job flows that asserted the brand never sees "Yapp fee", which the answers file's approval
+summary contradicts). The temporary port shims are gone. Nothing outside `V2/` changed in the port.
 
 **Not verified:** a real phone or GPU (safe areas, Back gesture, glass blur), RTL, the GitHub
-Actions run itself (the V2 build step was tested locally the same way: `npm run build:pages` in
-`V2/` with the root install).
+Actions run itself (the V2 build step was tested locally the same way).
 
 **Known gaps (deliberate or inherited):**
 - Everything V1 lists as simulated still is (V1 CLAUDE.md "Known gaps"): no backend, uploads,
   payments, social APIs or post verification; the clock never moves, so nothing auto-approves.
 - On GitHub Pages an unknown URL under `/yap/V2/` shows **V1's** 404 page (Pages serves only the
   site's root `404.html`). V2's own 404 renders on a server and at `/yap/V2/404/`.
-- Campaigns have no drafts; review copies reuse the creator's first portfolio video (V1 seed gap);
-  the shared `BriefSummary` says "5 videos" for a hook pack; Layla has no seeded campaign slot, so
-  her pending pay is empty until she takes one; business notes are visible to the creator at once
-  (V1 store limit); a taken-down post is reachable only through the store; "Get help" is a toast.
-- In Get pitches, a product typed into the inline form must be saved ("Save product") before
-  Continue. "Make videos" onboarding continues as Layla and saves nothing (as V1).
-- `V2/.qa/profiles/` can hold leftover Chrome profiles from interrupted runs (175 MB at the end of
-  the build); it is safe to empty.
+- Inherited from V1's lib and seed: `creatorEarnings().lifetime` rises by an estimate (not the
+  slot's net) when a campaign slot is approved; seed campaign `r-251` is posted at 11:00 while the
+  clock is 10:00; review copies reuse the creator's first portfolio video; no seeded ad copy is
+  approved; no seeded open ad-copy order or two-platform campaign belongs to Nour; the paid extra
+  revision is copy only; business notes are visible to the creator at once.
+- Shared components from V1: `PriceSummary` always says "Raw footage included" (wrong for ad copy;
+  the order owner's hire sheet prints its own line); `BriefSummary` leaves out the hook line and
+  attachments (areas add them locally).
+- Copy shown to a creator in the job timeline and Messages is the store's text, which names Yapp's
+  20% to both sides (as V1 does).
+- Hook Lab's button opens a custom order without the hook-pack format preselected (`newOrder` takes
+  no format). On older orders without a brand deadline the pitch composer still asks for days. A
+  direct order repeated from an ad-copy job falls back to the creator's first video format.
+  Campaigns have no server-side draft, only the form autosave. Onboarding's prices step says "You
+  earn" twice. "Make videos" onboarding continues as Layla and saves nothing (as V1).
+- Only campaign review copies are watermarked before approval (V1 also watermarks custom-order
+  videos). Cancelled or declined jobs don't show their comments.
+- `V2/.qa/profiles/` can hold leftover Chrome profiles from interrupted runs; it is safe to empty.
 
-**Open question for the owner.** `feedback_docs_2/YAPPS_ROUND_3_ANSWERS.md` appeared during this
-build (10 Nov). It settles round 3 and changes rules both versions follow today: a 20% fee taken
-from the creator (instead of 10% charged to the brand), usage rights and raw footage included,
-dark mode paused, "Pick now" and "Custom order" as names, and navigation rules (bubble landing,
-feed on phones only) that V2 deliberately redesigned. V2 was built on the rules in V1's CLAUDE.md;
-nothing from that file has been applied to either version yet.
-
-**Next steps (owner to prioritise):** compare V1 and V2 with the owner; decide which of V2's
-structural changes (two modes, Today homes, Library, one job page, the landing) should carry into
-the main version; then apply the round 3 answers to whichever version goes forward.
+**Next steps (owner to prioritise):** compare V1 and V2 with the owner, now that both run on the
+same rules and data; decide which of V2's structural changes (two modes, Today homes, Library, one
+job page, the four-step order flows, the landing) should carry into the main version. When V1
+changes a rule again, port it the same way: three-way merge `lib/` (base = the V1 commit V2 last
+took, ours = `V2/lib`, theirs = V1's), keep V2's own files, then fix each area.

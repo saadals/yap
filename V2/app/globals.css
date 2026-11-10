@@ -83,9 +83,9 @@ html.dark body {
   --y-success-soft: rgb(52 240 108 / 0.14);
   --y-active-fg: #0b0b0c;
   --y-active-soft: rgb(52 240 108 / 0.2);
-  --y-warning: #a14a08;
+  --y-warning: #92400e;
   --y-warning-soft: rgb(245 158 11 / 0.14);
-  --y-danger: #c22a1e;
+  --y-danger: #b42318;
   --y-danger-soft: rgb(229 72 59 / 0.1);
   --y-red: #e5483b;
   --y-info: #1f55c9;
@@ -2824,5 +2824,65 @@ html[data-reel-tone="light"] .yapp {
   }
   html.dark .yapp .y-header .y-navlink[aria-current="page"] {
     background: rgb(255 255 255 / 0.08);
+  }
+}
+
+/* ========================================================================== */
+/* Round 3 stage 2 rules, ported from V1 (11 Nov 2026)                         */
+/* ========================================================================== */
+/* Chip text colours are the answers' red #B42318 and amber #92400E (item 51; set in the tokens
+   above). Empty states have no illustration (item 15): a title, one sentence, an optional line
+   icon, an action. Dark mode is paused (item 49): lib/prefs.tsx never sets `html.dark`, so the
+   dark rules above are dormant. */
+@layer components {
+  .yapp .y-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 40px 16px;
+    text-align: center;
+  }
+  .yapp .y-empty-ic {
+    display: grid;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 6px;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-fg, var(--y-ink));
+  }
+  .yapp .y-empty-t {
+    max-width: 32ch;
+    font-size: 1.25rem;
+    font-weight: 600;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
+  .yapp .y-empty-b {
+    max-width: 46ch;
+    color: var(--b-fg-2, var(--y-ink-2));
+  }
+  .yapp .y-empty-a {
+    margin-top: 12px;
+  }
+  .yapp .y-seg-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: rgb(29 29 31 / 0.08);
+    color: var(--y-ink);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .yapp .y-seg button[aria-checked="true"] .y-seg-count {
+    background: var(--y-paper);
+    color: var(--y-ink);
   }
 }

@@ -5,7 +5,7 @@ import { commissions as baseCommissions } from "./commissions";
 import { requests as baseRequests } from "./requests";
 import { threads as baseThreads } from "./threads";
 
-/** Custom requests and UGC campaigns (lib/data/campaigns.ts). */
+/** Custom orders and UGC campaigns (lib/data/campaigns.ts). */
 export const requests = [...campaignRequests, ...baseRequests];
 export const commissions = [...baseCommissions, ...campaignCommissions];
 export const threads = [...baseThreads, ...campaignThreads];

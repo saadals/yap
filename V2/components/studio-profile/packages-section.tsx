@@ -6,8 +6,8 @@ import { useState } from "react";
 import { FieldShell, TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { money, plural, priceLimits } from "@/lib/format";
-import { PRICE_MAX_PER_YAPP, PRICE_MIN_PER_YAPP } from "@/lib/taxonomy";
+import { creatorNet, money, moneyExact, num, plural, priceLimits } from "@/lib/format";
+import { FEE_PCT, PRICE_MAX_PER_YAPP, PRICE_MIN_PER_YAPP } from "@/lib/taxonomy";
 import type { Creator, Package, PackageTier } from "@/lib/types";
 
 import { PACKAGE_NUMBERS, TIERS, newPackage, tierLabel, type PackageField } from "./draft";
@@ -28,9 +28,14 @@ function packageLine(p: Package): string {
   return parts.filter(Boolean).join(" · ");
 }
 
+/** A price worth showing a net for (a whole, positive number). */
+const priced = (price: number) => Number.isFinite(price) && price > 0;
+
 /**
  * Packages: Basic, and optionally Standard and Premium, as rows. A row opens its editor in place
- * (one at a time). Prices stay inside the per-Yapp limits and go up from tier to tier.
+ * (one at a time). Prices stay inside the per-Yapp limits and go up from tier to tier. Each price
+ * is what the brand pays; "you earn $X" (after Yapp's 20%, from `creatorNet`) sits beside it on the
+ * row and under the field, and follows as you type.
  */
 export function PackagesSection({ creator, draft, set, show, touch, errorCount }: DraftProps & { creator: Creator }) {
   /** null: open the first package with something to fix (after a save attempt); "none": all closed. */
@@ -70,7 +75,7 @@ export function PackagesSection({ creator, draft, set, show, touch, errorCount }
     <EditorSection
       id="packages"
       title="Packages"
-      description={`What brands can order from your profile. ${money(PRICE_MIN_PER_YAPP)}–${money(PRICE_MAX_PER_YAPP)} a video; you keep 100% and the brand pays Yapp's fee.`}
+      description={`What brands can order from your profile, at ${money(PRICE_MIN_PER_YAPP)}–${money(PRICE_MAX_PER_YAPP)} a video. Brands pay the price you set and nothing on top; you earn it after Yapp's ${FEE_PCT}%.`}
       errorCount={errorCount}
     >
       <div className="y-tile flex flex-col overflow-hidden !bg-transparent shadow-[inset_0_0_0_1px_var(--b-line)]">
@@ -96,7 +101,12 @@ export function PackagesSection({ creator, draft, set, show, touch, errorCount }
                   <span className="truncate font-medium">{pkg.name.trim() || `Name your ${tier.label} package`}</span>
                   <span className="y-small y-fg-2">{packageLine(pkg)}</span>
                 </span>
-                <span className="y-num flex-none font-semibold">{Number.isFinite(pkg.price) ? money(pkg.price) : "No price"}</span>
+                <span className="flex flex-none flex-col items-end text-end">
+                  <span className="y-num font-semibold">{priced(pkg.price) ? money(pkg.price) : "No price"}</span>
+                  {priced(pkg.price) ? (
+                    <span className="y-micro y-fg-2 y-num">you earn {moneyExact(creatorNet(pkg.price))}</span>
+                  ) : null}
+                </span>
                 <ChevronDown size={18} aria-hidden className={`y-fg-2 flex-none transition-transform ${open ? "rotate-180" : ""}`} />
               </button>
               {open ? (
@@ -115,25 +125,38 @@ export function PackagesSection({ creator, draft, set, show, touch, errorCount }
                       error={err("name")}
                     />
                     <FieldShell label="Price" required error={err("price")}>
-                      {({ id, describedBy }) => (
-                        <div className="sb-money">
-                          <span aria-hidden>$</span>
-                          <input
-                            id={id}
-                            name={`${pkg.tier}-price`}
-                            aria-describedby={describedBy}
-                            aria-invalid={err("price") ? true : undefined}
-                            className="y-input y-num"
-                            type="number"
-                            inputMode="numeric"
-                            min={priceLimits(pkg.videos || 1).min}
-                            max={priceLimits(pkg.videos || 1).max}
-                            value={showNum(pkg.price)}
-                            onChange={(event) => patch(pkg.tier, { price: toNum(event.target.value) })}
-                            onBlur={() => touch(`packages.${pkg.tier}.price`)}
-                          />
-                        </div>
-                      )}
+                      {({ id, describedBy }) => {
+                        const limits = priceLimits(Number.isInteger(pkg.videos) && pkg.videos > 0 ? pkg.videos : 1);
+                        const netId = `${id}-net`;
+                        return (
+                          <>
+                            <div className="sb-money">
+                              <span aria-hidden>$</span>
+                              <input
+                                id={id}
+                                name={`${pkg.tier}-price`}
+                                aria-describedby={[describedBy, err("price") ? null : netId].filter(Boolean).join(" ") || undefined}
+                                aria-invalid={err("price") ? true : undefined}
+                                className="y-input y-num"
+                                type="number"
+                                inputMode="numeric"
+                                min={limits.min}
+                                max={limits.max}
+                                value={showNum(pkg.price)}
+                                onChange={(event) => patch(pkg.tier, { price: toNum(event.target.value) })}
+                                onBlur={() => touch(`packages.${pkg.tier}.price`)}
+                              />
+                            </div>
+                            {err("price") ? null : (
+                              <p id={netId} className="y-micro y-fg-2 y-num px-1">
+                                {priced(pkg.price)
+                                  ? `You earn ${moneyExact(creatorNet(pkg.price))}`
+                                  : `${money(limits.min)}–${num(limits.max)}`}
+                              </p>
+                            )}
+                          </>
+                        );
+                      }}
                     </FieldShell>
                   </div>
                   <TextArea

@@ -7,7 +7,7 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
 import { quoted, weekdayDate } from "@/lib/format";
-import { cityById, videoById } from "@/lib/selectors";
+import { cityById, deadlineDaysOf, isAdCopy, videoById } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import { creatorKindById } from "@/lib/taxonomy";
 import type { ContentRequest, Product, Video } from "@/lib/types";
@@ -75,7 +75,9 @@ export function CompareView({
     return winners.length === 1 ? winners[0].pitch.id : undefined;
   };
   const lowest = pick((i) => i.pitch.price, true);
-  const fastest = pick((i) => i.pitch.deliveryDays, true);
+  // By the date the first version would land (the brand's deadline, later for booked creators).
+  const fastest = pick((i) => Date.parse(deliveryInfo(i.pitch.deliveryDays, request, i.creator).date), true);
+  const deadline = deadlineDaysOf(request);
   const bestFit = pick((i) => i.fit.score, false);
   const bestRated = pick((i) => (i.creator.reviewCount ? i.creator.rating : 0), false);
   const mostOnTime = pick((i) => i.creator.onTimeRate, false);
@@ -140,10 +142,10 @@ export function CompareView({
                     <VideoThumb video={sample} frame="9:16" playable showHook={false} showMeta={false} decorative />
                   </button>
                 ) : (
-                  <p className="y-micro y-fg-2">No sample attached</p>
+                  <p className="y-micro y-fg-2">{isAdCopy(request) ? "Written pitch, no video" : "No sample attached"}</p>
                 )}
               </div>
-              <Cell label="The idea">
+              <Cell label={isAdCopy(request) ? "Sample line" : "The idea"}>
                 <button type="button" className="text-start font-medium hover:underline" dir="auto" onClick={() => onOpen(pitch.id)}>
                   {quoted(pitch.angle)}
                 </button>
@@ -153,10 +155,17 @@ export function CompareView({
                 <span className={`y-micro block ${budget.over ? "text-(--y-warning)" : "y-fg-2"}`}>{budget.text}</span>
               </Cell>
               <Cell label="First version" best={fastest === pitch.id ? "Fastest" : undefined}>
-                <DaysText item={item} request={request} className="font-semibold" />
+                {deadline ? (
+                  <span className="font-semibold">{weekdayDate(delivery.date)}</span>
+                ) : (
+                  <DaysText item={item} request={request} className="font-semibold" />
+                )}
                 <span className="y-micro y-fg-2 block">
-                  {delivery.startsOn ? `Starts ${weekdayDate(delivery.startsOn)}, ready ` : "By "}
-                  {weekdayDate(delivery.date)}
+                  {deadline
+                    ? delivery.startsOn
+                      ? `Starts when free, ${weekdayDate(delivery.startsOn)}`
+                      : "On your deadline"
+                    : `${delivery.startsOn ? `Starts ${weekdayDate(delivery.startsOn)}, ready ` : "By "}${weekdayDate(delivery.date)}`}
                 </span>
               </Cell>
               <Cell label="Fit" best={bestFit === pitch.id ? "Best fit" : undefined}>

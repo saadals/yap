@@ -17,7 +17,7 @@ import { useToast } from "@/components/ui/toast";
 import { hasContactDetails } from "@/lib/contact";
 import { compact, lengthLabel, money, num, plural, quoted, timeAgoInline, timeOf, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { cityById, reviewsForCreator, videoById } from "@/lib/selectors";
+import { cityById, deadlineDaysOf, isAdCopy, reviewsForCreator, videoById } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { creatorKindById, formatById } from "@/lib/taxonomy";
 import type { ContentRequest, Creator, Video } from "@/lib/types";
@@ -118,6 +118,8 @@ export function PitchSheet({
   const declined = pitch.status === "declined";
   const hired = pitch.status === "hired";
   const invited = request.invitedCreatorIds.includes(creator.id);
+  const adCopy = isAdCopy(request);
+  const deadline = deadlineDaysOf(request);
 
   const primary = hired ? (
     commissionId ? (
@@ -184,7 +186,7 @@ export function PitchSheet({
         </div>
 
         <div className="flex flex-col gap-3">
-          <p className="y-micro y-fg-2 font-medium">The idea</p>
+          <p className="y-micro y-fg-2 font-medium">{adCopy ? "Their sample line" : "The idea"}</p>
           <p dir="auto" className="y-display text-[21px] leading-snug font-semibold tracking-[-0.015em]">
             {quoted(pitch.angle)}
           </p>
@@ -196,7 +198,13 @@ export function PitchSheet({
         {sample ? (
           <div className="flex flex-col gap-3">
             <p className="y-micro y-fg-2 font-medium">
-              {samples.length > 1 ? `${samples.length} samples ${creator.firstName} picked for you` : `A sample ${creator.firstName} picked for you`}
+              {adCopy
+                ? samples.length > 1
+                  ? `${samples.length} portfolio videos ${creator.firstName} added`
+                  : `A portfolio video ${creator.firstName} added`
+                : samples.length > 1
+                  ? `${samples.length} samples ${creator.firstName} picked for you`
+                  : `A sample ${creator.firstName} picked for you`}
             </p>
             <VideoPlayer key={sample.id} video={sample} size="sm" />
             <p className="y-micro y-fg-2 text-center">{videoMeta(sample)}</p>
@@ -212,8 +220,23 @@ export function PitchSheet({
           </div>
           <div className="flex flex-col gap-0.5">
             <dt className="y-micro y-fg-2">First version</dt>
-            <dd className="y-display y-num text-[24px] leading-tight">{plural(pitch.deliveryDays, "day")}</dd>
-            {hired && commission ? (
+            {deadline ? (
+              <>
+                <dd className="y-display y-num text-[24px] leading-tight">
+                  {weekdayDate(hired && commission ? commission.dueDate : delivery.date)}
+                </dd>
+                <dd className="y-micro y-fg-2">
+                  {hired
+                    ? "As agreed when you hired"
+                    : delivery.startsOn
+                      ? `Starts when free, ${weekdayDate(delivery.startsOn)}`
+                      : `If you hire today: your ${plural(deadline, "day")}`}
+                </dd>
+              </>
+            ) : (
+              <dd className="y-display y-num text-[24px] leading-tight">{plural(pitch.deliveryDays, "day")}</dd>
+            )}
+            {deadline ? null : hired && commission ? (
               <dd className="y-micro y-fg-2">Due {weekdayDate(commission.dueDate)}</dd>
             ) : (
               <dd className={`y-micro ${delivery.late ? "font-semibold text-(--y-warning)" : "y-fg-2"}`}>
@@ -332,11 +355,18 @@ export function MessageSheet({
   const [text, setText] = useState(`Hi ${creator.firstName}, thanks for your pitch. `);
   const [sentThread, setSentThread] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const quick = [
-    "Could you share one more sample in this style?",
-    "What would your opening line be, word for word?",
-    "Could you deliver a few days sooner?",
-  ];
+  // The brand set the deadline on newer orders, so "sooner" isn't a question there.
+  const quick = isAdCopy(request)
+    ? [
+        "Could you share two more lines in this tone?",
+        "Have you written ads for a product like ours?",
+        "Would you send two versions of each headline to test?",
+      ]
+    : [
+        "Could you share one more sample in this style?",
+        "What would your opening line be, word for word?",
+        deadlineDaysOf(request) ? "Have you made a video for a product like ours?" : "Could you deliver a few days sooner?",
+      ];
 
   const send = () => {
     const body = text.trim();

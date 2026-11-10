@@ -15,22 +15,168 @@
       "text": "Approve and release $300"
     },
     {
+      "text": "Comments (4)"
+    },
+    {
+      "text": "3 open \u00b7 1 done"
+    },
+    {
+      "text": "Private: only you and Layla see these"
+    },
+    {
+      "text": "Comments don't pause the review"
+    },
+    {
+      "text": "Karim"
+    },
+    {
+      "text": "New"
+    },
+    {
+      "text": "Total"
+    },
+    {
+      "text": "Raw footage"
+    },
+    {
+      "text": "Usage: Paid ads \u00b7 12 months"
+    },
+    {
+      "text": "Held since you hired"
+    },
+    {
+      "notText": "Service fee"
+    },
+    {
+      "notText": "you keep 100%"
+    },
+    {
+      "eval": "window.scrollTo(0, 0), 'top'"
+    },
+    {
       "shot": "job-c201-review"
     },
     {
       "type": {
-        "sel": "#job-note",
+        "sel": "textarea[name=job-comment]",
         "text": "Hold the WhatsApp send on screen a second longer"
       }
     },
     {
-      "click": "Add note"
+      "click": "Send comment at 0:00",
+      "after": 800
+    },
+    {
+      "text": "Comment at 0:00 sent"
     },
     {
       "text": "Hold the WhatsApp send on screen a second longer"
     },
     {
-      "text": "2 open"
+      "text": "Comments (5)"
+    },
+    {
+      "click": "Make it general"
+    },
+    {
+      "text": "General comment"
+    },
+    {
+      "type": {
+        "sel": "textarea[name=job-comment]",
+        "text": "Overall this is great. Can the end card stay up a beat longer?"
+      }
+    },
+    {
+      "click": "Send general comment",
+      "after": 800
+    },
+    {
+      "text": "Comment sent"
+    },
+    {
+      "text": "Comments (6)"
+    },
+    {
+      "click": "Reply",
+      "after": 400
+    },
+    {
+      "type": {
+        "sel": "textarea[id^=reply-]",
+        "text": "Agreed, keep that opening line exactly as it is."
+      }
+    },
+    {
+      "click": "Send reply",
+      "after": 800
+    },
+    {
+      "text": "Reply sent"
+    },
+    {
+      "text": "Agreed, keep that opening line exactly as it is."
+    },
+    {
+      "clickSel": "[aria-label='Edit your comment at 0:17']",
+      "after": 400
+    },
+    {
+      "type": {
+        "sel": "textarea[id^=edit-]",
+        "text": "When you pick Marco, keep his name readable for a full second."
+      }
+    },
+    {
+      "click": "Save",
+      "after": 800
+    },
+    {
+      "text": "Comment updated"
+    },
+    {
+      "text": "keep his name readable for a full second"
+    },
+    {
+      "text": "edited"
+    },
+    {
+      "clickSel": "[aria-label='Delete your comment at 0:00']",
+      "after": 600
+    },
+    {
+      "text": "Comment at 0:00 deleted"
+    },
+    {
+      "notText": "Hold the WhatsApp send on screen a second longer"
+    },
+    {
+      "click": "Undo",
+      "after": 800
+    },
+    {
+      "text": "Hold the WhatsApp send on screen a second longer"
+    },
+    {
+      "click": "Resolve",
+      "after": 600
+    },
+    {
+      "text": "Comment resolved"
+    },
+    {
+      "click": "2 resolved",
+      "after": 400
+    },
+    {
+      "click": "Re-open",
+      "after": 600
+    },
+    {
+      "text": "Comment re-opened"
+    },
+    {
+      "shot": "job-c201-comments"
     },
     {
       "click": "Approve and release $300"
@@ -39,17 +185,32 @@
       "text": "Approve version 1?"
     },
     {
-      "text": "won't be sent as change requests"
+      "text": "You pay"
     },
     {
-      "click": "Approve and release $300 to Layla",
+      "text": "Nothing is added on top"
+    },
+    {
+      "text": "Usage rights start today: paid ads for 12 months"
+    },
+    {
+      "text": "won't be sent as changes"
+    },
+    {
+      "click": "Approve and release $300",
       "after": 1500
     },
     {
-      "text": "Approved \u00b7 $300 released to Layla"
+      "text": "Approved \u00b7 $300 payment released"
     },
     {
       "text": "How did Layla do?"
+    },
+    {
+      "text": "Comments (6)"
+    },
+    {
+      "text": "Open for final feedback until Dec 4"
     },
     {
       "shot": "job-c201-approved"
@@ -83,7 +244,10 @@
       "text": "Tick what should carry into your next brief for Daftar Invoices"
     },
     {
-      "click": "Hold the WhatsApp send on screen a second longer"
+      "text": "From your comments"
+    },
+    {
+      "eval": "[...document.querySelectorAll('label')].find((l) => l.innerText.startsWith('Hold the WhatsApp send'))?.click() ?? 'ticked'"
     },
     {
       "click": "Save 1 learning",
@@ -96,17 +260,118 @@
       "text": "Order again from Layla"
     },
     {
-      "eval": "[...document.querySelectorAll('a')].filter(a => a.getClientRects().length && a.innerText.includes('Order again from Layla')).map(a => a.getAttribute('href')).join(' ')"
-    },
-    {
       "eval": "document.querySelector('a[href*=\"/creators/laylatalks/order\"][href*=\"again=c-201\"]') ? 'order-again link ok' : 'order-again link MISSING'"
     },
     {
       "text": "See it in your Library"
     },
     {
+      "text": "$300 released"
+    },
+    {
       "shot": "job-c201-done",
       "full": true
+    },
+    {
+      "go": "/jobs/c-201?comment=dc-201-3",
+      "after": 3500
+    },
+    {
+      "text": "The reminder going out on its own is the best moment"
+    },
+    {
+      "eval": "document.querySelector('[data-comment=\"dc-201-3\"]')?.className.includes('inset_0_0_0_2px') ? 'deep link highlights dc-201-3' : 'deep link MISSING'"
+    },
+    {
+      "shot": "job-c201-deeplink"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "eval": "location.pathname + location.search"
+    },
+    {
+      "text": "Paid \u00b7 $240 is in your earnings"
+    },
+    {
+      "text": "That's the $300 price after Yapp's 20% fee"
+    },
+    {
+      "text": "Yapp fee (20%)"
+    },
+    {
+      "text": "\u2212$60"
+    },
+    {
+      "text": "You earn"
+    },
+    {
+      "notText": "keep 100%"
+    },
+    {
+      "text": "Comments (6)"
+    },
+    {
+      "text": "New"
+    },
+    {
+      "text": "Agreed, keep that opening line exactly as it is."
+    },
+    {
+      "click": "Reply",
+      "after": 400
+    },
+    {
+      "type": {
+        "sel": "textarea[id^=reply-]",
+        "text": "Thank you both. I'll keep the opening for the next one too."
+      }
+    },
+    {
+      "click": "Send reply",
+      "after": 800
+    },
+    {
+      "text": "Reply sent"
+    },
+    {
+      "shot": "job-c201-creator-done"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/jobs/c-201",
+      "after": 3500
+    },
+    {
+      "text": "Comments (6)"
+    },
+    {
+      "text": "1 new"
+    },
+    {
+      "notText": "Private: only you and Layla see these"
+    },
+    {
+      "text": "1 new comment on Version 1"
+    },
+    {
+      "click": "View",
+      "after": 1200
+    },
+    {
+      "text": "Private: only you and Layla see these"
+    },
+    {
+      "text": "Thank you both. I'll keep the opening for the next one too."
+    },
+    {
+      "shot": "job-c201-view-link"
     },
     {
       "account": "layla"
@@ -122,7 +387,25 @@
       "text": "You earn"
     },
     {
+      "text": "$384"
+    },
+    {
+      "text": "From the $480 price, after Yapp's 20% fee"
+    },
+    {
+      "text": "Usage: paid ads for 6 months, included in the price. Raw footage included."
+    },
+    {
+      "text": "Pays on time"
+    },
+    {
+      "text": "Shares results"
+    },
+    {
       "notText": "Used 0 of 2"
+    },
+    {
+      "shot": "job-c302-offer"
     },
     {
       "click": "Accept offer",
@@ -132,7 +415,13 @@
       "text": "Deliver version 1 by"
     },
     {
-      "text": "Upload version 1"
+      "text": "$384 is released to you when Qalamy approves"
+    },
+    {
+      "text": "You earn"
+    },
+    {
+      "text": "\u2212$96"
     },
     {
       "click": "Upload version 1"
@@ -164,6 +453,9 @@
       "text": "Version 1 is with Qalamy"
     },
     {
+      "text": "$384 is released to you"
+    },
+    {
       "click": "Done"
     },
     {
@@ -173,6 +465,9 @@
       "text": "Version 1: the work email one first"
     },
     {
+      "text": "No comments yet. When Qalamy watches it"
+    },
+    {
       "shot": "job-c302-delivered"
     },
     {
@@ -180,13 +475,13 @@
       "after": 3500
     },
     {
-      "click": "Take a slot"
+      "click": "Pick now"
     },
     {
-      "click": "I'll post with the tag"
+      "click": "I'll post it on TikTok"
     },
     {
-      "click": "Take the slot",
+      "click": "Pick now",
       "after": 1800
     },
     {
@@ -201,6 +496,15 @@
     },
     {
       "text": "Talking points"
+    },
+    {
+      "text": "Your $96 is released 7 days after we verify the post"
+    },
+    {
+      "text": "Price per Yapp"
+    },
+    {
+      "text": "\u2212$24"
     },
     {
       "click": "Upload review copy"
@@ -239,6 +543,25 @@
       "text": "Watermarked, low-quality preview"
     },
     {
+      "text": "Price per Yapp"
+    },
+    {
+      "text": "$120"
+    },
+    {
+      "type": {
+        "sel": "textarea[name=job-comment]",
+        "text": "Great energy. Post it as soon as it's approved."
+      }
+    },
+    {
+      "click": "Send comment at",
+      "after": 800
+    },
+    {
+      "text": "Comments (1)"
+    },
+    {
       "shot": "job-slot-review"
     },
     {
@@ -246,6 +569,9 @@
     },
     {
       "text": "Approve this video?"
+    },
+    {
+      "text": "Usage rights start today"
     },
     {
       "clickSel": "[role=dialog] [aria-label='Rate Layla'] [role=radio]:nth-child(5)",
@@ -269,10 +595,29 @@
       "after": 3500
     },
     {
-      "text": "Post it to unlock $30"
+      "text": "Post it to unlock $96"
     },
     {
       "text": "Tag @daftar.app in the caption."
+    },
+    {
+      "text": "Link to your TikTok post"
+    },
+    {
+      "text": "Comments (1)"
+    },
+    {
+      "type": {
+        "sel": "input[name=post-link]",
+        "text": "https://www.instagram.com/reel/C123/"
+      }
+    },
+    {
+      "click": "Submit post",
+      "after": 800
+    },
+    {
+      "text": "That isn't a TikTok link"
     },
     {
       "type": {
@@ -294,7 +639,7 @@
       "text": "Verified: tag found, disclosure found"
     },
     {
-      "text": "is released on"
+      "text": "$96 is released on"
     },
     {
       "text": "Keep it up until"
@@ -335,7 +680,7 @@
       "text": "Review version 1 from Omar"
     },
     {
-      "text": "Approve and release $520"
+      "text": "Approve and release $"
     },
     {
       "shot": "job-live-delivered"

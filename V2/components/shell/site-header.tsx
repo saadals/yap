@@ -10,7 +10,6 @@ import { Brand } from "@/components/ui/brand";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { urgentCount } from "@/lib/attention";
 import { homeFor, modeLabel, sideForMode, type Mode } from "@/lib/mode";
 import { paths } from "@/lib/paths";
@@ -210,10 +209,6 @@ export function SiteHeader({
             <PillButton href={paths.signIn({ new: 1 })} variant="contrast" onClick={() => setMenuOpen(false)}>
               Get started
             </PillButton>
-          </div>
-          <div className="mt-4 flex items-center justify-between gap-3 px-1">
-            <span className="y-small y-fg-2">Appearance</span>
-            <ThemeToggle />
           </div>
         </Sheet>
       )}

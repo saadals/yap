@@ -1,0 +1,272 @@
+{
+  "steps": [
+    {
+      "go": "/services",
+      "after": 4000
+    },
+    {
+      "text": "What you can get made on Yapp"
+    },
+    {
+      "text": "UGC ads"
+    },
+    {
+      "text": "Native posts"
+    },
+    {
+      "text": "Hook Lab"
+    },
+    {
+      "text": "Go to market"
+    },
+    {
+      "text": "For tech teams"
+    },
+    {
+      "notText": "Creator Network"
+    },
+    {
+      "notText": "Amplified ads"
+    },
+    {
+      "notText": "For growth agencies"
+    },
+    {
+      "shot": "public-account-s-services"
+    },
+    {
+      "click": "Native posts",
+      "after": 3500
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Your product, posted by creators people follow"
+    },
+    {
+      "text": "At a glance"
+    },
+    {
+      "text": "How a native posts campaign runs"
+    },
+    {
+      "text": "Runs as a UGC campaign."
+    },
+    {
+      "text": "10 Yapps at $120 is $1,200, held when you post, with nothing added."
+    },
+    {
+      "notText": "service fee"
+    },
+    {
+      "shot": "public-account-s-native-posts"
+    },
+    {
+      "shot": "public-account-s-native-posts-full",
+      "full": true
+    },
+    {
+      "click": "Start a UGC campaign",
+      "after": 3500
+    },
+    {
+      "eval": "location.pathname + location.search"
+    },
+    {
+      "text": "Sign in to Yapp"
+    },
+    {
+      "text": "Get short videos made for your product"
+    },
+    {
+      "click": "Nour Haddad",
+      "after": 4500
+    },
+    {
+      "eval": "location.pathname + location.search"
+    },
+    {
+      "notText": "Sign in to Yapp"
+    },
+    {
+      "shot": "public-account-s-native-posts-next"
+    },
+    {
+      "go": "/services/ugc-ads",
+      "after": 3500
+    },
+    {
+      "text": "Creator videos made to run as ads"
+    },
+    {
+      "text": "Runs as a custom order."
+    },
+    {
+      "text": "What brands said after approving"
+    },
+    {
+      "text": "Questions brands ask"
+    },
+    {
+      "eval": "(() => { const d = [...document.querySelectorAll('details')].find((x) => x.textContent.includes('Can I run the video as a paid ad?')); d.open = true; return d.open; })()",
+      "after": 600
+    },
+    {
+      "text": "Every order carries one usage term, chosen by you and included in the price"
+    },
+    {
+      "click": "Start a custom order",
+      "after": 3500
+    },
+    {
+      "eval": "location.pathname + location.search"
+    },
+    {
+      "go": "/services/go-to-market",
+      "after": 3500
+    },
+    {
+      "text": "Launch with ten creators on one brief"
+    },
+    {
+      "text": "Plan a launch campaign"
+    },
+    {
+      "text": "15 Yapps at $140 is $2,100"
+    },
+    {
+      "shot": "public-account-s-go-to-market"
+    },
+    {
+      "go": "/services/hook-lab",
+      "after": 3500
+    },
+    {
+      "text": "Several openings, one ad, ready to test"
+    },
+    {
+      "text": "Order a hook pack"
+    },
+    {
+      "go": "/for/tech-teams",
+      "after": 3500
+    },
+    {
+      "text": "Short videos for apps, SaaS, AI and gadgets"
+    },
+    {
+      "text": "Runs as a custom order or a UGC campaign."
+    },
+    {
+      "text": "Ad copy writing as a custom order, for the words around your videos"
+    },
+    {
+      "text": "Other services"
+    },
+    {
+      "shot": "public-account-s-tech-teams"
+    },
+    {
+      "go": "/",
+      "after": 1500
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "go": "/how-it-works#pricing",
+      "after": 3500
+    },
+    {
+      "text": "Clear prices. Nothing added on top."
+    },
+    {
+      "text": "What you'd pay"
+    },
+    {
+      "text": "Nothing is added on top"
+    },
+    {
+      "shot": "public-account-s-pricing"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/messages?thread=t-201",
+      "after": 4000
+    },
+    {
+      "text": "Inbox"
+    },
+    {
+      "text": "Message Daftar"
+    },
+    {
+      "text": "3 new comments on Version 1"
+    },
+    {
+      "shot": "public-account-s-messages"
+    },
+    {
+      "clickSel": "#main a[href*='/jobs/c-201'][href*='version=1']",
+      "after": 3500
+    },
+    {
+      "eval": "location.pathname + location.search"
+    },
+    {
+      "go": "/messages?tab=alerts",
+      "after": 3000
+    },
+    {
+      "text": "Daftar left 3 comments on Version 1"
+    },
+    {
+      "text": "Daftar left a comment on Version 1 of"
+    },
+    {
+      "shot": "public-account-s-alerts"
+    },
+    {
+      "click": "Daftar left 3 comments on Version 1",
+      "after": 3500
+    },
+    {
+      "eval": "location.pathname + location.search"
+    },
+    {
+      "go": "/account",
+      "after": 3000
+    },
+    {
+      "text": "Switch to ordering"
+    },
+    {
+      "notText": "Log out and forget"
+    },
+    {
+      "shot": "public-account-s-account"
+    },
+    {
+      "go": "/settings#studio",
+      "after": 3500
+    },
+    {
+      "text": "Match alerts"
+    },
+    {
+      "text": "Upgrade to a business account"
+    },
+    {
+      "text": "Brand accounts"
+    },
+    {
+      "notText": "Appearance"
+    },
+    {
+      "shot": "public-account-s-settings"
+    }
+  ]
+}

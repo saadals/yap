@@ -8,7 +8,9 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { ProgressBar } from "@/components/ui/progress";
 import { autoApproveAt } from "@/lib/attention";
 import { dueLabel, money, plural, shortDate, timeAgoInline, weekdayDate } from "@/lib/format";
-import { formatById, tierById } from "@/lib/taxonomy";
+import { closesInDays, isAdCopy, isCampaign } from "@/lib/selectors";
+import { formatById, jobTypeById, tierById } from "@/lib/taxonomy";
+import type { ContentRequest } from "@/lib/types";
 
 import { type OrderItem, itemHref } from "./order-items";
 import { RowLink } from "./row-link";
@@ -49,31 +51,44 @@ function Lead({ item }: { item: OrderItem }) {
   );
 }
 
-/** The row's one meta line. `quiet` drops what a Needs you row above already says. */
-export function itemMeta(item: OrderItem, quiet = false): string {
+/** "Closes Nov 18", or "Closes tomorrow" when it's close: when a custom order stops taking pitches. */
+export function closesLine(request: Pick<ContentRequest, "closesAt">): string {
+  const days = closesInDays(request);
+  if (days < 0) return `Closing date was ${shortDate(request.closesAt)}`;
+  if (days === 0) return "Closes today";
+  if (days === 1) return "Closes tomorrow";
+  if (days <= 3) return `Closes in ${days} days`;
+  return `Closes ${shortDate(request.closesAt)}`;
+}
+
+/** The row's one meta line (never what the row's chip already says). */
+export function itemMeta(item: OrderItem): string {
   switch (item.kind) {
     case "job": {
       const c = item.commission;
       const who = item.creator?.name ?? "Creator";
       const first = item.creator?.firstName ?? "the creator";
-      const format = formatById[c.brief.format]?.name;
+      // Ad copy has no video format: its job type labels it on every status ("Ad copy writing").
+      const kind = isAdCopy(c) ? jobTypeById["ad-copy"].name : null;
+      const format = kind ?? formatById[c.brief.format]?.name;
+      const line = (...parts: (string | null | undefined)[]) => [who, ...parts].filter(Boolean).join(" · ");
       switch (c.status) {
         case "offered":
-          return `${who} · Waiting for ${first} to accept`;
+          return line(kind, `Waiting for ${first} to accept`);
         case "in_progress":
-          return `${who} · ${format} · ${dueLabel(c.dueDate).text}`;
+          return line(format, dueLabel(c.dueDate).text);
         case "delivered":
-          return `${who} · Approves itself ${weekdayDate(autoApproveAt(c))}`;
+          return line(kind, `Approves itself ${weekdayDate(autoApproveAt(c))}`);
         case "revision":
-          return `${who} · Making your changes · ${dueLabel(c.dueDate).text}`;
+          return line(kind, "Making your changes", dueLabel(c.dueDate).text);
         case "disputed":
-          return `${who} · Our team is helping resolve this`;
+          return line(kind, "Our team is helping resolve this");
         case "completed":
-          return `${who} · ${format} · Approved ${shortDate(c.completedAt ?? c.createdAt)}`;
+          return line(format, `Approved ${shortDate(c.completedAt ?? c.createdAt)}`);
         case "declined":
-          return `${who} · Declined the offer, nothing was charged`;
+          return line("Declined the offer, nothing was charged");
         case "cancelled":
-          return `${who} · Cancelled and refunded`;
+          return line(kind, "Cancelled and refunded");
       }
       return who;
     }
@@ -82,20 +97,25 @@ export function itemMeta(item: OrderItem, quiet = false): string {
       const tier = terms ? tierById[terms.tierId] : undefined;
       return [
         "UGC campaign",
+        terms ? `${money(terms.pricePerVideo)} a Yapp` : null,
         tier ? `${tier.label} followers` : null,
-        terms ? `${money(terms.pricePerVideo)} a video` : null,
       ]
         .filter(Boolean)
         .join(" · ");
     }
     case "request": {
-      if (item.stage === "done") return item.pitches ? `Closed · ${plural(item.pitches, "pitch", "pitches")}` : "Closed";
+      const kind = isAdCopy(item.request) ? `${jobTypeById["ad-copy"].name} · ` : "";
+      if (item.stage === "done") return `${kind}${item.pitches ? `Closed · ${plural(item.pitches, "pitch", "pitches")}` : "Closed"}`;
+      // New pitches are the row's chip (or a Needs you row on Home), so the meta doesn't repeat them.
       const pitches = item.pitches ? plural(item.pitches, "pitch", "pitches") : "No pitches yet";
-      const fresh = !quiet && item.unread ? ` · ${item.unread} new` : "";
-      return `${pitches}${fresh} · Posted ${timeAgoInline(item.request.postedAt)}`;
+      return `${kind}${pitches} · ${closesLine(item.request)}`;
     }
     case "draft":
-      return `Not posted yet · Saved ${timeAgoInline(item.request?.postedAt ?? item.autosave!.savedAt)}`;
+      return [
+        (item.autosave?.kind ?? (isCampaign(item.request) ? "campaign" : "custom")) === "campaign" ? "UGC campaign" : "Custom order",
+        "Not posted yet",
+        `Saved ${timeAgoInline(item.request?.postedAt ?? item.autosave!.savedAt)}`,
+      ].join(" · ");
   }
 }
 
@@ -150,7 +170,7 @@ export function OrderRow({ item, quiet = false }: { item: OrderItem; quiet?: boo
       href={itemHref(item)}
       lead={<Lead item={item} />}
       title={item.title}
-      meta={itemMeta(item, quiet)}
+      meta={itemMeta(item)}
       below={item.kind === "campaign" && item.stage === "progress" ? <CampaignProgress item={item} /> : undefined}
       end={chip}
       phoneEnd={chip}

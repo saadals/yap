@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Sparkles, X } from "lucide-react";
+import { ChevronDown, SearchX, Sparkles, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -14,31 +14,36 @@ import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
 import { money } from "@/lib/format";
 import { paths, type OrderType } from "@/lib/paths";
-import { me } from "@/lib/selectors";
+import { me, requestById } from "@/lib/selectors";
 import { actions, useDemo, useHydrated } from "@/lib/store";
-import { formatById, formats, languageById, languages } from "@/lib/taxonomy";
-import type { FormatId, LanguageId } from "@/lib/types";
+import { FEE_PCT, formats, jobTypeById, jobTypes, languageById, languages, orderKinds } from "@/lib/taxonomy";
+import type { FormatId, JobType, LanguageId } from "@/lib/types";
+
+import { PickSheet, type CampaignRequest } from "@/components/opportunity/pick-sheet";
 
 import "@/app/styles/studio-work.css";
 
 import { WorkList, WorkRow } from "./work-row";
 import { MIN_PAY_STEPS, SORTS, matches, sortItems, workItems, type WorkItem, type WorkSort } from "./work-items";
 
-const isFormat = (v: string | null): v is FormatId => Boolean(v && v in formatById);
+// Video formats only: ad copy is a job type, never a format filter.
+const isFormat = (v: string | null): v is FormatId => formats.some((f) => f.id === v);
+const isJob = (v: string | null): v is JobType => Boolean(v && v in jobTypeById);
 const isLanguage = (v: string | null): v is LanguageId => Boolean(v && v in languageById);
 const isSort = (v: string | null): v is WorkSort => SORTS.some((o) => o.value === v);
 
 const KIND_LINE: Record<OrderType, string> = {
-  custom: "Brands describe what they want. You pitch your idea and your price, and they pick.",
-  campaign: "A fixed price per video, posted on your own account. First come, first served.",
+  custom: `The brand sets a budget and a deadline. You pitch your idea and your price, they pick, and you earn your price less Yapp's ${FEE_PCT}%.`,
+  campaign: "The brand sets a price per Yapp and a follower tier. If you qualify, pick a Yapp and post it on your own account. First come, first served.",
 };
 
 /**
- * Find work: every open custom request and UGC campaign, ranked by how well it fits you. Tabs
- * (`?kind=`), filters (`format`, `lang`, `min`) and sort (`sort`) live in the URL; "Not
- * interested" hides an item, with "Show hidden (n)" (`hidden=1`). Without a creator profile the
- * list still works and the setup is offered once, at the top. Uses `useSearchParams`: render
- * inside <Suspense>.
+ * Find work: every open custom order and UGC campaign, ranked by how well it fits you. Tabs
+ * (`?kind=`), filters (`job` for the job type, `format`, `lang`, `min`) and sort (`sort`) live in
+ * the URL; "Not interested" hides an item, with "Show hidden (n)" (`hidden=1`). A campaign you
+ * qualify for has "Pick now" on its row, which opens the pick sheet here. Without a creator profile
+ * the list still works and the setup is offered once, at the top. The account's own orders never
+ * show. Uses `useSearchParams`: render inside <Suspense>.
  */
 export function FindWorkPage() {
   const s = useDemo();
@@ -47,13 +52,16 @@ export function FindWorkPage() {
   const router = useRouter();
   const toast = useToast();
   const [setupOpen, setSetupOpen] = useState(false);
+  const [pickId, setPickId] = useState<string | null>(null);
 
   if (!hydrated) return <FindWorkSkeleton />;
 
   const creator = me.creator(s);
   const kindParam = params.get("kind");
   const kind: OrderType | undefined = kindParam === "custom" || kindParam === "campaign" ? kindParam : undefined;
-  const format = isFormat(params.get("format")) ? (params.get("format") as FormatId) : undefined;
+  // Campaigns are always full video, so the job type filter only applies outside that tab.
+  const job = kind !== "campaign" && isJob(params.get("job")) ? (params.get("job") as JobType) : undefined;
+  const format = job !== "ad-copy" && isFormat(params.get("format")) ? (params.get("format") as FormatId) : undefined;
   const lang = isLanguage(params.get("lang")) ? (params.get("lang") as LanguageId) : undefined;
   const min = Math.max(0, Number(params.get("min")) || 0);
   const sortParam = params.get("sort");
@@ -61,21 +69,32 @@ export function FindWorkPage() {
   const sort: WorkSort = isSort(sortParam) && (creator || sortParam !== "fit") ? sortParam : fallbackSort;
   const showHidden = params.get("hidden") === "1";
 
-  const go = (patch: Partial<{ kind: OrderType; format: string; lang: string; min: number; sort: string; hidden: 1 }>) => {
-    const next = { kind, format, lang, min: min || undefined, sort: sort === fallbackSort ? undefined : sort, hidden: showHidden ? (1 as const) : undefined, ...patch };
+  const go = (patch: Partial<{ kind: OrderType; job: string; format: string; lang: string; min: number; sort: string; hidden: 1 }>) => {
+    const next = {
+      kind,
+      job,
+      format,
+      lang,
+      min: min || undefined,
+      sort: sort === fallbackSort ? undefined : sort,
+      hidden: showHidden ? (1 as const) : undefined,
+      ...patch,
+    };
     router.replace(paths.findWork(next), { scroll: false });
   };
 
   const all = workItems(s);
   const hiddenCount = all.filter((i) => i.hidden).length;
-  const pool = all.filter((i) => (showHidden ? true : !i.hidden) && matches(i, { format, lang, min }));
+  const pool = all.filter((i) => (showHidden ? true : !i.hidden) && matches(i, { job, format, lang, min }));
   const counts = {
     all: pool.length,
     custom: pool.filter((i) => i.kind === "custom").length,
     campaign: pool.filter((i) => i.kind === "campaign").length,
   };
   const list = sortItems(kind ? pool.filter((i) => i.kind === kind) : pool, sort);
-  const filtered = Boolean(format || lang || min);
+  const filtered = Boolean(job || format || lang || min);
+  const clearFilters = () => go({ job: undefined, format: undefined, lang: undefined, min: undefined });
+  const picking = pickId ? requestById(s, pickId) : undefined;
 
   const hide = (item: WorkItem) => {
     actions.hideRequest(item.id);
@@ -101,6 +120,7 @@ export function FindWorkPage() {
   const tabHref = (k?: OrderType) =>
     paths.findWork({
       kind: k,
+      job: k === "campaign" ? undefined : job,
       format,
       lang,
       min: min || undefined,
@@ -114,8 +134,8 @@ export function FindWorkPage() {
         title="Find work"
         description={
           creator
-            ? "Briefs to pitch on and campaigns to join, best fit first."
-            : "Briefs to pitch on and campaigns to join. Look around, then set up your profile to take one on."
+            ? "Custom orders to pitch on and UGC campaigns to pick from, best fit first. Every price shows what you earn."
+            : "Custom orders to pitch on and UGC campaigns to pick from. Look around, then set up your profile to take one on."
         }
       />
 
@@ -126,7 +146,7 @@ export function FindWorkPage() {
               <Sparkles size={18} />
             </span>
             <div className="flex flex-col gap-0.5">
-              <p className="y-head">Set up your creator profile to pitch and take slots</p>
+              <p className="y-head">Set up your creator profile to pitch and pick</p>
               <p className="y-small y-fg-2">
                 It takes a minute. Then this list is ranked by how well each brief fits you.
               </p>
@@ -143,19 +163,29 @@ export function FindWorkPage() {
         value={kind ?? "all"}
         items={[
           { id: "all", label: "All", count: counts.all, href: tabHref() },
-          { id: "custom", label: "Pitch", count: counts.custom, href: tabHref("custom") },
-          { id: "campaign", label: "Campaigns", count: counts.campaign, href: tabHref("campaign") },
+          { id: "custom", label: orderKinds.custom.name, count: counts.custom, href: tabHref("custom") },
+          { id: "campaign", label: orderKinds.campaign.name, count: counts.campaign, href: tabHref("campaign") },
         ]}
       />
 
       <div className="flex flex-col gap-3 pt-4 pb-4 md:flex-row md:items-center md:justify-between">
         <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center" role="group" aria-label="Filters">
-          <PillSelect
-            label="Format"
-            value={format ?? ""}
-            onChange={(v) => go({ format: v || undefined })}
-            options={[{ value: "", label: "Any format" }, ...formatOptions.map((f) => ({ value: f.id, label: f.name }))]}
-          />
+          {kind !== "campaign" ? (
+            <PillSelect
+              label="Job type"
+              value={job ?? ""}
+              onChange={(v) => go({ job: v || undefined, format: v === "ad-copy" ? undefined : format })}
+              options={[{ value: "", label: "Any job type" }, ...jobTypes.map((j) => ({ value: j.id, label: j.name }))]}
+            />
+          ) : null}
+          {job !== "ad-copy" ? (
+            <PillSelect
+              label="Format"
+              value={format ?? ""}
+              onChange={(v) => go({ format: v || undefined })}
+              options={[{ value: "", label: "Any format" }, ...formatOptions.map((f) => ({ value: f.id, label: f.name }))]}
+            />
+          ) : null}
           <PillSelect
             label="Language"
             value={lang ?? ""}
@@ -172,7 +202,7 @@ export function FindWorkPage() {
             <button
               type="button"
               className="y-small inline-flex min-h-9 items-center gap-1 rounded-full px-2 font-semibold"
-              onClick={() => go({ format: undefined, lang: undefined, min: undefined })}
+              onClick={clearFilters}
             >
               <X size={15} aria-hidden /> Clear
             </button>
@@ -192,7 +222,7 @@ export function FindWorkPage() {
       {list.length ? (
         <WorkList label="Open work">
           {list.map((item) => (
-            <WorkRow key={item.id} item={item} onHide={hide} onUnhide={unhide} />
+            <WorkRow key={item.id} item={item} onHide={hide} onUnhide={unhide} onPick={(i) => setPickId(i.id)} />
           ))}
         </WorkList>
       ) : (
@@ -201,15 +231,13 @@ export function FindWorkPage() {
             title={filtered ? "Nothing matches these filters" : "Nothing open here right now"}
             body={
               filtered
-                ? "Try another format or language, or a lower minimum pay."
-                : "New briefs and campaigns come in every week. We'll show them here first."
+                ? "Try another job type, format or language, or a lower minimum pay."
+                : "New custom orders and UGC campaigns come in every week. We'll show them here first."
             }
-            shape="pill"
-            tint="sea"
-            face="calm"
+            icon={<SearchX size={22} aria-hidden />}
             action={
               filtered ? (
-                <PillButton variant="contrast" onClick={() => go({ format: undefined, lang: undefined, min: undefined })}>
+                <PillButton variant="contrast" onClick={clearFilters}>
                   Clear filters
                 </PillButton>
               ) : kind ? (
@@ -232,10 +260,21 @@ export function FindWorkPage() {
 
       <CreatorSetupSheet
         open={setupOpen}
-        reason="to pitch and take campaign slots"
+        reason="to pitch on custom orders and pick UGC campaign Yapps"
         onClose={() => setSetupOpen(false)}
         onDone={() => setSetupOpen(false)}
       />
+      {picking?.campaign ? (
+        <PickSheet
+          open
+          request={picking as CampaignRequest}
+          onClose={() => setPickId(null)}
+          onFull={() => {
+            setPickId(null);
+            toast({ message: "Someone just took the last slot. If one reopens, it goes to the first creator who picks it." });
+          }}
+        />
+      ) : null}
     </Page>
   );
 }

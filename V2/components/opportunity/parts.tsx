@@ -1,6 +1,6 @@
 "use client";
 
-import { BadgeCheck, MoreHorizontal, Pause, Play } from "lucide-react";
+import { BadgeCheck, Download, FileText, Image as ImageIcon, Lock, MoreHorizontal, Pause, Play, PlayCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
@@ -8,26 +8,23 @@ import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
+import { KeyValues } from "@/components/ui/progress";
+import { useToast } from "@/components/ui/toast";
+import { attachmentMeta } from "@/lib/files";
 import { clock } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { reliabilityLine } from "@/lib/selectors";
-import type { Business } from "@/lib/types";
+import { reliabilityFigures } from "@/lib/selectors";
+import type { BriefAttachment, Business } from "@/lib/types";
 
 import "@/app/styles/studio-work.css";
 
 /**
- * Who's asking, as one quiet line: logo, name, verified, and how reliably they review work.
- * Creators see review speed and timer approvals, never a star rating (feedback about brands is
- * private).
+ * Who's asking, as one quiet line: logo, name, verified, payment verified. How reliably the brand
+ * works with creators sits in `BrandRecord` (five figures, never a star rating: feedback about
+ * brands is private).
  */
 export function BrandLine({ business, extra }: { business: Business; extra?: string }) {
-  const meta = [
-    reliabilityLine(business) ?? "New on Yapp",
-    business.paymentVerified ? "Payment verified" : null,
-    extra,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const meta = [business.paymentVerified ? "Payment verified" : "New on Yapp", extra].filter(Boolean).join(" · ");
   return (
     <div className="flex min-w-0 items-center gap-3">
       <BusinessLogo business={business} size={40} />
@@ -39,6 +36,44 @@ export function BrandLine({ business, extra }: { business: Business; extra?: str
         <p className="y-micro y-fg-2">{meta}</p>
       </div>
     </div>
+  );
+}
+
+/**
+ * The brand's five reliability figures (Pays on time, Review speed, Hire rate, Auto-approved,
+ * Shares results), each "—" until Yapp has enough data. Brands never get stars.
+ */
+export function BrandRecord({ business }: { business: Business }) {
+  const figures = reliabilityFigures(business);
+  const unknown = figures.every((f) => !f.known);
+  return (
+    <Block as="section" aria-labelledby="brand-record-h" tone="paper" pad="md" className="flex flex-col gap-3">
+      <div className="flex flex-col gap-0.5">
+        <h2 id="brand-record-h" className="y-head">
+          How {business.name} works with creators
+        </h2>
+        <p className="y-micro y-fg-2">Worked out by Yapp from their orders. Brands have no star rating.</p>
+      </div>
+      <KeyValues
+        rows={figures.map((f) => ({
+          label: <span title={f.hint}>{f.label}</span>,
+          value: f.known ? (
+            <span className="y-num">{f.value}</span>
+          ) : (
+            <span className="y-fg-2">
+              {f.value}
+              <span className="sr-only"> not enough data yet</span>
+            </span>
+          ),
+        }))}
+      />
+      {unknown ? (
+        <p className="y-micro y-fg-2 flex items-start gap-1.5">
+          <Lock size={13} aria-hidden className="mt-0.5 flex-none" />
+          Figures appear after {business.name}&apos;s first few hires.
+        </p>
+      ) : null}
+    </Block>
   );
 }
 
@@ -165,9 +200,6 @@ export function Unavailable({ title, body }: { title: string; body: string }) {
         <EmptyState
           title={title}
           body={body}
-          shape="tower"
-          tint="sun"
-          face="calm"
           action={
             <PillButton href={paths.findWork()} variant="contrast" arrow>
               Find work
@@ -233,6 +265,49 @@ export function ExplainerTile({ name, durationSec }: { name: string; durationSec
           <span style={{ width: `${(elapsed / durationSec) * 100}%` }} />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The files a brand attached to the brief (documents, one short reference video, images), visible
+ * before anyone pitches or picks. Downloads are simulated.
+ */
+export function BriefFiles({ files, brandName }: { files: BriefAttachment[]; brandName: string }) {
+  const toast = useToast();
+  if (!files.length) return null;
+  return (
+    <div className="flex flex-col gap-2">
+      <h3 className="y-micro y-fg-2">Files from {brandName}</h3>
+      <ul className="flex flex-col gap-1.5">
+        {files.map((file) => (
+          <li key={file.id} className="y-tile flex items-center gap-3 py-2 ps-3.5 pe-2">
+            <span className="flex-none" aria-hidden>
+              {file.kind === "video" ? (
+                <PlayCircle size={18} />
+              ) : file.kind === "image" ? (
+                <ImageIcon size={18} />
+              ) : (
+                <FileText size={18} />
+              )}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="y-small block truncate font-semibold">{file.name}</span>
+              <span className="y-micro y-fg-2 block">{attachmentMeta(file)}</span>
+            </span>
+            <button
+              type="button"
+              className="y-round flex-none"
+              data-tone-btn="ghost"
+              data-size="sm"
+              aria-label={`Download ${file.name}`}
+              onClick={() => toast({ message: "Files are simulated in this demo, so there's nothing to download." })}
+            >
+              <Download size={16} aria-hidden />
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

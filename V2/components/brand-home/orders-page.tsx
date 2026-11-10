@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, X } from "lucide-react";
+import { CircleCheckBig, Hourglass, MessagesSquare, Plus, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -29,7 +29,7 @@ const tabHref = (id: OrderStage) => paths.orders({ view: TABS.find((t) => t.id =
 
 /**
  * /orders: everything the signed-in account ordered, in three tabs (`?view=`): In progress (jobs
- * and running campaigns, what needs you first), Open (custom requests taking pitches, drafts) and
+ * and running campaigns, what needs you first), Open (custom orders taking pitches, drafts) and
  * Done. Search covers title, creator, product and format. Uses `useSearchParams`: render inside
  * <Suspense>.
  */
@@ -118,8 +118,7 @@ export function OrdersPage() {
         <Block tone="paper" pad="md">
           <EmptyState
             headingLevel={2}
-            shape="bean"
-            tint="sun"
+            icon={<Search size={22} aria-hidden />}
             title={`Nothing here matches “${trimmed}”`}
             body={
               elsewhere.length
@@ -153,9 +152,7 @@ function TabEmpty({ tab }: { tab: OrderStage }) {
   if (tab === "progress")
     return (
       <EmptyState
-        shape="pill"
-        tint="mint"
-        face="smile"
+        icon={<Hourglass size={22} aria-hidden />}
         title="Nothing in progress"
         body="When a creator accepts your order or your campaign starts, it's tracked here until the video is approved."
         action={
@@ -168,25 +165,21 @@ function TabEmpty({ tab }: { tab: OrderStage }) {
   if (tab === "open")
     return (
       <EmptyState
-        shape="dome"
-        tint="violet"
-        face="calm"
+        icon={<MessagesSquare size={22} aria-hidden />}
         title="Nothing open for pitches"
-        body="Describe the video you need and creators send ideas and quotes. Drafts you save wait here too."
+        body="Post a custom order for a video or ad copy and creators pitch ideas and prices. Drafts you save wait here too."
         action={
           <PillButton href={paths.newOrder({ type: "custom" })} variant="contrast" arrow>
-            Get pitches
+            Post a custom order
           </PillButton>
         }
       />
     );
   return (
     <EmptyState
-      shape="tower"
-      tint="sun"
-      face="focus"
+      icon={<CircleCheckBig size={22} aria-hidden />}
       title="Nothing finished yet"
-      body="Approved jobs, closed campaigns and cancelled orders collect here. The approved videos themselves live in your Library."
+      body="Approved jobs, closed campaigns and cancelled orders collect here. What you approved lives in your Library."
       action={
         <Link href={paths.library()} className="y-small y-link font-medium">
           Open the Library

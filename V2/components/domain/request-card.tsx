@@ -4,19 +4,33 @@ import { Megaphone, MailOpen, Sparkles } from "lucide-react";
 import Link from "next/link";
 
 import { AvatarStack } from "@/components/ui/face-avatar";
-import { compact, daysFromNow, dueLabel, lengthLabel, money, moneyRange, plural, timeAgo } from "@/lib/format";
+import {
+  compact,
+  creatorNet,
+  daysFromNow,
+  dueLabel,
+  lengthLabel,
+  money,
+  moneyExact,
+  moneyRange,
+  netRange,
+  plural,
+  timeAgo,
+} from "@/lib/format";
 import type { Fit } from "@/lib/selectors";
 import {
   businessById,
   campaignProgress,
   creatorById,
+  isAdCopy,
   isCampaign,
   openSlotCount,
   pitchesForRequest,
+  platformList,
   productById,
 } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { campaignPlatformById, formatById, tierById } from "@/lib/taxonomy";
+import { CAMPAIGN_FEE_RATE, formatById, tierById } from "@/lib/taxonomy";
 import type { Business, ContentRequest, Pitch, Product } from "@/lib/types";
 
 import { BusinessLogo } from "./business-logo";
@@ -31,9 +45,9 @@ function postedLine(request: ContentRequest, business: Business | undefined, pro
 }
 
 /**
- * An order as a card (custom request or UGC campaign).
+ * An order as a card (custom order or UGC campaign).
  * - perspective "creator": who's asking, what, budget, fit, invite and my pitch status.
- *   Campaigns: price per Yapp, tier, slots left.
+ *   Campaigns: price per Yapp, tier, slots left. Creators see their net beside every price.
  * - perspective "business": status, pitches with faces, views, due date. Campaigns: slots filled.
  */
 export function RequestCard({
@@ -116,9 +130,11 @@ function CustomRequestCard({
 
   const meta = [
     format.name,
-    `${request.brief.videoCount} × ${lengthLabel(request.brief.durationSec)}`,
+    isAdCopy(request) ? null : `${request.brief.videoCount} × ${lengthLabel(request.brief.durationSec)}`,
     languageList(request.brief.languages),
-  ].join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <article data-tone="paper" className={`y-block y-hoverable relative flex flex-col gap-4 p-5 md:p-6 ${className}`}>
@@ -149,8 +165,13 @@ function CustomRequestCard({
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--b-line) pt-4">
         <span className="flex items-center gap-3">
-          <span className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">
-            {moneyRange(request.budget.min, request.budget.max)}
+          <span className="flex flex-col">
+            <span className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">
+              {moneyRange(request.budget.min, request.budget.max)}
+            </span>
+            {perspective === "creator" ? (
+              <span className="y-micro y-fg-2 y-num">you earn {netRange(request.budget.min, request.budget.max)}</span>
+            ) : null}
           </span>
           {badge}
         </span>
@@ -201,7 +222,7 @@ function CampaignCard({
   const open = openSlotCount(s, request);
   const progress = campaignProgress(s, request);
   const meta = [
-    `UGC campaign on ${campaignPlatformById[terms.platform].name}`,
+    `UGC campaign on ${platformList(terms.platforms)}`,
     `${tier.label} followers`,
     languageList(request.brief.languages),
   ].join(" · ");
@@ -228,9 +249,12 @@ function CampaignCard({
       </div>
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--b-line) pt-4">
-        <span className="flex items-baseline gap-1.5">
+        <span className="flex flex-wrap items-baseline gap-x-1.5">
           <span className="y-display y-num text-[20px] font-semibold tracking-[-0.02em]">{money(terms.pricePerVideo)}</span>
-          <span className="y-micro y-fg-2">per Yapp</span>
+          <span className="y-micro y-fg-2">
+            per Yapp
+            {perspective === "creator" ? ` · you earn ${moneyExact(creatorNet(terms.pricePerVideo, CAMPAIGN_FEE_RATE))}` : ""}
+          </span>
         </span>
         <span className="y-micro y-fg-2 flex items-center gap-3">
           {perspective === "business" ? (

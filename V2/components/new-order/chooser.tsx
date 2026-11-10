@@ -9,15 +9,16 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { Page } from "@/components/ui/page";
 import { money, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { me, startingPrice } from "@/lib/selectors";
+import { isAdCopy, me, startingPrice } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import {
-  CAMPAIGN_DEADLINE_OPTIONS,
   CAMPAIGN_MAX_VIDEOS,
   CAMPAIGN_MIN_VIDEOS,
-  CAMPAIGN_OPEN_DAYS,
-  SERVICE_FEE_RATE,
+  ORDER_DEADLINE_OPTIONS,
+  ORDER_OPEN_DAYS,
+  campaignPlatforms,
   followerTiers,
+  orderKinds,
 } from "@/lib/taxonomy";
 import type { Creator } from "@/lib/types";
 
@@ -61,12 +62,20 @@ export function Chooser({ params }: { params: URLSearchParams }) {
   const productId = product?.id ?? again?.brief.productId;
 
   const cheapest = Math.min(...others.map(startingPrice));
-  const lowestTier = Math.min(...followerTiers.filter((t) => !t.placeholder).map((t) => t.pricePerVideo));
+  // Creators who could pick a campaign slot today: a verified account inside a follower tier.
+  const minFollowers = Math.min(...followerTiers.map((t) => t.min));
+  const canPick = others.filter((c) =>
+    (c.socials ?? []).some((a) => a.verified && campaignPlatforms.some((p) => p.id === a.platform) && a.followers >= minFollowers),
+  ).length;
+  const shortest = ORDER_DEADLINE_OPTIONS[0];
+  const longest = ORDER_DEADLINE_OPTIONS[ORDER_DEADLINE_OPTIONS.length - 1];
   const replyHours = Math.max(1, Math.round(median(others.map((c) => c.responseHours))));
   const days = others.flatMap((c) => c.packages.map((p) => p.deliveryDays));
   const fastest = Math.min(...days);
   const slowest = Math.max(...days);
-  const repeatOfNamed = again && named && again.creatorId === named.id ? again.id : undefined;
+  // Packages are for videos: ad copy is ordered again as a custom order, with the writer invited.
+  const againAdCopy = again ? isAdCopy(again) : false;
+  const repeatOfNamed = again && named && !againAdCopy && again.creatorId === named.id ? again.id : undefined;
 
   const options: Option[] = [
     named
@@ -90,25 +99,25 @@ export function Chooser({ params }: { params: URLSearchParams }) {
         },
     {
       id: "custom",
-      title: "Get pitches",
-      body: "Describe the video. Creators send an idea, samples and a price, and you pick one.",
-      meta: `${plural(others.length, "creator")} could pitch · you set the budget`,
+      title: orderKinds.custom.name,
+      body: "Describe the video or the ad copy you need. Creators pitch an idea and a price, and you pick one.",
+      meta: `${plural(others.length, "creator")} could pitch · you set the budget and the deadline`,
       icon: <MessagesSquare size={20} aria-hidden />,
       href: paths.newOrder({ type: "custom", product: productId, creator: named?.handle, again: again?.id }),
-      cta: "Describe the video",
+      cta: "Write the brief",
     },
     {
       id: "campaign",
-      title: "Run a UGC campaign",
-      body: `${CAMPAIGN_MIN_VIDEOS} or more creators each make a video and post it on their own account, at a fixed price per video by follower tier. First come, first served.`,
-      meta: `From ${money(lowestTier)} a video · ${CAMPAIGN_MIN_VIDEOS} to ${CAMPAIGN_MAX_VIDEOS} videos`,
+      title: orderKinds.campaign.name,
+      body: `${CAMPAIGN_MIN_VIDEOS} or more creators each make a video and post it on their own account, at a price per Yapp you set. First come, first served.`,
+      meta: `${plural(canPick, "creator")} with verified accounts can pick · ${CAMPAIGN_MIN_VIDEOS} to ${CAMPAIGN_MAX_VIDEOS} Yapps`,
       icon: <Megaphone size={20} aria-hidden />,
       href: paths.newOrder({ type: "campaign", product: productId }),
       cta: "Set up the campaign",
     },
   ];
 
-  const [choice, setChoice] = useState<Way | null>(named ? "creator" : null);
+  const [choice, setChoice] = useState<Way | null>(againAdCopy ? "custom" : named ? "creator" : null);
   const [tried, setTried] = useState(false);
   const chosen = options.find((o) => o.id === choice);
 
@@ -123,14 +132,14 @@ export function Chooser({ params }: { params: URLSearchParams }) {
     },
     {
       label: "How the price is set",
-      values: ["The creator's package price", "Creators quote inside your budget", "Fixed per video by follower tier"],
+      values: ["The creator's package price", "Creators pitch a price within your budget", "You set one price per Yapp"],
     },
     {
       label: "How fast",
       values: [
         `Starts when they accept; ${fastest}–${slowest} days to deliver`,
-        `Creators usually reply within ${plural(replyHours, "hour")}; you set the date`,
-        `Creators upload within ${CAMPAIGN_DEADLINE_OPTIONS[0]}–${CAMPAIGN_DEADLINE_OPTIONS[CAMPAIGN_DEADLINE_OPTIONS.length - 1]} days; open for ${CAMPAIGN_OPEN_DAYS} days`,
+        `Pitches usually within ${plural(replyHours, "hour")}; you give ${shortest}–${longest} days to deliver`,
+        `Creators upload within the ${shortest}–${longest} days you set; open for ${ORDER_OPEN_DAYS} days`,
       ],
     },
     {
@@ -163,7 +172,7 @@ export function Chooser({ params }: { params: URLSearchParams }) {
               ) : product ? (
                 `For ${product.name}. Its audience, tone and learnings come with you.`
               ) : (
-                "Three ways to get a video made. Pick the one that fits."
+                "Three ways to get videos or ad copy made. Pick the one that fits."
               )}
             </p>
           </div>
@@ -217,7 +226,7 @@ export function Chooser({ params }: { params: URLSearchParams }) {
                   <th className="w-[22%]" />
                   {options.map((o) => (
                     <th key={o.id} scope="col" className="y-small px-2 pb-2 text-start align-bottom font-semibold">
-                      {o.id === "creator" ? (named ? `Order from ${named.firstName}` : "Pick a creator") : o.title.replace("Run a ", "")}
+                      {o.id === "creator" ? (named ? `Order from ${named.firstName}` : "Pick a creator") : o.title}
                     </th>
                   ))}
                 </tr>
@@ -245,7 +254,7 @@ export function Chooser({ params }: { params: URLSearchParams }) {
                     {row.values.map((value, index) => (
                       <div key={index} className="grid grid-cols-[7.5rem_1fr] gap-2">
                         <dt className="y-micro y-fg-2 pt-0.5">
-                          {index === 0 ? (named ? `From ${named.firstName}` : "Pick a creator") : index === 1 ? "Get pitches" : "UGC campaign"}
+                          {index === 0 ? (named ? `From ${named.firstName}` : "Pick a creator") : index === 1 ? orderKinds.custom.name : orderKinds.campaign.name}
                         </dt>
                         <dd className="y-small">{value}</dd>
                       </div>
@@ -257,9 +266,9 @@ export function Chooser({ params }: { params: URLSearchParams }) {
           </Disclosure>
         </div>
 
-        <p className="y-small y-fg-2 mt-5 flex items-start gap-2 px-1">
+        <p className="y-small y-fg-2 mt-5 mb-8 flex items-start gap-2 px-1">
           <ShieldCheck size={16} aria-hidden className="mt-0.5 flex-none" />
-          Payment is held until you approve. {Math.round(SERVICE_FEE_RATE * 100)}% service fee, refunded with the payment.
+          You pay the listed price. Payment is held until you approve.
         </p>
       </Page>
 

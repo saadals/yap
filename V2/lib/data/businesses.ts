@@ -35,8 +35,9 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-400),
     hires: 7,
-    reliability: { reviewHours: 9, timerApprovedPct: 0 },
+    reliability: { paysOnTimePct: 100, reviewHours: 9, hireRatePct: 88, timerApprovedPct: 0, sharesResults: null },
     website: "daftar.app",
+    handles: { tiktok: "@daftar.app", instagram: "@daftar.app" },
   },
   {
     id: "b-roundleaf",
@@ -51,8 +52,9 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-520),
     hires: 14,
-    reliability: { reviewHours: 16, timerApprovedPct: 4 },
+    reliability: { paysOnTimePct: 100, reviewHours: 16, hireRatePct: 82, timerApprovedPct: 4, sharesResults: null },
     website: "roundleaf.money",
+    handles: { tiktok: "@roundleaf.money" },
   },
   {
     id: "b-tablecrew",
@@ -67,7 +69,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-300),
     hires: 6,
-    reliability: { reviewHours: 6, timerApprovedPct: 0 },
+    reliability: { paysOnTimePct: 100, reviewHours: 6, hireRatePct: 75, timerApprovedPct: 0, sharesResults: null },
     website: "tablecrew.app",
   },
   {
@@ -83,7 +85,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-260),
     hires: 9,
-    reliability: { reviewHours: 22, timerApprovedPct: 8 },
+    reliability: { paysOnTimePct: 96, reviewHours: 22, hireRatePct: 70, timerApprovedPct: 8, sharesResults: null },
     website: "qalamy.ai",
   },
   {
@@ -99,7 +101,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-450),
     hires: 9,
-    reliability: { reviewHours: 30, timerApprovedPct: 11 },
+    reliability: { paysOnTimePct: 97, reviewHours: 30, hireRatePct: 64, timerApprovedPct: 11, sharesResults: null },
     website: "notewren.app",
   },
   {
@@ -115,8 +117,9 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-330),
     hires: 8,
-    reliability: { reviewHours: 12, timerApprovedPct: 3 },
+    reliability: { paysOnTimePct: 100, reviewHours: 12, hireRatePct: 80, timerApprovedPct: 3, sharesResults: null },
     website: "wayfolk.travel",
+    handles: { instagram: "@wayfolk.travel" },
   },
   {
     id: "b-wasla",
@@ -131,7 +134,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-360),
     hires: 8,
-    reliability: { reviewHours: 44, timerApprovedPct: 14 },
+    reliability: { paysOnTimePct: 93, reviewHours: 44, hireRatePct: 57, timerApprovedPct: 14, sharesResults: null },
     website: "wasla.app",
   },
   {
@@ -147,8 +150,9 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-600),
     hires: 18,
-    reliability: { reviewHours: 18, timerApprovedPct: 6 },
+    reliability: { paysOnTimePct: 99, reviewHours: 18, hireRatePct: 78, timerApprovedPct: 6, sharesResults: null },
     website: "souqly.shop",
+    handles: { tiktok: "@souqly", instagram: "@souqly.shop" },
   },
   {
     id: "b-brindle",
@@ -163,7 +167,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-480),
     hires: 11,
-    reliability: { reviewHours: 10, timerApprovedPct: 2 },
+    reliability: { paysOnTimePct: 100, reviewHours: 10, hireRatePct: 85, timerApprovedPct: 2, sharesResults: null },
     website: "brindlering.app",
   },
   {
@@ -179,7 +183,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-300),
     hires: 6,
-    reliability: { reviewHours: 8, timerApprovedPct: 0 },
+    reliability: { paysOnTimePct: 100, reviewHours: 8, hireRatePct: 83, timerApprovedPct: 0, sharesResults: null },
     website: "pixelarcade.games",
   },
   {
@@ -195,7 +199,7 @@ export const businesses: Business[] = [
     paymentVerified: true,
     memberSince: at(-380),
     hires: 8,
-    reliability: { reviewHours: 14, timerApprovedPct: 4 },
+    reliability: { paysOnTimePct: 100, reviewHours: 14, hireRatePct: 79, timerApprovedPct: 4, sharesResults: null },
     website: "wrenlowaudio.co.uk",
   },
 ];

@@ -1,14 +1,11 @@
 "use client";
 
 import { Search, ShieldCheck, Wallet } from "lucide-react";
-import { useState } from "react";
 
-import { CreatorSetupSheet } from "@/components/account/creator-setup-sheet";
 import { Block } from "@/components/ui/block";
-import { Character } from "@/components/ui/character";
 import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
-import { AUTO_APPROVE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
+import { AUTO_APPROVE_DAYS, FEE_PCT } from "@/lib/taxonomy";
 import { useDemo } from "@/lib/store";
 
 import { WorkList, WorkRow } from "@/components/find-work/work-row";
@@ -19,12 +16,12 @@ const points = [
   {
     icon: Search,
     title: "Find work that fits",
-    body: "Briefs and campaigns from tech brands, ranked by the languages and formats you make.",
+    body: "Custom orders and UGC campaigns from tech brands, ranked by the languages and formats you make.",
   },
   {
     icon: Wallet,
-    title: "You keep 100% of your price",
-    body: `The brand pays Yapp's ${Math.round(SERVICE_FEE_RATE * 100)}% fee on top. Nothing comes out of your pay.`,
+    title: "See what you earn up front",
+    body: `Every price shows your share beside it. Yapp keeps ${FEE_PCT}%, and the brand pays the listed price, nothing on top.`,
   },
   {
     icon: ShieldCheck,
@@ -35,27 +32,25 @@ const points = [
 
 /**
  * Studio without a creator profile: the case for making videos on Yapp in three points, how much
- * is open right now, and the setup (green). Once the profile exists, Studio Today takes over.
+ * is open right now, and the setup (green). No illustration (round 3 answers, item 15). Once the
+ * profile exists, Studio Today takes over (it holds the setup sheet, so the sheet stays open while
+ * the page behind it changes).
  */
-export function StudioWelcome() {
+export function StudioWelcome({ onSetUp }: { onSetUp: () => void }) {
   const s = useDemo();
-  const [setupOpen, setSetupOpen] = useState(false);
   const items = workItems(s).filter((i) => !i.hidden);
   const preview = sortItems(items, "newest").slice(0, 3);
 
   return (
     <Page>
       <Block tone="paper" pad="lg" className="flex flex-col gap-8">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-          <div className="flex max-w-[56ch] flex-col gap-2">
-            <p className="y-eyebrow y-fg-2">Studio</p>
-            <h1 className="y-display y-t-display">Make videos for tech brands, from this account</h1>
-            <p className="y-body y-fg-2">
-              Set up a creator profile and you can pitch on briefs and take campaign slots. Same login; switch
-              back to ordering any time.
-            </p>
-          </div>
-          <Character shape="dome" tint="violet" face="smile" look={-1} className="hidden h-28 w-auto flex-none md:block" />
+        <div className="flex max-w-[56ch] flex-col gap-2">
+          <p className="y-eyebrow y-fg-2">Studio</p>
+          <h1 className="y-display y-t-display">Make videos for tech brands, from this account</h1>
+          <p className="y-body y-fg-2">
+            Set up a creator profile and you can pitch on custom orders and pick Yapps on UGC campaigns. Same
+            login; switch back to ordering any time.
+          </p>
         </div>
 
         <ul className="grid gap-5 md:grid-cols-3">
@@ -80,7 +75,7 @@ export function StudioWelcome() {
             <PillButton href={paths.findWork()} variant="ghost">
               Look around first
             </PillButton>
-            <PillButton variant="neon" arrow className="justify-between ps-5" onClick={() => setSetupOpen(true)}>
+            <PillButton variant="neon" arrow className="justify-between ps-5" onClick={onSetUp}>
               Set up your creator profile
             </PillButton>
           </div>
@@ -100,12 +95,6 @@ export function StudioWelcome() {
         </section>
       ) : null}
 
-      <CreatorSetupSheet
-        open={setupOpen}
-        reason="to make videos in Studio"
-        onClose={() => setSetupOpen(false)}
-        onDone={() => setSetupOpen(false)}
-      />
     </Page>
   );
 }

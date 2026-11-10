@@ -1,11 +1,11 @@
 "use client";
 
-import { Check, Link2, Minus, X } from "lucide-react";
+import { BadgeCheck, Check, Link2, Minus, X } from "lucide-react";
 
 import { PaymentMethodPicker } from "@/components/domain/money";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { extraDaysLabel, tierName } from "@/components/new-order/helpers";
-import { Disclosure, GroupError, ListEditor, Question, SubLabel } from "@/components/new-order/parts";
+import { ChoiceTile, Disclosure, GroupError, ListEditor, Question, SubLabel } from "@/components/new-order/parts";
 import { ProductPicker } from "@/components/new-order/product-picker";
 import { referenceId } from "@/components/new-order/pitches-steps";
 import { FilterChip } from "@/components/ui/chip";
@@ -15,7 +15,7 @@ import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { lengthLabel, money, plural, weekdayDate } from "@/lib/format";
 import { at } from "@/lib/clock";
 import type { DemoState } from "@/lib/store";
-import { addonById, aspects, formatById, includedRights, languageById, platforms } from "@/lib/taxonomy";
+import { RAW_FOOTAGE_INCLUDED, addonById, aspects, formatById, languageById, platforms, usageOptions } from "@/lib/taxonomy";
 import type { Aspect, Commission, Creator, Video } from "@/lib/types";
 
 import { SLACK_OPTIONS, businessProducts, fromProduct, lengthOptions, withPackage, type Derived, type Draft, type FieldId } from "./model";
@@ -375,49 +375,75 @@ export function DetailsSection({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Extras                                                                      */
+/* Usage and extras                                                            */
 /* -------------------------------------------------------------------------- */
 
-export function AddonsSection({ creator, d, x, set }: SectionProps) {
+export function UsageSection({ creator, d, x, set }: SectionProps) {
   return (
-    <Question id="s-addons" title="Extras" optional>
-      {creator.addons.length ? (
-        <ul className="-mx-1 flex flex-col" aria-labelledby="s-addons">
-          {creator.addons.map((addon) => {
-            const info = addonById[addon.id];
-            const Icon = info.icon;
-            const on = d.addons.includes(addon.id);
-            const days = extraDaysLabel(addon.extraDays);
-            return (
-              <li key={addon.id}>
-                <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-(--y-r-sm) px-1 py-2 hover:bg-(--y-mist)">
-                  <Icon size={18} aria-hidden className="flex-none" />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="y-small font-semibold">{info.name}</span>
-                    <span className="y-micro y-fg-2">
-                      {info.description}
-                      {days ? ` · ${days}` : ""}
-                    </span>
-                  </span>
-                  <span className="y-small y-num flex-none font-semibold">+{money(addon.price)}</span>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    className="y-switch"
-                    checked={on}
-                    onChange={() => set({ addons: toggle(d.addons, addon.id) })}
-                  />
-                </label>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="y-small y-fg-2">{creator.firstName} doesn&apos;t offer extras yet.</p>
-      )}
-      <p className="y-micro y-fg-2">
-        {plural(x.revisions, "revision")} included. Always included: {includedRights}
+    <Question
+      id="s-usage"
+      title="Usage and extras"
+      hint={`How you'll use the videos is part of ${tierName[x.pkg.tier]}'s price, with no separate rights fee. ${creator.firstName} sees it with the offer.`}
+    >
+      <div role="radiogroup" aria-labelledby="s-usage" className="grid gap-2 sm:grid-cols-2">
+        {usageOptions.map((option) => (
+          <ChoiceTile
+            key={option.id}
+            name="usage"
+            checked={d.usage === option.id}
+            onChange={() => set({ usage: option.id })}
+            label={`${option.name}. ${option.description}`}
+            className="!p-3.5"
+          >
+            <span className="y-small font-semibold">{option.name}</span>
+            <span className="y-micro y-fg-2">{option.description}</span>
+          </ChoiceTile>
+        ))}
+      </div>
+      <p className="y-micro y-fg-2 flex items-start gap-2">
+        <BadgeCheck size={15} aria-hidden className="mt-px flex-none" />
+        {plural(x.revisions, "revision")} included. {RAW_FOOTAGE_INCLUDED}
       </p>
+
+      <div className="flex flex-col gap-1 border-t border-(--b-line) pt-4">
+        <SubLabel id="s-addons">
+          Extras <span className="y-fg-2 font-normal">· optional</span>
+        </SubLabel>
+        {creator.addons.length ? (
+          <ul className="-mx-1 flex flex-col" aria-labelledby="s-addons">
+            {creator.addons.map((addon) => {
+              const info = addonById[addon.id];
+              const Icon = info.icon;
+              const on = d.addons.includes(addon.id);
+              const days = extraDaysLabel(addon.extraDays);
+              return (
+                <li key={addon.id}>
+                  <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-(--y-r-sm) px-1 py-2 hover:bg-(--y-mist)">
+                    <Icon size={18} aria-hidden className="flex-none" />
+                    <span className="flex min-w-0 flex-1 flex-col">
+                      <span className="y-small font-semibold">{info.name}</span>
+                      <span className="y-micro y-fg-2">
+                        {info.description}
+                        {days ? ` · ${days}` : ""}
+                      </span>
+                    </span>
+                    <span className="y-small y-num flex-none font-semibold">+{money(addon.price)}</span>
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      className="y-switch"
+                      checked={on}
+                      onChange={() => set({ addons: toggle(d.addons, addon.id) })}
+                    />
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="y-small y-fg-2">{creator.firstName} doesn&apos;t offer extras yet.</p>
+        )}
+      </div>
     </Question>
   );
 }

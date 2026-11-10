@@ -352,8 +352,8 @@ scripts by a native speaker.
   (`yapp-billing-details-v2`), saved sign-in accounts (`yapp-saved-accounts-v2`), the feed's
   position, the region chosen on More (`yapp-region-v1`, which changes only the footer and More
   text), Find work's last filters (sessionStorage).
-- **`V2/` still follows the rules from before stage 2** (10% fee on top, tier prices, add-ons, dark
-  mode). Nobody has updated it; this session did not touch it.
+- `V2/` was ported to the stage 2 rules on 11 Nov 2026 (its `lib/` synced from this repo at
+  `9e183d3`; see V2/CLAUDE.md, "Round 3 stage 2 port"). It keeps its own layouts and navigation.
 - Shown but not enforced, because the demo clock never moves: auto-approval, upload deadlines, the
   14-day campaign window, comments closing 30 days after completion, the reminders before
   auto-approval. Nothing in the interface can take a post down, so the "post removed" path is
@@ -393,7 +393,7 @@ scripts by a native speaker.
    refund period for unpicked slots after a campaign closes, and the 14-day window.
 2. From the sender: the abstract illustrations for confirmations and empty states; the designs for
    the brand's pitch-review and campaign-management screens; the design for ad copy writing.
-3. For the owner: the five service pages' copy; whether `V2/` should move to the stage 2 rules.
+3. For the owner: the five service pages' copy (V2 uses the same draft).
 4. The name: when "Yapping" is cleared, does interface copy change from "Yapp"?
 5. Still placeholders in `lib/taxonomy.tsx`: the penalty for repeated rejections
    (`CAMPAIGN_REJECTION_PENALTY`) and the maximum reassignments of one slot

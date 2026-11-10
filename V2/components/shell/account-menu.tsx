@@ -3,19 +3,17 @@
 import {
   ArrowLeftRight,
   CalendarCheck,
+  ChartNoAxesColumn,
   ChevronRight,
   CreditCard,
   ExternalLink,
   Heart,
   LogOut,
-  Moon,
   Package,
   PenLine,
   Repeat2,
   RotateCcw,
   Settings,
-  Sun,
-  UserX,
   Wallet,
 } from "lucide-react";
 import Link from "next/link";
@@ -123,17 +121,20 @@ function MenuButton({
 
 /**
  * Everything about the signed-in account: who you are, the mode switch, the pages that aren't in
- * the main navigation, theme, demo tools and log out. Rendered in the desktop avatar sheet and on
- * the phone's Me page (`/account`).
+ * the main navigation, demo tools and log out. Rendered in the desktop avatar sheet and on the
+ * phone's Me page (`/account`). Light only (dark mode is paused, round 3 answers item 49), and one
+ * "Log out" that asks first (item 57: "Log out and forget" is gone; a saved account is removed from
+ * this device on the sign-in screen).
  */
 export function AccountMenuBody({ mode, onNavigate }: { mode: Mode; onNavigate?: () => void }) {
   const s = useDemo();
   const router = useRouter();
   const pathname = usePathname();
   const toast = useToast();
-  const { isDark, toggleTheme, signIn, signOut } = usePrefs();
+  const { signIn, signOut } = usePrefs();
   const switchMode = useSwitchMode();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmLogOut, setConfirmLogOut] = useState(false);
   const account = me.account(s);
   const business = me.business(s);
   const member = me.member(s);
@@ -147,12 +148,15 @@ export function AccountMenuBody({ mode, onNavigate }: { mode: Mode; onNavigate?:
     signIn(accountId);
     onNavigate?.();
     const next = s.accounts.find((a) => a.id === accountId);
+    // A switched-to account starts in its own default mode (Nour: Ordering, Layla: Studio) on pages
+    // that don't set one, not in whatever mode it was last left in this tab.
+    if (next) rememberMode(next.id, defaultMode(next));
     toast({ message: `You're now ${next?.firstName ?? "signed in"} (demo)`, tone: "info" });
     if (next && !visibleTo(s, accountId, pathname)) router.push(homeFor(defaultMode(next)));
   };
 
-  const logOut = (forget: boolean) => {
-    signOut({ forget });
+  const logOut = () => {
+    signOut();
     onNavigate?.();
     router.push(paths.landing);
   };
@@ -228,13 +232,13 @@ export function AccountMenuBody({ mode, onNavigate }: { mode: Mode; onNavigate?:
         {links.map((link) => (
           <MenuLink key={link.href} {...link} onNavigate={onNavigate} />
         ))}
-        <MenuLink href={paths.settings()} icon={<Settings size={20} aria-hidden />} label="Settings" onNavigate={onNavigate} />
-        <MenuButton
-          icon={isDark ? <Sun size={20} aria-hidden /> : <Moon size={20} aria-hidden />}
-          label={isDark ? "Light mode" : "Dark mode"}
-          onClick={toggleTheme}
-          pressed={isDark}
+        <MenuLink
+          href={paths.productivity({ as: mode === "studio" ? "creator" : "brand" })}
+          icon={<ChartNoAxesColumn size={20} aria-hidden />}
+          label="Productivity"
+          onNavigate={onNavigate}
         />
+        <MenuLink href={paths.settings()} icon={<Settings size={20} aria-hidden />} label="Settings" onNavigate={onNavigate} />
       </nav>
 
       <Block tone="mist" className="flex flex-col p-1.5 !rounded-(--y-r-tile)">
@@ -282,20 +286,28 @@ export function AccountMenuBody({ mode, onNavigate }: { mode: Mode; onNavigate?:
         )}
       </Block>
 
-      <div className="flex flex-col">
+      {confirmLogOut ? (
+        <div className="y-tile flex flex-col gap-3 p-4" role="alert">
+          <p className="y-small">
+            Log out of {account.firstName}&apos;s account? It stays saved on this device for one-tap
+            sign in.
+          </p>
+          <div className="flex gap-2">
+            <PillButton variant="contrast" size="sm" onClick={logOut}>
+              Log out
+            </PillButton>
+            <PillButton variant="ghost" size="sm" onClick={() => setConfirmLogOut(false)}>
+              Stay signed in
+            </PillButton>
+          </div>
+        </div>
+      ) : (
         <MenuButton
           icon={<LogOut size={20} aria-hidden className="y-flip" />}
           label="Log out"
-          detail="Keeps this account saved for one-tap sign in"
-          onClick={() => logOut(false)}
+          onClick={() => setConfirmLogOut(true)}
         />
-        <MenuButton
-          icon={<UserX size={20} aria-hidden className="text-(--y-danger)" />}
-          label="Log out and forget this account"
-          detail="Removes it from this device"
-          onClick={() => logOut(true)}
-        />
-      </div>
+      )}
     </div>
   );
 }

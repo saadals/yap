@@ -8,27 +8,34 @@ import { PublicShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
 import { List, Row } from "@/components/ui/list";
 import { PillButton } from "@/components/ui/pill-button";
-import { money, moneyRange } from "@/lib/format";
+import { creatorNet, money, moneyExact } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessById, isCampaign, me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
-import { AUTO_APPROVE_DAYS, SERVICE_FEE_RATE, formatById } from "@/lib/taxonomy";
+import { AUTO_APPROVE_DAYS, FEE_PCT, formatById, formats, jobTypeById, languages, orderKinds } from "@/lib/taxonomy";
 
 import { Faq, type FaqItem, MarketingMain, Section, StepNumber, useStartLinks } from "./blocks";
 import { EarningsEstimator } from "./calculators";
+import { usageTerms } from "./faq-content";
+import { OpenWorkPrice } from "./open-work-price";
 import { MARKETING, campaignFacts, openOrders, sampleVideos } from "./platform";
 
-const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
 const CAMPAIGN = campaignFacts();
+
+const andList = (items: string[]) =>
+  items.length < 2 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+
+const NET_PCT = 100 - FEE_PCT;
+const example = { price: 140, net: creatorNet(140) };
 
 const faq: FaqItem[] = [
   {
     q: "Do I need a lot of followers?",
-    a: `Not for most work. Brands order videos for their own accounts and ads, so they look at your portfolio, your reviews and how reliably you deliver. UGC campaigns are different: they pay a fixed price per video by follower tier, starting at ${CAMPAIGN.floor} verified followers on the platform you'll post to.`,
+    a: `Not for custom orders. Brands order videos for their own accounts and ads, so they look at your portfolio, your reviews and how reliably you deliver. UGC campaigns are different: the brand sets one price per Yapp and a follower tier, starting at ${CAMPAIGN.floor} verified followers on the platform you'll post to. The tier only decides who can pick.`,
   },
   {
     q: "What's a UGC campaign?",
-    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at a fixed price per video (from ${money(CAMPAIGN.fromPrice)}). Slots go first come, first served. Take one, upload a review copy within the days the brand set, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
+    a: `A brand orders ${CAMPAIGN.minVideos} or more videos, one per creator, at one price per Yapp it sets (from ${money(CAMPAIGN.fromPrice)}, so you earn at least ${moneyExact(CAMPAIGN.fromNet)}). You see the price, what you earn and how the brand will use the video before you pick. Yapps go first come, first served: Pick now, choose the platform you'll post on, upload a review copy within the days the brand set, and once it's approved, post it on your own account with the brand's tag and the paid-partnership label.`,
   },
   {
     q: "How do you check my followers?",
@@ -40,16 +47,16 @@ const faq: FaqItem[] = [
   },
   {
     q: "What does Yapp charge creators?",
-    a: `Nothing. You keep 100% of your price and your add-ons, on every kind of order and on campaigns. The brand pays Yapp's ${FEE_PCT}% service fee on top.`,
+    a: `Yapp keeps ${FEE_PCT}% of every order, campaign Yapp, add-on and paid extra revision. It comes out of what you're paid: on a ${money(example.price)} video you earn ${moneyExact(example.net)}. The brand pays the listed price and nothing on top. You always see what you earn beside the price, before you pitch or pick.`,
   },
   {
     q: "When do I get paid?",
     a: (
       <>
         <p>
-          The brand&apos;s payment is secured when the work starts, before you film anything. It&apos;s
-          released to your earnings the moment they approve your video, or by itself {AUTO_APPROVE_DAYS}{" "}
-          days after you deliver if they don&apos;t respond.
+          The brand&apos;s payment is secured when the work starts, before you film anything. Your {NET_PCT}% is
+          released to your earnings the moment they approve your video, or by itself {AUTO_APPROVE_DAYS} days
+          after you deliver if they don&apos;t respond.
         </p>
         <p>
           Campaign pay works differently: after the brand approves your video, you post it, and the pay is
@@ -65,29 +72,33 @@ const faq: FaqItem[] = [
   },
   {
     q: "What if a brand keeps asking for changes?",
-    a: "Each package states how many revision rounds are included, and change requests have to point at what was agreed in the brief. Extra rounds are a paid add-on you price yourself. If you can't agree, Yapp support reviews the brief and the delivery and decides.",
+    a: "Two revisions are included on every order, and change requests point at comments on the version you delivered. After two rounds the brand can approve, agree a paid extra revision with you, or open a dispute. A person at Yapp replies within 48 hours and decides.",
   },
   {
     q: "What if a brand cancels after I've started?",
-    a: "Once you've delivered, a brand can't cancel; they can approve or ask for the revisions in your package. Before delivery, a cancellation needs your agreement or a decision from Yapp support, and work you've already done can be paid in part.",
+    a: "Once you've delivered, a brand can't cancel; they can approve or request the revisions that are included. Before delivery, a cancellation needs your agreement or a decision from Yapp, and work you've already done can be paid in part.",
   },
   {
     q: "Who owns the videos I make?",
-    a: "The brand can use the final video on their own accounts for good. Running it as a paid ad is a separate add-on that you price, for 90 days or 12 months. You can show the work in your portfolio unless the brand asks you to keep it private.",
+    a: `The brand picks how they'll use the video on every order: ${usageTerms()}. It's part of your price, with no separate rights fee, and you see it before you pitch or pick. The raw footage goes with the approved video. You can show the work in your Yapp portfolio unless the brand asks you to keep it private.`,
+  },
+  {
+    q: "Can I write ad copy instead of filming?",
+    a: `Yes. ${jobTypeById["ad-copy"].name} is a custom order like any other: pitch on it, deliver the text or a document, and get paid when the brand approves. There's no filming and no posting.`,
   },
   {
     q: "Which languages and formats can I offer?",
-    a: "English, Spanish, French, Arabic, Portuguese, Hindi, Korean and Chinese. List the languages you're natural in and the formats you're good at: app demos, screen walkthroughs, unboxings, problem → solution videos, comparisons, testimonials, talking heads, voiceovers and ad hook packs.",
+    a: `${andList(languages.map((l) => l.name))}. List the languages you're natural in and the formats you're good at: ${andList(formats.map((f) => f.name.toLowerCase()))}.`,
   },
 ];
 
 const steps = [
   { title: "Build your profile", body: "Your best videos, the languages you speak, the formats you make, and your own prices." },
   {
-    title: "Pitch, accept or take a slot",
-    body: `Pitch on briefs, accept direct orders, or take a UGC campaign slot once you have ${CAMPAIGN.floor}+ followers.`,
+    title: "Pitch, accept or pick",
+    body: `Pitch on custom orders, accept direct orders, or pick a Yapp in a UGC campaign once you have ${CAMPAIGN.floor}+ followers.`,
   },
-  { title: "Deliver and get paid", body: "Answer the brand's notes, and get paid when they approve." },
+  { title: "Deliver and get paid", body: `Answer the brand's comments, and get your ${NET_PCT}% when they approve.` },
 ];
 
 const payoutFlow = [
@@ -122,8 +133,8 @@ export function ForCreatorsPage() {
         </Section>
         <Section
           id="payouts"
-          title="You keep 100% of your price"
-          sub={`Brands pay Yapp's ${FEE_PCT}% fee on top. Campaign pay is released ${CAMPAIGN.releaseDays} days after we verify your post, as long as it's still up.`}
+          title={`You earn ${NET_PCT}% of every price`}
+          sub={`Yapp keeps ${FEE_PCT}%, taken from your side; the brand pays the listed price. On a ${money(example.price)} video you earn ${moneyExact(example.net)}. Campaign pay is released ${CAMPAIGN.releaseDays} days after we verify your post, as long as it's still up.`}
         >
           <div className="flex flex-col gap-3">
             <Block tone="paper" pad="lg">
@@ -217,14 +228,14 @@ function OpenWork() {
     <Section
       id="open"
       title="Open work right now"
-      sub="Real briefs and campaigns from tech brands, with the price stated up front."
+      sub="Real custom orders and campaigns from tech brands, with the price and what you earn up front."
       action={
         <PillButton href={start.make(paths.findWork())} variant="outline" size="sm" arrow>
           See all open work
         </PillButton>
       }
     >
-      <List label="Open briefs and campaigns">
+      <List label="Open custom orders and campaigns">
         {open.map((request) => {
           const business = businessById(s, request.businessId);
           return (
@@ -233,14 +244,8 @@ function OpenWork() {
               href={start.make(paths.order(request.id))}
               lead={business ? <BusinessLogo business={business} size={40} /> : undefined}
               title={request.title}
-              meta={`${business?.name ?? "A brand"} · ${isCampaign(request) ? "UGC campaign" : formatById[request.brief.format]?.name}`}
-              end={
-                <span className="y-small y-num font-semibold">
-                  {isCampaign(request) && request.campaign
-                    ? `${money(request.campaign.pricePerVideo)} a video`
-                    : moneyRange(request.budget.min, request.budget.max)}
-                </span>
-              }
+              meta={`${business?.name ?? "A brand"} · ${isCampaign(request) ? orderKinds.campaign.name : formatById[request.brief.format]?.name}`}
+              end={<OpenWorkPrice request={request} />}
             />
           );
         })}

@@ -4,7 +4,9 @@ import {
   Ban,
   FileText,
   History,
+  Inbox,
   Link2,
+  Paperclip,
   Pencil,
   RotateCcw,
   Send,
@@ -26,27 +28,29 @@ import { PillButton } from "@/components/ui/pill-button";
 import { KeyValues } from "@/components/ui/progress";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { lengthLabel, money, moneyRange, plural, shortDate, timeAgoInline, weekdayDate } from "@/lib/format";
+import { lengthLabel, money, moneyRange, plural, quoted, shortDate, timeAgoInline, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { pitchesForRequest, productById, videoById } from "@/lib/selectors";
+import { isAdCopy, pitchesForRequest, productById, videoById } from "@/lib/selectors";
 import { absoluteUrl } from "@/lib/site";
 import { actions, useDemo } from "@/lib/store";
-import { addonById, formatById, languageById, platformById } from "@/lib/taxonomy";
+import { addonById, formatById } from "@/lib/taxonomy";
 import type { ContentRequest, Video } from "@/lib/types";
 
 import { CompareView } from "./compare";
 import { HireSheet } from "./hire-sheet";
-import { BarSpacer, MobileBar, OverflowMenu, RailSection, type MenuItem } from "./parts";
+import { BarSpacer, MetaLine, MobileBar, OverflowMenu, RailSection, type MenuItem } from "./parts";
 import { PitchCard } from "./pitch-card";
 import { MessageSheet, PitchSheet, SampleSheet } from "./pitch-sheet";
-import { BriefSheet, CloseRequestSheet, DeleteDraftSheet, EditRequestSheet, InviteSheet } from "./request-sheets";
+import { BriefExtras, BriefSheet, CloseRequestSheet, DeleteDraftSheet, EditRequestSheet, InviteSheet } from "./request-sheets";
 import {
-  deliverableLabel,
+  briefFacts,
+  deadlineLabel,
   isInRunning,
   isUndecided,
   rankPitches,
   sortLabels,
   sortPitches,
+  usageName,
   type PitchSort,
   type RankedPitch,
 } from "./shared";
@@ -62,10 +66,12 @@ type Overlay =
   | { kind: "invite" | "edit" | "close" | "delete" | "brief" };
 
 /**
- * The owner's view of a custom request ("Get pitches"): a shortlist board of pitch cards (New ·
- * Shortlist · All · Declined), the full pitch in a side sheet, compare the shortlist side by side,
- * and hire into a held payment. Side rail: the brief, the product and its learnings, who can pitch.
- * `?pitch=<id>` opens that pitch (Home's "Decide on Nina's pitch").
+ * The owner's view of a custom order: a shortlist board of pitch cards (New · Shortlist · All ·
+ * Declined), the full pitch in a side sheet, compare the shortlist side by side, and hire into a
+ * held payment (the pitch's listed price, nothing on top). Works for both job types: video, and
+ * ad copy writing (written pitches, no video facts). The header says once when the order closes
+ * and the delivery deadline the brand set. Side rail: the brief, the product and its learnings,
+ * who can pitch. `?pitch=<id>` opens that pitch (Home's "Decide on Nina's pitch").
  */
 export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const s = useDemo();
@@ -138,6 +144,7 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
             : true,
     ),
     sort,
+    request,
   );
   // "All": hired first, declined last.
   const ordered =
@@ -152,6 +159,7 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const shortlist = sortPitches(
     ranked.filter((r) => r.pitch.status === "shortlisted"),
     sort,
+    request,
   );
   const showCompare = comparing && shortlist.length >= 2;
   const hired = ranked.filter((r) => r.pitch.status === "hired");
@@ -218,10 +226,19 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const openHire = (id: string) => push({ kind: "hire", id });
 
   /* --------------------------------------------------------- header bits */
-  const format = formatById[request.brief.format];
-  const meta = [product?.name, format.name, moneyRange(request.budget.min, request.budget.max), `Due ${weekdayDate(request.dueDate)}`]
-    .filter(Boolean)
-    .join(" · ");
+  // Said once, here: what it is, the budget, when it stops taking pitches, the delivery deadline.
+  const beforeHire = request.status === "open" || request.status === "draft";
+  const meta = (
+    <MetaLine
+      items={[
+        product?.name,
+        isAdCopy(request) ? "Ad copy writing" : formatById[request.brief.format].name,
+        moneyRange(request.budget.min, request.budget.max),
+        request.status === "open" ? `Closes ${weekdayDate(request.closesAt)}` : null,
+        beforeHire ? deadlineLabel(request, weekdayDate) : null,
+      ]}
+    />
+  );
 
   const menu: MenuItem[] = isDraft
     ? [
@@ -273,7 +290,7 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
         description={
           <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <RequestBadge status={request.status} />
-            <span>{meta}</span>
+            {meta}
           </span>
         }
         actions={
@@ -368,6 +385,7 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
                 <p className="y-small y-fg-2">The brief as it will be posted.</p>
               </div>
               <BriefSummary brief={request.brief} product={product} />
+              <BriefExtras brief={request.brief} />
             </Block>
           ) : showCompare ? (
             <CompareView
@@ -389,11 +407,9 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
                 body={
                   request.status === "open"
                     ? "Creators who match usually pitch within a day. Invite a few who fit to hear back sooner."
-                    : "Reopen the order, or invite creators directly to get pitches."
+                    : "Reopen the order, or invite creators directly to hear from them."
                 }
-                shape="ball"
-                tint="sea"
-                face="focus"
+                icon={<Inbox size={22} />}
                 action={
                   request.status === "open" ? (
                     <PillButton variant="neon" icon={<UserPlus size={16} aria-hidden />} onClick={() => push({ kind: "invite" })}>
@@ -476,9 +492,6 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
                           ? "You've read every pitch. New ones show up here the moment they arrive."
                           : "Pitches you decline move here, and you can reconsider them any time."
                     }
-                    shape="gem"
-                    tint="sun"
-                    face="smile"
                     action={
                       <PillButton variant="outline" onClick={() => setTabChoice("all")}>
                         See all pitches
@@ -559,25 +572,61 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
 
 function BriefCard({ request, onOpen }: { request: ContentRequest; onOpen: () => void }) {
   const b = request.brief;
-  const facts = [
-    deliverableLabel(b.format, b.videoCount),
-    `up to ${lengthLabel(b.durationSec)}`,
-    b.languages.map((id) => languageById[id].name).join(", "),
-    b.platforms.map((id) => platformById[id].short).join(", "),
-  ].join(" · ");
+  const adCopy = isAdCopy(request);
+  const files = b.attachments?.length ?? 0;
   return (
     <Block as="section" aria-labelledby="brief-h" tone="paper" pad="md" className="flex flex-col gap-3">
       <h2 id="brief-h" className="y-head">
         The brief
       </h2>
       <p className="y-small font-medium">{b.keyMessage}</p>
-      <p className="y-micro y-fg-2">{facts}</p>
-      {b.mustInclude.length ? (
-        <p className="y-micro y-fg-2">
-          {plural(b.mustInclude.length, "must-include")}
-          {b.avoid.length ? ` · ${plural(b.avoid.length, "thing", "things")} to avoid` : ""}
+      <p className="y-micro y-fg-2">{briefFacts(request, lengthLabel)}</p>
+      {adCopy && b.copy?.pieces.length ? (
+        <ul className="flex flex-col gap-1" aria-label="What to write">
+          {b.copy.pieces.map((piece) => (
+            <li key={piece} className="y-small flex gap-2">
+              <span aria-hidden className="mt-[7px] size-1.5 flex-none rounded-full bg-current" />
+              <span className="min-w-0">{piece}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {b.hook ? (
+        <p className="y-small y-fg-2" dir="auto">
+          {adCopy ? "Opening line: " : "Hook: "}
+          <span className="text-(--b-fg)">{quoted(b.hook)}</span>
         </p>
       ) : null}
+      <KeyValues
+        rows={[
+          { label: "Usage", value: `${usageName(request)}, included` },
+          ...(b.mustInclude.length || b.avoid.length
+            ? [
+                {
+                  label: "Guardrails",
+                  value: [
+                    b.mustInclude.length ? plural(b.mustInclude.length, "must-include") : null,
+                    b.avoid.length ? `${b.avoid.length} to avoid` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · "),
+                },
+              ]
+            : []),
+          ...(files
+            ? [
+                {
+                  label: (
+                    <span className="inline-flex items-center gap-1">
+                      <Paperclip size={13} aria-hidden /> Attached
+                    </span>
+                  ),
+                  value: plural(files, "file"),
+                },
+              ]
+            : []),
+        ]}
+      />
       <PillButton variant="outline" size="sm" className="w-fit" icon={<FileText size={14} aria-hidden />} onClick={onOpen}>
         Show full brief
       </PillButton>

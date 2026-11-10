@@ -15,10 +15,22 @@
       "text": "Review the offer"
     },
     {
+      "text": "$480 · you earn $384"
+    },
+    {
       "text": "Available to withdraw"
     },
     {
+      "text": "What you receive, after the 20% Yapp fee"
+    },
+    {
       "text": "Work that fits you"
+    },
+    {
+      "text": "you earn $160–280"
+    },
+    {
+      "notText": "100%: "
     },
     {
       "shot": "studio-work-today",
@@ -32,25 +44,52 @@
       "text": "Find work"
     },
     {
+      "text": "Custom order"
+    },
+    {
+      "text": "UGC campaign"
+    },
+    {
       "text": "Show us your first invoice on WhatsApp"
     },
     {
-      "click": "Campaigns"
+      "text": "$120 a Yapp"
     },
     {
-      "text": "You qualify: 18.4K verified followers on TikTok"
+      "text": "you earn $96"
     },
     {
-      "text": "Needs 20K–50K verified followers on Instagram"
+      "text": "Pick now · 3 of 10 left"
+    },
+    {
+      "text": "Pays on time 100%"
+    },
+    {
+      "text": "Closes Nov 16"
+    },
+    {
+      "notText": "Take a slot"
+    },
+    {
+      "click": "UGC campaign"
+    },
+    {
+      "text": "You qualify on TikTok"
+    },
+    {
+      "text": "Needs 20K–50K verified followers on Instagram (you have 9.1K)"
     },
     {
       "notText": "Skit: 'Is this still available?'"
     },
     {
+      "eval": "!document.querySelector('select[aria-label=\"Job type\"]')"
+    },
+    {
       "click": "All"
     },
     {
-      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Format\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, 'app-demo'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
+      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Job type\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, 'ad-copy'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
     },
     {
       "wait": 900
@@ -59,10 +98,52 @@
       "eval": "location.search"
     },
     {
+      "text": "Ad copy: App Store text and three Meta ads for Brindle Ring"
+    },
+    {
+      "text": "Ad copy writing · English · 3 pieces"
+    },
+    {
+      "notText": "App demo: plan 30 drops in one tap"
+    },
+    {
+      "notText": "Show us your first invoice on WhatsApp"
+    },
+    {
+      "eval": "!document.querySelector('select[aria-label=\"Format\"]')"
+    },
+    {
+      "shot": "studio-work-find-adcopy"
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Job type\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, 'video'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
+    },
+    {
+      "wait": 900
+    },
+    {
+      "notText": "Ad copy: App Store text and three Meta ads for Brindle Ring"
+    },
+    {
+      "text": "App demo: plan 30 drops in one tap"
+    },
+    {
+      "click": "Clear"
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('select[aria-label=\"Format\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, 'app-demo'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
+    },
+    {
+      "wait": 900
+    },
+    {
       "text": "App demo: plan 30 drops in one tap"
     },
     {
       "notText": "Skit: 'Is this still available?'"
+    },
+    {
+      "notText": "Ad copy: App Store text"
     },
     {
       "eval": "(() => { const el = document.querySelector('select[aria-label=\"Minimum pay\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, '300'); el.dispatchEvent(new Event('change', { bubbles: true })); return true; })()"
@@ -102,6 +183,51 @@
       "full": true
     },
     {
+      "click": "Pick now · 2 of 10 left"
+    },
+    {
+      "text": "Pick a Yapp from Roundleaf?"
+    },
+    {
+      "text": "$100 for 1 Yapp at $125, after the 20% Yapp fee"
+    },
+    {
+      "text": "Upload your review copy within 7 days, by Wed, Nov 11"
+    },
+    {
+      "text": "Your TikTok, tagging @roundleaf.money"
+    },
+    {
+      "text": "Paid ads · 6 months, included in the price"
+    },
+    {
+      "shot": "studio-work-row-pick"
+    },
+    {
+      "click": "I'll post it on TikTok"
+    },
+    {
+      "click": "Pick now · 2 of 10 left"
+    },
+    {
+      "wait": 1300
+    },
+    {
+      "text": "The slot is yours"
+    },
+    {
+      "text": "Open the job"
+    },
+    {
+      "click": "Stay on this page"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "text": "Your Yapp · due Nov 11"
+    },
+    {
       "go": "/orders/r-101",
       "after": 3000
     },
@@ -115,10 +241,22 @@
       "text": "1 app demo in your portfolio"
     },
     {
-      "text": "Reviews in about 9h"
+      "text": "You'd earn $160–280"
     },
     {
-      "click": "Pitch"
+      "text": "How Daftar works with creators"
+    },
+    {
+      "text": "Review speed"
+    },
+    {
+      "text": "Shares results"
+    },
+    {
+      "notText": "Rating 4"
+    },
+    {
+      "click": "Pitch now"
     },
     {
       "text": "Pitch to Daftar"
@@ -136,7 +274,13 @@
       }
     },
     {
-      "text": "You keep 100%"
+      "text": "You earn $280"
+    },
+    {
+      "text": "Daftar pays $350, nothing on top"
+    },
+    {
+      "notText": "You keep 100%"
     },
     {
       "shot": "studio-work-composer"
@@ -149,6 +293,9 @@
     },
     {
       "text": "Your pitch"
+    },
+    {
+      "text": "$350 · you earn $280"
     },
     {
       "text": "Sent. Daftar usually replies within a day"
@@ -200,6 +347,101 @@
       "text": "Open the conversation"
     },
     {
+      "go": "/orders/r-213",
+      "after": 3000
+    },
+    {
+      "text": "Ad copy writing"
+    },
+    {
+      "text": "Opening line from Brindle"
+    },
+    {
+      "text": "Start with how you feel at 7 a.m., not with the ring."
+    },
+    {
+      "text": "What to write"
+    },
+    {
+      "text": "Where it runs"
+    },
+    {
+      "text": "Paid ads · 6 months"
+    },
+    {
+      "text": "Brindle brand voice.docx"
+    },
+    {
+      "text": "You'll have 5 days to deliver after you're hired"
+    },
+    {
+      "text": "Pitch by"
+    },
+    {
+      "text": "You'd earn $120–200"
+    },
+    {
+      "shot": "studio-work-adcopy",
+      "full": true
+    },
+    {
+      "click": "Download Brindle brand voice.docx"
+    },
+    {
+      "text": "Files are simulated in this demo"
+    },
+    {
+      "click": "Pitch now"
+    },
+    {
+      "text": "Your headline idea"
+    },
+    {
+      "text": "Brindle set it: you'll have 5 days to deliver after you're hired"
+    },
+    {
+      "text": "A short writing sample"
+    },
+    {
+      "notText": "First version in"
+    },
+    {
+      "click": "Lead with the moment everyone knows"
+    },
+    {
+      "type": {
+        "sel": "[data-pitch-field=\"message\"] textarea",
+        "text": "Hi Brindle team, I'm Layla. I'd write this for the person checking their phone before their feet hit the floor: short lines, no medical words, and the free trial in every call to action."
+      }
+    },
+    {
+      "type": {
+        "sel": "[data-pitch-field=\"samples\"] textarea",
+        "text": "Headline: Push or rest? Ask your morning. Primary text: One score when you wake up, and one plain reason behind it."
+      }
+    },
+    {
+      "text": "You earn $160"
+    },
+    {
+      "shot": "studio-work-adcopy-composer"
+    },
+    {
+      "click": "Send pitch · $200"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "text": "Your pitch"
+    },
+    {
+      "text": "$200 · you earn $160"
+    },
+    {
+      "text": "Writing sample:"
+    },
+    {
       "go": "/orders/r-102",
       "after": 2500
     },
@@ -235,7 +477,7 @@
       "text": "Pitch withdrawn"
     },
     {
-      "text": "Pitch"
+      "text": "Pitch now"
     },
     {
       "go": "/studio/work",
@@ -252,31 +494,58 @@
       "text": "Show us your first invoice on WhatsApp"
     },
     {
-      "text": "You qualify: 18.4K verified followers on TikTok"
+      "text": "a Yapp, set by Daftar"
     },
     {
-      "text": "3 of 10 slots left"
+      "text": "You earn $96"
     },
     {
-      "click": "Take a slot"
+      "text": "7 of 10 picked"
+    },
+    {
+      "text": "Who can pick"
+    },
+    {
+      "text": "18.4K verified followers · you qualify"
+    },
+    {
+      "text": "Paid ads · 12 months"
+    },
+    {
+      "text": "How Daftar works with creators"
+    },
+    {
+      "click": "Pick now · 3 of 10 left"
+    },
+    {
+      "text": "Pick a Yapp from Daftar?"
     },
     {
       "text": "Upload your review copy within 5 days, by Mon, Nov 9"
     },
     {
+      "text": "$96 for 1 Yapp at $120"
+    },
+    {
       "shot": "studio-work-take-sheet"
     },
     {
-      "click": "I'll post with the tag"
+      "click": "Pick now · 3 of 10 left"
     },
     {
-      "click": "Take the slot"
+      "text": "Tick the box to agree to the posting rule."
     },
     {
-      "wait": 1200
+      "click": "I'll post it on TikTok"
     },
     {
-      "text": "Slot 8 is yours"
+      "click": "Pick now · 3 of 10 left"
+    },
+    {
+      "wait": 1300
+    },
+    {
+      "text": "The slot is yours"
     },
     {
       "click": "Open the job"
@@ -301,14 +570,17 @@
       "text": "Your Yapp · due Nov 9"
     },
     {
-      "text": "You have slot 8."
+      "text": "You hold slot 8, posting on TikTok."
     },
     {
       "go": "/studio/work?kind=campaign",
       "after": 2500
     },
     {
-      "text": "Your slot · due Nov 9"
+      "text": "Your Yapp · due Nov 9"
+    },
+    {
+      "text": "Your Yapp · due Nov 11"
     },
     {
       "go": "/orders/r-252",
@@ -318,7 +590,10 @@
       "text": "Your verified followers are below this tier"
     },
     {
-      "notText": "Take a slot"
+      "text": "9.1K verified followers, below 20K–50K"
+    },
+    {
+      "notText": "Pick now"
     },
     {
       "account": "nour"
@@ -331,7 +606,10 @@
       "text": "Make videos for tech brands, from this account"
     },
     {
-      "text": "You keep 100% of your price"
+      "text": "See what you earn up front"
+    },
+    {
+      "notText": "You keep 100%"
     },
     {
       "text": "are open right now"
@@ -340,19 +618,51 @@
       "shot": "studio-work-welcome"
     },
     {
+      "go": "/studio/work",
+      "after": 3000
+    },
+    {
+      "text": "Set up your creator profile to pitch and pick"
+    },
+    {
+      "notText": "Show us your first invoice on WhatsApp"
+    },
+    {
+      "notText": "Screen walkthrough for Daftar Stock"
+    },
+    {
+      "text": "Open your shop on Souqly in one coffee"
+    },
+    {
+      "go": "/studio",
+      "after": 3000
+    },
+    {
       "click": "Set up your creator profile"
     },
     {
       "text": "Create my creator profile"
     },
     {
+      "text": "What you make"
+    },
+    {
       "click": "App demo"
+    },
+    {
+      "click": "Ad copy writing"
+    },
+    {
+      "type": {
+        "sel": "#creator-setup-form input[placeholder=\"yourhandle\"]",
+        "text": "nourmade"
+      }
     },
     {
       "click": "Create my creator profile"
     },
     {
-      "wait": 1200
+      "wait": 4000
     },
     {
       "text": "Good morning, Nour"
@@ -363,6 +673,107 @@
     {
       "shot": "studio-work-nour-today",
       "full": true
+    },
+    {
+      "go": "/orders/r-251",
+      "after": 3000
+    },
+    {
+      "text": "Open your shop on Souqly in one coffee"
+    },
+    {
+      "text": "Creators with 10K–20K verified followers on TikTok or Instagram"
+    },
+    {
+      "text": "15K verified followers · you qualify"
+    },
+    {
+      "text": "Not connected yet"
+    },
+    {
+      "click": "Connect"
+    },
+    {
+      "text": "Connect your Instagram"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input",
+        "text": "nourmade"
+      }
+    },
+    {
+      "click": "Connect Instagram"
+    },
+    {
+      "wait": 2600
+    },
+    {
+      "text": "Verified: 16.4K real followers on Instagram"
+    },
+    {
+      "click": "Done"
+    },
+    {
+      "wait": 600
+    },
+    {
+      "text": "16.4K verified followers · you qualify"
+    },
+    {
+      "click": "Pick now · 13 of 15 left"
+    },
+    {
+      "text": "Where you'll post"
+    },
+    {
+      "text": "tag @souqly.shop"
+    },
+    {
+      "click": "Instagram"
+    },
+    {
+      "text": "I'll post it on Instagram with the tag"
+    },
+    {
+      "shot": "studio-work-pick-platform"
+    },
+    {
+      "click": "I'll post it on Instagram"
+    },
+    {
+      "click": "Pick now · 13 of 15 left"
+    },
+    {
+      "wait": 1300
+    },
+    {
+      "text": "The slot is yours"
+    },
+    {
+      "text": "post it on your Instagram"
+    },
+    {
+      "click": "Open the job"
+    },
+    {
+      "wait": 2500
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Open your shop on Souqly in one coffee"
+    },
+    {
+      "go": "/orders/r-251",
+      "after": 2500
+    },
+    {
+      "text": "You hold slot 3, posting on Instagram."
+    },
+    {
+      "text": "Post on your own Instagram, tagging @souqly.shop"
     }
   ]
 }

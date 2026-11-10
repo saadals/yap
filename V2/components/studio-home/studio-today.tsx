@@ -4,6 +4,8 @@ import { ArrowRight, Sparkles, Wallet } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { CreatorSetupSheet } from "@/components/account/creator-setup-sheet";
+
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { campaignStageIndex, stageIndex } from "@/components/domain/stage-track";
 import { CommissionBadge, SlotBadge } from "@/components/domain/status-badge";
@@ -15,7 +17,7 @@ import { ProgressBar } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { attention, type AttentionItem } from "@/lib/attention";
 import { NOW, TZ_OFFSET } from "@/lib/clock";
-import { dueLabel, money, plural, shortDate } from "@/lib/format";
+import { dueLabel, moneyExact, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
   businessById,
@@ -27,6 +29,7 @@ import {
   pitchesForCreator,
 } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
+import { CAMPAIGN_RELEASE_DAYS, FEE_PCT } from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
 import { WorkList, WorkRow } from "@/components/find-work/work-row";
@@ -49,18 +52,36 @@ function greeting(): string {
 const dueSoon = (c?: Commission) => Boolean(c && dueLabel(c.dueDate).urgency !== "ok");
 
 /**
- * Studio Home ("Today"): what needs you, money, what's in progress and work that fits you. At most
- * five blocks; each job appears once (a version due soon is in Needs you, later ones in progress).
- * Without a creator profile it's the Studio welcome, which sets one up.
+ * Studio Home ("Today"): what needs you (from `attention()`), money (all net: what you receive after
+ * Yapp's 20%), what's in progress and work that fits you. At most five blocks; each job appears once
+ * (a version due soon is in Needs you, later ones in progress). Without a creator profile it's the
+ * Studio welcome, which sets one up.
  */
 export function StudioToday() {
   const s = useDemo();
   const hydrated = useHydrated();
   const [showAll, setShowAll] = useState(false);
+  const [setupOpen, setSetupOpen] = useState(false);
 
   if (!hydrated) return <TodaySkeleton />;
   const creator = me.creator(s);
-  if (!creator) return <StudioWelcome />;
+  // The setup sheet sits beside the page in the same place either way, so it stays open (and
+  // finishes connecting TikTok) while the welcome turns into Today behind it.
+  const setup = (
+    <CreatorSetupSheet
+      open={setupOpen}
+      reason="to make videos in Studio"
+      onClose={() => setSetupOpen(false)}
+      onDone={() => setSetupOpen(false)}
+    />
+  );
+  if (!creator)
+    return (
+      <>
+        <StudioWelcome onSetUp={() => setSetupOpen(true)} />
+        {setup}
+      </>
+    );
 
   const items = attention(s, "creator");
   const needs = items.filter(
@@ -90,129 +111,149 @@ export function StudioToday() {
   const shown = showAll ? needs : needs.slice(0, NEEDS_SHOWN);
 
   return (
-    <Page>
-      <PageHeader
-        title={`${greeting()}, ${creator.firstName}`}
-        description={fresh ? "Your creator profile is live. Here's work that fits you." : `${summary}.`}
-      />
+    <>
+      <Page>
+        <PageHeader
+          title={`${greeting()}, ${creator.firstName}`}
+          description={fresh ? "Your creator profile is live. Here's work that fits you." : `${summary}.`}
+        />
 
-      <div className="grid grid-cols-1 gap-x-4 gap-y-8 lg:grid-cols-12 lg:items-start [&>*]:min-w-0">
-        {/* Needs you */}
-        <section aria-labelledby="needs-h" className="flex flex-col gap-3 lg:col-span-8">
-          <h2 id="needs-h" className="y-head">
-            Needs you
-          </h2>
-          {needs.length ? (
-            <div data-tone="paper" className="y-block overflow-hidden">
-              <div role="list" aria-label="Needs you" className="y-list">
-                {shown.map((item, index) =>
-                  index === 0 ? <TopRow key={`${item.kind}-${item.href}`} item={item} /> : <NeedRow key={`${item.kind}-${item.href}`} item={item} />,
-                )}
-              </div>
-              {needs.length > NEEDS_SHOWN ? (
-                <div className="border-t border-(--b-line) px-5 py-2">
-                  <button type="button" className="y-small min-h-10 font-semibold" onClick={() => setShowAll((v) => !v)} aria-expanded={showAll}>
-                    {showAll ? "Show fewer" : `Show ${plural(needs.length - NEEDS_SHOWN, "more item")}`}
-                  </button>
+        <div className="grid grid-cols-1 gap-x-4 gap-y-8 lg:grid-cols-12 lg:items-start [&>*]:min-w-0">
+          {/* Needs you */}
+          <section aria-labelledby="needs-h" className="flex flex-col gap-3 lg:col-span-8">
+            <h2 id="needs-h" className="y-head">
+              Needs you
+            </h2>
+            {needs.length ? (
+              <div data-tone="paper" className="y-block overflow-hidden">
+                <div role="list" aria-label="Needs you" className="y-list">
+                  {shown.map((item, index) =>
+                    index === 0 ? (
+                      <TopRow key={`${item.kind}-${item.href}`} item={item} />
+                    ) : (
+                      <NeedRow key={`${item.kind}-${item.href}`} item={item} />
+                    ),
+                  )}
                 </div>
-              ) : null}
-            </div>
-          ) : (
-            <Block tone="paper" pad="md" className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="y-body">
-                {fresh
-                  ? "Nothing here yet. Your first job starts with a pitch or a campaign slot."
-                  : "You're all caught up. Nothing is waiting on you."}
-              </p>
-              <PillButton href={paths.findWork()} variant="neon" arrow className="flex-none">
-                Find work
-              </PillButton>
-            </Block>
-          )}
-        </section>
-
-        {/* Money (and the profile nudge): the side column on desktop, after Needs you on phones */}
-        <aside aria-label="Money" className="flex flex-col gap-3 lg:col-span-4 lg:col-start-9 lg:row-span-3 lg:row-start-1">
-          <h2 className="y-head lg:invisible" aria-hidden>
-            Money
-          </h2>
-          <Block tone="paper" pad="md" className="flex flex-col gap-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex flex-col gap-1">
-                <p className="y-micro y-fg-2">Available to withdraw</p>
-                <p className="y-display y-num text-[36px] leading-none font-normal tracking-[-0.03em]">
-                  {money(earnings.available)}
-                </p>
+                {needs.length > NEEDS_SHOWN ? (
+                  <div className="border-t border-(--b-line) px-5 py-2">
+                    <button
+                      type="button"
+                      className="y-small min-h-10 font-semibold"
+                      onClick={() => setShowAll((v) => !v)}
+                      aria-expanded={showAll}
+                    >
+                      {showAll ? "Show fewer" : `Show ${plural(needs.length - NEEDS_SHOWN, "more item")}`}
+                    </button>
+                  </div>
+                ) : null}
               </div>
-              <span className="grid size-10 flex-none place-items-center rounded-full bg-(--y-mist)" aria-hidden>
-                <Wallet size={18} />
-              </span>
-            </div>
-            <MoneyLines earnings={earnings} />
-            <Link href={paths.earnings} className="y-small inline-flex w-fit items-center gap-1.5 font-semibold">
-              Earnings <ArrowRight size={15} aria-hidden className="y-flip" />
-            </Link>
-          </Block>
-          {gap ? (
-            <Link
-              href={gap.href}
-              className="y-tile flex items-center gap-3 px-4 py-3 transition-shadow hover:shadow-[inset_0_0_0_1px_var(--y-line-strong)]"
-            >
-              <Sparkles size={16} aria-hidden className="flex-none" />
-              <span className="y-small min-w-0 flex-1">
-                <span className="font-semibold">Stronger profile: </span>
-                {gap.text}
-              </span>
-              <ArrowRight size={15} aria-hidden className="y-flip flex-none" />
-            </Link>
-          ) : null}
-        </aside>
+            ) : (
+              <Block
+                tone="paper"
+                pad="md"
+                className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <p className="y-body">
+                  {fresh
+                    ? "Nothing here yet. Your first job starts with a pitch on a custom order, or a Yapp you pick on a UGC campaign."
+                    : "You're all caught up. Nothing is waiting on you."}
+                </p>
+                <PillButton href={paths.findWork()} variant="neon" arrow className="flex-none">
+                  Find work
+                </PillButton>
+              </Block>
+            )}
+          </section>
 
-        {/* In progress */}
-        {inProgress.length ? (
-          <section aria-labelledby="progress-h" className="flex flex-col gap-3 lg:col-span-8">
+          {/* Money (and the profile nudge): the side column on desktop, after Needs you on phones */}
+          <aside
+            aria-label="Money"
+            className="flex flex-col gap-3 lg:col-span-4 lg:col-start-9 lg:row-span-3 lg:row-start-1"
+          >
+            <h2 className="y-head lg:invisible" aria-hidden>
+              Money
+            </h2>
+            <Block tone="paper" pad="md" className="flex flex-col gap-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <p className="y-micro y-fg-2">Available to withdraw</p>
+                  <p className="y-display y-num text-[36px] leading-none font-normal tracking-[-0.03em]">
+                    {moneyExact(earnings.available)}
+                  </p>
+                  <p className="y-micro y-fg-2">What you receive, after the {FEE_PCT}% Yapp fee</p>
+                </div>
+                <span className="grid size-10 flex-none place-items-center rounded-full bg-(--y-mist)" aria-hidden>
+                  <Wallet size={18} />
+                </span>
+              </div>
+              <MoneyLines earnings={earnings} />
+              <Link href={paths.earnings} className="y-small inline-flex w-fit items-center gap-1.5 font-semibold">
+                Earnings <ArrowRight size={15} aria-hidden className="y-flip" />
+              </Link>
+            </Block>
+            {gap ? (
+              <Link
+                href={gap.href}
+                className="y-tile flex items-center gap-3 px-4 py-3 transition-shadow hover:shadow-[inset_0_0_0_1px_var(--y-line-strong)]"
+              >
+                <Sparkles size={16} aria-hidden className="flex-none" />
+                <span className="y-small min-w-0 flex-1">
+                  <span className="font-semibold">Stronger profile: </span>
+                  {gap.text}
+                </span>
+                <ArrowRight size={15} aria-hidden className="y-flip flex-none" />
+              </Link>
+            ) : null}
+          </aside>
+
+          {/* In progress */}
+          {inProgress.length ? (
+            <section aria-labelledby="progress-h" className="flex flex-col gap-3 lg:col-span-8">
+              <div className="flex items-center justify-between gap-3">
+                <h2 id="progress-h" className="y-head">
+                  In progress
+                </h2>
+                <Link href={paths.studioJobs()} className="y-small font-semibold">
+                  All jobs
+                </Link>
+              </div>
+              <List label="In progress">
+                {inProgress.map((c) => (
+                  <JobRow key={c.id} commission={c} />
+                ))}
+              </List>
+            </section>
+          ) : null}
+
+          {/* Work that fits you */}
+          <section aria-labelledby="fits-h" className="flex flex-col gap-3 lg:col-span-8">
             <div className="flex items-center justify-between gap-3">
-              <h2 id="progress-h" className="y-head">
-                In progress
+              <h2 id="fits-h" className="y-head">
+                Work that fits you
               </h2>
-              <Link href={paths.studioJobs()} className="y-small font-semibold">
-                All jobs
+              <Link href={paths.findWork()} className="y-small font-semibold">
+                Find work
               </Link>
             </div>
-            <List label="In progress">
-              {inProgress.map((c) => (
-                <JobRow key={c.id} commission={c} />
-              ))}
-            </List>
+            {fits.length ? (
+              <WorkList label="Work that fits you">
+                {fits.map((item) => (
+                  <WorkRow key={item.id} item={item} compact />
+                ))}
+              </WorkList>
+            ) : (
+              <Block tone="paper" pad="md">
+                <p className="y-small y-fg-2">
+                  Nothing new fits right now. New custom orders and UGC campaigns come in every week.
+                </p>
+              </Block>
+            )}
           </section>
-        ) : null}
-
-        {/* Work that fits you */}
-        <section aria-labelledby="fits-h" className="flex flex-col gap-3 lg:col-span-8">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="fits-h" className="y-head">
-              Work that fits you
-            </h2>
-            <Link href={paths.findWork()} className="y-small font-semibold">
-              Find work
-            </Link>
-          </div>
-          {fits.length ? (
-            <WorkList label="Work that fits you">
-              {fits.map((item) => (
-                <WorkRow key={item.id} item={item} compact />
-              ))}
-            </WorkList>
-          ) : (
-            <Block tone="paper" pad="md">
-              <p className="y-small y-fg-2">
-                Nothing new fits right now. New briefs and campaigns come in every week.
-              </p>
-            </Block>
-          )}
-        </section>
-      </div>
-    </Page>
+        </div>
+      </Page>
+      {setup}
+    </>
   );
 }
 
@@ -221,10 +262,10 @@ function MoneyLines({ earnings }: { earnings: ReturnType<typeof creatorEarnings>
   const lines = [
     earnings.pending
       ? next
-        ? `${money(earnings.pending)} pending · next release ${shortDate(next.withdrawableFrom!)}`
-        : `${money(earnings.pending)} pending · released 7 days after your posts are verified`
+        ? `${moneyExact(earnings.pending)} pending · next release ${shortDate(next.withdrawableFrom!)}`
+        : `${moneyExact(earnings.pending)} pending · released ${CAMPAIGN_RELEASE_DAYS} days after your posts are verified`
       : null,
-    earnings.held ? `${money(earnings.held)} held for jobs in progress` : null,
+    earnings.held ? `${moneyExact(earnings.held)} held for jobs in progress` : null,
   ].filter(Boolean);
   if (!lines.length) return <p className="y-small y-fg-2">Paid out as brands approve your videos.</p>;
   return (
@@ -290,8 +331,22 @@ function JobRow({ commission: c }: { commission: Commission }) {
       lead={business ? <BusinessLogo business={business} size={36} /> : undefined}
       title={c.title}
       meta={meta}
-      end={<span className="hidden sm:inline-flex">{campaign ? <SlotBadge commission={c} side="creator" /> : <CommissionBadge status={c.status} side="creator" />}</span>}
-      below={<ProgressBar value={Math.max(0, index) / stages} label={`${c.title}: stage ${Math.max(0, index)} of ${stages}`} className="max-w-xs" />}
+      end={
+        <span className="hidden sm:inline-flex">
+          {campaign ? (
+            <SlotBadge commission={c} side="creator" />
+          ) : (
+            <CommissionBadge status={c.status} side="creator" />
+          )}
+        </span>
+      }
+      below={
+        <ProgressBar
+          value={Math.max(0, index) / stages}
+          label={`${c.title}: stage ${Math.max(0, index)} of ${stages}`}
+          className="max-w-xs"
+        />
+      }
     />
   );
 }

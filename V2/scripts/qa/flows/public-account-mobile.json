@@ -17,6 +17,12 @@
       "text": "Three ways to get videos made"
     },
     {
+      "text": "Post a custom order"
+    },
+    {
+      "notText": "Keep 100%"
+    },
+    {
       "shot": "public-account-m-landing"
     },
     {
@@ -28,7 +34,7 @@
       "after": 3500
     },
     {
-      "text": "Make videos for tech brands. You keep 100% of your price."
+      "text": "Make videos for tech brands. You earn 80% of every price, paid when the brand approves."
     },
     {
       "shot": "public-account-m-signin"
@@ -114,6 +120,9 @@
       "text": "Mark all as read"
     },
     {
+      "text": "Daftar left 3 comments on Version 1"
+    },
+    {
       "shot": "public-account-m-alerts"
     },
     {
@@ -144,6 +153,41 @@
     },
     {
       "text": "Vacation mode"
+    },
+    {
+      "text": "Brand accounts"
+    },
+    {
+      "notText": "Appearance"
+    },
+    {
+      "text": "Not added yet"
+    },
+    {
+      "clickSel": "button[aria-label='Add the TikTok account']",
+      "after": 800
+    },
+    {
+      "type": {
+        "sel": "#brand input",
+        "text": "laylatalks.shop"
+      }
+    },
+    {
+      "click": "Save",
+      "after": 1000
+    },
+    {
+      "text": "Saved @laylatalks.shop for TikTok"
+    },
+    {
+      "eval": "document.getElementById('brand').scrollIntoView(); 1"
+    },
+    {
+      "wait": 500
+    },
+    {
+      "shot": "public-account-m-settings-brand"
     },
     {
       "notText": "Change password"
@@ -236,6 +280,15 @@
       "text": "Set your prices"
     },
     {
+      "text": "You earn 80% of each, after Yapp's 20% fee."
+    },
+    {
+      "text": "What you earn"
+    },
+    {
+      "text": "Yapp fee (20%)"
+    },
+    {
       "shot": "public-account-m-make-prices"
     },
     {
@@ -318,6 +371,52 @@
     },
     {
       "text": "In legal review"
+    },
+    {
+      "go": "/services",
+      "after": 3500
+    },
+    {
+      "text": "What you can get made on Yapp"
+    },
+    {
+      "text": "Hook Lab"
+    },
+    {
+      "notText": "Creator Network"
+    },
+    {
+      "notText": "Amplified ads"
+    },
+    {
+      "notText": "For growth agencies"
+    },
+    {
+      "shot": "public-account-m-services"
+    },
+    {
+      "click": "Hook Lab",
+      "after": 3500
+    },
+    {
+      "text": "Several openings, one ad, ready to test"
+    },
+    {
+      "text": "Order a hook pack"
+    },
+    {
+      "shot": "public-account-m-service-hook-lab"
+    },
+    {
+      "shot": "public-account-m-service-hook-lab-full",
+      "full": true
+    },
+    {
+      "click": "Order a hook pack",
+      "after": 4000
+    },
+    {
+      "eval": "location.pathname + location.search"
     }
   ]
 }

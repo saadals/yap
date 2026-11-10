@@ -41,13 +41,14 @@ export const TIERS: { id: PackageTier; label: string; hint: string }[] = [
 ];
 export const tierLabel = (tier: PackageTier) => TIERS.find((t) => t.id === tier)?.label ?? tier;
 
-/** Starting prices when an add-on is first switched on. */
+/**
+ * Starting prices when an add-on is first switched on. Only the current `AddonId`s: usage is chosen
+ * by the brand and included in the price, and raw footage always comes with the video, so neither
+ * is an add-on any more.
+ */
 export const SUGGESTED_ADDONS: Record<AddonId, { price: number; extraDays: number }> = {
   "extra-revision": { price: 35, extraDays: 1 },
-  "raw-footage": { price: 50, extraDays: 0 },
   subtitles: { price: 40, extraDays: 0 },
-  "ad-rights-90": { price: 90, extraDays: 0 },
-  "ad-rights-365": { price: 220, extraDays: 0 },
   rush: { price: 80, extraDays: -2 },
   "extra-hooks": { price: 60, extraDays: 1 },
   "post-to-account": { price: 150, extraDays: 0 },

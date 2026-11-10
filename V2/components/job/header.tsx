@@ -39,12 +39,21 @@ export function JobHeader({
       : slot && c.requestId
         ? { href: paths.order(c.requestId), label: "Campaign" }
         : { href: paths.orders(), label: "Orders" };
-  const meta = [
-    slot ? "UGC campaign" : formatById[c.brief.format]?.name,
-    `${plural(c.brief.videoCount, "video")} × ${lengthLabel(c.brief.durationSec)}`,
-    c.brief.languages.map((id) => languageById[id].name).join(" and "),
-    slot ? slot.platformName : null,
-  ]
+  // Ad copy has no format, length or platform to show: what to write, and the language.
+  const meta = (
+    job.adCopy
+      ? [
+          "Ad copy writing",
+          c.brief.copy?.pieces.length ? plural(c.brief.copy.pieces.length, "piece") : null,
+          languageById[c.brief.languages[0]]?.name,
+        ]
+      : [
+          slot ? "UGC campaign" : formatById[c.brief.format]?.name,
+          `${plural(c.brief.videoCount, "video")} × ${lengthLabel(c.brief.durationSec)}`,
+          c.brief.languages.map((id) => languageById[id].name).join(" and "),
+          slot ? slot.platformName : null,
+        ]
+  )
     .filter(Boolean)
     .join(" · ");
 
@@ -102,7 +111,7 @@ function PartyLine({ job }: { job: Job }) {
     </Link>
   ) : c.source === "request" && c.requestId ? (
     <Link href={paths.order(c.requestId)} className="y-link">
-      {side === "business" ? "From your request" : "Hired from a request"}
+      {side === "business" ? "From your custom order" : "Hired from a custom order"}
     </Link>
   ) : c.source === "repeat" ? (
     "Repeat order"

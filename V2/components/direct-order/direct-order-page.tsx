@@ -76,8 +76,6 @@ function NotFound({ handle }: { handle: string }) {
         <EmptyState
           title="We couldn't find that creator"
           body={`There's no creator at @${handle}. They may have changed their handle. Browse creators to find someone who fits.`}
-          shape="dome"
-          tint="violet"
           action={
             <PillButton href={paths.discover()} variant="contrast" arrow>
               Browse creators

@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, PackageX, Pencil, Plus, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { sortItems } from "@/components/brand-home/order-items";
 import { OrderRow } from "@/components/brand-home/order-row";
 import { VideoThumb } from "@/components/domain/video-thumb";
-import { libraryItems } from "@/components/library/data";
+import { libraryVideos } from "@/components/library/data";
 import { Block } from "@/components/ui/block";
 import { Chip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -145,7 +145,7 @@ function WhatCreatorsGet({ product, onEdit, onDelete }: { product: Product; onEd
 }
 
 /**
- * /products/[id]: one saved product. The header's one action orders a video for it; the page shows
+ * /products/[id]: one saved product. The header's one action starts an order for it; the page shows
  * what creators get (editable in a sheet), the learnings that carry into every brief, the videos
  * made for it and its orders.
  */
@@ -165,9 +165,7 @@ export function ProductPage() {
         <h1 className="sr-only">Product not found</h1>
         <Block tone="paper" pad="md" className="mt-4">
           <EmptyState
-            shape="gem"
-            tint="sun"
-            face="sleepy"
+            icon={<PackageX size={22} aria-hidden />}
             title="We couldn't find that product"
             body="It may have been deleted, or the link is from another account. Your saved products are all on one page."
             action={
@@ -195,7 +193,7 @@ function ProductView({ product, onDeleted }: { product: Product; onDeleted: () =
     liveRef.current = product;
   }, [product]);
 
-  const videos = libraryItems(s).filter((item) => item.product?.id === product.id);
+  const videos = libraryVideos(s).filter((item) => item.product?.id === product.id);
   const orders = sortItems(productOrders(s, product.id));
   const surfaces = surfaceOptions.filter((o) => product.surfaces.includes(o.id)).map((o) => o.label);
   const facts = [nicheById[product.niche]?.name, surfaces.join(", "), product.website].filter(Boolean).join(" · ");
@@ -235,7 +233,7 @@ function ProductView({ product, onDeleted }: { product: Product; onDeleted: () =
         description={product.oneLiner}
         actions={
           <PillButton href={paths.newOrder({ product: product.id })} variant="neon" icon={<Plus size={18} aria-hidden />}>
-            Order a video for this product
+            Start an order
           </PillButton>
         }
       />

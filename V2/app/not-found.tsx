@@ -1,9 +1,8 @@
 "use client";
 
-import { Compass, House, LifeBuoy } from "lucide-react";
+import { Compass, House, LifeBuoy, Sparkles } from "lucide-react";
 
 import { PublicShell } from "@/components/shell/app-shell";
-import { Character } from "@/components/ui/character";
 import { List, Row } from "@/components/ui/list";
 import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
@@ -13,7 +12,10 @@ import { usePrefs } from "@/lib/prefs";
 import { me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 
-/** A friendly 404: what happened, one way home, and two places people usually meant. */
+/**
+ * A friendly 404: what happened, one way home, and the places people usually meant. No character
+ * (round 3 answers, item 15: none in empty states until abstract artwork arrives).
+ */
 export default function NotFound() {
   const s = useDemo();
   const { account } = usePrefs();
@@ -25,7 +27,6 @@ export default function NotFound() {
     <PublicShell>
       <Page width="narrow" className="pb-8 md:pt-16">
         <div className="flex flex-col items-center gap-5 pt-6 text-center">
-          <Character shape="gem" tint="coral" face="wow" look={-1} className="h-24 w-auto" />
           <p className="y-eyebrow">Page not found</p>
           <h1 className="y-display y-t-display max-w-[20ch] text-balance">This page went off script</h1>
           <p className="y-body y-fg-2 max-w-[46ch]">
@@ -42,6 +43,12 @@ export default function NotFound() {
               lead={<Compass size={19} aria-hidden />}
               title="Find creators"
               meta="Watch videos and compare prices"
+            />
+            <Row
+              href={paths.services}
+              lead={<Sparkles size={19} aria-hidden />}
+              title="Services"
+              meta="UGC ads, native posts, Hook Lab and more"
             />
             <Row
               href={`${paths.howItWorks}#faq`}

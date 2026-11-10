@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  Check,
   ChevronDown,
   Download,
+  FileText,
   Film,
   Image as ImageIcon,
   KeyRound,
@@ -19,16 +21,18 @@ import { plural, quoted, shortDate, timeOf, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { creatorById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
+import { attachmentMeta } from "@/lib/files";
 import {
   addonById,
   aspects,
   AUTO_APPROVE_DAYS,
   CAMPAIGN_RELEASE_DAYS,
   platformById,
+  usageById,
 } from "@/lib/taxonomy";
 import type { ProductAsset } from "@/lib/types";
 
-import { cash, type Job } from "./helpers";
+import { cash, possessive, type Job } from "./helpers";
 
 /**
  * The side rail (desktop: sticky 340px; phones: the "Details" view): money, dates, revisions, the
@@ -44,6 +48,7 @@ export function Rail({ job }: { job: Job }) {
       <Block tone="paper" pad="md" className="flex flex-col gap-5">
         <h2 className="y-head">Details</h2>
         {side === "creator" && c.status === "offered" ? null : <Money job={job} />}
+        {side === "creator" && c.status === "offered" ? null : <Included job={job} />}
         <Dates job={job} />
         <Revisions job={job} ended={ended} />
       </Block>
@@ -85,59 +90,101 @@ function Money({ job }: { job: Job }) {
   const s = useDemo();
   const { commission: c, side, slot, creatorName, businessName, totals } = job;
   const method = s.paymentMethods.find((m) => m.id === c.payment.methodId);
-  const status = c.payment.status;
-  const fee = `Service fee (${Math.round(c.feeRate * 100)}%)`;
-  const addons = c.addons.map((a) => ({ label: `+ ${addonById[a.id].name}`, value: cash(a.price) }));
+  // A direct offer withdrawn or declined before it was accepted was only ever authorized.
+  const neverCharged = !slot && c.source !== "request" && !c.acceptedAt;
+  const status = neverCharged && c.payment.status === "refunded" ? "authorized" : c.payment.status;
+  const ended = c.status === "declined" || c.status === "cancelled";
+  const addons = c.addons.map((a) => ({ label: addonById[a.id]?.name ?? "Add-on", value: cash(a.price) }));
 
+  // The brand pays the listed price and nothing on top; the creator sees Yapp's 20% come off it.
   const rows =
     side === "business"
       ? slot
-        ? [
-            { label: "Price per video", value: cash(c.price) },
-            { label: fee, value: cash(totals.fee) },
-            { label: "Held in your campaign", value: cash(totals.total), strong: true },
-          ]
-        : [
-            { label: `${creatorName}'s price`, value: cash(c.price) },
-            ...addons,
-            { label: fee, value: cash(totals.fee) },
-            { label: "Total", value: cash(totals.total), strong: true },
-          ]
-      : [{ label: slot ? "Slot price" : "Your price", value: cash(c.price) }, ...addons, { label: "You earn", value: cash(totals.creatorEarns), strong: true }];
+        ? [{ label: "Price per Yapp", value: cash(totals.total), strong: true }]
+        : addons.length
+          ? [{ label: `${possessive(creatorName)} price`, value: cash(c.price) }, ...addons, { label: "Total", value: cash(totals.total), strong: true }]
+          : [{ label: `${possessive(creatorName)} price`, value: cash(totals.total), strong: true }]
+      : [
+          { label: slot ? "Price per Yapp" : "Price", value: cash(c.price) },
+          ...addons,
+          { label: `Yapp fee (${Math.round(c.feeRate * 100)}%)`, value: `−${cash(totals.fee)}` },
+          { label: "You earn", value: cash(totals.creatorEarns), strong: true },
+        ];
 
-  const releaseOn = c.withdrawableFrom;
-  const line =
+  const releaseOn = c.withdrawableFrom ? weekdayDate(c.withdrawableFrom) : undefined;
+  const paidOn = c.completedAt ? shortDate(c.completedAt) : undefined;
+  const [word, rest]: [string, string] =
     side === "business"
       ? {
-          authorized: `Authorized${method ? ` on ${paymentLabel(method)}` : ""}. Charged only if ${creatorName} accepts.`,
-          held: slot
-            ? `Held in your campaign. Paid to ${creatorName} ${CAMPAIGN_RELEASE_DAYS} days after their post of the approved video is verified.`
-            : `Held safely${method ? ` (${paymentLabel(method)})` : ""}. Released to ${creatorName} only when you approve.`,
-          pending: `Approved and still held. Paid to ${creatorName} ${releaseOn ? `on ${weekdayDate(releaseOn)}` : `${CAMPAIGN_RELEASE_DAYS} days after the post is verified`} if it's still up.`,
-          released: `Released to ${creatorName}${c.completedAt && !slot ? ` on ${shortDate(c.completedAt)}` : ""}.`,
-          refunded: c.acceptedAt ? "Refunded to your card, service fee included." : "The authorization was released. You weren't charged.",
-          returned: "Back in your campaign hold for another creator.",
+          authorized: ended
+            ? (["Released", "You weren't charged."] as [string, string])
+            : (["Authorized", `${method ? `On ${paymentLabel(method)}. ` : ""}Charged only if ${creatorName} accepts.`] as [string, string]),
+          held:
+            c.status === "disputed"
+              ? (["Held", "While Yapp support looks into it."] as [string, string])
+              : slot
+                ? (["Held in your campaign", `Paid to ${creatorName} ${CAMPAIGN_RELEASE_DAYS} days after their post is verified.`] as [string, string])
+                : (["Held since you hired", `${method ? `${paymentLabel(method)}. ` : ""}Released to ${creatorName} when you approve.`] as [string, string]),
+          pending: [
+            "Approved, still held",
+            `Paid to ${creatorName} ${releaseOn ? `on ${releaseOn}` : `${CAMPAIGN_RELEASE_DAYS} days after the post is verified`} if it's still up.`,
+          ] as [string, string],
+          released: ["Paid", `Released to ${creatorName}${paidOn && !slot ? ` on ${paidOn}` : ""}.`] as [string, string],
+          refunded: ["Refunded", `The ${cash(totals.total)} went back to your card.`] as [string, string],
+          returned: ["Back in your campaign", "The slot reopened for another creator."] as [string, string],
         }[status]
       : {
-          authorized: `Authorized by ${businessName}. Held for you when you accept.`,
-          held: slot
-            ? `Held by Yapp from the campaign budget. Released ${CAMPAIGN_RELEASE_DAYS} days after your post is verified.`
-            : `Held safely. Paid to you when ${businessName} approves, or ${AUTO_APPROVE_DAYS} days after delivery.`,
-          pending: `Pending. Released ${releaseOn ? `on ${weekdayDate(releaseOn)}` : `${CAMPAIGN_RELEASE_DAYS} days after we verify your post`} if it's still up.`,
-          released: "Paid to you. It's in your earnings.",
-          refunded: `Refunded to ${businessName}.`,
-          returned: "Back with the campaign.",
+          authorized: ended
+            ? (["Not charged", "Nothing was paid on this offer."] as [string, string])
+            : (["Authorized", `By ${businessName}. Held for you when you accept.`] as [string, string]),
+          held:
+            c.status === "disputed"
+              ? (["Held", "While Yapp support looks into it."] as [string, string])
+              : slot
+                ? (["Reserved for you", `Paid ${CAMPAIGN_RELEASE_DAYS} days after your post is verified.`] as [string, string])
+                : (["Held by Yapp", `Paid to you when ${businessName} approves, or ${AUTO_APPROVE_DAYS} days after delivery.`] as [string, string]),
+          pending:
+            c.post?.status === "removed"
+              ? (["On hold", "Your post is down."] as [string, string])
+              : ([
+                  "Pending",
+                  `Released ${releaseOn ? `on ${releaseOn}` : `${CAMPAIGN_RELEASE_DAYS} days after we verify your post`} if it's still up.`,
+                ] as [string, string]),
+          released: ["Paid", "It's in your earnings."] as [string, string],
+          refunded: ["Refunded", `The payment went back to ${businessName}.`] as [string, string],
+          returned: ["Back with the campaign", "This slot ended without a payment."] as [string, string],
         }[status];
 
   return (
     <Section title="Money">
       <KV rows={rows} />
-      {side === "creator" ? (
-        <p className="y-micro y-fg-2">You keep 100%. {slot ? "The brand" : businessName} pays Yapp&apos;s fee.</p>
-      ) : null}
       <p className="y-small inline-flex items-start gap-2">
         <ShieldCheck size={16} aria-hidden className="mt-px flex-none" />
-        <span>{line}</span>
+        <span>
+          <span className="font-medium">{word}</span>
+          <span className="y-fg-2"> · {rest}</span>
+        </span>
+      </p>
+    </Section>
+  );
+}
+
+/** What comes with the work, in the price: raw footage (video) and the order's usage option. */
+function Included({ job }: { job: Job }) {
+  const usage = usageById[job.commission.brief.usage];
+  const items = [...(job.adCopy ? [] : ["Raw footage"]), `Usage: ${usage.name}`];
+  return (
+    <Section title="Included in the price">
+      <ul className="flex flex-col gap-1.5">
+        {items.map((item) => (
+          <li key={item} className="y-small inline-flex items-start gap-2">
+            <Check size={15} strokeWidth={2.5} aria-hidden className="mt-0.5 flex-none" />
+            {item}
+          </li>
+        ))}
+      </ul>
+      <p className="y-micro y-fg-2">
+        {job.side === "business" ? usage.description : `${job.businessName} may use it for ${usage.phrase}.`}
       </p>
     </Section>
   );
@@ -241,12 +288,19 @@ function Bullets({ items }: { items: string[] }) {
 function Brief({ job }: { job: Job }) {
   const { brief } = job.commission;
   const aspect = aspects.find((a) => a.id === brief.aspect);
+  const placements = brief.copy?.placements ?? [];
   return (
     <Disclosure title="Brief" meta={brief.goal}>
       <Field label="Goal">{brief.goal}</Field>
       <Field label="Key message">
         <span className="font-medium">{quoted(brief.keyMessage)}</span>
       </Field>
+      {brief.hook ? <Field label={job.adCopy ? "The opening" : "The hook"}>{quoted(brief.hook)}</Field> : null}
+      {job.adCopy && brief.copy?.pieces.length ? (
+        <Field label="What to write">
+          <Bullets items={brief.copy.pieces} />
+        </Field>
+      ) : null}
       <Field label="Who it's for">{brief.audience}</Field>
       {brief.mustInclude.length ? (
         <Field label={job.slot ? "Talking points" : "Must include"}>
@@ -258,11 +312,22 @@ function Brief({ job }: { job: Job }) {
           <Bullets items={brief.avoid} />
         </Field>
       ) : null}
-      <Field label="Platforms">{brief.platforms.map((id) => platformById[id].name).join(", ")}</Field>
-      <Field label="Aspect ratio">{aspect ? `${aspect.name} (${aspect.use})` : brief.aspect}</Field>
+      {job.adCopy ? (
+        placements.length ? (
+          <Field label={`Where ${job.side === "business" ? "you'll" : `${job.businessName} will`} run it`}>
+            {placements.map((id) => platformById[id]?.name ?? id).join(", ")}
+          </Field>
+        ) : null
+      ) : (
+        <>
+          {job.slot ? null : <Field label="Platforms">{brief.platforms.map((id) => platformById[id].name).join(", ")}</Field>}
+          <Field label="Aspect ratio">{aspect ? `${aspect.name} (${aspect.use})` : brief.aspect}</Field>
+        </>
+      )}
       {job.slot ? (
         <Field label="Posting">
-          On {job.slot.platformName}, tagging {job.slot.brandHandle}, with the {job.slot.disclosure.toLowerCase()}.
+          {job.side === "creator" ? "You post it" : `${job.creatorName} posts it`} on {job.slot.platformName}, tagging{" "}
+          {job.slot.brandHandle}, with the {job.slot.disclosure.toLowerCase()}.
         </Field>
       ) : null}
       {brief.references.length ? (
@@ -332,17 +397,25 @@ function Files({ job }: { job: Job }) {
   const toast = useToast();
   const { commission: c, side, product, latest, slot, noun } = job;
   const assets = (product?.assets ?? []).filter((a) => side === "creator" || a.kind !== "demo-account");
+  const attachments = c.brief.attachments ?? [];
   const preview = Boolean(latest?.reviewCopy) && side === "business" && latest?.status !== "approved";
   const delivered = latest?.files ?? [];
-  const count = delivered.length + assets.length;
+  const count = delivered.length + assets.length + attachments.length;
   if (!count) return null;
   const rows: { key: string; name: string; meta: string; icon: React.ReactNode; message: string; copy?: boolean }[] = [
     ...delivered.map((file) => ({
       key: `d-${file.name}`,
       name: file.name,
       meta: `${noun.charAt(0).toUpperCase()}${noun.slice(1)} ${latest?.version} · ${file.size}${preview ? " · watermarked preview" : slot && latest?.status === "approved" ? " · full quality" : ""}`,
-      icon: <Film size={16} aria-hidden />,
+      icon: file.kind === "document" ? <FileText size={16} aria-hidden /> : <Film size={16} aria-hidden />,
       message: preview ? `Downloading the watermarked preview of ${file.name}` : `Downloading ${file.name}`,
+    })),
+    ...attachments.map((file) => ({
+      key: file.id,
+      name: file.name,
+      meta: `With the brief · ${attachmentMeta(file)}`,
+      icon: file.kind === "video" ? <Film size={16} aria-hidden /> : file.kind === "image" ? <ImageIcon size={16} aria-hidden /> : <FileText size={16} aria-hidden />,
+      message: `Downloading ${file.name}`,
     })),
     ...assets.map((asset) => ({
       key: asset.id,
@@ -356,7 +429,11 @@ function Files({ job }: { job: Job }) {
   return (
     <Disclosure
       title="Files"
-      meta={[delivered.length ? plural(delivered.length, "delivered file") : null, assets.length ? plural(assets.length, "product file") : null]
+      meta={[
+        delivered.length ? plural(delivered.length, "delivered file") : null,
+        attachments.length ? plural(attachments.length, "brief file") : null,
+        assets.length ? plural(assets.length, "product file") : null,
+      ]
         .filter(Boolean)
         .join(" · ")}
     >

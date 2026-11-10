@@ -9,11 +9,13 @@ import { createPortal } from "react-dom";
 
 /**
  * A list row for the Studio business pages (Jobs, Earnings). Like `Row` from components/ui/list,
- * but the title is a stretched link, so the row can also hold a menu button at the end, and the
- * status chip moves under the meta line on phones (the end keeps only the amount there).
+ * but the title is a stretched link (or, with `onClick`, a stretched button that opens a detail
+ * sheet), so the row can also hold a menu button at the end, and the status chip moves under the
+ * meta line on phones (the end keeps only the amount there).
  */
 export function ItemRow({
   href,
+  onClick,
   lead,
   title,
   meta,
@@ -22,6 +24,8 @@ export function ItemRow({
   menu,
 }: {
   href?: string;
+  /** Opens the row's detail (used instead of `href`). */
+  onClick?: () => void;
   lead?: React.ReactNode;
   title: React.ReactNode;
   meta?: React.ReactNode;
@@ -33,19 +37,23 @@ export function ItemRow({
   menu?: React.ReactNode;
 }) {
   return (
-    <div role="listitem" className={`y-row ${href ? "sb-linkrow" : ""}`}>
+    <div role="listitem" className={`y-row ${href || onClick ? "sb-linkrow" : ""}`}>
       {lead ? <span className="flex-none">{lead}</span> : null}
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         {href ? (
           <Link href={href} className="sb-stretch truncate font-medium">
             {title}
           </Link>
+        ) : onClick ? (
+          <button type="button" onClick={onClick} aria-haspopup="dialog" className="sb-stretch w-full truncate text-start font-medium">
+            {title}
+          </button>
         ) : (
           <span className="truncate font-medium">{title}</span>
         )}
         {meta ? <span className="y-small y-fg-2 truncate">{meta}</span> : null}
         {chip ? (
-          <span className="mt-1 flex items-center justify-between gap-3 sm:hidden">
+          <span className="mt-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:hidden">
             {chip}
             {amount !== undefined ? <span className="y-num font-semibold">{amount}</span> : null}
           </span>
@@ -59,7 +67,7 @@ export function ItemRow({
       ) : null}
       {menu ? (
         <span className="relative z-[2] -me-2 flex-none">{menu}</span>
-      ) : href ? (
+      ) : href || onClick ? (
         <span aria-hidden className="-me-1 flex w-7 flex-none justify-center">
           <ChevronRight size={18} className="y-fg-3 y-flip" />
         </span>

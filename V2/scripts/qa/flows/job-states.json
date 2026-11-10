@@ -1,0 +1,321 @@
+{
+  "account": "nour",
+  "steps": [
+    {
+      "go": "/jobs/c-201",
+      "after": 4000
+    },
+    {
+      "text": "Review version 1 from Layla"
+    },
+    {
+      "eval": "window.scrollTo(0, 900), 'scrolled'"
+    },
+    {
+      "wait": 800
+    },
+    {
+      "eval": "document.querySelector('.job-strip') ? 'sticky strip shown' : 'sticky strip MISSING'"
+    },
+    {
+      "shot": "job-s-c201-strip"
+    },
+    {
+      "go": "/jobs/c-150-3",
+      "after": 3500
+    },
+    {
+      "text": "Review Hana's copy"
+    },
+    {
+      "text": "Request changes"
+    },
+    {
+      "text": "Reject"
+    },
+    {
+      "text": "Price per Yapp"
+    },
+    {
+      "text": "Held in your campaign"
+    },
+    {
+      "shot": "job-s-slot-review"
+    },
+    {
+      "go": "/jobs/c-203",
+      "after": 3500
+    },
+    {
+      "text": "Approved \u00b7 $180 payment released"
+    },
+    {
+      "text": "Order again from Hana"
+    },
+    {
+      "text": "Comments ("
+    },
+    {
+      "shot": "job-s-c203"
+    },
+    {
+      "go": "/jobs/c-206",
+      "after": 3500
+    },
+    {
+      "text": "Review version 1 from Layla"
+    },
+    {
+      "text": "Ad copy writing"
+    },
+    {
+      "text": "THE COPY \u00b7 VERSION 1"
+    },
+    {
+      "text": "They said \"tomorrow.\" Daftar says today."
+    },
+    {
+      "text": "daftar_meta_ad_copy_v1.docx"
+    },
+    {
+      "text": "Headline 1 is the one"
+    },
+    {
+      "text": "General"
+    },
+    {
+      "text": "Comment on the copy"
+    },
+    {
+      "notText": "Make it general"
+    },
+    {
+      "notText": "Raw footage"
+    },
+    {
+      "text": "Usage: Paid ads \u00b7 12 months"
+    },
+    {
+      "text": "Approve and release $160"
+    },
+    {
+      "shot": "job-s-c206-review"
+    },
+    {
+      "type": {
+        "sel": "textarea[name=job-comment]",
+        "text": "Primary text 5 is perfect. Can headline 4 lose 'finally'?"
+      }
+    },
+    {
+      "click": "Send comment on the copy",
+      "after": 800
+    },
+    {
+      "text": "Comment sent"
+    },
+    {
+      "click": "Request changes (2)"
+    },
+    {
+      "text": "Layla gets the comments you tick and starts on version 2"
+    },
+    {
+      "click": "Send 2 comments to Layla",
+      "after": 1500
+    },
+    {
+      "text": "Layla is working on version 2"
+    },
+    {
+      "text": "with 2 comments"
+    },
+    {
+      "account": "layla"
+    },
+    {
+      "go": "/jobs/c-206",
+      "after": 3500
+    },
+    {
+      "text": "Daftar requested changes"
+    },
+    {
+      "text": "What Daftar asked you to change"
+    },
+    {
+      "text": "2 to go"
+    },
+    {
+      "text": "THE COPY \u00b7 VERSION 1"
+    },
+    {
+      "click": "Mark done",
+      "after": 800
+    },
+    {
+      "text": "1 to go"
+    },
+    {
+      "text": "Send version 2"
+    },
+    {
+      "shot": "job-s-c206-changes"
+    },
+    {
+      "click": "Send version 2"
+    },
+    {
+      "text": "The copy"
+    },
+    {
+      "text": "PDF, DOC, DOCX or TXT, up to 10 MB."
+    },
+    {
+      "text": "Changes Daftar asked for"
+    },
+    {
+      "click": "No file handy? Use a sample",
+      "after": 4000
+    },
+    {
+      "text": "Uploaded"
+    },
+    {
+      "shot": "job-s-c206-deliver"
+    },
+    {
+      "click": "Send version 2 for review"
+    },
+    {
+      "click": "Send it anyway",
+      "after": 1200
+    },
+    {
+      "text": "Version 2 is with Daftar"
+    },
+    {
+      "text": "$128 is released to you"
+    },
+    {
+      "click": "Done"
+    },
+    {
+      "text": "Waiting for Daftar's review"
+    },
+    {
+      "text": "THE COPY \u00b7 VERSION 2"
+    },
+    {
+      "text": "Ad copy"
+    },
+    {
+      "shot": "job-s-c206-delivered"
+    },
+    {
+      "go": "/jobs/c-305",
+      "after": 3500
+    },
+    {
+      "text": "Wayfolk requested changes"
+    },
+    {
+      "text": "Upload version 2"
+    },
+    {
+      "shot": "job-s-c305"
+    },
+    {
+      "go": "/jobs/c-303",
+      "after": 3500
+    },
+    {
+      "text": "is in your earnings"
+    },
+    {
+      "text": "after Yapp's 20% fee"
+    },
+    {
+      "text": "Only Yapp sees this."
+    },
+    {
+      "shot": "job-s-c303"
+    },
+    {
+      "go": "/jobs/c-301",
+      "after": 3500
+    },
+    {
+      "text": "Deliver version 1 by"
+    },
+    {
+      "click": "Open a dispute"
+    },
+    {
+      "text": "What's going wrong?"
+    },
+    {
+      "click": "The client isn't responding"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] textarea",
+        "text": "I sent two questions about the brief on Monday and haven't heard back."
+      }
+    },
+    {
+      "click": "Ask Yapp for help",
+      "after": 1500
+    },
+    {
+      "text": "Yapp support is on it"
+    },
+    {
+      "text": "a person replies here within 48 hours"
+    },
+    {
+      "shot": "job-s-c301-disputed"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/jobs/c-202",
+      "after": 3500
+    },
+    {
+      "text": "Omar is making your video"
+    },
+    {
+      "click": "Cancel and refund"
+    },
+    {
+      "text": "Cancel this job?"
+    },
+    {
+      "text": "is refunded in full"
+    },
+    {
+      "click": "Our plans changed"
+    },
+    {
+      "click": "Cancel and refund $",
+      "after": 1500
+    },
+    {
+      "text": "This job was cancelled"
+    },
+    {
+      "text": "refunded in full to your card"
+    },
+    {
+      "notText": "service fee"
+    },
+    {
+      "text": "Find another creator"
+    },
+    {
+      "shot": "job-s-c202-cancelled"
+    }
+  ]
+}

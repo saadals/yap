@@ -3,7 +3,7 @@
 import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-import { libraryItems } from "@/components/library/data";
+import { libraryVideos } from "@/components/library/data";
 import { ProtectedNote } from "@/components/domain/money";
 import { Block } from "@/components/ui/block";
 import { List } from "@/components/ui/list";
@@ -16,6 +16,7 @@ import { paths } from "@/lib/paths";
 import { businessSpend, me } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
 
+import { FiguresLink } from "./figures-link";
 import { LatestVideos } from "./latest-videos";
 import { NeedsYou } from "./needs-you";
 import { orderItems, sortItems } from "./order-items";
@@ -38,9 +39,10 @@ const today = new Intl.DateTimeFormat("en-US", {
 }).format(NOW);
 
 /**
- * Ordering's Home ("Today"): what needs you, what's in progress, a way to start an order and your
- * latest approved videos. Five blocks at most; the one green action is the most urgent thing to
- * do, or starting an order when nothing waits.
+ * Ordering's Home ("Today"): what needs you, what's in progress, a way to start an order with a
+ * quiet line of figures into Productivity under it, and your latest approved videos. Five blocks at
+ * most; the one green action is the most urgent thing to do, or starting an order when nothing
+ * waits.
  */
 export function BrandToday() {
   const s = useDemo();
@@ -62,7 +64,7 @@ export function BrandToday() {
   );
   const allOpen = orderItems(s).filter((item) => item.stage !== "done").length;
   const held = businessSpend(s).held;
-  const videos = libraryItems(s).slice(0, LATEST_VIDEOS);
+  const videos = libraryVideos(s).slice(0, LATEST_VIDEOS);
 
   const header = (description: string) => (
     <PageHeader eyebrow={today} title={`${greeting()}, ${account.firstName}`} description={description} />
@@ -136,8 +138,9 @@ export function BrandToday() {
           aria-label="Start an order"
           className="min-w-0 pt-8 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start lg:pt-[34px]"
         >
-          <div className="lg:sticky lg:top-[calc(var(--y-header-h)+16px)]">
+          <div className="flex flex-col gap-3 lg:sticky lg:top-[calc(var(--y-header-h)+16px)]">
             <StartOrder highlight={needs.length === 0} />
+            <FiguresLink />
           </div>
         </aside>
 

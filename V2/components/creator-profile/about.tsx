@@ -1,19 +1,21 @@
-import { Block } from "@/components/ui/block";
+import { madeForPlatforms } from "@/components/discover/filters";
 import { platformList } from "@/components/domain/chips";
+import { Block } from "@/components/ui/block";
 import { compact, monthYearOf } from "@/lib/format";
 import { campaignPlatformById, formatById, nicheById } from "@/lib/taxonomy";
 import type { Creator } from "@/lib/types";
 
 /**
  * Bio plus the facts a brand checks before ordering. Connected accounts show the platform and
- * verified real followers only, never a handle or a link out (everything stays on Yapp).
+ * verified real followers only, never a handle or a link out (everything stays on Yapp). "Makes
+ * videos for" leaves out ad placements (Meta ads is where a brand runs an ad, not a platform).
  */
 export function AboutBlock({ creator }: { creator: Creator }) {
   const verifiedSocials = (creator.socials ?? []).filter((social) => social.verified);
   const facts = [
     { label: "Formats", value: creator.formats.map((id) => formatById[id].name).join(", ") },
     { label: "Categories", value: creator.niches.map((id) => nicheById[id].name).join(", ") },
-    { label: "Makes videos for", value: platformList(creator.platforms) },
+    { label: "Makes videos for", value: platformList(madeForPlatforms(creator)) },
     { label: "Equipment", value: creator.equipment.join(", ") },
     {
       label: "Verified followers",

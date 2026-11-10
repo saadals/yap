@@ -10,7 +10,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { DEFAULT_LANGUAGE, formats, languages } from "@/lib/taxonomy";
+import { DEFAULT_LANGUAGE, adCopyFormat, formats, languages } from "@/lib/taxonomy";
 import type { FormatId, LanguageId } from "@/lib/types";
 
 import { CAMPAIGN_FLOOR, ConnectStatus, READ_ONLY_NOTE, useConnectSequence } from "./social";
@@ -23,9 +23,10 @@ type Errors = Partial<Record<"name" | "languages" | "formats", string>>;
 
 /**
  * "Set up your creator profile": the short sheet that gives an account a creator profile so it can
- * pitch on custom orders and take campaign slots. Opened from Studio Home, Find work, an order or a
- * campaign, and anywhere else an account without a creator profile tries to take on work. Calls
- * `onDone(creatorId)` when the profile exists, then `onClose()`.
+ * pitch on custom orders and pick Yapps on UGC campaigns. Opened from Studio Home, Find work, an
+ * order or a campaign, and anywhere else an account without a creator profile tries to take on
+ * work. "What you make" offers the video formats plus ad copy writing (the one non-video job).
+ * Calls `onDone(creatorId)` when the profile exists, then `onClose()`.
  */
 export function CreatorSetupSheet({
   open,
@@ -36,7 +37,7 @@ export function CreatorSetupSheet({
   open: boolean;
   onClose: () => void;
   onDone?: (creatorId: string) => void;
-  /** Why it opened, e.g. "to take a slot on this campaign". */
+  /** Why it opened, e.g. "to pick a Yapp on this campaign". */
   reason?: string;
 }) {
   return (
@@ -91,7 +92,7 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
     const found: Errors = {
       name: form.name.trim().length < 2 ? "Enter the name people will see." : undefined,
       languages: form.languages.length ? undefined : "Pick at least one language.",
-      formats: form.formats.length ? undefined : "Pick at least one format.",
+      formats: form.formats.length ? undefined : "Pick at least one thing you make.",
     };
     setErrors(found);
     if (Object.values(found).some(Boolean)) return;
@@ -112,8 +113,11 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
       finish();
       return;
     }
+    // Saved straight away, so the account is connected even if the page behind this sheet changes
+    // (Studio Home swaps its welcome for Today the moment the profile exists); the sequence below
+    // only shows the check.
+    const social = actions.connectSocial(creatorId, "tiktok", handle);
     connect.start(() => {
-      const social = actions.connectSocial(creatorId, "tiktok", handle);
       setFollowers(social.followers);
       window.setTimeout(finish, 1100);
     });
@@ -183,11 +187,11 @@ function SetupForm({ onClose, onDone }: { onClose: () => void; onDone?: (creator
 
         <div className="flex flex-col gap-2.5">
           <p id={formatsId} className="y-label">
-            <span>Formats you make</span>
+            <span>What you make</span>
             <span className="y-micro y-fg-3 font-medium">Required</span>
           </p>
           <div role="group" aria-labelledby={formatsId} className="flex flex-wrap gap-1.5">
-            {formats.map((format) => {
+            {[...formats, adCopyFormat].map((format) => {
               const Icon = format.icon;
               return (
                 <FilterChip

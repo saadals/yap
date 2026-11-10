@@ -20,7 +20,7 @@ import { useDemo, useHydrated } from "@/lib/store";
 import type { Commission } from "@/lib/types";
 
 import { ItemRow } from "./item-row";
-import { JobChip, inProgressOrder, isOpenJob, jobAmount, jobMeta, needsYou, needsYouOrder } from "./job-status";
+import { JobAmount, JobChip, inProgressOrder, isOpenJob, jobAmount, jobMeta, needsYou, needsYouOrder } from "./job-status";
 import { PitchLists, isOpenPitch } from "./pitch-rows";
 import { SetupPrompt } from "./setup-prompt";
 
@@ -29,7 +29,8 @@ const TABS: StudioJobsTab[] = ["active", "pitches", "done"];
 /**
  * /studio/jobs: a creator's work in three tabs (`?tab=active|pitches|done`). Active groups what's
  * waiting on you above what's in progress; Pitches splits open from decided; Done lists paid work
- * (with the brand's rating) and work that ended. Uses `useSearchParams`: render inside <Suspense>.
+ * (with the brand's rating) and work that ended. Every amount is the price with what you earn after
+ * Yapp's 20% ("$480 · you earn $384"). Uses `useSearchParams`: render inside <Suspense>.
  */
 export function JobsPage() {
   const s = useDemo();
@@ -59,7 +60,7 @@ export function JobsPage() {
       ) : (
         <SetupPrompt
           title="Your jobs live here"
-          body="Set up a creator profile to pitch on orders, take campaign slots and accept direct offers. Every job and pitch shows up on this page."
+          body="Set up a creator profile to pitch on custom orders, pick UGC campaign slots and accept direct offers. Every job and pitch shows up on this page, with what you earn on each."
           onSetUp={() => setSetupOpen(true)}
         />
       )}
@@ -104,7 +105,7 @@ function JobRow({ commission, rating = false }: { commission: Commission; rating
       title={commission.title}
       meta={jobMeta(s, commission, { rating })}
       chip={<JobChip commission={commission} />}
-      amount={jobAmount(commission)}
+      amount={jobAmount(commission) !== undefined ? <JobAmount commission={commission} /> : undefined}
     />
   );
 }
@@ -128,7 +129,7 @@ function ActiveTab({ jobs }: { jobs: Commission[] }) {
     return (
       <Empty
         title="Nothing in progress"
-        body="Pitch on an order, take a campaign slot or accept a direct offer, and the work shows up here from brief to payment."
+        body="Pitch on a custom order, pick a UGC campaign slot or accept a direct offer, and the work shows up here from brief to payment."
       />
     );
   }
@@ -159,7 +160,7 @@ function PitchesTab() {
     return (
       <Empty
         title="No pitches yet"
-        body="Find an order that fits what you make, write a short pitch and attach your closest samples. It takes about five minutes."
+        body="Find a custom order that fits what you make, write a short pitch and attach your closest samples. It takes about five minutes."
       />
     );
   }
@@ -218,9 +219,6 @@ function Empty({ title, body }: { title: string; body: string }) {
         headingLevel={2}
         title={title}
         body={body}
-        shape="pill"
-        tint="mint"
-        face="smile"
         action={
           <PillButton href={paths.findWork()} variant="neon" arrow>
             Find work

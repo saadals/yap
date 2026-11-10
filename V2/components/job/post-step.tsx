@@ -5,23 +5,25 @@ import { useId, useState } from "react";
 
 import { PillButton } from "@/components/ui/pill-button";
 import { weekdayDate } from "@/lib/format";
-import { keepLiveUntil } from "@/lib/selectors";
+import { keepLiveUntil, postLinkProblem } from "@/lib/selectors";
 import { actions } from "@/lib/store";
-import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS } from "@/lib/taxonomy";
+import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS, campaignPlatformById } from "@/lib/taxonomy";
 
 import { cash, FORM, possessive, type Job, type SlotContext } from "./helpers";
 import { Note, Panel } from "./panel";
-import { FinishedVideo } from "./completed";
+import { CommentsOnly, ReviewArea } from "./review-area";
 
 /**
- * Making side of an approved campaign slot: post it on your own account (tag + paid-partnership
- * label), paste the link, we check it (~3s simulated), then the pay is pending until 7 days after
- * verification, and the post stays up 30 days. A post that comes down has 48 hours to go back up.
+ * Making side of an approved campaign slot: post it on the platform you chose when picking (tag +
+ * paid-partnership label), paste the link, we check it (~3s simulated), then the pay is pending
+ * until 7 days after verification, and the post stays up 30 days. A post that comes down has 48
+ * hours to go back up. The amounts are the creator's net (after Yapp's 20%).
  */
 export function PostStep({ job }: { job: Job }) {
-  const { commission: c, businessName, slot, selected } = job;
+  const { commission: c, businessName, slot, selected, totals } = job;
   if (!slot) return null;
   const post = c.post;
+  const earns = cash(totals.creatorEarns);
 
   if (post?.status === "checking") {
     return (
@@ -29,7 +31,7 @@ export function PostStep({ job }: { job: Job }) {
         live
         icon={<Loader2 size={24} aria-hidden className="animate-spin motion-reduce:animate-none" />}
         title="Checking your post"
-        line={`Looking for ${slot.brandHandle} and the paid-partnership label. This takes a few seconds.`}
+        line={`Looking for ${slot.brandHandle} and the paid-partnership label on your ${slot.platformName} post. This takes a few seconds.`}
       />
     );
   }
@@ -37,6 +39,18 @@ export function PostStep({ job }: { job: Job }) {
   if (post?.status === "live") {
     const released = c.payment.status === "released";
     const keepUntil = keepLiveUntil(c);
+    const aside = (
+      <div className="flex min-w-0 flex-col gap-3">
+        <Note>
+          Keep it up until {keepUntil ? weekdayDate(keepUntil) : `${CAMPAIGN_KEEP_LIVE_DAYS} days after verification`}. We check
+          it once a day.
+        </Note>
+        <Note icon={<BadgeCheck size={17} aria-hidden className="mt-px flex-none" />}>
+          {slot.brandHandle} is tagged and the {slot.disclosure.charAt(0).toLowerCase()}
+          {slot.disclosure.slice(1)} is on. {businessName} can see the post is live.
+        </Note>
+      </div>
+    );
     return (
       <Panel
         live
@@ -44,23 +58,11 @@ export function PostStep({ job }: { job: Job }) {
         title="Verified: tag found, disclosure found"
         line={
           released
-            ? `${cash(c.price)} is in your earnings, ready to withdraw.`
-            : `${cash(c.price)} is released ${c.withdrawableFrom ? `on ${weekdayDate(c.withdrawableFrom)}` : `${CAMPAIGN_RELEASE_DAYS} days after verification`} if the post is still up.`
+            ? `${earns} is in your earnings, ready to withdraw.`
+            : `${earns} is released ${c.withdrawableFrom ? `on ${weekdayDate(c.withdrawableFrom)}` : `${CAMPAIGN_RELEASE_DAYS} days after verification`} if the post is still up.`
         }
       >
-        <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-          {selected ? <FinishedVideo delivery={selected} /> : null}
-          <div className="flex min-w-0 flex-col gap-3">
-            <Note>
-              Keep it up until {keepUntil ? weekdayDate(keepUntil) : `${CAMPAIGN_KEEP_LIVE_DAYS} days after verification`}. We
-              check it once a day.
-            </Note>
-            <Note icon={<BadgeCheck size={17} aria-hidden className="mt-px flex-none" />}>
-              {slot.brandHandle} is tagged and the {slot.disclosure.charAt(0).toLowerCase()}
-              {slot.disclosure.slice(1)} is on. {businessName} can see the post is live.
-            </Note>
-          </div>
-        </div>
+        {selected ? <ReviewArea job={job} delivery={selected} aside={aside} collapsed /> : aside}
       </Panel>
     );
   }
@@ -69,10 +71,11 @@ export function PostStep({ job }: { job: Job }) {
     return (
       <Panel title="Your post was taken down">
         <Note tone="warning">
-          Your {cash(c.price)} is on hold while the post is down. Put it back up within {CAMPAIGN_RESTORE_HOURS} hours and paste
-          the new link, or the slot and its pay go back to {businessName}.
+          Your {earns} is on hold while the post is down. Put it back up on {slot.platformName} within {CAMPAIGN_RESTORE_HOURS}{" "}
+          hours and paste the new link, or the slot and its pay go back to {businessName}.
         </Note>
         <PostLinkForm job={job} slot={slot} again />
+        {selected ? <CommentsOnly job={job} delivery={selected} /> : null}
       </Panel>
     );
   }
@@ -85,8 +88,8 @@ export function PostStep({ job }: { job: Job }) {
   ];
   return (
     <Panel
-      title={`Post it to unlock ${cash(c.price)}`}
-      line={`${businessName} approved your video. Post it, then paste the link here. Your ${cash(c.price)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`}
+      title={`Post it to unlock ${earns}`}
+      line={`${businessName} approved your video. Post it on ${slot.platformName}, then paste the link here. Your ${earns} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`}
     >
       <ol className="flex max-w-[62ch] flex-col gap-2.5">
         {steps.map((text, index) => (
@@ -100,21 +103,22 @@ export function PostStep({ job }: { job: Job }) {
       </ol>
       <PostLinkForm job={job} slot={slot} />
       <p className="y-micro y-fg-2">
-        The full-quality file of {possessive(businessName)} approved version is under Files in Details.
+        The full-quality file of {possessive(businessName)} approved version and the raw footage are under Files in Details.
       </p>
+      {selected ? <CommentsOnly job={job} delivery={selected} /> : null}
     </Panel>
   );
 }
-
-const looksLikeLink = (value: string) => /^(https?:\/\/)?[\w-]+(\.[\w-]+)+\/\S+/i.test(value.trim());
 
 function PostLinkForm({ job, slot, again = false }: { job: Job; slot: SlotContext; again?: boolean }) {
   const id = useId();
   const [url, setUrl] = useState("");
   const [tried, setTried] = useState(false);
-  const valid = looksLikeLink(url);
-  const error = tried && !valid ? "Paste the full link to your post, like the one you'd share." : null;
-  const example = `https://www.${slot.terms?.platform ?? "tiktok"}.com/${slot.social ? `@${slot.social.handle}/` : ""}…`;
+  const [refused, setRefused] = useState<string | null>(null);
+  // The link must be on the platform this creator picked (the store checks it too).
+  const problem = postLinkProblem(url, slot.platform);
+  const error = refused ?? (tried && problem ? problem : null);
+  const example = campaignPlatformById[slot.platform].example.replace("{handle}", slot.social?.handle ?? "you");
 
   return (
     <form
@@ -124,13 +128,14 @@ function PostLinkForm({ job, slot, again = false }: { job: Job; slot: SlotContex
       onSubmit={(event) => {
         event.preventDefault();
         setTried(true);
-        if (!valid) return;
+        if (problem) return;
         // The panel switches to "Checking your post" (announced politely).
-        actions.submitPost(job.commission.id, url.trim());
+        const result = actions.submitPost(job.commission.id, url.trim());
+        if (!result.ok) setRefused(result.reason);
       }}
     >
       <label htmlFor={id} className="y-label">
-        <span>{again ? "Link to the new post" : "Link to your post"}</span>
+        <span>{again ? `Link to the new ${slot.platformName} post` : `Link to your ${slot.platformName} post`}</span>
       </label>
       <div className="flex gap-2">
         <input
@@ -141,7 +146,10 @@ function PostLinkForm({ job, slot, again = false }: { job: Job; slot: SlotContex
           autoComplete="off"
           className="y-input min-w-0 flex-1"
           value={url}
-          onChange={(event) => setUrl(event.target.value)}
+          onChange={(event) => {
+            setUrl(event.target.value);
+            setRefused(null);
+          }}
           placeholder={example}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : `${id}-hint`}

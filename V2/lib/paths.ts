@@ -34,7 +34,9 @@ const q = (params: Params) => {
   return `?${entries.map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join("&")}`;
 };
 
-const job = (id: string, params: { tab?: string; version?: number } = {}) => `/jobs/${id}${q(params)}`;
+/** `comment` opens that delivery comment (notifications about a comment link straight to it). */
+const job = (id: string, params: { tab?: string; version?: number; comment?: string } = {}) =>
+  `/jobs/${id}${q(params)}`;
 const earnings = "/studio/earnings";
 
 export const paths = {
@@ -44,6 +46,10 @@ export const paths = {
   forCreators: "/for-creators",
   /** Terms, privacy and the other policies (in legal review: names only, no text yet). */
   legal: "/legal",
+  /** The services Yapp offers (round 3 answers, item 37): an index and one page per service. */
+  services: "/services",
+  service: (slug: "ugc-ads" | "native-posts" | "hook-lab" | "go-to-market") => `/services/${slug}`,
+  forTechTeams: "/for/tech-teams",
 
   /* -------------------------------------------------------------- auth */
   signIn: (params: { next?: string; intent?: SignInIntent; new?: 1 } = {}) => `/signin${q(params)}`,
@@ -94,6 +100,11 @@ export const paths = {
   /** Same as `job` (the store and seed data use this name). */
   commission: job,
   messages: (thread?: string) => `/messages${q({ thread })}`,
+  /**
+   * Productivity: figures the platform can compute, for the side you're in (Ordering: spending and
+   * results; Studio: earnings and pitching). `as` picks a side explicitly; `range` the period.
+   */
+  productivity: (params: { as?: "brand" | "creator"; range?: string } = {}) => `/productivity${q(params)}`,
   /** The Inbox's Alerts tab. */
   alerts: "/messages?tab=alerts",
   /** Account hub: the phone's "Me" tab, also reachable from the avatar menu. */
@@ -102,10 +113,12 @@ export const paths = {
 
   /* ---------------------------------------------------- studio mode */
   studio: "/studio",
-  /** Open custom requests and campaigns you can pitch on or join. */
+  /** Open custom orders and UGC campaigns you can pitch on or pick. */
   findWork: (
     params: {
       kind?: OrderType;
+      /** Job type: "video" (Full video) or "ad-copy" (Ad copy writing). */
+      job?: string;
       format?: string;
       lang?: string;
       /** Minimum pay in dollars. */

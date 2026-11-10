@@ -1,5 +1,5 @@
 #!/bin/bash
-# HTTP sweep: every route must render (200) for signed-out, Nour and Layla+dark sessions.
+# HTTP sweep: every route must render (200) for signed-out, Nour and Layla sessions (light only: dark mode is paused).
 # V2: one account, two modes; shared pages (orders, jobs) adapt to the viewer's side.
 # (curl runs no JS, so this checks the static HTML; flows/route-smoke-*.json check runtime errors.)
 # Usage: scripts/qa/sweep.sh [base_url]   (default http://localhost:3123)
@@ -13,9 +13,11 @@ routes=(/ /how-it-works /for-creators /legal /signin "/signin?intent=make" "/sig
   /jobs/c-201 /jobs/c-204 /jobs/c-205 /jobs/c-203 /jobs/c-150-3 /jobs/c-150-2 /jobs/c-302 /jobs/c-305 /jobs/c-301
   /library /products /products/new /products/p-daftar-invoices /billing
   /studio /studio/work "/studio/work?kind=campaign" /studio/jobs "/studio/jobs?tab=pitches" /studio/earnings /studio/profile
-  /messages "/messages?thread=t-401" "/messages?tab=alerts" /account /settings)
+  /messages "/messages?thread=t-401" "/messages?tab=alerts" /account /settings
+  /productivity "/productivity?as=creator" /services /services/ugc-ads /services/native-posts /services/hook-lab
+  /services/go-to-market /for/tech-teams /jobs/c-206 /orders/r-251 /orders/r-213)
 fail=0
-for cookie in "" "yapp2_account=nour" "yapp2_account=layla; yapp2_theme=dark"; do
+for cookie in "" "yapp2_account=nour" "yapp2_account=layla"; do
   for r in "${routes[@]}"; do
     code=$(curl -sL -o "$BODY" -w "%{http_code}" -H "Cookie: $cookie" "$BASE$r")
     if [ "$code" != "200" ]; then echo "FAIL [$cookie] $r -> $code"; fail=1; fi

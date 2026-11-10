@@ -311,6 +311,24 @@ export function Bullets({ items, marker }: { items: string[]; marker?: React.Rea
   );
 }
 
+/**
+ * The header's one meta line: "TikTok · 10K–20K followers · $120 per Yapp". Each fact keeps its
+ * words together, so a wrap falls between facts, never inside a date.
+ */
+export function MetaLine({ items }: { items: (string | null | undefined | false)[] }) {
+  const facts = items.filter((x): x is string => Boolean(x));
+  return (
+    <span>
+      {facts.map((fact, index) => (
+        <span key={fact}>
+          <span className="whitespace-nowrap">{fact}</span>
+          {index < facts.length - 1 ? " · " : null}
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** A labelled group inside a rail card. */
 export function RailSection({ title, children, action }: { title: string; children: React.ReactNode; action?: React.ReactNode }) {
   return (

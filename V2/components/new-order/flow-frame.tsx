@@ -57,7 +57,8 @@ export function FlowFrame({
   return (
     <>
       <Page>
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 [&>*]:min-w-0">
+        {/* pb: room for the fixed bar, so the last card never sits under it. */}
+        <div className="grid grid-cols-1 gap-6 pb-8 lg:grid-cols-12 [&>*]:min-w-0">
           <div className="flex flex-col gap-3 lg:col-span-7">
             <div className="flex flex-col gap-4 pb-2">
               <div className="flex items-center gap-3">

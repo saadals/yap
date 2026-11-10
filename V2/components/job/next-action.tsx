@@ -1,4 +1,4 @@
-import { Download, MessageSquare, UploadCloud } from "lucide-react";
+import { Download, FileText, MessageSquare, UploadCloud } from "lucide-react";
 
 import { weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
@@ -43,7 +43,11 @@ export function nextAction(job: Job, flow: Flow): NextAction | null {
       case "offered":
         return message(`Waiting for ${creatorName} to accept`);
       case "in_progress":
-        return message(slot ? `${creatorName} is filming · due ${weekdayDate(c.dueDate)}` : `${creatorName} is making it · due ${weekdayDate(c.dueDate)}`);
+        return message(
+          slot
+            ? `${creatorName} is filming · due ${weekdayDate(c.dueDate)}`
+            : `${creatorName} is ${job.adCopy ? "writing" : "making"} it · due ${weekdayDate(c.dueDate)}`,
+        );
       case "revision":
         return message(`${creatorName} is working on ${job.noun} ${nextVersion}`);
       case "disputed":
@@ -52,7 +56,7 @@ export function nextAction(job: Job, flow: Flow): NextAction | null {
         return slot
           ? { label: "Approve video", variant: "neon", arrow: true, run: () => job.openSheet("approve") }
           : {
-              label: `Approve and release ${cash(job.totals.creatorEarns)}`,
+              label: `Approve and release ${cash(job.totals.total)}`,
               variant: "neon",
               arrow: true,
               run: () => job.openSheet("approve"),
@@ -64,7 +68,7 @@ export function nextAction(job: Job, flow: Flow): NextAction | null {
             variant: "neon",
             icon: <Download size={16} aria-hidden />,
             run: flow.download,
-            secondary: job.latest ? { label: "Library", href: paths.library({ video: job.latest.video.id }) } : undefined,
+            secondary: job.latest?.video ? { label: "Library", href: paths.library({ video: job.latest.video.id }) } : undefined,
           };
         }
         const step = followUp(job, flow);
@@ -76,7 +80,7 @@ export function nextAction(job: Job, flow: Flow): NextAction | null {
               variant: "neon",
               arrow: true,
               href: paths.orderCreator(job.creator.handle, { again: c.id }),
-              secondary: job.latest ? { label: "Library", href: paths.library({ video: job.latest.video.id }) } : undefined,
+              secondary: job.latest?.video ? { label: "Library", href: paths.library({ video: job.latest.video.id }) } : undefined,
             }
           : null;
       }
@@ -99,9 +103,16 @@ export function nextAction(job: Job, flow: Flow): NextAction | null {
     case "in_progress":
     case "revision":
       return {
-        label: slot && nextVersion === 1 ? "Upload review copy" : `Upload version ${nextVersion}`,
+        label:
+          slot && nextVersion === 1
+            ? "Upload review copy"
+            : job.adCopy
+              ? nextVersion === 1
+                ? "Send the copy"
+                : `Send version ${nextVersion}`
+              : `Upload version ${nextVersion}`,
         variant: "neon",
-        icon: <UploadCloud size={16} aria-hidden />,
+        icon: job.adCopy ? <FileText size={16} aria-hidden /> : <UploadCloud size={16} aria-hidden />,
         run: () => job.openSheet("deliver"),
       };
     case "delivered":

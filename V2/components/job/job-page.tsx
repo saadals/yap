@@ -2,7 +2,8 @@
 
 import "@/app/styles/job.css";
 
-import { useCallback, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 
 import { AppShell } from "@/components/shell/app-shell";
 import { Block } from "@/components/ui/block";
@@ -18,17 +19,19 @@ import {
   commissionById,
   commissionTotals,
   creatorById,
+  isAdCopy,
   latestDelivery,
   me,
   productById,
   sideOf,
+  unreadComments,
 } from "@/lib/selectors";
 import { actions, useDemo, useHydrated } from "@/lib/store";
 import type { Commission, Role } from "@/lib/types";
 
 import type { CompletedFlow } from "./completed";
 import { JobHeader, PhoneBar, StickyStrip } from "./header";
-import { cash, reveal, slotContext, type Job, type SheetName } from "./helpers";
+import { cash, reveal, slotContext, unreadIds, type CommentFocus, type Job, type SheetName } from "./helpers";
 import { nextAction } from "./next-action";
 import { Rail } from "./rail";
 import { JobSheets } from "./sheets";
@@ -65,7 +68,10 @@ export function JobPage({ id }: { id: string }) {
   }
   return (
     <AppShell mode={modeForSide(side)}>
-      <JobView key={`${commission.id}:${side}`} commission={commission} side={side} />
+      {/* `?comment=` / `?version=` are read with useSearchParams, which needs a boundary. */}
+      <Suspense fallback={<JobSkeleton />}>
+        <JobView key={`${commission.id}:${side}`} commission={commission} side={side} />
+      </Suspense>
     </AppShell>
   );
 }
@@ -79,9 +85,6 @@ function Missing({ exists }: { exists: boolean }) {
       <Block tone="paper" pad="lg" className="mt-2">
         <EmptyState
           headingLevel={2}
-          shape="dome"
-          tint="violet"
-          face="sleepy"
           title={exists ? "This job isn't in your account" : "We couldn't find that job"}
           body={
             exists
@@ -138,6 +141,7 @@ function JobSkeleton() {
 function JobView({ commission, side }: { commission: Commission; side: Role }) {
   const s = useDemo();
   const toast = useToast();
+  const params = useSearchParams();
   const [sheet, setSheet] = useState<SheetName | null>(null);
   const [sheetKey, setSheetKey] = useState(0);
   const [picked, setPicked] = useState<{ id: string; count: number } | null>(null);
@@ -145,16 +149,61 @@ function JobView({ commission, side }: { commission: Commission; side: Role }) {
   const [afterReview, setAfterReview] = useState(false);
   const [learningsDone, setLearningsDone] = useState(false);
   const [justApproved, setJustApproved] = useState(false);
+  const [focus, setFocus] = useState<CommentFocus | undefined>();
+  const [scrollTo, setScrollTo] = useState<{ commentId?: string; key: number } | null>(null);
   const actionsRef = useRef<HTMLDivElement>(null);
 
   const deliveries = commission.deliveries;
   const latest = latestDelivery(commission);
   // A picked version holds until a new one arrives (then the newest shows).
   const selected = (picked && picked.count === deliveries.length ? deliveries.find((d) => d.id === picked.id) : undefined) ?? latest;
+  const [viewed, setViewed] = useState<ReadonlySet<string>>(() => new Set(latest ? [latest.id] : []));
+
+  // What was new to this side when the job opened (and anything that arrives while it's open), kept
+  // for the visit so the "New" marks survive marking everything read below.
+  const unreadNow = unreadIds(deliveries, side);
+  const [fresh, setFresh] = useState<ReadonlySet<string>>(() => new Set(unreadNow));
+  if (unreadNow.some((id) => !fresh.has(id))) setFresh(new Set([...fresh, ...unreadNow]));
+
+  // Opening the job clears this side's unread comments and replies (badges elsewhere in the app).
+  const unread = unreadComments(commission, side);
+  useEffect(() => {
+    if (unread > 0) actions.markCommentsRead(commission.id);
+  }, [commission.id, unread]);
+
+  // `?comment=` (notifications link here) and `?version=` open that version and that comment.
+  // Applied while rendering when the query changes; the scroll happens in the effect below.
+  const query = params.toString();
+  const [seenQuery, setSeenQuery] = useState<string | null>(null);
+  if (query !== seenQuery) {
+    setSeenQuery(query);
+    const commentId = params.get("comment") ?? undefined;
+    const version = Number(params.get("version"));
+    const owner = commentId
+      ? deliveries.find((d) => d.comments.some((m) => m.id === commentId || m.replies.some((r) => r.id === commentId)))
+      : undefined;
+    const target = owner ?? (version ? deliveries.find((d) => d.version === version) : undefined);
+    if (target) {
+      setPicked(target.id === latest?.id ? null : { id: target.id, count: deliveries.length });
+      if (!viewed.has(target.id)) setViewed(new Set([...viewed, target.id]));
+      setFocus({ deliveryId: target.id, commentId: owner ? commentId : undefined, key: (focus?.key ?? 0) + 1 });
+      setScrollTo({ commentId: owner ? commentId : undefined, key: (scrollTo?.key ?? 0) + 1 });
+    }
+  }
+  useEffect(() => {
+    if (!scrollTo) return;
+    const frame = window.requestAnimationFrame(() => {
+      const comment = scrollTo.commentId ? document.querySelector(`[data-comment="${scrollTo.commentId}"]`) : null;
+      const panel = scrollTo.commentId ? null : document.querySelector("[data-comments]");
+      reveal(comment ?? panel ?? document.getElementById(STAGE_ID), comment ? "center" : "start");
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [scrollTo]);
 
   const openSheet = useCallback((name: SheetName) => {
     setSheetKey((key) => key + 1);
     setSheet(name);
+    setFocus(undefined);
   }, []);
 
   const focusComposer = useCallback(() => {
@@ -169,9 +218,22 @@ function JobView({ commission, side }: { commission: Commission; side: Role }) {
   const pickVersion = useCallback(
     (deliveryId: string | null) => {
       setPicked(deliveryId ? { id: deliveryId, count: deliveries.length } : null);
+      const id = deliveryId ?? latest?.id;
+      if (id) setViewed((set) => (set.has(id) ? set : new Set([...set, id])));
+      setFocus(undefined);
       window.requestAnimationFrame(() => reveal(document.getElementById(STAGE_ID)));
     },
-    [deliveries.length],
+    [deliveries.length, latest?.id],
+  );
+
+  const showComments = useCallback(
+    (deliveryId: string, commentId?: string) => {
+      setPicked(deliveryId === latest?.id ? null : { id: deliveryId, count: deliveries.length });
+      setViewed((set) => (set.has(deliveryId) ? set : new Set([...set, deliveryId])));
+      setFocus((current) => ({ deliveryId, commentId, key: (current?.key ?? 0) + 1 }));
+      setScrollTo((current) => ({ commentId, key: (current?.key ?? 0) + 1 }));
+    },
+    [deliveries.length, latest?.id],
   );
 
   const creator = creatorById(s, commission.creatorId);
@@ -194,10 +256,15 @@ function JobView({ commission, side }: { commission: Commission; side: Role }) {
     latest,
     selected,
     slot,
+    adCopy: isAdCopy(commission),
     noun: slot ? "review copy" : "version",
+    fresh,
+    viewed,
+    focus,
     openSheet,
     focusComposer,
     pickVersion,
+    showComments,
   };
 
   const action = nextAction(job, {
@@ -210,7 +277,7 @@ function JobView({ commission, side }: { commission: Commission; side: Role }) {
     },
     download: () =>
       toast({
-        message: `Downloading ${latest?.files[0]?.name.replace(/[_-]?review[_-]?copy/i, "") ?? "the video"} in full quality`,
+        message: `Downloading ${latest?.files[0]?.name.replace(/[_-]?review[_-]?copy/i, "") ?? "the video"} in full quality, with the raw footage`,
         tone: "info",
       }),
   });

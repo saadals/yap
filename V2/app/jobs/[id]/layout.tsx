@@ -4,7 +4,7 @@ import { commissionIds } from "@/lib/static-params";
 
 export const metadata: Metadata = {
   title: "Job",
-  description: "One job from brief to approval: versions, notes, messages and payment.",
+  description: "One job from brief to approval: versions, comments, messages and payment.",
 };
 
 /** Pre-renders known ids for the static export (GitHub Pages). See lib/static-params.ts. */

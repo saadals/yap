@@ -9,7 +9,7 @@ import { VideoThumb } from "@/components/domain/video-thumb";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
-import { money } from "@/lib/format";
+import { money, priceWithNet } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 import { isSaved, startingPrice } from "@/lib/selectors";
@@ -104,7 +104,8 @@ export function WatchReel({ item, active, since, reducedMotion, own, translate, 
   const meta = [
     formatById[video.format]?.name,
     languageById[video.lang]?.name,
-    creator.packages.length ? `From ${money(startingPrice(creator))}` : null,
+    // Your own videos: what you earn from your starting price.
+    creator.packages.length ? `From ${own ? priceWithNet(startingPrice(creator)) : money(startingPrice(creator))}` : null,
   ]
     .filter(Boolean)
     .join(" · ");

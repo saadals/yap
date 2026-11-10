@@ -15,7 +15,7 @@ import { useDemo, useHydrated } from "@/lib/store";
 
 /**
  * One URL per order for everyone. The owner manages it (pitches, or a campaign's slots) in
- * Ordering; anyone else sees it as an opportunity in Studio (pitch, or take a slot).
+ * Ordering; anyone else sees it as an opportunity in Studio (pitch, or "Pick now" on a campaign).
  * Owner views: components/order-owner. Opportunity view: components/opportunity.
  */
 export default function OrderPage() {

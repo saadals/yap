@@ -4,168 +4,93 @@
   "height": 844,
   "mobile": true,
   "steps": [
-    {
-      "go": "/jobs/c-201",
-      "after": 4000
-    },
-    {
-      "text": "Review version 1 from Layla"
-    },
-    {
-      "text": "Approve and release $300"
-    },
+    { "go": "/jobs/c-201", "after": 4000 },
+    { "text": "Review version 1 from Layla" },
+    { "text": "Approve and release $300" },
     {
       "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
     },
-    {
-      "shot": "job-m-c201-top"
-    },
-    {
-      "shot": "job-m-c201-full",
-      "full": true
-    },
-    {
-      "click": "Details"
-    },
-    {
-      "text": "Held safely"
-    },
-    {
-      "shot": "job-m-c201-details"
-    },
-    {
-      "click": "Timeline"
-    },
-    {
-      "type": {
-        "sel": "#job-note",
-        "text": "Slow the reminder moment down a touch"
-      }
-    },
-    {
-      "click": "Add note"
-    },
-    {
-      "text": "Slow the reminder moment down a touch"
-    },
-    {
-      "click": "Ask for changes (2)"
-    },
-    {
-      "text": "Send 2 notes to Layla"
-    },
-    {
-      "click": "Send 2 notes to Layla",
-      "after": 1500
-    },
-    {
-      "text": "Layla is working on version 2"
-    },
-    {
-      "text": "Message"
-    },
-    {
-      "shot": "job-m-c201-revision"
-    },
-    {
-      "go": "/jobs/c-205",
-      "after": 3000
-    },
-    {
-      "text": "Waiting for Maya to accept"
-    },
-    {
-      "click": "Withdraw offer"
-    },
-    {
-      "text": "Withdraw this offer?"
-    },
-    {
-      "click": "Withdraw offer",
-      "after": 1200
-    },
-    {
-      "text": "You withdrew this offer"
-    },
-    {
-      "text": "Find another creator"
-    },
-    {
-      "shot": "job-m-c205-withdrawn"
-    },
-    {
-      "account": "layla"
-    },
-    {
-      "go": "/jobs/c-305",
-      "after": 3500
-    },
-    {
-      "text": "Wayfolk asked for changes"
-    },
-    {
-      "text": "Upload version 2"
-    },
+    { "shot": "job-m-c201-top" },
+    { "shot": "job-m-c201-full", "full": true },
+    { "click": "Details" },
+    { "text": "Held since you hired" },
+    { "text": "Usage: Paid ads · 12 months" },
+    { "notText": "Yapp fee" },
+    { "shot": "job-m-c201-details" },
+    { "click": "Timeline" },
+    { "type": { "sel": "textarea[name=job-comment]", "text": "Slow the reminder moment down a touch" } },
+    { "click": "Send comment at", "after": 800 },
+    { "text": "Slow the reminder moment down a touch" },
     {
       "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
     },
+    { "click": "Request changes (4)" },
+    { "text": "Send 4 comments to Layla" },
+    { "text": "4 of 4" },
+    { "eval": "[...document.querySelectorAll('[role=dialog] label')].find((l) => l.innerText.includes('Love this opening'))?.click() ?? 'unticked'" },
+    { "text": "Send 3 comments to Layla" },
+    { "shot": "job-m-c201-request" },
+    { "click": "Send 3 comments to Layla", "after": 1500 },
+    { "text": "Layla is working on version 2" },
+    { "text": "You requested changes on version 1 with 3 comments" },
+    { "text": "Sent as a change" },
+    { "text": "Message" },
+    { "shot": "job-m-c201-revision" },
+
+    { "go": "/jobs/c-205", "after": 3000 },
+    { "text": "Waiting for Maya to accept" },
+    { "click": "Withdraw offer" },
+    { "text": "Withdraw this offer?" },
+    { "click": "Withdraw offer", "after": 1200 },
+    { "text": "You withdrew this offer" },
+    { "text": "Find another creator" },
+    { "shot": "job-m-c205-withdrawn" },
+
+    { "account": "layla" },
+    { "go": "/jobs/c-201", "after": 3500 },
+    { "text": "Daftar requested changes" },
+    { "text": "What Daftar asked you to change" },
+    { "text": "3 to go" },
+    { "text": "Other comments" },
+    { "click": "Mark done", "after": 800 },
+    { "text": "Marked done" },
+    { "text": "2 to go" },
     {
-      "shot": "job-m-c305"
+      "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
     },
+    { "shot": "job-m-c201-creator-changes" },
+    { "click": "Upload version 2" },
+    { "text": "Changes Daftar asked for" },
+    { "shot": "job-m-c201-deliver" },
+    { "key": "Escape" },
+
+    { "go": "/jobs/c-305", "after": 3500 },
+    { "text": "Wayfolk requested changes" },
+    { "text": "What Wayfolk asked you to change" },
+    { "text": "Upload version 2" },
     {
-      "go": "/jobs/c-302",
-      "after": 3500
+      "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
     },
-    {
-      "text": "Accept offer"
-    },
-    {
-      "text": "Decline"
-    },
-    {
-      "shot": "job-m-c302-offer"
-    },
-    {
-      "click": "Decline"
-    },
-    {
-      "text": "Decline this offer?"
-    },
-    {
-      "click": "I'm booked on these dates"
-    },
-    {
-      "click": "Decline offer",
-      "after": 1200
-    },
-    {
-      "text": "You declined this offer"
-    },
-    {
-      "text": "Find new work"
-    },
-    {
-      "shot": "job-m-c302-declined"
-    },
-    {
-      "go": "/jobs/c-n39",
-      "after": 3000
-    },
-    {
-      "text": "We couldn't find that job"
-    },
-    {
-      "go": "/jobs/c-150-3",
-      "after": 3000
-    },
-    {
-      "text": "This job isn't in your account"
-    },
-    {
-      "text": "Go to Home"
-    },
-    {
-      "shot": "job-m-not-yours"
-    }
+    { "shot": "job-m-c305" },
+
+    { "go": "/jobs/c-302", "after": 3500 },
+    { "text": "Accept offer" },
+    { "text": "Decline" },
+    { "text": "$384" },
+    { "shot": "job-m-c302-offer" },
+    { "click": "Decline" },
+    { "text": "Decline this offer?" },
+    { "click": "I'm booked on these dates" },
+    { "click": "Decline offer", "after": 1200 },
+    { "text": "You declined this offer" },
+    { "text": "Find new work" },
+    { "shot": "job-m-c302-declined" },
+
+    { "go": "/jobs/c-n39", "after": 3000 },
+    { "text": "We couldn't find that job" },
+    { "go": "/jobs/c-150-3", "after": 3000 },
+    { "text": "This job isn't in your account" },
+    { "text": "Go to Home" },
+    { "shot": "job-m-not-yours" }
   ]
 }

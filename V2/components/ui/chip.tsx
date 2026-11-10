@@ -17,12 +17,17 @@ export function Chip({
   );
 }
 
-/** Chunky toggle pill used for filters; pressed = black (white on night blocks). */
+/**
+ * Toggle pill for filters; pressed = black (white on night blocks). md: the 44px chunky pill
+ * (white with a hairline). sm: the previews' small pressed pill (quiet fill, 32px on desktop and
+ * 44px under 1024px) for sidebar filters, platforms, deadlines and quick picks.
+ */
 export function FilterChip({
   pressed,
   onClick,
   count,
   icon,
+  size = "md",
   children,
   className = "",
 }: {
@@ -30,6 +35,7 @@ export function FilterChip({
   onClick: () => void;
   count?: number | string;
   icon?: ReactNode;
+  size?: "sm" | "md";
   children: ReactNode;
   className?: string;
 }) {
@@ -39,6 +45,7 @@ export function FilterChip({
       aria-pressed={pressed}
       onClick={onClick}
       className={`y-filter ${className}`}
+      data-size={size === "sm" ? "sm" : undefined}
     >
       {icon}
       <span>{children}</span>

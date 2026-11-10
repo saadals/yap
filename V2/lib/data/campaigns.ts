@@ -2,23 +2,30 @@
  * Seeded UGC campaigns (PM spec "UGC Campaign Flow"). A campaign is a ContentRequest with
  * `kind: "campaign"`; every slot a creator has taken is a Commission with `source: "campaign"`.
  *
- * - r-150 Daftar (Nour's): 10 videos at the 10K–20K tier on TikTok. Slots in every state, one
- *   creator removed earlier, 3 slots open — Layla is eligible and can take one.
- * - r-250 Roundleaf: nearly full ("Only 2 Yapps left"), Layla eligible.
- * - r-251 Souqly: just published, Layla eligible.
- * - r-252 Wayfolk: Instagram 20K–50K, Layla isn't eligible (shows why).
+ * - r-150 Daftar (Nour's): 10 videos at $120 for the 10K–20K tier on TikTok. Slots in every state,
+ *   one creator removed earlier, 3 slots open — Layla is eligible and can take one.
+ * - r-250 Roundleaf: $125, nearly full ("Only 2 Yapps left"), Layla eligible.
+ * - r-251 Souqly: $100, just published, on TikTok or Instagram (each creator posts on one); Layla
+ *   qualifies on TikTok only (her Instagram is under 10K).
+ * - r-252 Wayfolk: $150, Instagram 20K–50K, Layla isn't eligible (shows why).
+ *
+ * Each price sits inside its guidance range (lib/pricing.ts), so the demo never warns about its own
+ * campaigns: fintech at 10K–20K is $115–150, e-commerce tech at 10K–20K $100–130, consumer apps at
+ * 20K–50K $140–180. Prices are multiples of $5, so every creator's net is whole dollars.
  *
  * Seeded campaigns never fill up on their own; only campaigns created in the browser get simulated
  * creators joining (`campaign.simulate`).
  *
- * Money follows the live rules: each budget was charged with the 10% service fee when posted;
- * approved slots stay held (pending) and get their release date 7 days after the post is verified.
+ * Money follows the live rules: each campaign was charged slots × price when posted, nothing on
+ * top; approved slots stay held (pending) and get their release date 7 days after the post is
+ * verified; each creator then receives the price less Yapp's 20%.
  */
-import { withCampaignFee } from "@/lib/campaigns";
 import { addDays, at, hoursAgo } from "@/lib/clock";
-import { CAMPAIGN_FEE_RATE, CAMPAIGN_OPEN_DAYS, CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
+import { creatorNet } from "@/lib/format";
+import { CAMPAIGN_FEE_RATE, CAMPAIGN_OPEN_DAYS, CAMPAIGN_RELEASE_DAYS, DEFAULT_USAGE, FEE_PCT } from "@/lib/taxonomy";
 import type {
   Brief,
+  CampaignPlatformId,
   CampaignTerms,
   Commission,
   CommissionEvent,
@@ -33,6 +40,8 @@ import { videos } from "./videos";
 type SlotSeed = {
   slot: number;
   creatorId: string;
+  /** Where this creator posts, from the campaign's platforms (default: the first). */
+  platform?: CampaignPlatformId;
   /** Hours ago the slot was taken. */
   takenHoursAgo: number;
   state:
@@ -71,13 +80,14 @@ const seeds: CampaignSeed[] = [
     views: 486,
     terms: {
       tierId: "t10",
-      pricePerVideo: 30,
-      platform: "tiktok",
-      brandHandle: "@daftar.app",
+      pricePerVideo: 120,
+      platforms: ["tiktok"],
+      brandHandles: { tiktok: "@daftar.app" },
       explainer: { name: "daftar_explainer_60s.mp4", durationSec: 60 },
       deadlineDays: 5,
     },
     brief: {
+      usage: "ads-12m",
       languages: ["en"],
       durationSec: 30,
       audience: "Shop owners and home businesses in Canada and the US, 25–55, who chase customers for money.",
@@ -113,13 +123,14 @@ const seeds: CampaignSeed[] = [
     views: 1240,
     terms: {
       tierId: "t10",
-      pricePerVideo: 30,
-      platform: "tiktok",
-      brandHandle: "@roundleaf.money",
+      pricePerVideo: 125,
+      platforms: ["tiktok"],
+      brandHandles: { tiktok: "@roundleaf.money" },
       explainer: { name: "roundleaf_roundups_45s.mp4", durationSec: 45 },
       deadlineDays: 7,
     },
     brief: {
+      usage: "ads-6m",
       languages: ["en"],
       durationSec: 30,
       audience: "Young professionals in Canada and the US, 22–35, who want to save but never get round to it.",
@@ -150,12 +161,14 @@ const seeds: CampaignSeed[] = [
     views: 132,
     terms: {
       tierId: "t10",
-      pricePerVideo: 30,
-      platform: "tiktok",
-      brandHandle: "@souqly",
+      pricePerVideo: 100,
+      // Two platforms: each creator posts on one, chosen when picking (Layla qualifies on TikTok only).
+      platforms: ["tiktok", "instagram"],
+      brandHandles: { tiktok: "@souqly", instagram: "@souqly.shop" },
       deadlineDays: 3,
     },
     brief: {
+      usage: "organic",
       languages: ["en", "ar"],
       durationSec: 40,
       audience: "People, 20–40, who sell through Instagram DMs in English or Arabic and want a real store link.",
@@ -180,13 +193,14 @@ const seeds: CampaignSeed[] = [
     views: 388,
     terms: {
       tierId: "t20",
-      pricePerVideo: 40,
-      platform: "instagram",
-      brandHandle: "@wayfolk.travel",
+      pricePerVideo: 150,
+      platforms: ["instagram"],
+      brandHandles: { instagram: "@wayfolk.travel" },
       explainer: { name: "wayfolk_planner_50s.mp4", durationSec: 50 },
       deadlineDays: 5,
     },
     brief: {
+      usage: "ads-12m",
       languages: ["en"],
       durationSec: 45,
       audience: "Friends and families in the US and Canada, 20–40, planning short winter trips.",
@@ -206,11 +220,12 @@ function briefFor(seed: CampaignSeed): Brief {
   return {
     productId: seed.productId,
     format: "testimonial",
-    platforms: [seed.terms.platform],
+    platforms: seed.terms.platforms,
     aspect: "9:16",
     videoCount: 1,
     references: [],
     onCamera: true,
+    usage: DEFAULT_USAGE,
     addons: [],
     ...seed.brief,
   };
@@ -239,8 +254,10 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
     actor,
     text,
   });
+  // Each creator posts on one of the campaign's platforms: the first one they qualify on.
+  const platform = s.platform ?? seed.terms.platforms[0];
   const events: CommissionEvent[] = [
-    ev(1, "slot_accepted", "creator", `Took slot ${s.slot}`, takenAt),
+    ev(1, "slot_accepted", "creator", `Picked slot ${s.slot}`, takenAt),
   ];
   const deliveries: Delivery[] = [];
   const firstUpload = iso(Math.max(1, s.takenHoursAgo - 18));
@@ -269,8 +286,21 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
       status: s.state === "review" ? "in_review" : s.state === "revision" ? "changes_requested" : "approved",
       comments:
         s.state === "revision"
-          ? [{ id: `dc-${id}-1`, atSec: 4, text: "Can you show the WhatsApp send a bit earlier? It's at 9s now.", author: "business", resolved: false, createdAt: iso(s.takenHoursAgo - 22) }]
+          ? [
+              {
+                id: `dc-${id}-1`,
+                atSec: 4,
+                text: "Can you show the WhatsApp send a bit earlier? It's at 9s now.",
+                author: "business",
+                authorId: seed.businessId === "b-daftar" ? "m-nour" : seed.businessId,
+                resolved: false,
+                createdAt: iso(s.takenHoursAgo - 22),
+                requestedAt: iso(s.takenHoursAgo - 22),
+                replies: [],
+              },
+            ]
           : [],
+      kind: "video",
       files: file(1),
       reviewCopy: true,
     });
@@ -290,7 +320,13 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
     completedAt = iso(Math.max(1, s.takenHoursAgo - 24));
     events.push(ev(3, "approved", "business", "Version 1 approved. Full-quality file unlocked.", completedAt));
     events.push(
-      ev(4, "paid", "system", `$${seed.terms.pricePerVideo} stays held until ${CAMPAIGN_RELEASE_DAYS} days after the post is verified`, completedAt),
+      ev(
+        4,
+        "paid",
+        "system",
+        `$${seed.terms.pricePerVideo} stays held until ${CAMPAIGN_RELEASE_DAYS} days after the post is verified ($${creatorNet(seed.terms.pricePerVideo, CAMPAIGN_FEE_RATE)} to the creator after the ${FEE_PCT}% Yapp fee)`,
+        completedAt,
+      ),
     );
     post = { status: "due" };
   }
@@ -301,14 +337,17 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
     withdrawableFrom = addDays(verifiedAt, CAMPAIGN_RELEASE_DAYS);
     post = {
       status: "live",
-      url: `https://www.tiktok.com/@creator/video/${7300000000 + index * 7919}`,
+      url:
+        platform === "instagram"
+          ? `https://www.instagram.com/reel/C${(7300000000 + index * 7919).toString(36)}/`
+          : `https://www.tiktok.com/@creator/video/${7300000000 + index * 7919}`,
       at: postedAt,
       verifiedAt,
       tagFound: true,
       disclosureFound: true,
     };
     events.push(ev(5, "posted", "creator", "Posted on their account", postedAt));
-    events.push(ev(6, "post_verified", "system", `Post verified: ${seed.terms.brandHandle} tagged, paid partnership label on`, verifiedAt));
+    events.push(ev(6, "post_verified", "system", `Post verified: ${seed.terms.brandHandles[platform]} tagged, paid partnership label on`, verifiedAt));
   }
 
   return {
@@ -336,6 +375,7 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
     threadId: `t-${id.slice(2)}`,
     payment: { status: payment, methodId: seed.methodId },
     campaignSlot: s.slot,
+    postPlatform: platform,
     post,
     withdrawableFrom,
     cancelCode,
@@ -345,7 +385,6 @@ function slotCommission(seed: CampaignSeed, s: SlotSeed, index: number): Commiss
 
 export const campaignRequests: ContentRequest[] = seeds.map((seed) => {
   const active = seed.taken.filter((t) => t.state !== "replaced").length;
-  const budget = withCampaignFee(seed.slots * seed.terms.pricePerVideo);
   return {
     id: seed.id,
     businessId: seed.businessId,
@@ -354,6 +393,7 @@ export const campaignRequests: ContentRequest[] = seeds.map((seed) => {
     budget: { min: seed.terms.pricePerVideo, max: seed.terms.pricePerVideo },
     dueDate: at(30, "18:00"),
     postedAt: at(-seed.postedDaysAgo, "11:00"),
+    closesAt: at(CAMPAIGN_OPEN_DAYS - seed.postedDaysAgo, "11:00"),
     status: active >= seed.slots ? "hired" : "open",
     visibility: "public",
     invitedCreatorIds: [],
@@ -370,9 +410,8 @@ export const campaignRequests: ContentRequest[] = seeds.map((seed) => {
           id: `lg-${seed.id}-1`,
           at: at(-seed.postedDaysAgo, "10:58"),
           kind: "charge",
-          amount: budget.total,
-          fee: budget.fee,
-          note: `${seed.slots} videos × $${seed.terms.pricePerVideo}, plus the ${Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee`,
+          amount: seed.slots * seed.terms.pricePerVideo,
+          note: `${seed.slots} Yapps × $${seed.terms.pricePerVideo}`,
         },
       ],
       excludedCreatorIds: seed.taken.filter((t) => t.state === "replaced").map((t) => t.creatorId),

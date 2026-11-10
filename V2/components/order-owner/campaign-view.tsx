@@ -15,6 +15,7 @@ import {
   Pencil,
   RotateCcw,
   SlidersHorizontal,
+  TrendingUp,
   UserMinus,
   UserPlus,
   UserRound,
@@ -34,7 +35,7 @@ import { FaceAvatar } from "@/components/ui/face-avatar";
 import { List, Row } from "@/components/ui/list";
 import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
-import { ProgressBar } from "@/components/ui/progress";
+import { KeyValues, ProgressBar } from "@/components/ui/progress";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { agoLower, autoApproveAt } from "@/lib/attention";
@@ -42,23 +43,28 @@ import { useMediaQuery } from "@/lib/hooks";
 import { money, moneyExact, plural, shortDate, timeAgoInline, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
+  brandHandleFor,
   campaignMoney,
   campaignProgress,
   campaignSlots,
   creatorById,
   latestDelivery,
+  platformList,
   productById,
+  slotPlatform,
+  type SlotView,
 } from "@/lib/selectors";
 import { absoluteUrl } from "@/lib/site";
 import { actions, useDemo } from "@/lib/store";
 import {
-  CAMPAIGN_FEE_RATE,
   CAMPAIGN_MAX_REASSIGNMENTS,
   CAMPAIGN_RELEASE_DAYS,
   CAMPAIGN_RESTORE_HOURS,
+  PRICE_MAX_PER_YAPP,
   campaignPlatformById,
   languageById,
   tierById,
+  usageById,
 } from "@/lib/taxonomy";
 import type { Commission, Creator } from "@/lib/types";
 
@@ -70,14 +76,23 @@ import {
   CloseCampaignSheet,
   EditCampaignSheet,
   LearningSheet,
+  RaisePriceSheet,
   RejectSheet,
   RemoveCreatorSheet,
 } from "./campaign-sheets";
-import { Bullets, ExplainerTile, OverflowMenu, RailSection, Watermark, type MenuItem } from "./parts";
-import { deadlineRule, followersOn, payRule, perVideo, postLabel, postingRule, type CampaignRequest } from "./shared";
+import { Bullets, ExplainerTile, MetaLine, OverflowMenu, RailSection, Watermark, type MenuItem } from "./parts";
+import {
+  deadlineRule,
+  followersOn,
+  payRule,
+  perYapp,
+  postLabel,
+  postingRule,
+  type CampaignRequest,
+} from "./shared";
 
 type SheetState =
-  | { kind: "tier" | "close" | "edit" | "learning" }
+  | { kind: "tier" | "price" | "close" | "edit" | "learning" }
   | { kind: "changes" | "reject" | "remove"; commissionId: string };
 
 /** Remove is only for a creator who hasn't uploaded anything yet. */
@@ -85,9 +100,10 @@ const canRemove = (c: Commission) => c.status === "in_progress" && c.deliveries.
 
 /**
  * The owner's view of a UGC campaign. Review copies come first whenever any are waiting (approve
- * with a quick rating, ask for changes, or reject: the slot reopens); then progress, then every
- * slot. The rail holds the money and what creators were told. It reads the store, so it follows
- * simulated creators joining, uploading and posting live.
+ * with a quick rating, request changes, or reject: the slot reopens); then progress, then every
+ * slot with the platform its creator posts on and the handle to tag there. The rail holds the
+ * money (held, paid out, refunded: listed prices, nothing on top) and what creators were told. It
+ * reads the store, so it follows simulated creators picking, uploading and posting live.
  */
 export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
   const s = useDemo();
@@ -100,7 +116,6 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
   const terms = request.campaign;
   const product = productById(s, request.brief.productId);
   const tier = tierById[terms.tierId];
-  const platform = campaignPlatformById[terms.platform];
   const closed = request.status === "closed";
   const isDraft = request.status === "draft";
   const slots = campaignSlots(s, request);
@@ -116,7 +131,7 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
     const url = absoluteUrl(paths.order(request.id));
     try {
       await navigator.clipboard.writeText(url);
-      toast({ message: "Link copied. Eligible creators who open it can take a slot." });
+      toast({ message: "Link copied. Eligible creators who open it can pick a slot." });
     } catch {
       toast({ message: `Copy this link: ${url}`, tone: "info" });
     }
@@ -124,13 +139,27 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
 
   const menu: MenuItem[] = [
     {
-      label: "Change follower tier",
+      label: "Raise the price",
+      icon: <TrendingUp size={16} aria-hidden />,
+      disabled: closed
+        ? "The campaign is closed"
+        : isDraft
+          ? "Set the price when you post it"
+          : terms.pricePerVideo >= PRICE_MAX_PER_YAPP
+            ? `Already at the ${money(PRICE_MAX_PER_YAPP)} maximum`
+            : undefined,
+      onSelect: () => setSheet({ kind: "price" }),
+    },
+    {
+      label: "Change who can pick",
       icon: <SlidersHorizontal size={16} aria-hidden />,
       disabled: terms.tierChangedAt
         ? `Already changed on ${shortDate(terms.tierChangedAt)}. It can change once.`
         : closed
           ? "The campaign is closed"
-          : undefined,
+          : isDraft
+            ? "Set the tier when you post it"
+            : undefined,
       onSelect: () => setSheet({ kind: "tier" }),
     },
     { label: "Edit what creators are told", icon: <Pencil size={16} aria-hidden />, onSelect: () => setSheet({ kind: "edit" }) },
@@ -144,14 +173,18 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
       : [{ label: "Close campaign", icon: <Ban size={16} aria-hidden />, danger: true, onSelect: () => setSheet({ kind: "close" }) }]),
   ];
 
-  const meta = [
-    platform.name,
-    `${tier.label} followers`,
-    perVideo(terms.pricePerVideo),
-    closed ? null : `Open until ${weekdayDate(terms.closesAt)}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const meta = (
+    <MetaLine
+      items={[
+        platformList(terms.platforms),
+        `${tier.label} followers`,
+        terms.postedPrice && terms.postedPrice !== terms.pricePerVideo
+          ? `${perYapp(terms.pricePerVideo)} (raised from ${money(terms.postedPrice)})`
+          : perYapp(terms.pricePerVideo),
+        closed || isDraft ? null : `Open until ${weekdayDate(terms.closesAt)}`,
+      ]}
+    />
+  );
 
   const target = sheet && "commissionId" in sheet ? s.commissions.find((c) => c.id === sheet.commissionId) : undefined;
   const targetCreator = target ? creatorById(s, target.creatorId) : undefined;
@@ -164,7 +197,7 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
         description={
           <span className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <RequestBadge status={request.status} campaign />
-            <span>{meta}</span>
+            {meta}
           </span>
         }
         actions={<OverflowMenu label="More for this campaign" items={menu} size="md" tone="outline" />}
@@ -191,7 +224,7 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
                   {reviews.length === 1 ? "A review copy is ready" : `${reviews.length} review copies are ready`}
                 </h2>
                 <p className="y-small y-fg-2 max-sm:hidden">
-                  Watch each one, then approve it, ask for changes or reject it. A copy you don&apos;t answer approves itself 3 days after upload.
+                  Watch each one, then approve it, request changes or reject it. A copy you don&apos;t answer approves itself 3 days after upload.
                 </p>
               </div>
               {current && currentCreator ? (
@@ -241,6 +274,7 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
       </div>
 
       {sheet?.kind === "tier" ? <ChangeTierSheet request={request} onClose={() => setSheet(null)} /> : null}
+      {sheet?.kind === "price" ? <RaisePriceSheet request={request} onClose={() => setSheet(null)} /> : null}
       {sheet?.kind === "close" ? <CloseCampaignSheet request={request} onClose={() => setSheet(null)} /> : null}
       {sheet?.kind === "edit" ? <EditCampaignSheet request={request} onClose={() => setSheet(null)} /> : null}
       {sheet?.kind === "learning" && product ? (
@@ -250,10 +284,10 @@ export function CampaignOwnerView({ request }: { request: CampaignRequest }) {
         <ChangesSheet commission={target} creator={targetCreator} onClose={() => setSheet(null)} />
       ) : null}
       {sheet?.kind === "reject" && target && targetCreator ? (
-        <RejectSheet commission={target} creator={targetCreator} closed={closed} onClose={() => setSheet(null)} />
+        <RejectSheet commission={target} creator={targetCreator} request={request} onClose={() => setSheet(null)} />
       ) : null}
       {sheet?.kind === "remove" && target && targetCreator ? (
-        <RemoveCreatorSheet commission={target} creator={targetCreator} closed={closed} onClose={() => setSheet(null)} />
+        <RemoveCreatorSheet commission={target} creator={targetCreator} request={request} onClose={() => setSheet(null)} />
       ) : null}
     </Page>
   );
@@ -284,13 +318,15 @@ function ReviewCopyCard({
   const [watching, setWatching] = useState(false);
   const wide = useMediaQuery("(min-width: 640px)");
   const delivery = latestDelivery(commission);
-  if (!delivery) return null;
-  const platformName = campaignPlatformById[request.campaign.platform].name;
-  const followers = followersOn(creator, request.campaign.platform);
+  const video = delivery?.video;
+  if (!delivery || !video) return null;
+  const platform = slotPlatform(commission, request);
+  const platformName = campaignPlatformById[platform].name;
+  const followers = followersOn(creator, platform);
   const approve = () => {
     actions.approve(commission.id, { rating: rating || undefined });
     toast({
-      message: `Approved. ${creator.firstName} posts it on ${platformName} next, and is paid ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
+      message: `Approved. ${creator.firstName} posts it on ${platformName} next, tagging ${brandHandleFor(request.campaign, platform)}, and is paid ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
     });
   };
   const uploaded = `${delivery.version > 1 ? `Version ${delivery.version}, uploaded` : "Uploaded"} ${agoLower(delivery.deliveredAt)}`;
@@ -342,9 +378,9 @@ function ReviewCopyCard({
         Approve
       </PillButton>
       <PillButton variant="outline" className="max-sm:flex-1" onClick={onChanges}>
-        Ask for changes
+        Request changes
       </PillButton>
-      <PillButton variant="ghost" onClick={onReject}>
+      <PillButton variant="ghost" className="max-sm:w-full" onClick={onReject}>
         Reject
       </PillButton>
     </div>
@@ -355,8 +391,8 @@ function ReviewCopyCard({
       {wide ? (
         <div className="oo-review">
           <div className="relative w-full max-w-[260px]">
-            <VideoPlayer video={delivery.video} size="sm" />
-            <Watermark video={delivery.video} />
+            <VideoPlayer video={video} size="sm" />
+            <Watermark video={video} />
           </div>
           <div className="flex min-w-0 flex-col gap-4">
             <div className="flex items-center gap-3">
@@ -388,8 +424,8 @@ function ReviewCopyCard({
               aria-haspopup="dialog"
               className="relative block w-[104px] flex-none rounded-(--y-r-tile)"
             >
-              <VideoThumb video={delivery.video} frame="9:16" playable showHook={false} showMeta={false} decorative />
-              <Watermark video={delivery.video} small />
+              <VideoThumb video={video} frame="9:16" playable showHook={false} showMeta={false} decorative />
+              <Watermark video={video} small />
             </button>
             <div className="flex min-w-0 flex-1 flex-col gap-2 pt-0.5">
               {who}
@@ -414,8 +450,8 @@ function ReviewCopyCard({
           width="md"
         >
           <div className="relative mx-auto w-full max-w-[340px]">
-            <VideoPlayer video={delivery.video} size="md" />
-            <Watermark video={delivery.video} />
+            <VideoPlayer video={video} size="md" />
+            <Watermark video={video} />
           </div>
         </Sheet>
       ) : null}
@@ -451,7 +487,7 @@ function ProgressCard({ request }: { request: CampaignRequest }) {
           </p>
         </div>
         <p className="y-small y-fg-2">
-          {p.taken} of {p.total} slots taken
+          {p.taken} of {p.total} slots picked
         </p>
       </div>
       <ProgressBar value={p.total ? p.approved / p.total : 0} label={`${p.approved} of ${p.total} videos approved`} done={p.approved === p.total} />
@@ -465,8 +501,8 @@ function ProgressCard({ request }: { request: CampaignRequest }) {
       </dl>
       <p className="y-small y-fg-2 border-t border-(--b-line) pt-3">
         {closed
-          ? "Closed. Open slots were refunded with their fee; creators already filming carry on."
-          : `Eligible creators take slots first come, first served until ${weekdayDate(request.campaign.closesAt)}, unless you close it sooner. Slots nobody takes are refunded with their fee.`}
+          ? "Closed. Unpicked slots were refunded in full; creators already filming carry on."
+          : `Eligible creators pick slots first come, first served until ${weekdayDate(request.campaign.closesAt)}, unless you close it sooner. Slots nobody picks are refunded in full.`}
       </p>
     </Block>
   );
@@ -480,11 +516,11 @@ function slotMeta(c: Commission): string {
   const latest = latestDelivery(c);
   switch (c.status) {
     case "in_progress":
-      return `Took it ${timeAgoInline(c.createdAt)} · review copy due ${weekdayDate(c.dueDate)}`;
+      return `Picked ${timeAgoInline(c.createdAt)} · review copy due ${weekdayDate(c.dueDate)}`;
     case "delivered":
       return `Uploaded ${latest ? agoLower(latest.deliveredAt) : "recently"} · approves itself ${weekdayDate(autoApproveAt(c))}`;
     case "revision":
-      return `You asked for changes · a new copy comes back here`;
+      return "Changes requested · a new copy comes back here";
     case "completed": {
       const post = c.post;
       if (post?.status === "live") {
@@ -498,6 +534,20 @@ function slotMeta(c: Commission): string {
     default:
       return "";
   }
+}
+
+type SlotGroup = { kind: "filled"; view: SlotView } | { kind: "open"; from: number; to: number };
+
+/** Filled slots one row each; a run of open slots in one row ("3 open slots · 8–10"). */
+function groupSlots(slots: SlotView[]): SlotGroup[] {
+  const groups: SlotGroup[] = [];
+  for (const view of slots) {
+    const last = groups[groups.length - 1];
+    if (view.commission) groups.push({ kind: "filled", view });
+    else if (last?.kind === "open" && last.to === view.slot - 1) last.to = view.slot;
+    else groups.push({ kind: "open", from: view.slot, to: view.slot });
+  }
+  return groups;
 }
 
 function SlotsCard({ request, onRemove }: { request: CampaignRequest; onRemove: (commissionId: string) => void }) {
@@ -517,34 +567,51 @@ function SlotsCard({ request, onRemove }: { request: CampaignRequest; onRemove: 
       </div>
       <Block tone="paper" pad="none" className="overflow-visible">
         <ul className="y-list" aria-label="Slots">
-          {slots.map((view) => {
-            const c = view.commission;
-            const creator = c ? creatorById(s, c.creatorId) : undefined;
+          {groupSlots(slots).map((group) => {
+            if (group.kind === "open") {
+              const label = group.from === group.to ? `${group.from}` : `${group.from}–${group.to}`;
+              const count = group.to - group.from + 1;
+              return (
+                <li key={`open-${group.from}`} className="y-row !min-h-[68px] !gap-3">
+                  <span className="y-micro y-num y-fg-2 w-5 flex-none text-end" aria-hidden>
+                    {group.from}
+                  </span>
+                  <span
+                    aria-hidden
+                    className="grid size-10 flex-none place-items-center rounded-full border-2 border-dashed border-(--b-line) text-(--b-fg-2)"
+                  >
+                    <UserPlus size={16} />
+                  </span>
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className="y-small font-medium">
+                      {count === 1 ? "Open" : `${count} open slots`}
+                      <span className="sr-only">, slot{count === 1 ? "" : "s"} {label}</span>
+                      {count > 1 ? (
+                        <span aria-hidden className="y-fg-2 font-normal">
+                          {" "}
+                          · {label}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="y-micro y-fg-2 max-sm:line-clamp-2 sm:truncate">
+                      {closed
+                        ? "Closed · refunded"
+                        : `Waiting for eligible creators${request.campaign.platforms.length > 1 ? ` on ${platformList(request.campaign.platforms)}` : ""}`}
+                    </span>
+                  </span>
+                </li>
+              );
+            }
+            const { view } = group;
+            const c = view.commission!;
+            const creator = creatorById(s, c.creatorId);
+            if (!creator) return null;
             return (
               <li key={view.slot} className="y-row !min-h-[68px] !gap-3">
                 <span className="y-micro y-num y-fg-2 w-5 flex-none text-end" aria-hidden>
                   {view.slot}
                 </span>
-                {c && creator ? (
-                  <FilledSlot c={c} creator={creator} slot={view.slot} onRemove={onRemove} />
-                ) : (
-                  <>
-                    <span
-                      aria-hidden
-                      className="grid size-10 flex-none place-items-center rounded-full border-2 border-dashed border-(--b-line) text-(--b-fg-2)"
-                    >
-                      <UserPlus size={16} />
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="y-small font-medium">
-                        Open<span className="sr-only">, slot {view.slot}</span>
-                      </span>
-                      <span className="y-micro y-fg-2 truncate">
-                        {closed ? "Closed · refunded with its fee" : "Waiting for an eligible creator"}
-                      </span>
-                    </span>
-                  </>
-                )}
+                <FilledSlot c={c} creator={creator} slot={view.slot} request={request} onRemove={onRemove} />
               </li>
             );
           })}
@@ -596,13 +663,18 @@ function FilledSlot({
   c,
   creator,
   slot,
+  request,
   onRemove,
 }: {
   c: Commission;
   creator: Creator;
   slot: number;
+  request: CampaignRequest;
   onRemove: (commissionId: string) => void;
 }) {
+  // Where this creator posts (chosen when picking) and the brand account to tag there.
+  const platform = slotPlatform(c, request);
+  const postsOn = `Posts on ${campaignPlatformById[platform].name} · tags ${brandHandleFor(request.campaign, platform)}`;
   const postUrl = c.post?.status === "live" || c.post?.status === "checking" ? c.post.url : undefined;
   const items: MenuItem[] = [
     { label: "Open the job", icon: <ArrowUpRight size={16} aria-hidden />, href: paths.job(c.id) },
@@ -624,6 +696,7 @@ function FilledSlot({
           <span className="sr-only">, slot {slot}</span>
         </Link>
         <span className="y-micro y-fg-2 max-sm:line-clamp-2 sm:truncate">{slotMeta(c)}</span>
+        <span className="y-micro y-fg-2 max-sm:line-clamp-2 sm:truncate">{postsOn}</span>
         <SlotBadge commission={c} side="business" className="relative z-[2] mt-1 w-fit sm:!hidden" />
         {postUrl ? (
           <a
@@ -664,7 +737,7 @@ function MoneyCard({ request }: { request: CampaignRequest }) {
   const [open, setOpen] = useState(false);
   const stats = [
     { label: "Held now", value: totals.held },
-    { label: "Paid out", value: totals.paidOut },
+    { label: "Paid out", value: totals.released },
     { label: "Refunded", value: totals.refunded },
   ];
   return (
@@ -674,7 +747,8 @@ function MoneyCard({ request }: { request: CampaignRequest }) {
           <Wallet size={16} aria-hidden /> Money
         </h2>
         <p className="y-micro y-fg-2">
-          {method ? `On ${paymentLabel(method)} · ` : ""}includes the {Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee
+          {method ? `On ${paymentLabel(method)} · ` : ""}
+          {money(totals.total)} in all, nothing added on top
         </p>
       </div>
       <dl className="grid grid-cols-3 gap-3">
@@ -685,11 +759,12 @@ function MoneyCard({ request }: { request: CampaignRequest }) {
           </div>
         ))}
       </dl>
-      {totals.pending ? (
-        <p className="y-micro y-fg-2">
-          Of the held money, {money(totals.pending)} is for approved videos, paid to creators {CAMPAIGN_RELEASE_DAYS} days after their posts are verified.
-        </p>
-      ) : null}
+      <p className="y-micro y-fg-2">
+        {totals.pending
+          ? `Of the held money, ${money(totals.pending)} is for approved videos, paid out ${CAMPAIGN_RELEASE_DAYS} days after each post is verified. `
+          : `Each slot is paid out ${CAMPAIGN_RELEASE_DAYS} days after its post is verified. `}
+        {request.status === "closed" ? "Unpicked slots were refunded when it closed." : "Unpicked slots are refunded when it closes."}
+      </p>
       {ledger.length ? (
         <div className="border-t border-(--b-line) pt-1">
           <button
@@ -710,7 +785,7 @@ function MoneyCard({ request }: { request: CampaignRequest }) {
                     <div className="min-w-0">
                       <p className="y-small">{entry.note}</p>
                       <p className="y-micro y-fg-2">
-                        {shortDate(entry.at)} · {entry.kind === "refund" ? "Refunded" : entry.kind === "top_up" ? "Added to the hold" : "Held"}
+                        {shortDate(entry.at)} · {entry.kind === "refund" ? "Refunded" : entry.kind === "top_up" ? "Top-up held" : "Held"}
                       </p>
                     </div>
                     <span className="y-small y-num flex-none font-semibold">
@@ -755,9 +830,15 @@ function ToldCard({ request, onEdit }: { request: CampaignRequest; onEdit: () =>
           <Bullets items={brief.avoid} marker={<Ban size={14} strokeWidth={2.5} aria-hidden className="mt-0.5 flex-none" />} />
         </RailSection>
       ) : null}
-      {brief.languages.length ? (
-        <p className="y-micro y-fg-2">In {brief.languages.map((id) => languageById[id].name).join(" or ")} · tag {terms.brandHandle}</p>
-      ) : null}
+      <KeyValues
+        rows={[
+          ...(brief.languages.length
+            ? [{ label: "Language", value: brief.languages.map((id) => languageById[id].name).join(" or ") }]
+            : []),
+          ...terms.platforms.map((p) => ({ label: `Tag on ${campaignPlatformById[p].name}`, value: brandHandleFor(terms, p) })),
+          { label: "Usage", value: `${usageById[brief.usage].name}, included` },
+        ]}
+      />
       {terms.explainer ? <ExplainerTile name={terms.explainer.name} durationSec={terms.explainer.durationSec} /> : null}
     </Block>
   );
@@ -766,11 +847,10 @@ function ToldCard({ request, onEdit }: { request: CampaignRequest; onEdit: () =>
 function RulesCard({ request }: { request: CampaignRequest }) {
   const terms = request.campaign;
   const tier = tierById[terms.tierId];
-  const platform = campaignPlatformById[terms.platform];
   const rules = [
     {
       icon: <Users size={15} aria-hidden />,
-      text: `Creators with ${tier.label} verified real followers on ${platform.name}${terms.tierChangedAt && terms.previousTierId ? ` (changed from ${tierById[terms.previousTierId].label} on ${shortDate(terms.tierChangedAt)})` : ""}.`,
+      text: `Creators with ${tier.label} verified real followers on ${platformList(terms.platforms)}${terms.platforms.length > 1 ? " (each posts on one)" : ""}${terms.tierChangedAt && terms.previousTierId ? `, changed from ${tierById[terms.previousTierId].label} on ${shortDate(terms.tierChangedAt)}` : ""}.`,
     },
     { icon: <Clock size={15} aria-hidden />, text: deadlineRule(terms) },
     { icon: <Megaphone size={15} aria-hidden />, text: postingRule(terms) },

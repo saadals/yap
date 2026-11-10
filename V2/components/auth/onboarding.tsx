@@ -10,7 +10,7 @@ import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 import { rememberMode } from "@/lib/mode";
 import { actions, useDemo } from "@/lib/store";
-import { formatById, nicheById } from "@/lib/taxonomy";
+import { FEE_PCT, formatById, nicheById } from "@/lib/taxonomy";
 import type { PackageTier } from "@/lib/types";
 
 import { GroupError, RadioCards } from "./choice";
@@ -118,11 +118,14 @@ const titles: Record<StepId, { title: string; description: string }> = {
   product: { title: "What are the videos about?", description: "Write it once. It fills in every order you place." },
   audience: { title: "Who should the videos reach?", description: "Creators shape the hook around the problem and the people who have it." },
   voice: { title: "How should it sound?", description: "Creators turn this into the hook and the ending." },
-  profile: { title: "Set up your creator profile", description: "What brands see first when you pitch or take a campaign." },
+  profile: { title: "Set up your creator profile", description: "What brands see first when you pitch or pick a campaign Yapp." },
   work: { title: "What do you make?", description: "We match you with orders for these." },
   portfolio: { title: "Show your best work", description: `Add 1 to ${MAX_SAMPLES} videos. This is how brands decide.` },
   tiktok: { title: "Connect your TikTok", description: "Read-only. It unlocks UGC campaigns that fit your audience." },
-  prices: { title: "Set your prices", description: "Three packages. You keep 100% of each one." },
+  prices: {
+    title: "Set your prices",
+    description: `Three packages, priced as the brand pays them. You earn ${100 - FEE_PCT}% of each, after Yapp's ${FEE_PCT}% fee.`,
+  },
   paid: { title: "Where should we pay you?", description: "Earnings go here when a brand approves your video. A quick ID check comes first." },
   lite: { title: "Make videos too", description: "A creator profile on the same account. Add the rest later in Studio." },
 };
@@ -471,7 +474,7 @@ function Done({ data, finished }: { data: Data; finished: Finished }) {
           {
             href: paths.findWork(),
             label: "Find work",
-            meta: "Open briefs and campaigns that fit what you make",
+            meta: "Open custom orders and campaigns that fit what you make",
             icon: <Search size={18} />,
           },
           ...(finished.creatorHandle
@@ -518,11 +521,11 @@ function Done({ data, finished }: { data: Data; finished: Finished }) {
         {
           href: paths.newOrder(finished.productId ? { product: finished.productId } : {}),
           label: "Place your first order",
-          meta: "Pick a creator, get pitches, or run a UGC campaign",
+          meta: "Order from a creator, post a custom order, or run a UGC campaign",
           icon: <ShoppingBag size={18} />,
         },
         both
-          ? { href: paths.findWork(), label: "Find work in Studio", meta: "Briefs and campaigns to pitch on", icon: <Search size={18} /> }
+          ? { href: paths.findWork(), label: "Find work in Studio", meta: "Custom orders to pitch on and campaigns to pick", icon: <Search size={18} /> }
           : { href: paths.discover(), label: "Browse creators", meta: "Watch their videos first", icon: <Search size={18} /> },
         ...(finished.productId
           ? [

@@ -1,23 +1,23 @@
 "use client";
 
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck, FileText } from "lucide-react";
 
 import { paymentLabel } from "@/components/domain/money";
 import { StarRow } from "@/components/domain/stars";
 import { PillButton } from "@/components/ui/pill-button";
 import { plural, quoted, relativeDay, shortDate, timeOf, weekdayDate } from "@/lib/format";
-import { reliabilityLine } from "@/lib/selectors";
+import { openComments, reliabilityFigures, requestedComments } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import {
   addonById,
   AUTO_APPROVE_DAYS,
   CAMPAIGN_RELEASE_DAYS,
   CAMPAIGN_RESTORE_HOURS,
-  includedRights,
+  FEE_PCT,
 } from "@/lib/taxonomy";
 
-import { BusinessCompleted, CreatorCompleted, FinishedVideo, type CompletedFlow } from "./completed";
-import { ago, autoApproveDate, cash, possessive, revisionsLeft, type Job } from "./helpers";
+import { BusinessCompleted, CreatorCompleted, type CompletedFlow } from "./completed";
+import { ago, autoApproveDate, cash, includedLine, possessive, revisionsLeft, type Job } from "./helpers";
 import { PostStep } from "./post-step";
 import { Checklist, Note, Panel, Quote } from "./panel";
 import { ReviewArea } from "./review-area";
@@ -88,8 +88,8 @@ function BusinessOffered({ job }: { job: Job }) {
 }
 
 function BusinessMaking({ job }: { job: Job }) {
-  const { commission: c, creatorName, slot } = job;
-  const what = c.brief.videoCount > 1 ? `your ${c.brief.videoCount} videos` : "your video";
+  const { commission: c, creatorName, slot, adCopy } = job;
+  const what = adCopy ? "your ad copy" : c.brief.videoCount > 1 ? `your ${c.brief.videoCount} videos` : "your video";
   if (slot) {
     return (
       <Panel
@@ -108,8 +108,8 @@ function BusinessMaking({ job }: { job: Job }) {
   }
   return (
     <Panel
-      title={`${creatorName} is making ${what}`}
-      line={`Due ${weekdayDate(c.dueDate)}, ${relativeDay(c.dueDate)}. Version 1 comes here for review, and you'll have ${AUTO_APPROVE_DAYS} days to look at it.`}
+      title={`${creatorName} is ${adCopy ? "writing" : "making"} ${what}`}
+      line={`Due ${weekdayDate(c.dueDate)}, ${relativeDay(c.dueDate)}. ${adCopy ? "The copy" : "Version 1"} comes here for review, and you'll have ${AUTO_APPROVE_DAYS} days to look at it.`}
     >
       <div>
         <PillButton variant="outline" size="sm" onClick={() => job.openSheet("extend")}>
@@ -125,7 +125,7 @@ function BusinessReview({ job }: { job: Job }) {
   const auto = autoApproveDate(c);
   const delivery = selected ?? latest;
   if (!delivery || !latest) return null;
-  const open = latest.comments.filter((m) => !m.resolved).length;
+  const mine = openComments(latest).filter((m) => m.author === "business").length;
   const left = revisionsLeft(c);
   const onLatest = delivery.id === latest.id;
 
@@ -133,7 +133,7 @@ function BusinessReview({ job }: { job: Job }) {
     <div className="flex flex-col gap-3 border-t border-(--b-line) pt-4">
       <div className="flex flex-wrap items-center gap-2">
         <PillButton variant="outline" onClick={() => job.openSheet("requestChanges")}>
-          Ask for changes{open ? ` (${open})` : ""}
+          Request changes{mine ? ` (${mine})` : ""}
         </PillButton>
         {slot ? (
           <PillButton variant="ghost" onClick={() => job.openSheet("reject")}>
@@ -143,10 +143,10 @@ function BusinessReview({ job }: { job: Job }) {
       </div>
       <p className="y-micro y-fg-2">
         {left > 0
-          ? `${plural(left, slot ? "change round" : "revision")} left of ${c.revisionsIncluded}.`
+          ? `${plural(left, "revision")} left of ${c.revisionsIncluded}.`
           : slot
-            ? "You've used the included change rounds. You can still ask, or reject it to free the slot."
-            : `You've used the ${plural(c.revisionsIncluded, "included revision")}. Another round is a paid extra.`}
+            ? "You've used the included revisions. You can still ask, or reject it to free the slot."
+            : `You've used the ${plural(c.revisionsIncluded, "included revision")}. You can approve, agree a paid extra revision, or open a dispute.`}
       </p>
     </div>
   ) : null;
@@ -163,11 +163,11 @@ function BusinessReview({ job }: { job: Job }) {
 
 function BusinessRevision({ job }: { job: Job }) {
   const { commission: c, creatorName, latest, selected, slot, noun } = job;
-  const notes = latest?.comments.length ?? 0;
+  const sent = latest ? requestedComments(latest).length : 0;
   return (
     <Panel
       title={slot ? `${creatorName} is redoing the video` : `${creatorName} is working on version ${c.deliveries.length + 1}`}
-      line={`${latest ? `You asked for changes on ${noun} ${latest.version}${notes ? ` with ${plural(notes, "note")}` : ""}. ` : ""}The next ${noun} comes back here for review. Due ${weekdayDate(c.dueDate)}.`}
+      line={`${latest ? `You requested changes on ${noun} ${latest.version}${sent ? ` with ${plural(sent, "comment")}` : ""}. ` : ""}The next ${noun} comes back here for review. Due ${weekdayDate(c.dueDate)}.`}
     >
       {selected ? <ReviewArea job={job} delivery={selected} /> : null}
     </Panel>
@@ -181,22 +181,17 @@ function BusinessSlotDone({ job }: { job: Job }) {
   const post = c.post;
   const releaseOn = c.withdrawableFrom;
   const live = post?.status === "live";
-  const line =
-    live
-      ? c.payment.status === "released"
-        ? `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on. ${creatorName} has been paid.`
-        : `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on. ${creatorName} is paid${releaseOn ? ` on ${weekdayDate(releaseOn)}` : ""} if it's still up.`
-      : post?.status === "checking"
-        ? `${creatorName} posted it. We're checking the tag and the paid-partnership label.`
-        : post?.status === "removed"
-          ? `${possessive(creatorName)} post was taken down. Their pay stays held; if it isn't back within ${CAMPAIGN_RESTORE_HOURS} hours, the slot reopens and its money returns to your campaign.`
-          : `${creatorName} posts it next on their ${slot.platformName} account, tagging ${slot.brandHandle} with the paid-partnership label. They're paid ${CAMPAIGN_RELEASE_DAYS} days after we verify it.`;
-  return (
-    <Panel
-      title="Full-quality file unlocked"
-      line={`You approved ${possessive(creatorName)} video${c.completedAt ? ` on ${shortDate(c.completedAt)}` : ""}. No watermark. ${includedRights}`}
-    >
-      {selected ? <FinishedVideo delivery={selected} /> : null}
+  const line = live
+    ? c.payment.status === "released"
+      ? `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on. ${creatorName} has been paid.`
+      : `Posted on ${slot.platformName} and verified: ${slot.brandHandle} tagged, paid-partnership label on. ${creatorName} is paid${releaseOn ? ` on ${weekdayDate(releaseOn)}` : ""} if it's still up.`
+    : post?.status === "checking"
+      ? `${creatorName} posted it on ${slot.platformName}. We're checking the tag and the paid-partnership label.`
+      : post?.status === "removed"
+        ? `${possessive(creatorName)} post was taken down. Their pay stays held; if it isn't back within ${CAMPAIGN_RESTORE_HOURS} hours, the slot reopens and its money returns to your campaign.`
+        : `${creatorName} posts it next on their ${slot.platformName} account, tagging ${slot.brandHandle} with the paid-partnership label. They're paid ${CAMPAIGN_RELEASE_DAYS} days after we verify it.`;
+  const aside = (
+    <div className="flex flex-col gap-3">
       <Note
         tone={post?.status === "removed" ? "warning" : "plain"}
         icon={live ? <BadgeCheck size={17} aria-hidden className="mt-px flex-none" /> : undefined}
@@ -208,6 +203,14 @@ function BusinessSlotDone({ job }: { job: Job }) {
           You rated {creatorName} <StarRow value={c.quickRating} size={14} />
         </p>
       ) : null}
+    </div>
+  );
+  return (
+    <Panel
+      title="Full-quality file unlocked"
+      line={`You approved ${possessive(creatorName)} video${c.completedAt ? ` on ${shortDate(c.completedAt)}` : ""}. No watermark. ${includedLine(job)}`}
+    >
+      {selected ? <ReviewArea job={job} delivery={selected} aside={aside} collapsed /> : aside}
     </Panel>
   );
 }
@@ -217,17 +220,20 @@ function BusinessSlotDone({ job }: { job: Job }) {
 /* -------------------------------------------------------------------------- */
 
 function CreatorOffer({ job }: { job: Job }) {
-  const { commission: c, business, businessName, totals } = job;
-  const reliability = business ? reliabilityLine(business) : undefined;
-  const includes = c.addons.map((addon) => `${addonById[addon.id].name} (${cash(addon.price)})`);
+  const { commission: c, business, businessName, totals, adCopy } = job;
+  const figures = reliabilityFigures(business);
+  const includes = c.addons.map((addon) => `${addonById[addon.id]?.name ?? "Add-on"} (${cash(addon.price)})`);
   return (
     <Panel title={`${businessName} wants to work with you`}>
       <div className="flex flex-col gap-1">
         <p className="y-micro y-fg-2">You earn</p>
         <p className="y-display y-num text-[40px] leading-none tracking-[-0.03em]">{cash(totals.creatorEarns)}</p>
         <p className="y-small y-fg-2 pt-1.5">
-          Due {weekdayDate(c.dueDate)} ({relativeDay(c.dueDate)}) · {plural(c.revisionsIncluded, "revision")} included
+          From the {cash(totals.total)} {includes.length ? "total" : "price"}, after Yapp&apos;s {FEE_PCT}% fee
           {includes.length ? ` · Includes ${includes.join(", ")}` : ""}
+        </p>
+        <p className="y-small y-fg-2">
+          Due {weekdayDate(c.dueDate)} ({relativeDay(c.dueDate)}) · {plural(c.revisionsIncluded, "revision")} included
         </p>
       </div>
 
@@ -244,7 +250,14 @@ function CreatorOffer({ job }: { job: Job }) {
             <dt className="y-micro y-fg-2">Key message</dt>
             <dd className="y-small font-medium">{quoted(c.brief.keyMessage)}</dd>
           </div>
-          {c.brief.mustInclude.length ? (
+          {adCopy && c.brief.copy?.pieces.length ? (
+            <div className="flex flex-col gap-1.5">
+              <dt className="y-micro y-fg-2">What to write</dt>
+              <dd>
+                <Checklist items={c.brief.copy.pieces} />
+              </dd>
+            </div>
+          ) : c.brief.mustInclude.length ? (
             <div className="flex flex-col gap-1.5">
               <dt className="y-micro y-fg-2">Must include</dt>
               <dd>
@@ -253,22 +266,40 @@ function CreatorOffer({ job }: { job: Job }) {
             </div>
           ) : null}
         </dl>
+        <Note icon={<FileText size={17} aria-hidden className="mt-px flex-none" />}>{includedLine(job)}</Note>
         <p className="y-micro y-fg-2">The full brief and the product details are under Details.</p>
       </div>
 
-      <div className="flex flex-col gap-2 border-t border-(--b-line) pt-4">
-        <Note icon={<BadgeCheck size={17} aria-hidden className="mt-px flex-none" />}>
-          {businessName}: {reliability ?? "New on Yapp"}
-          {business?.paymentVerified ? " · Payment verified" : ""}
-        </Note>
+      <section className="flex flex-col gap-3 border-t border-(--b-line) pt-4" aria-labelledby="offer-brand">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h3 id="offer-brand" className="y-head">
+            How {businessName} works with creators
+          </h3>
+          {business?.paymentVerified ? (
+            <span className="y-micro y-fg-2 inline-flex items-center gap-1 font-medium">
+              <BadgeCheck size={14} aria-hidden /> Payment verified
+            </span>
+          ) : null}
+        </div>
+        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
+          {figures.map((figure) => (
+            <div key={figure.id} className="flex flex-col gap-0.5" title={figure.hint}>
+              <dt className="y-micro y-fg-2">{figure.label}</dt>
+              <dd className={`y-small y-num font-medium ${figure.known ? "" : "y-fg-2"}`}>
+                {figure.value}
+                {figure.known ? null : <span className="sr-only"> (not enough data yet)</span>}
+              </dd>
+            </div>
+          ))}
+        </dl>
         <Note>Payment is already authorized. It&apos;s held when you accept and paid to you when they approve.</Note>
-      </div>
+      </section>
     </Panel>
   );
 }
 
 function CreatorMaking({ job }: { job: Job }) {
-  const { commission: c, businessName, slot } = job;
+  const { commission: c, businessName, slot, adCopy, totals } = job;
   const brief = c.brief;
   if (slot) {
     return (
@@ -291,16 +322,28 @@ function CreatorMaking({ job }: { job: Job }) {
         <Note>
           After approval: post it on {slot.platformName}
           {slot.social ? ` from @${slot.social.handle}` : ""}, tag {slot.brandHandle} and turn on the paid-partnership
-          label. Your {cash(c.price)} is released {CAMPAIGN_RELEASE_DAYS} days after we verify the post.
+          label. Your {cash(totals.creatorEarns)} is released {CAMPAIGN_RELEASE_DAYS} days after we verify the post.
         </Note>
       </Panel>
     );
   }
   return (
     <Panel
-      title={`Deliver version 1 by ${weekdayDate(c.dueDate)}`}
-      line={`${timeOf(c.dueDate)}, ${relativeDay(c.dueDate)}. ${businessName} then has ${AUTO_APPROVE_DAYS} days to approve it or ask for changes.`}
+      title={adCopy ? `Send the copy by ${weekdayDate(c.dueDate)}` : `Deliver version 1 by ${weekdayDate(c.dueDate)}`}
+      line={`${timeOf(c.dueDate)}, ${relativeDay(c.dueDate)}. ${businessName} then has ${AUTO_APPROVE_DAYS} days to approve it or request changes.`}
     >
+      {brief.hook ? (
+        <div className="flex flex-col gap-1">
+          <h3 className="y-head">{adCopy ? "The opening" : "The hook"}</h3>
+          <p className="y-small max-w-[62ch]">{quoted(brief.hook)}</p>
+        </div>
+      ) : null}
+      {adCopy && brief.copy?.pieces.length ? (
+        <div className="flex flex-col gap-2">
+          <h3 className="y-head">What to write</h3>
+          <Checklist items={brief.copy.pieces} />
+        </div>
+      ) : null}
       {brief.mustInclude.length ? (
         <div className="flex flex-col gap-2">
           <h3 className="y-head">Must include</h3>
@@ -313,22 +356,26 @@ function CreatorMaking({ job }: { job: Job }) {
           <Checklist items={brief.avoid} kind="avoid" />
         </div>
       ) : null}
-      <Note>Payment is held safely. It&apos;s released to you when {businessName} approves.</Note>
+      <Note>
+        Payment is held safely. {cash(totals.creatorEarns)} is released to you when {businessName} approves.
+      </Note>
     </Panel>
   );
 }
 
 function CreatorRevision({ job }: { job: Job }) {
   const { commission: c, businessName, latest, selected, noun } = job;
-  const open = latest?.comments.filter((m) => !m.resolved && m.author === "business").length ?? 0;
+  const sent = latest ? requestedComments(latest) : [];
+  const asked = sent.length ? sent : latest ? openComments(latest).filter((m) => m.author === "business") : [];
+  const toGo = asked.filter((m) => !m.resolved).length;
   return (
     <Panel
-      title={`${businessName} asked for changes`}
+      title={`${businessName} requested changes`}
       line={
         latest
-          ? open
-            ? `${plural(open, "note")} to address on ${noun} ${latest.version}, pinned to the second. Tick each one as you go; ${businessName} sees them marked done. Due ${weekdayDate(c.dueDate)}.`
-            : `Every note on ${noun} ${latest.version} is ticked off. Upload ${noun} ${c.deliveries.length + 1} when it's ready.`
+          ? toGo
+            ? `${plural(toGo, "comment")} to work through on ${noun} ${latest.version}. Mark each one done as you go; ${businessName} sees it ticked. Due ${weekdayDate(c.dueDate)}.`
+            : `Everything ${businessName} asked for on ${noun} ${latest.version} is done. Upload ${noun} ${c.deliveries.length + 1} when it's ready.`
           : "Upload a new version when it's ready."
       }
     >
@@ -340,7 +387,6 @@ function CreatorRevision({ job }: { job: Job }) {
 function CreatorWaiting({ job }: { job: Job }) {
   const { commission: c, businessName, latest, selected, slot, noun, totals } = job;
   const auto = autoApproveDate(c);
-  const earns = slot ? c.price : totals.creatorEarns;
   return (
     <Panel
       title={`Waiting for ${possessive(businessName)} review`}
@@ -348,7 +394,7 @@ function CreatorWaiting({ job }: { job: Job }) {
         auto
           ? slot
             ? `If they don't respond, it's approved on ${weekdayDate(auto)}.`
-            : `If they don't respond, it approves itself on ${weekdayDate(auto)} and ${cash(earns)} is released to you.`
+            : `If they don't respond, it approves itself on ${weekdayDate(auto)} and ${cash(totals.creatorEarns)} is released to you.`
           : ""
       }`}
     >
@@ -368,8 +414,8 @@ function Disputed({ job }: { job: Job }) {
       title="Yapp support is on it"
       line={
         side === "business"
-          ? `We're reading the brief, the versions and your messages, and we'll reply here within 24 hours. The payment stays held meanwhile. If ${creatorName} can't deliver what was agreed, you get a full refund.`
-          : "We're reading the brief, the versions and your messages, and we'll reply here within 24 hours. The payment stays held meanwhile. If the work matches what was agreed, you're paid in full."
+          ? `We're reading the brief, the versions and your messages, and a person replies here within 48 hours. The payment stays held meanwhile. If ${creatorName} can't deliver what was agreed, you get a full refund.`
+          : "We're reading the brief, the versions and your messages, and a person replies here within 48 hours. The payment stays held meanwhile. If the work matches what was agreed, you're paid."
       }
     >
       {selected ? <ReviewArea job={job} delivery={selected} /> : null}
@@ -385,7 +431,7 @@ function Ended({ job }: { job: Job }) {
   if (slot) {
     const slotMoney =
       c.payment.status === "refunded"
-        ? "The campaign is closed, so the slot's money and its fee went back to your card."
+        ? "The campaign is closed, so the slot's money went back to your card in full."
         : "The slot reopened for another creator, and its money stays held in your campaign.";
     if (side === "business") {
       const title =
@@ -444,7 +490,7 @@ function Ended({ job }: { job: Job }) {
         title={withdrawn ? "You withdrew this offer" : "This job was cancelled"}
         line={`${reasonLine}${
           c.acceptedAt
-            ? "Refunded in full to your card, service fee included. Refunds take 3–5 working days to show."
+            ? `The ${cash(job.totals.total)} you paid was refunded in full to your card. Refunds take 3–5 working days to show.`
             : "The authorization on your card was released. You weren't charged."
         }`}
       />
@@ -461,4 +507,3 @@ function Ended({ job }: { job: Job }) {
     />
   );
 }
-

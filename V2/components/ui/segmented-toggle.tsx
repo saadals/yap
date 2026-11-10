@@ -2,20 +2,31 @@
 
 import { useRef } from "react";
 
-/** Weekly / Monthly style toggle. A radiogroup with roving focus and arrow-key navigation. */
+/**
+ * Segmented control: a radiogroup with roving focus and arrow-key navigation; the selected option
+ * is the dark primary pill. sm 34px (compact toggles), md 40px (the previews' Work tabs, order
+ * tabs, Productivity's brand/creator switch), lg 44px (Find work's type bar). An option can carry
+ * a count (it turns green when selected). `fill` makes it span its row on phones, with the options
+ * sharing it evenly; `phoneCounts={false}` drops the counts under 768px when the labels need the
+ * room (Find work's type bar).
+ */
 export function SegmentedToggle<T extends string>({
   options,
   value,
   onChange,
   label,
   size = "sm",
+  fill = false,
+  phoneCounts = true,
   className = "",
 }: {
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; count?: number }[];
   value: T;
   onChange: (value: T) => void;
   label: string;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg";
+  fill?: boolean;
+  phoneCounts?: boolean;
   className?: string;
 }) {
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
@@ -35,7 +46,13 @@ export function SegmentedToggle<T extends string>({
     }
   };
   return (
-    <div role="radiogroup" aria-label={label} className={`y-seg ${className}`} data-size={size}>
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={`y-seg ${className}`}
+      data-size={size}
+      data-fill={fill ? "true" : undefined}
+    >
       {options.map((option, index) => {
         const checked = option.value === value;
         return (
@@ -52,6 +69,11 @@ export function SegmentedToggle<T extends string>({
             onKeyDown={(event) => onKeyDown(event, index)}
           >
             {option.label}
+            {option.count !== undefined ? (
+              <span className={`y-seg-count ${phoneCounts ? "" : "max-md:hidden"}`}>
+                {option.count}
+              </span>
+            ) : null}
           </button>
         );
       })}

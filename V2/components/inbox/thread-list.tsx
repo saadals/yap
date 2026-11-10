@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageCircle } from "lucide-react";
+import { CheckCheck, MessageCircle } from "lucide-react";
 import Link from "next/link";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
@@ -69,12 +69,10 @@ export function ThreadList({
         title="Your conversations will appear here"
         body={
           mode === "studio"
-            ? "Pitch on a brief or take a campaign slot. Every job gets its own conversation."
+            ? "Pitch on a custom order or pick a Yapp in a campaign. Every job gets its own conversation."
             : "Message a creator from their profile, or place an order. Every job gets its own conversation."
         }
-        shape="bean"
-        tint="violet"
-        face="smile"
+        icon={<MessageCircle size={22} />}
         headingLevel={3}
         action={
           <PillButton href={mode === "studio" ? paths.findWork() : paths.discover()} variant="contrast" size="sm">
@@ -115,9 +113,7 @@ export function ThreadList({
                 ? "Conversations about videos you make will show up here."
                 : "Conversations about videos you order will show up here."
           }
-          shape="ball"
-          tint="sea"
-          face={filter === "unread" ? "smile" : "focus"}
+          icon={filter === "unread" ? <CheckCheck size={22} /> : <MessageCircle size={22} />}
           headingLevel={3}
           action={
             <PillButton variant="soft" size="sm" onClick={() => onFilter("all")}>

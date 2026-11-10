@@ -12,12 +12,12 @@ import { RowList, SwitchRow } from "./controls";
 
 const channelCopy: Record<Role, Record<"email" | "whatsapp" | "push", string>> = {
   business: {
-    email: "New pitches, videos to review, campaign slots taken and receipts.",
+    email: "New pitches, videos to review, comments, campaign picks and receipts.",
     whatsapp: "Only time-sensitive things, like a video to review.",
     push: "While Yapp is open in a tab.",
   },
   creator: {
-    email: "New offers, replies, approvals, campaign posts and payouts.",
+    email: "New offers, comments, approvals, campaign posts and payouts.",
     whatsapp: "Only time-sensitive things, like a new offer.",
     push: "While Yapp is open in a tab.",
   },

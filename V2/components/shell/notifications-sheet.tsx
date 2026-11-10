@@ -9,6 +9,7 @@ import {
   Gift,
   Megaphone,
   MessageCircle,
+  MessageSquareText,
   Repeat2,
   Send,
   Star,
@@ -25,6 +26,7 @@ import type { NotificationKind } from "@/lib/types";
 
 const icons: Record<NotificationKind, React.ReactNode> = {
   pitch: <Send size={17} aria-hidden className="y-flip" />,
+  comment: <MessageSquareText size={17} aria-hidden />,
   delivery: <Film size={17} aria-hidden />,
   message: <MessageCircle size={17} aria-hidden />,
   offer: <Gift size={17} aria-hidden />,
@@ -51,9 +53,8 @@ export function NotificationList({ onNavigate, card = false }: { onNavigate?: ()
     const empty = (
       <EmptyState
         title="Nothing yet"
-        body="Orders, deliveries and payments will show up here."
-        shape="ball"
-        tint="sea"
+        body="Orders, deliveries, comments and payments will show up here."
+        icon={<Bell size={22} />}
         headingLevel={3}
       />
     );

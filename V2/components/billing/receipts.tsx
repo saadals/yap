@@ -7,6 +7,7 @@ import {
   Download,
   Mail,
   Megaphone,
+  ReceiptText,
   RotateCcw,
   ShieldCheck,
   Undo2,
@@ -26,11 +27,11 @@ import { List, Row } from "@/components/ui/list";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
-import { longDate, money, plural, shortDate } from "@/lib/format";
+import { creatorNet, longDate, money, moneyExact, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { campaignReceipts, me, receipts } from "@/lib/selectors";
 import { type DemoState, useDemo } from "@/lib/store";
-import { AUTO_APPROVE_DAYS, CAMPAIGN_FEE_RATE, CAMPAIGN_RELEASE_DAYS, countries } from "@/lib/taxonomy";
+import { AUTO_APPROVE_DAYS, CAMPAIGN_FEE_RATE, CAMPAIGN_RELEASE_DAYS, FEE_PCT, countries } from "@/lib/taxonomy";
 import type { LedgerEntry, PaymentStatus } from "@/lib/types";
 
 import type { BillingDetails } from "./billing-details";
@@ -121,11 +122,12 @@ export function Receipts({ rows, details }: { rows: Receipt[]; details: BillingD
   const visibleFilters = filters.filter((f) => count(f.value) > 0 || f.value === status);
 
   const exportCsv = () => {
-    const header = ["Receipt", "Date", "Type", "Paid to", "Order", "Order ID", "Status", "Amount (USD)", "Service fee (USD)", "Total (USD)"];
+    // Listed prices only: what moved on your card. Nothing is added on top of a price.
+    const header = ["Receipt", "Date", "Type", "Paid to", "Order", "Order ID", "Status", "Total (USD)"];
     const lines = shown.map((row) =>
       row.kind === "order"
-        ? [row.id, isoDay(row.date), "Order", row.creator?.name ?? "", row.commission.title, row.commission.id, statusOf(row).label, row.subtotal.toFixed(2), row.fee.toFixed(2), row.total.toFixed(2)]
-        : [row.id, isoDay(row.date), "UGC campaign", "Campaign creators", row.request.title, row.request.id, ledgerInfo[row.entry.kind].line, row.subtotal.toFixed(2), row.fee.toFixed(2), row.amount.toFixed(2)],
+        ? [row.id, isoDay(row.date), row.commission.source === "request" ? "Custom order" : "Direct order", row.creator?.name ?? "", row.commission.title, row.commission.id, statusOf(row).label, row.total.toFixed(2)]
+        : [row.id, isoDay(row.date), "UGC campaign", "Campaign creators", row.request.title, row.request.id, ledgerInfo[row.entry.kind].line, row.amount.toFixed(2)],
     );
     downloadFile(`yapp-receipts${status === "all" ? "" : `-${status}`}.csv`, toCsv([header, ...lines]));
     toast({ message: `Exported ${plural(shown.length, "receipt")} as CSV` });
@@ -137,9 +139,7 @@ export function Receipts({ rows, details }: { rows: Receipt[]; details: BillingD
         <EmptyState
           title="No receipts yet"
           body="When a creator accepts your order or you post a campaign, the payment is held and a receipt appears here. You get another when it's released."
-          shape="dome"
-          tint="sun"
-          face="calm"
+          icon={<ReceiptText size={22} aria-hidden />}
           headingLevel={3}
           action={
             <PillButton href={paths.discover()} variant="contrast" size="sm">
@@ -304,15 +304,23 @@ function OrderReceiptSheet({
   const refundedAt = c.events.find((e) => e.kind === "cancelled")?.at;
   const note =
     receipt.status === "held"
-      ? `Held safely by Yapp. It's released to the creator only when you approve the final video, or by itself ${AUTO_APPROVE_DAYS} days after a delivery if you don't respond.`
+      ? `Held safely by Yapp. It's released to the creator only when you approve the work, or by itself ${AUTO_APPROVE_DAYS} days after a delivery if you don't respond.`
       : receipt.status === "released"
         ? `Released to ${receipt.creator?.firstName ?? "the creator"} when you approved the work${c.completedAt ? ` on ${longDate(c.completedAt)}` : ""}.`
-        : `Refunded in full to ${method ? paymentLabel(method) : "your card"}${refundedAt ? ` on ${longDate(refundedAt)}` : ""}, service fee included.`;
+        : `Refunded in full to ${method ? paymentLabel(method) : "your card"}${refundedAt ? ` on ${longDate(refundedAt)}` : ""}: the price you paid, all of it.`;
+  const first = receipt.creator?.firstName ?? "The creator";
+  const net = moneyExact(receipt.creatorEarns);
+  const creatorLine =
+    receipt.status === "released"
+      ? `Received ${net} after Yapp's ${FEE_PCT}%`
+      : receipt.status === "held"
+        ? `${first} receives ${net} on approval, after Yapp's ${FEE_PCT}%`
+        : "Not paid: the money came back to you";
 
   return (
     <SheetFrame receipt={receipt} details={details} description={`${longDate(receipt.date)} · ${c.title}`} note={note} onClose={onClose}>
       <div className="y-tile p-4">
-        <PriceSummary price={c.price} addons={c.addons} feeRate={c.feeRate} perspective="business" showRights cents />
+        <PriceSummary price={c.price} addons={c.addons} feeRate={c.feeRate} perspective="business" usage={c.brief.usage} cents />
       </div>
       <KeyValues
         rows={[
@@ -322,7 +330,7 @@ function OrderReceiptSheet({
             value: (
               <span className="flex flex-col items-end">
                 <span>{receipt.creator?.name ?? "Creator"}</span>
-                <span className="y-fg-2 font-normal">Keeps 100% of {money(receipt.subtotal)}</span>
+                <span className="y-fg-2 font-normal">{creatorLine}</span>
               </span>
             ),
           },
@@ -356,10 +364,10 @@ function CampaignReceiptSheet({
   const card = method ? paymentLabel(method) : "your card";
   const note =
     entry.kind === "charge"
-      ? `Charged when you posted the campaign and held by Yapp, fee included. Each creator is paid ${CAMPAIGN_RELEASE_DAYS} days after their post is verified; slots nobody takes are refunded with their fee when the campaign closes.`
+      ? `Charged when you posted the campaign and held by Yapp. Each creator is paid ${CAMPAIGN_RELEASE_DAYS} days after their post is verified; slots nobody picks are refunded in full when the campaign closes.`
       : entry.kind === "top_up"
-        ? "Extra held, with its fee, after the price of open slots went up. Slots already taken keep their price."
-        : `Refunded to ${card}, with the matching share of the service fee.`;
+        ? "Extra held after you raised the price for open slots. Slots already picked keep their price."
+        : `Refunded to ${card} in full.`;
   const row = "flex items-baseline justify-between gap-3";
 
   return (
@@ -367,17 +375,16 @@ function CampaignReceiptSheet({
       <dl className="y-tile flex flex-col gap-2.5 p-4">
         <div className={row}>
           <dt className="y-small">{ledgerInfo[entry.kind].line}</dt>
-          <dd className="y-small y-num font-medium">{signed(receipt.subtotal)}</dd>
+          <dd className="y-small y-num font-medium">{signed(receipt.amount)}</dd>
         </div>
         <div className={row}>
           <dt className="y-small y-fg-2">{entry.note}</dt>
         </div>
         <div className={`${row} border-t border-(--b-line) pt-2.5`}>
-          <dt className="y-small y-fg-2">Service fee ({Math.round(CAMPAIGN_FEE_RATE * 100)}%)</dt>
-          <dd className="y-small y-num y-fg-2">{signed(receipt.fee)}</dd>
-        </div>
-        <div className={`${row} border-t border-(--b-line) pt-2.5`}>
-          <dt className="y-head">Total</dt>
+          <dt className="y-head">
+            Total
+            <span className="y-micro y-fg-2 block font-normal">Nothing is added on top</span>
+          </dt>
           <dd className="y-display y-num text-[28px] leading-none">{signed(receipt.amount)}</dd>
         </div>
       </dl>
@@ -389,7 +396,10 @@ function CampaignReceiptSheet({
             value: (
               <span className="flex flex-col items-end">
                 <span>The campaign&apos;s creators</span>
-                <span className="y-fg-2 font-normal">{money(request.campaign.pricePerVideo)} per approved video, keeping 100%</span>
+                <span className="y-fg-2 font-normal">
+                  {money(request.campaign.pricePerVideo)} a Yapp. Each creator receives{" "}
+                  {moneyExact(creatorNet(request.campaign.pricePerVideo, CAMPAIGN_FEE_RATE))} after Yapp&apos;s {FEE_PCT}%
+                </span>
               </span>
             ),
           },

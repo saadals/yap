@@ -24,7 +24,8 @@ import { EditorSection } from "./section";
 
 /**
  * Connected accounts: one row per campaign platform. Read-only connections verify real followers,
- * which decide the campaign tier you can take. Saves as you go (`connectSocial` / `disconnectSocial`).
+ * which decide the campaign tiers you can pick from (the brand sets each campaign's price). Saves
+ * as you go (`connectSocial` / `disconnectSocial`).
  */
 export function AccountsSection({ creator }: { creator: Creator }) {
   const toast = useToast();
@@ -45,7 +46,7 @@ export function AccountsSection({ creator }: { creator: Creator }) {
     <EditorSection
       id="accounts"
       title="Connected accounts"
-      description={`${READ_ONLY_NOTE} Custom orders hire on your portfolio; UGC campaigns pay by follower tier.`}
+      description={`${READ_ONLY_NOTE} Custom orders hire on your portfolio. UGC campaigns are open by follower tier on the platform you post to, at a price the brand sets.`}
       instant
     >
       <ul className="y-tile flex flex-col overflow-hidden !bg-transparent shadow-[inset_0_0_0_1px_var(--b-line)]">

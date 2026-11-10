@@ -5,11 +5,11 @@ import Link from "next/link";
 import { useId, useState } from "react";
 
 import { Block } from "@/components/ui/block";
-import { money, plural } from "@/lib/format";
+import { plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { me } from "@/lib/selectors";
 import { type DemoState, useDemo } from "@/lib/store";
-import { CAMPAIGN_MIN_VIDEOS, followerTiers } from "@/lib/taxonomy";
+import { CAMPAIGN_MIN_VIDEOS } from "@/lib/taxonomy";
 import type { Product } from "@/lib/types";
 
 import { IconTile } from "./order-row";
@@ -26,11 +26,9 @@ export function myProducts(s: DemoState): Product[] {
     .sort((a, b) => uses(b.id) - uses(a.id) || Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
 }
 
-const lowestPrice = Math.min(...followerTiers.filter((t) => !t.placeholder).map((t) => t.pricePerVideo));
-
 /**
  * Start an order: three ways to work, in plain words, with the product the brief starts from.
- * When nothing needs you, "Get pitches" carries the screen's one green action.
+ * When nothing needs you, the custom order carries the screen's one green action.
  */
 export function StartOrder({ highlight }: { highlight: boolean }) {
   const s = useDemo();
@@ -52,15 +50,15 @@ export function StartOrder({ highlight }: { highlight: boolean }) {
     {
       key: "pitches",
       icon: <MessagesSquare size={18} />,
-      title: "Get pitches",
-      line: "Describe the video. Creators send ideas and quotes, you choose.",
+      title: "Post a custom order",
+      line: "Describe a video or ad copy. Creators pitch, you choose.",
       href: paths.newOrder({ type: "custom", product: productId }),
     },
     {
       key: "campaign",
       icon: <Megaphone size={18} />,
       title: "Run a UGC campaign",
-      line: `${CAMPAIGN_MIN_VIDEOS} or more creators post on their own accounts, from ${money(lowestPrice)} a video.`,
+      line: `${CAMPAIGN_MIN_VIDEOS} or more creators post on their own accounts, at your price.`,
       href: paths.newOrder({ type: "campaign", product: productId }),
     },
   ];

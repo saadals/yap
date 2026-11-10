@@ -3,12 +3,12 @@
 import {
   AlertTriangle,
   BadgeCheck,
-  CalendarDays,
   Check,
   Globe,
   Link2,
   MailOpen,
   Minus,
+  Paperclip,
   Pencil,
   ShieldCheck,
   Sparkles,
@@ -25,44 +25,51 @@ import { TextArea, TextField } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 import { useToast } from "@/components/ui/toast";
-import { lengthLabel, money, moneyRange, plural, weekdayDate } from "@/lib/format";
+import { attachmentMeta } from "@/lib/files";
+import { lengthLabel, money, moneyRange, plural, quoted, weekdayDate } from "@/lib/format";
 import { cityById, me } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
 import {
-  SERVICE_FEE_RATE,
+  ORDER_DEADLINE_OPTIONS,
+  RAW_FOOTAGE_INCLUDED,
   addonById,
   aspects,
   formatById,
   formats,
-  includedRights,
+  jobTypeById,
+  jobTypes,
   languages,
   platforms,
+  usageOptions,
 } from "@/lib/taxonomy";
-import type { AddonId, Aspect, FormatId, Product } from "@/lib/types";
+import type { AddonId, Aspect, FormatId, JobType, Product } from "@/lib/types";
 
+import { AttachmentsField } from "./attachments";
 import { ChoiceTile, Disclosure, GroupError, ListEditor, Question, Stepper, SubLabel, MoneyInput } from "./parts";
 import {
-  DEADLINE_PRESETS,
-  MAX_DEADLINE_DAYS,
-  MIN_DEADLINE_DAYS,
+  AD_COPY_PIECES,
+  HOOK_MAX,
+  TITLE_MAX,
+  VIDEO_COUNT_MAX,
   WANTED_ADDONS,
   applyProduct,
   autoTitle,
-  daysForIsoDay,
+  closesAtIfNow,
   deliverableLabel,
   draftCopy,
-  dueDateFor,
   effectiveTitle,
+  firstVersionIfHiredToday,
   formToBrief,
   inviteCandidates,
-  isoDay,
+  isAdCopyForm,
   lengthOptions,
   median,
-  recommendedDays,
+  perUnit,
   totalBudget,
   typicalLength,
   unitWord,
   unitsFor,
+  withJobType,
   type FieldKey,
   type Market,
   type PitchesForm,
@@ -128,20 +135,21 @@ function ContextLine({ product }: { product: Product }) {
   return (
     <p className="y-small y-fg-2 flex items-start gap-2 px-1">
       <ShieldCheck size={16} aria-hidden className="mt-0.5 flex-none" />
-      <span>
-        Also sent with the brief: {parts.join(", ")}.
-      </span>
+      <span>Also sent with the brief: {parts.join(", ")}.</span>
     </p>
   );
 }
 
 /* -------------------------------------------------------------------------- */
-/* 2 · The video                                                               */
+/* 2 · What to make                                                            */
 /* -------------------------------------------------------------------------- */
 
-export function VideoStep({ s, form, set, product, error }: StepProps) {
+export function WorkStep({ s, form, set, product, error, goTo }: StepProps) {
   const toast = useToast();
+  const adCopy = isAdCopyForm(form);
   const formatErr = error("format");
+  const piecesErr = error("copyPieces");
+  const placementsErr = error("copyPlacements");
   const platformErr = error("platforms");
   const langErr = error("languages");
   const [direction, setDirection] = useState(false);
@@ -162,7 +170,7 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
   const writeIt = () => {
     if (!product) return;
     const before = { goal: form.goal, keyMessage: form.keyMessage };
-    set(draftCopy(form.format, product));
+    set(draftCopy(adCopy ? "ad-copy" : form.format, product));
     if (before.goal.trim()) {
       toast({ message: "Wrote a new goal and key message", action: { label: "Undo", onClick: () => set(before) } });
     }
@@ -173,94 +181,167 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
     form.keyMessage.trim() ? "key message" : null,
     form.mustInclude.length ? plural(form.mustInclude.length, "must-include") : null,
     form.avoid.length ? `${form.avoid.length} to avoid` : null,
+    form.attachments.length ? plural(form.attachments.length, "file") : null,
   ].filter(Boolean);
 
   return (
     <>
-      <Question id="q-format" title="Format" hint="Creators plan, price and film around it.">
-        <div
-          role="radiogroup"
-          aria-labelledby="q-format"
-          data-invalid={formatErr ? "true" : undefined}
-          tabIndex={-1}
-          className="grid gap-2 outline-none sm:grid-cols-2"
-        >
-          {formats.map((format) => {
-            const Icon = format.icon;
-            const checked = form.format === format.id;
-            return (
-              <ChoiceTile
-                key={format.id}
-                name="format"
-                checked={checked}
-                onChange={() => choose(format.id)}
-                label={`${format.name}. ${format.short}`}
-                className="!p-3.5"
+      <Question id="q-format" title="What you need" hint={jobTypeById[form.jobType].description}>
+        <SegmentedToggle<JobType>
+          label="Job type"
+          size="md"
+          className="w-fit max-w-full"
+          value={form.jobType}
+          onChange={(jobType) => set((f) => withJobType(s, f, jobType, product))}
+          options={jobTypes.map((j) => ({ value: j.id, label: j.id === "video" ? "Video" : j.name }))}
+        />
+        {adCopy ? (
+          <>
+            <div className="flex flex-col gap-2">
+              <SubLabel id="q-pieces" hint="One piece per line, with any length limits.">
+                What to write
+              </SubLabel>
+              <ListEditor
+                label="What to write"
+                items={form.copyPieces}
+                onChange={(copyPieces) => set({ copyPieces })}
+                placeholder={`e.g. ${AD_COPY_PIECES[0]}`}
+                marker={<Check size={15} strokeWidth={2.75} />}
+                invalid={Boolean(piecesErr)}
+                describedBy={piecesErr ? "q-pieces-error" : undefined}
+              />
+              {!form.copyPieces.length ? (
+                <div className="y-tile flex flex-wrap items-center gap-3 p-3 ps-4">
+                  <p className="y-small min-w-0 flex-1">
+                    <span className="font-semibold">Most ad orders ask for:</span>{" "}
+                    <span className="y-fg-2">{AD_COPY_PIECES.join(" · ")}</span>
+                  </p>
+                  <PillButton size="sm" variant="soft" onClick={() => set({ copyPieces: [...AD_COPY_PIECES] })}>
+                    Use these
+                  </PillButton>
+                </div>
+              ) : null}
+              <GroupError id="q-pieces-error" message={piecesErr} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <SubLabel id="q-placements" hint="Where you'll run the ads. The writer never posts anything.">
+                Where it will run
+              </SubLabel>
+              <div
+                role="group"
+                aria-labelledby="q-placements"
+                data-invalid={placementsErr ? "true" : undefined}
+                tabIndex={-1}
+                className="flex flex-wrap gap-2 outline-none"
               >
-                <span className="flex items-start gap-3">
-                  <span className="y-round flex-none" data-tone-btn={checked ? "contrast" : "soft"} data-size="sm" aria-hidden>
-                    <Icon size={18} />
-                  </span>
-                  <span className="flex min-w-0 flex-col">
-                    <span className="y-small font-semibold">{format.name}</span>
-                    <span className="y-micro y-fg-2">{format.short}</span>
-                  </span>
-                </span>
-              </ChoiceTile>
-            );
-          })}
-        </div>
-        <GroupError message={formatErr} />
+                {platforms.map((p) => (
+                  <FilterChip
+                    key={p.id}
+                    pressed={form.copyPlacements.includes(p.id)}
+                    onClick={() => set((f) => ({ copyPlacements: toggle(f.copyPlacements, p.id) }))}
+                  >
+                    {p.name}
+                  </FilterChip>
+                ))}
+              </div>
+              <GroupError message={placementsErr} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div
+              role="radiogroup"
+              aria-label="Format"
+              data-invalid={formatErr ? "true" : undefined}
+              tabIndex={-1}
+              className="grid gap-2 outline-none sm:grid-cols-2"
+            >
+              {formats.map((format) => {
+                const Icon = format.icon;
+                const checked = form.format === format.id;
+                return (
+                  <ChoiceTile
+                    key={format.id}
+                    name="format"
+                    checked={checked}
+                    onChange={() => choose(format.id)}
+                    label={`${format.name}. ${format.short}`}
+                    className="!p-3.5"
+                  >
+                    <span className="flex items-start gap-3">
+                      <span className="y-round flex-none" data-tone-btn={checked ? "contrast" : "soft"} data-size="sm" aria-hidden>
+                        <Icon size={18} />
+                      </span>
+                      <span className="flex min-w-0 flex-col">
+                        <span className="y-small font-semibold">{format.name}</span>
+                        <span className="y-micro y-fg-2">{format.short}</span>
+                      </span>
+                    </span>
+                  </ChoiceTile>
+                );
+              })}
+            </div>
+            <GroupError message={formatErr} />
+          </>
+        )}
       </Question>
 
-      <Question id="q-size" title={form.format === "hook-pack" ? "How many hooks, how long" : "How many, how long"}>
-        <div className="flex flex-col gap-5">
-          <Stepper
-            label={form.format === "hook-pack" ? "Hooks" : "Videos"}
-            value={form.videoCount}
-            min={1}
-            max={10}
-            onChange={(videoCount) => set({ videoCount })}
-            unit={(n) => (form.format === "hook-pack" ? (n === 1 ? "hook" : "hooks") : n === 1 ? "video" : "videos")}
-          />
-          <div className="flex flex-col gap-2">
-            <SubLabel
-              id="q-length"
-              hint={form.format ? `Most ${formatById[form.format].noun[1]} run ${typicalLength(form.format)}.` : undefined}
-            >
-              Length of each
-            </SubLabel>
-            <div role="group" aria-labelledby="q-length" className="flex flex-wrap gap-2">
-              {lengthOptions(form.format).map((option) => (
-                <FilterChip
-                  key={option.value}
-                  pressed={form.durationSec === option.value}
-                  onClick={() => set({ durationSec: option.value })}
-                >
-                  Up to {lengthLabel(option.value)}
-                  {option.longer ? <span className="font-normal opacity-75"> · longer than usual</span> : null}
-                </FilterChip>
-              ))}
+      {!adCopy ? (
+        <Question id="q-size" title={form.format === "hook-pack" ? "How many hooks, how long" : "How many, how long"}>
+          <div className="flex flex-col gap-5">
+            <Stepper
+              label={form.format === "hook-pack" ? "Hooks" : "Videos"}
+              value={form.videoCount}
+              min={1}
+              max={VIDEO_COUNT_MAX}
+              onChange={(videoCount) => set({ videoCount })}
+              unit={(n) => (form.format === "hook-pack" ? (n === 1 ? "hook" : "hooks") : n === 1 ? "video" : "videos")}
+            />
+            <div className="flex flex-col gap-2">
+              <SubLabel
+                id="q-length"
+                hint={form.format ? `Most ${formatById[form.format].noun[1]} run ${typicalLength(form.format)}.` : undefined}
+              >
+                Length of each
+              </SubLabel>
+              <div role="group" aria-labelledby="q-length" className="flex flex-wrap gap-2">
+                {lengthOptions(form.format).map((option) => (
+                  <FilterChip
+                    key={option.value}
+                    pressed={form.durationSec === option.value}
+                    onClick={() => set({ durationSec: option.value })}
+                  >
+                    Up to {lengthLabel(option.value)}
+                    {option.longer ? <span className="font-normal opacity-75"> · longer than usual</span> : null}
+                  </FilterChip>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      </Question>
+        </Question>
+      ) : null}
 
-      <Question id="q-where" title="Language and where it goes">
+      <Question
+        id="q-where"
+        title={adCopy ? "Language to write in" : "Language and where it goes"}
+        hint={adCopy ? "Writers who work in it see your order." : undefined}
+      >
         <div className="flex flex-col gap-2">
-          <SubLabel id="q-lang" hint="Numbers show creators who make videos in it.">
-            Language
-          </SubLabel>
-          <div role="group" aria-labelledby="q-lang" data-invalid={langErr ? "true" : undefined} tabIndex={-1} className="flex flex-wrap gap-2 outline-none">
+          {!adCopy ? (
+            <SubLabel id="q-lang" hint="Numbers show creators who make videos in it.">
+              Language
+            </SubLabel>
+          ) : null}
+          <div role="group" aria-labelledby={adCopy ? "q-where" : "q-lang"} data-invalid={langErr ? "true" : undefined} tabIndex={-1} className="flex flex-wrap gap-2 outline-none">
             {languages.map((lang) => {
               const count = s.creators.filter(
-                (c) => c.languages.includes(lang.id) && (!form.format || c.formats.includes(form.format)),
+                (c) => c.languages.includes(lang.id) && (adCopy || !form.format || c.formats.includes(form.format)),
               ).length;
               return (
                 <FilterChip
                   key={lang.id}
                   pressed={form.languages.includes(lang.id)}
-                  count={count}
+                  count={adCopy ? undefined : count}
                   onClick={() => set((f) => ({ languages: toggle(f.languages, lang.id) }))}
                 >
                   {lang.name}
@@ -270,74 +351,99 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
           </div>
           <GroupError message={langErr} />
         </div>
-        <div className="flex flex-col gap-2">
-          <SubLabel id="q-platforms">Where you&apos;ll post it</SubLabel>
-          <div role="group" aria-labelledby="q-platforms" data-invalid={platformErr ? "true" : undefined} tabIndex={-1} className="flex flex-wrap gap-2 outline-none">
-            {platforms.map((p) => (
-              <FilterChip
-                key={p.id}
-                pressed={form.platforms.includes(p.id)}
-                onClick={() => set((f) => ({ platforms: toggle(f.platforms, p.id) }))}
-              >
-                {p.name}
-              </FilterChip>
-            ))}
-          </div>
-          <GroupError message={platformErr} />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <SubLabel>Who&apos;s in it</SubLabel>
-            <SegmentedToggle<"on" | "off">
-              label="On camera or voice only"
-              size="md"
-              className="w-fit"
-              value={form.onCamera ? "on" : "off"}
-              onChange={(value) => set({ onCamera: value === "on" })}
-              options={[
-                { value: "on", label: "On camera" },
-                { value: "off", label: "Voice only" },
-              ]}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <SubLabel>Shape</SubLabel>
-            <SegmentedToggle<Aspect>
-              label="Shape"
-              size="md"
-              className="w-fit"
-              value={form.aspect}
-              onChange={(aspect) => set({ aspect })}
-              options={aspects.map((a) => ({ value: a.id, label: a.id }))}
-            />
-          </div>
-        </div>
+        {!adCopy ? (
+          <>
+            <div className="flex flex-col gap-2">
+              <SubLabel id="q-platforms">Where you&apos;ll post it</SubLabel>
+              <div role="group" aria-labelledby="q-platforms" data-invalid={platformErr ? "true" : undefined} tabIndex={-1} className="flex flex-wrap gap-2 outline-none">
+                {platforms.map((p) => (
+                  <FilterChip
+                    key={p.id}
+                    pressed={form.platforms.includes(p.id)}
+                    onClick={() => set((f) => ({ platforms: toggle(f.platforms, p.id) }))}
+                  >
+                    {p.name}
+                  </FilterChip>
+                ))}
+              </div>
+              <GroupError message={platformErr} />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <SubLabel>Who&apos;s in it</SubLabel>
+                <SegmentedToggle<"on" | "off">
+                  label="On camera or voice only"
+                  size="md"
+                  className="w-fit"
+                  value={form.onCamera ? "on" : "off"}
+                  onChange={(value) => set({ onCamera: value === "on" })}
+                  options={[
+                    { value: "on", label: "On camera" },
+                    { value: "off", label: "Voice only" },
+                  ]}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <SubLabel>Shape</SubLabel>
+                <SegmentedToggle<Aspect>
+                  label="Shape"
+                  size="md"
+                  className="w-fit"
+                  value={form.aspect}
+                  onChange={(aspect) => set({ aspect })}
+                  options={aspects.map((a) => ({ value: a.id, label: a.id }))}
+                />
+              </div>
+            </div>
+          </>
+        ) : null}
       </Question>
 
-      {form.format ? (
-        <Question id="q-title" title="Title" hint="Creators see it first. We suggested one from your answers.">
-          <TextField
-            label="Order title"
-            required
-            value={title}
-            maxLength={90}
-            error={error("title")}
-            onChange={(event) => set({ title: event.target.value, titleTouched: true })}
+      {adCopy || form.format ? (
+        <Question id="q-title" title="Title and hook" hint="Creators see the title first. We suggested one from your answers.">
+          <div className="flex flex-col gap-2">
+            <TextField
+              label="Order title"
+              required
+              value={title}
+              maxLength={TITLE_MAX}
+              error={error("title")}
+              onChange={(event) => set({ title: event.target.value, titleTouched: true })}
+            />
+            {form.titleTouched && title !== suggestion ? (
+              <PillButton size="sm" variant="ghost" className="w-fit" onClick={() => set({ titleTouched: false, title: "" })}>
+                Use &ldquo;{suggestion}&rdquo;
+              </PillButton>
+            ) : null}
+          </div>
+          <TextArea
+            label={adCopy ? "Opening line or angle" : "Hook line"}
+            name="hook"
+            rows={2}
+            maxLength={HOOK_MAX + 40}
+            value={form.hook}
+            error={error("hook")}
+            placeholder={
+              adCopy
+                ? "e.g. Open on what a customer says: “I'll pay you tomorrow”"
+                : "e.g. Open on a shop owner chasing a payment by text at 9 PM"
+            }
+            hint={
+              adCopy
+                ? `The idea the copy should start from. Up to ${HOOK_MAX} characters.`
+                : `What happens in the first two seconds. Creators build their pitch around it. Up to ${HOOK_MAX} characters.`
+            }
+            onChange={(event) => set({ hook: event.target.value })}
           />
-          {form.titleTouched && title !== suggestion ? (
-            <PillButton size="sm" variant="ghost" className="w-fit" onClick={() => set({ titleTouched: false, title: "" })}>
-              Use &ldquo;{suggestion}&rdquo;
-            </PillButton>
-          ) : null}
         </Question>
       ) : null}
 
       <Disclosure
-        title="Creative direction (optional)"
+        title="Creative direction and files (optional)"
         summary={
           directionSummary.length
             ? `${product ? `From ${product.name}: ` : ""}${directionSummary.join(", ")}`
-            : "Key message, must include, avoid, references, notes"
+            : "Key message, must include, avoid, files, references, notes"
         }
         open={direction}
         onToggle={setDirection}
@@ -351,35 +457,45 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
             </PillButton>
           </div>
         ) : null}
+        {adCopy && product && product.learnings.length > form.learningIds.length ? (
+          <p className="y-small y-fg-2 flex flex-wrap items-center gap-x-2">
+            <span>Learnings from earlier videos aren&apos;t attached to ad copy.</span>
+            <button type="button" className="y-link font-semibold" onClick={() => goTo(0)}>
+              Attach them on the Product step
+            </button>
+          </p>
+        ) : null}
         <TextArea
           label="Who it's for"
           rows={2}
           value={form.audience}
-          hint={product ? `From ${product.name}. Narrow it for this video if you like.` : undefined}
+          hint={product ? `From ${product.name}. Narrow it for this order if you like.` : undefined}
           onChange={(event) => set({ audience: event.target.value })}
         />
         <TextArea
           label="Goal"
           rows={2}
           value={form.goal}
-          placeholder="What should viewers do or feel after watching?"
+          placeholder={adCopy ? "What should people do after reading the ad?" : "What should viewers do or feel after watching?"}
           onChange={(event) => set({ goal: event.target.value })}
         />
         <TextField
           label="Key message"
           value={form.keyMessage}
-          placeholder="The one line viewers should remember"
+          placeholder="The one line people should remember"
           onChange={(event) => set({ keyMessage: event.target.value })}
         />
         <div className="flex flex-col gap-2">
-          <SubLabel hint={product?.dos.length ? `Started from ${product.name}'s dos.` : "Shots, lines or moments it needs."}>
+          <SubLabel
+            hint={product?.dos.length ? `Started from ${product.name}'s dos.` : adCopy ? "Points the copy must get across." : "Shots, lines or moments it needs."}
+          >
             Must include
           </SubLabel>
           <ListEditor
             label="Must include"
             items={form.mustInclude}
             onChange={(mustInclude) => set({ mustInclude })}
-            placeholder="e.g. Show the invoice landing in WhatsApp"
+            placeholder={adCopy ? "e.g. Invoices go out on WhatsApp in 10 seconds" : "e.g. Show the invoice landing in WhatsApp"}
             marker={<Check size={15} strokeWidth={2.75} />}
           />
         </div>
@@ -394,9 +510,13 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
           />
         </div>
         <div className="flex flex-col gap-2">
-          <SubLabel hint="A video or account you like, and why. One good reference saves a round of changes.">
-            References
+          <SubLabel hint="Creators see them before they pitch. A brand guide or one short reference video saves a round of changes.">
+            Files
           </SubLabel>
+          <AttachmentsField files={form.attachments} onChange={(attachments) => set({ attachments })} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <SubLabel hint="A video, ad or account you like, and why.">References</SubLabel>
           <ListEditor
             label="References"
             items={form.references.map((r) => r.label)}
@@ -414,7 +534,7 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
           label="Notes"
           rows={3}
           value={form.notes}
-          placeholder="Setting, wardrobe, what worked before, how you'll use it"
+          placeholder={adCopy ? "Tone, words your customers use, what worked before" : "Setting, wardrobe, what worked before, how you'll use it"}
           onChange={(event) => set({ notes: event.target.value })}
         />
       </Disclosure>
@@ -423,7 +543,7 @@ export function VideoStep({ s, form, set, product, error }: StepProps) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* 3 · Budget, timing and who can pitch                                        */
+/* 3 · Budget, deadline and who can pitch                                      */
 /* -------------------------------------------------------------------------- */
 
 function PriceStrip({ prices, budget }: { prices: number[]; budget: { min: number; max: number } }) {
@@ -452,16 +572,18 @@ function PriceStrip({ prices, budget }: { prices: number[]; budget: { min: numbe
 }
 
 export function TermsStep({ s, form, set, product, market, error, pinnedInvites = [] }: StepProps) {
-  const [customDate, setCustomDate] = useState(!DEADLINE_PRESETS.includes(form.dueInDays));
+  const adCopy = isAdCopyForm(form);
   const budgetErr = error("budget");
   const deadlineErr = error("deadline");
   const invitesErr = error("invites");
-  const unit = unitWord(form.format);
-  const units = unitsFor(form.format, form.videoCount);
+  const unit = unitWord(form);
+  const each = perUnit(form);
+  const units = unitsFor(form);
   const total = totalBudget(form);
-  const recommended = recommendedDays(market, form);
-  const suggested = market.count >= 3 && form.perVideo.min === market.low && form.perVideo.max === market.high;
+  const suggested = market.quoted >= 3 && form.perVideo.min === market.low && form.perVideo.max === market.high;
   const candidates = inviteCandidates(s, form, product, pinnedInvites);
+  const brand = me.business(s).name;
+  const tight = market.typicalDays > 0 && form.deadlineDays < market.typicalDays;
 
   const addonStats = (id: AddonId) => {
     const offers = market.pool.flatMap((q) => q.creator.addons.filter((a) => a.id === id));
@@ -470,7 +592,7 @@ export function TermsStep({ s, form, set, product, market, error, pinnedInvites 
 
   return (
     <>
-      <Question id="q-budget" title={`Budget per ${unit}`}>
+      <Question id="q-budget" title={unit ? `Budget per ${unit}` : "Budget"}>
         <div className="flex flex-col gap-2">
           <div className="flex items-end gap-3">
             <MoneyInput
@@ -496,23 +618,23 @@ export function TermsStep({ s, form, set, product, market, error, pinnedInvites 
           <GroupError id="q-budget-error" message={budgetErr} />
           {units > 1 && !budgetErr ? (
             <p className="y-small y-fg-2 px-1">
-              {moneyRange(total.min, total.max)} for {plural(units, unit)}.
+              {moneyRange(total.min, total.max)} for {unit ? plural(units, unit) : "the order"}.
             </p>
           ) : null}
         </div>
 
         <div className="y-tile flex flex-col gap-3 p-4" aria-live="polite">
-          {market.count ? (
+          {market.quoted ? (
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="y-small min-w-0">
                   <span className="font-semibold">
-                    {market.count >= 3
-                      ? `Creators usually charge ${moneyRange(market.low, market.high)} a ${unit} for this`
-                      : `${plural(market.count, "creator")} ${market.count === 1 ? "makes" : "make"} this, from ${money(market.perUnitPrices[0])}`}
+                    {market.quoted >= 3
+                      ? `Creators usually charge ${moneyRange(market.low, market.high)}${each} for this`
+                      : `${plural(market.quoted, "creator")} ${market.quoted === 1 ? "makes" : "make"} this, from ${money(market.perUnitPrices[0])}`}
                   </span>
                 </p>
-                {market.count >= 3 && !suggested ? (
+                {market.quoted >= 3 && !suggested ? (
                   <PillButton
                     size="sm"
                     variant="soft"
@@ -525,10 +647,15 @@ export function TermsStep({ s, form, set, product, market, error, pinnedInvites 
               <PriceStrip prices={market.perUnitPrices} budget={form.perVideo} />
               <p className="y-micro y-fg-2">
                 Each dot is a creator who makes {form.format ? formatById[form.format].noun[1] : "this format"} in your
-                language, priced from their own packages. {market.inBudget} of {market.count} usually charge within your
+                language, priced from their own packages. {market.inBudget} of {market.quoted} usually charge within your
                 maximum.
               </p>
             </>
+          ) : adCopy ? (
+            <p className="y-small">
+              Ad copy is new on Yapp, so there are no usual prices to compare yet. Writers pitch their own price within
+              your range.
+            </p>
           ) : (
             <p className="y-small">
               No creators make this format in your language yet, so there&apos;s no usual price to show. Try another
@@ -538,105 +665,95 @@ export function TermsStep({ s, form, set, product, market, error, pinnedInvites 
         </div>
       </Question>
 
-      <Question id="q-deadline" title="When do you need it?" hint="The day the final video should be approved by.">
+      <Question
+        id="q-deadline"
+        title="Delivery deadline"
+        hint={`Days the creator you hire has to deliver the first version. Creators see it as set by ${brand}.`}
+      >
         <div role="group" aria-labelledby="q-deadline" data-invalid={deadlineErr ? "true" : undefined} tabIndex={-1} className="flex flex-wrap gap-2 outline-none">
-          {DEADLINE_PRESETS.map((days) => (
-            <FilterChip
-              key={days}
-              pressed={!customDate && form.dueInDays === days}
-              onClick={() => {
-                setCustomDate(false);
-                set({ dueInDays: days });
-              }}
-            >
-              {weekdayDate(dueDateFor(days))}
+          {ORDER_DEADLINE_OPTIONS.map((days) => (
+            <FilterChip key={days} pressed={form.deadlineDays === days} onClick={() => set({ deadlineDays: days })}>
+              {plural(days, "day")}
             </FilterChip>
           ))}
-          <FilterChip pressed={customDate} icon={<CalendarDays size={16} aria-hidden />} onClick={() => setCustomDate(true)}>
-            Pick a date
-          </FilterChip>
         </div>
-        {customDate ? (
-          <TextField
-            label="Due date"
-            type="date"
-            required
-            min={isoDay(MIN_DEADLINE_DAYS)}
-            max={isoDay(MAX_DEADLINE_DAYS)}
-            value={Number.isFinite(form.dueInDays) ? isoDay(form.dueInDays) : ""}
-            onChange={(event) => set({ dueInDays: daysForIsoDay(event.target.value) })}
-            error={deadlineErr}
-            className="max-w-xs"
-          />
-        ) : (
-          <GroupError message={deadlineErr} />
-        )}
-        {Number.isFinite(form.dueInDays) && !deadlineErr ? (
-          form.dueInDays < market.typicalDays ? (
-            <p className="y-small flex items-start gap-2">
-              <Badge tone="danger" icon={<AlertTriangle size={14} aria-hidden />}>
-                Very tight
-              </Badge>
-              <span>
-                First versions usually take {plural(market.typicalDays, "day")}. Expect fewer pitches, or allow at least{" "}
-                {recommended} days.
-              </span>
-            </p>
-          ) : form.dueInDays < recommended ? (
-            <p className="y-small flex items-start gap-2">
-              <Badge tone="warning" icon={<AlertTriangle size={14} aria-hidden />}>
-                Tight
-              </Badge>
-              <span>{recommended} days leaves room for a round of changes.</span>
-            </p>
-          ) : (
-            <p className="y-small y-fg-2 flex items-center gap-2">
-              <Check size={16} aria-hidden className="flex-none" />
-              {plural(form.dueInDays, "day")} from today: time for a first version and a round of changes.
-            </p>
-          )
+        <GroupError message={deadlineErr} />
+        {tight ? (
+          <p className="y-small flex items-start gap-2">
+            <Badge tone="warning" icon={<AlertTriangle size={14} aria-hidden />}>
+              Tight
+            </Badge>
+            <span>
+              Creators who match usually need {plural(market.typicalDays, "day")} for a first version. Expect fewer
+              pitches.
+            </span>
+          </p>
         ) : null}
+        <p className="y-small y-fg-2">
+          Open for pitches until {weekdayDate(closesAtIfNow())}. Hire today and the first version is due{" "}
+          {weekdayDate(firstVersionIfHiredToday(form.deadlineDays))}.
+        </p>
       </Question>
 
-      <Question id="q-addons" title="Extras to include in quotes" optional>
-        <ul className="-mx-1 flex flex-col" aria-labelledby="q-addons">
-          {WANTED_ADDONS.map((id) => {
-            const addon = addonById[id];
-            const Icon = addon.icon;
-            const on = form.addons.includes(id);
-            const stats = addonStats(id);
-            return (
-              <li key={id}>
-                <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-(--y-r-sm) px-1 py-2 hover:bg-(--y-mist)">
-                  <Icon size={18} aria-hidden className="flex-none" />
-                  <span className="flex min-w-0 flex-1 flex-col">
-                    <span className="y-small font-semibold">{addon.name}</span>
-                    <span className="y-micro y-fg-2">
-                      {stats.count ? `Usually +${money(stats.price)} · ${stats.count} of ${market.count} offer it` : addon.description}
-                    </span>
-                  </span>
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    className="y-switch"
-                    checked={on}
-                    onChange={() =>
-                      set((f) => {
-                        if (on) return { addons: f.addons.filter((a) => a !== id) };
-                        const exclusive: AddonId[] = id === "ad-rights-90" ? ["ad-rights-365"] : id === "ad-rights-365" ? ["ad-rights-90"] : [];
-                        return { addons: [...f.addons.filter((a) => !exclusive.includes(a)), id] };
-                      })
-                    }
-                  />
-                </label>
-              </li>
-            );
-          })}
-        </ul>
+      <Question
+        id="q-usage"
+        title={adCopy ? "How you'll use the copy" : "How you'll use the videos"}
+        hint="Included in the price, with no separate rights fee. Creators see it before they pitch."
+      >
+        <div role="radiogroup" aria-labelledby="q-usage" className="grid gap-2 sm:grid-cols-2">
+          {usageOptions.map((option) => (
+            <ChoiceTile
+              key={option.id}
+              name="usage"
+              checked={form.usage === option.id}
+              onChange={() => set({ usage: option.id })}
+              label={`${option.name}. ${option.description}`}
+              className="!p-3.5"
+            >
+              <span className="y-small font-semibold">{option.name}</span>
+              <span className="y-micro y-fg-2">{option.description}</span>
+            </ChoiceTile>
+          ))}
+        </div>
         <p className="y-micro y-fg-2 flex items-start gap-2">
           <BadgeCheck size={15} aria-hidden className="mt-px flex-none" />
-          Always included: {includedRights}
+          {adCopy ? "Two revisions included." : `Two revisions included. ${RAW_FOOTAGE_INCLUDED}`}
         </p>
+        {!adCopy ? (
+          <div className="flex flex-col gap-1 border-t border-(--b-line) pt-4">
+            <SubLabel id="q-addons" hint="Creators include them in their pitch price.">
+              Extras to include in quotes <span className="y-fg-2 font-normal">· optional</span>
+            </SubLabel>
+            <ul className="-mx-1 flex flex-col" aria-labelledby="q-addons">
+              {WANTED_ADDONS.map((id) => {
+                const addon = addonById[id];
+                const Icon = addon.icon;
+                const on = form.addons.includes(id);
+                const stats = addonStats(id);
+                return (
+                  <li key={id}>
+                    <label className="flex min-h-14 cursor-pointer items-center gap-3 rounded-(--y-r-sm) px-1 py-2 hover:bg-(--y-mist)">
+                      <Icon size={18} aria-hidden className="flex-none" />
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="y-small font-semibold">{addon.name}</span>
+                        <span className="y-micro y-fg-2">
+                          {stats.count ? `Usually +${money(stats.price)} · ${stats.count} of ${market.count} offer it` : addon.description}
+                        </span>
+                      </span>
+                      <input
+                        type="checkbox"
+                        role="switch"
+                        className="y-switch"
+                        checked={on}
+                        onChange={() => set((f) => ({ addons: toggle(f.addons, id) }))}
+                      />
+                    </label>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
       </Question>
 
       <Question id="q-who" title="Who can pitch?">
@@ -658,7 +775,9 @@ export function TermsStep({ s, form, set, product, market, error, pinnedInvites 
             <MailOpen size={16} aria-hidden className="mt-0.5 flex-none" />
           )}
           {form.visibility === "public"
-            ? "Creators who make this format in your language see it. Anyone you invite hears about it first."
+            ? adCopy
+              ? "Creators who write in your language see it. Anyone you invite hears about it first."
+              : "Creators who make this format in your language see it. Anyone you invite hears about it first."
             : "Only the creators you pick can see it and pitch."}
         </p>
         <div className="flex flex-col gap-2" data-invalid={invitesErr ? "true" : undefined} tabIndex={-1}>
@@ -705,6 +824,7 @@ export function ReviewStep({ s, form, product, market, goTo }: StepProps) {
   const business = me.business(s);
   const brief = formToBrief(form, product);
   const total = totalBudget(form);
+  const adCopy = isAdCopyForm(form);
   const invited = form.invitedCreatorIds
     .map((id) => s.creators.find((c) => c.id === id))
     .filter((c) => c !== undefined);
@@ -729,17 +849,37 @@ export function ReviewStep({ s, form, product, market, goTo }: StepProps) {
             </h2>
             <p className="y-small y-fg-2">
               {moneyRange(total.min, total.max)}
-              {unitsFor(form.format, form.videoCount) > 1 ? ` for ${deliverableLabel(form.format, form.videoCount)}` : ""} · Due{" "}
-              {weekdayDate(dueDateFor(form.dueInDays))}
+              {unitsFor(form) > 1 ? ` for ${deliverableLabel(form)}` : ""} · delivered within{" "}
+              {plural(form.deadlineDays, "day")} of the hire · open until {weekdayDate(closesAtIfNow())}
             </p>
           </div>
         </div>
+        {brief.hook ? (
+          <div className="flex flex-col gap-1">
+            <h3 className="y-micro y-fg-2">{adCopy ? "Opening line" : "Hook"}</h3>
+            <p className="y-body max-w-[62ch]">{quoted(brief.hook)}</p>
+          </div>
+        ) : null}
         <BriefSummary brief={brief} product={product} showProduct={false} />
+        {form.attachments.length ? (
+          <div className="flex flex-col gap-2">
+            <h3 className="y-micro y-fg-2">Files</h3>
+            <ul className="flex flex-col gap-1.5">
+              {form.attachments.map((file) => (
+                <li key={file.id} className="y-small flex items-center gap-2">
+                  <Paperclip size={15} aria-hidden className="flex-none" />
+                  <span className="min-w-0 truncate font-semibold">{file.name}</span>
+                  <span className="y-micro y-fg-2 flex-none">{attachmentMeta(file)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
         <div className="flex flex-wrap items-center gap-1 border-t border-(--b-line) pt-3">
           <span className="y-micro y-fg-2 me-1">Change</span>
           {edit(0, "Product")}
-          {edit(1, "The video")}
-          {edit(2, "Budget and timing")}
+          {edit(1, "What to make")}
+          {edit(2, "Budget and terms")}
         </div>
       </Block>
 
@@ -766,15 +906,16 @@ export function ReviewStep({ s, form, product, market, goTo }: StepProps) {
   );
 }
 
+/** How a custom order's money works, said once (the review step). */
 export function MoneyNote() {
   return (
     <Block tone="paper" pad="md" className="flex items-start gap-3">
       <ShieldCheck size={20} aria-hidden className="mt-0.5 flex-none" />
       <p className="y-small">
-        <span className="font-semibold">You pay nothing until you hire.</span>{" "}
+        <span className="font-semibold">You pay the price you agree on. Nothing is added on top.</span>{" "}
         <span className="y-fg-2">
-          Then the price plus a {Math.round(SERVICE_FEE_RATE * 100)}% service fee is held until you approve. Full refund if
-          it isn&apos;t delivered.
+          Nothing is charged until you hire. Then the price is held until you approve, and refunded in full if the work
+          isn&apos;t delivered.
         </span>
       </p>
     </Block>

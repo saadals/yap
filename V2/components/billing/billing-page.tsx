@@ -6,18 +6,17 @@ import { Block } from "@/components/ui/block";
 import { Page, PageHeader, SectionLabel } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { autoApproveAt } from "@/lib/attention";
 import { NOW_ISO } from "@/lib/clock";
 import { money, monthYearOf, plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { businessSpend, campaignAttention, commissionTotals, commissionsForBusiness, creatorById } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
-import { CAMPAIGN_RELEASE_DAYS, SERVICE_FEE_RATE } from "@/lib/taxonomy";
+import { CAMPAIGN_RELEASE_DAYS } from "@/lib/taxonomy";
 
 import { BillingDetailsCard, useBillingDetails } from "./billing-details";
 import { PaymentMethods } from "./payment-methods";
 import { Receipts, allReceipts } from "./receipts";
-
-const FEE_PCT = Math.round(SERVICE_FEE_RATE * 100);
 
 /** What's held right now, as one light big number, and the next step that releases money. */
 function HeldCard() {
@@ -28,9 +27,22 @@ function HeldCard() {
   const held = mine.filter((c) => c.payment.status === "held");
   const offers = mine.filter((c) => c.payment.status === "authorized");
   const onOrders = spend.held - spend.campaignHeld;
-  const toReview = held.find((c) => c.status === "delivered");
+  // The delivery that approves itself soonest (Home's Needs you order).
+  const toReview = held
+    .filter((c) => c.status === "delivered")
+    .sort((a, b) => Date.parse(autoApproveAt(a)) - Date.parse(autoApproveAt(b)))[0];
   const reviewCreator = toReview ? creatorById(s, toReview.creatorId) : undefined;
   const campaignToReview = toReview ? undefined : campaignAttention(s)[0];
+  // When each part of the held money is released (orders and campaigns differ), said once.
+  const releaseLine = [
+    onOrders > 0 ? "Orders are released when you approve" : null,
+    spend.campaignHeld > 0
+      ? `${onOrders > 0 ? "campaign" : "Campaign"} slots ${CAMPAIGN_RELEASE_DAYS} days after each creator's post is verified`
+      : null,
+  ]
+    .filter(Boolean)
+    .join("; ")
+    .concat(". Full refund if work isn't delivered.");
 
   return (
     <Block as="section" aria-labelledby="held-title" tone="paper" pad="md" className="flex flex-col gap-5">
@@ -39,17 +51,15 @@ function HeldCard() {
           <ShieldCheck size={17} aria-hidden /> Held for your orders
         </h2>
         <p className="y-display y-num text-[40px] leading-none tracking-[-0.03em] md:text-[48px]">{money(spend.held)}</p>
-        {spend.held > 0 ? (
+        {onOrders > 0 && spend.campaignHeld > 0 ? (
           <p className="y-small y-num">
             {money(onOrders)} on orders · {money(spend.campaignHeld)} in campaigns
           </p>
         ) : null}
         <p className="y-small y-fg-2 max-w-[60ch]">
-          {spend.held > 0
-            ? `Released to the creator when you approve${held.length ? ` (${plural(held.length, "order")} in progress)` : ""}, and on campaigns ${CAMPAIGN_RELEASE_DAYS} days after each creator's post is verified. A full refund, fee included, if work isn't delivered.`
-            : "Nothing is held right now. Payment is charged and held when you hire, and released when you approve."}
+          {spend.held > 0 ? releaseLine : "Nothing is held right now. Payment is charged and held when you hire, and released when you approve."}
           {offers.length
-            ? ` ${money(spend.authorized)} more is authorized for ${plural(offers.length, "offer")} waiting to be accepted; nothing is charged until then.`
+            ? ` ${money(spend.authorized)} more is authorized for ${offers.length === 1 ? "an offer" : plural(offers.length, "offer")} waiting to be accepted, not charged yet.`
             : ""}
         </p>
       </div>
@@ -58,7 +68,7 @@ function HeldCard() {
         <div className="flex flex-col gap-3 border-t border-(--b-line) pt-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="y-small">
             <span className="font-medium">{reviewCreator?.firstName ?? "A creator"} delivered.</span>{" "}
-            <span className="y-fg-2">Approve to release {money(commissionTotals(toReview).creatorEarns)}.</span>
+            <span className="y-fg-2">Approve to release {money(commissionTotals(toReview).total)}.</span>
           </p>
           <PillButton href={paths.job(toReview.id)} variant="neon" arrow className="flex-none">
             Review delivery
@@ -78,7 +88,8 @@ function HeldCard() {
 
       {spend.spent > 0 ? (
         <p className="y-micro y-fg-2 y-num border-t border-(--b-line) pt-3">
-          Spent in {monthYearOf(NOW_ISO)}: {money(spend.thisMonth)} · {money(spend.spent)} since you joined
+          {spend.thisMonth > 0 ? `Spent in ${monthYearOf(NOW_ISO)}: ${money(spend.thisMonth)} · ` : ""}
+          {money(spend.spent)} spent since you joined
         </p>
       ) : null}
     </Block>
@@ -99,7 +110,7 @@ export function BillingPage() {
     <Page>
       <PageHeader
         title="Billing"
-        description={`You pay when you hire or post a campaign, plus Yapp's ${FEE_PCT}% service fee. Both are held until the work is approved, and a refund returns the fee too.`}
+        description="You pay the listed price, nothing on top. It's charged when you hire or post a campaign and held until the work is approved; a refund returns all of it."
       />
 
       {!hydrated ? (

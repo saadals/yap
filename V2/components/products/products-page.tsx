@@ -1,9 +1,9 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Package, Plus } from "lucide-react";
 
 import { RowLink } from "@/components/brand-home/row-link";
-import { libraryItems } from "@/components/library/data";
+import { libraryVideos } from "@/components/library/data";
 import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
 import { List } from "@/components/ui/list";
@@ -40,7 +40,7 @@ export function ProductsPage() {
   const products = s.products
     .filter((p) => p.businessId === businessId)
     .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt));
-  const videos = hydrated ? libraryItems(s) : [];
+  const videos = hydrated ? libraryVideos(s) : [];
 
   const addButton = (
     <PillButton href={paths.newProduct} variant="neon" icon={<Plus size={18} aria-hidden />}>
@@ -89,9 +89,7 @@ export function ProductsPage() {
       ) : (
         <Block tone="paper" pad="md">
           <EmptyState
-            shape="bean"
-            tint="mint"
-            face="smile"
+            icon={<Package size={22} aria-hidden />}
             title="Add your first product"
             body="Describe what you're promoting once: who it's for, the problem, the tone. Every order starts from it, so creators never have to ask twice."
             action={addButton}

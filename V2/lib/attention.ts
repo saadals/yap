@@ -10,7 +10,8 @@
  *   tier 3: follow-ups (a review to leave, a shortlisted pitch of yours)
  */
 import { addDays } from "./clock";
-import { dueLabel, money, plural, timeAgo, weekdayDate } from "./format";
+import { unreadComments } from "./comments";
+import { dueLabel, money, moneyExact, plural, timeAgo, weekdayDate } from "./format";
 import { paths } from "./paths";
 import {
   businessById,
@@ -21,18 +22,21 @@ import {
   commissionsForCreator,
   creatorById,
   latestDelivery,
+  isAdCopy,
   pitchesForCreator,
   pitchesForRequest,
+  repliesForCreator,
   requestById,
   requestsForBusiness,
 } from "./selectors";
 import type { DemoState } from "./store";
-import { AUTO_APPROVE_DAYS, formatById } from "./taxonomy";
+import { AUTO_APPROVE_DAYS, CAMPAIGN_RELEASE_DAYS, formatById } from "./taxonomy";
 import type { Commission, Role } from "./types";
 
 export type AttentionKind =
   | "review" // a delivery to review
   | "review-copies" // campaign review copies to review
+  | "comments" // unread comments or replies on a delivered version
   | "pitches" // unread pitches on an open request
   | "shortlist" // a shortlisted pitch to decide on
   | "draft" // an order saved but not posted
@@ -41,7 +45,8 @@ export type AttentionKind =
   | "changes" // the client asked for changes
   | "post" // an approved campaign video to post (or put back up)
   | "deliver" // a version to make and upload
-  | "shortlisted"; // your pitch was shortlisted
+  | "shortlisted" // your pitch was shortlisted
+  | "reply"; // the brand replied to your comment
 
 export type AttentionItem = {
   side: Role;
@@ -94,7 +99,7 @@ function ordering(s: DemoState): AttentionItem[] {
       tier: 0,
       at: Date.parse(auto),
       eyebrow: "Ready for review",
-      title: `Review ${possessive(who)} ${formatById[c.brief.format].noun[0]}`,
+      title: isAdCopy(c) ? `Review ${possessive(who)} ad copy` : `Review ${possessive(who)} ${formatById[c.brief.format].noun[0]}`,
       line: [
         delivery ? `Version ${delivery.version} arrived ${agoLower(delivery.deliveredAt)}.` : "",
         `Approves itself ${weekdayDate(auto)}.`,
@@ -118,7 +123,7 @@ function ordering(s: DemoState): AttentionItem[] {
       kind: "review-copies",
       tier: 0,
       at: first ?? Number.POSITIVE_INFINITY,
-      eyebrow: "Campaign",
+      eyebrow: "UGC campaign",
       title:
         progress.review === 1 ? "A review copy is ready" : `${progress.review} review copies are ready`,
       line: `On “${request.title}”. Each one approves itself 3 days after upload.`,
@@ -126,6 +131,26 @@ function ordering(s: DemoState): AttentionItem[] {
       href: paths.order(request.id),
       requestId: request.id,
       businessId: request.businessId,
+    });
+  }
+
+  // Comments or replies from the creator the brand hasn't read (jobs in review are already listed).
+  for (const c of commissionsForBusiness(s).filter((x) => x.status !== "delivered")) {
+    const unread = unreadComments(c, "business");
+    if (!unread) continue;
+    const who = creatorById(s, c.creatorId)?.firstName ?? "Your creator";
+    out.push({
+      side: "business",
+      kind: "comments",
+      tier: 2,
+      at: Date.parse(c.createdAt),
+      eyebrow: "Comments",
+      title: `${who} left ${plural(unread, "new comment")}`,
+      line: `On “${c.title}”.`,
+      action: "Read them",
+      href: paths.job(c.id),
+      commissionId: c.id,
+      creatorId: c.creatorId,
     });
   }
 
@@ -225,7 +250,7 @@ function studio(s: DemoState): AttentionItem[] {
         at: Date.parse(c.createdAt),
         eyebrow: "New offer",
         title: `${business} wants ${plural(c.brief.videoCount, "video")}`,
-        line: `${money(commissionTotals(c).creatorEarns)} · ${c.title}`,
+        line: `${money(commissionTotals(c).total)} · you earn ${moneyExact(commissionTotals(c).creatorEarns)} · ${c.title}`,
         action: "Review the offer",
       });
     } else if (c.status === "revision") {
@@ -249,8 +274,8 @@ function studio(s: DemoState): AttentionItem[] {
         eyebrow: removed ? "Post taken down" : "Post due",
         title: removed ? `Put your ${business} post back up` : `Post your video for ${business}`,
         line: removed
-          ? `${money(c.price)} is on hold until it's back up.`
-          : `${money(c.price)} is released 7 days after we verify the post.`,
+          ? `Your ${moneyExact(commissionTotals(c).creatorEarns)} is on hold until it's back up.`
+          : `Your ${moneyExact(commissionTotals(c).creatorEarns)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
         action: removed ? "See what to do" : "Post it",
       });
     } else if (c.status === "in_progress") {
@@ -259,12 +284,34 @@ function studio(s: DemoState): AttentionItem[] {
         kind: "deliver",
         tier: 1,
         at: Date.parse(c.dueDate),
-        eyebrow: slot ? "Campaign" : "Next delivery",
-        title: slot ? `Film your review copy for ${business}` : `Deliver to ${business}`,
+        eyebrow: slot ? "UGC campaign" : "Next delivery",
+        title: slot
+          ? `Film your review copy for ${business}`
+          : isAdCopy(c)
+            ? `Write the copy for ${business}`
+            : `Deliver to ${business}`,
         line: slot ? c.title : `${c.title} · ${dueLabel(c.dueDate).text}`,
         action: slot ? "Upload review copy" : "Open the job",
       });
     }
+  }
+
+  for (const hit of repliesForCreator(s).slice(0, 3)) {
+    const business = businessById(s, hit.commission.businessId)?.name ?? "Your client";
+    const text = hit.reply.text.length > 90 ? `${hit.reply.text.slice(0, 88)}…` : hit.reply.text;
+    out.push({
+      side: "creator",
+      kind: "reply",
+      tier: 2,
+      at: -Date.parse(hit.reply.createdAt),
+      eyebrow: "New reply",
+      title: `${business} replied to your comment`,
+      line: `On version ${hit.delivery.version} of “${hit.commission.title}”: “${text}”`,
+      action: "Read the reply",
+      href: paths.job(hit.commission.id, { version: hit.delivery.version, comment: hit.comment.id }),
+      commissionId: hit.commission.id,
+      businessId: hit.commission.businessId,
+    });
   }
 
   for (const pitch of pitchesForCreator(s).filter((p) => p.status === "shortlisted")) {

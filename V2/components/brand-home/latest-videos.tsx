@@ -3,12 +3,12 @@
 import Link from "next/link";
 
 import { VideoThumb } from "@/components/domain/video-thumb";
-import type { LibraryItem } from "@/components/library/data";
+import type { VideoItem } from "@/components/library/data";
 import { shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 
 /** A strip of the newest approved videos; each opens in the Library. */
-export function LatestVideos({ items }: { items: LibraryItem[] }) {
+export function LatestVideos({ items }: { items: VideoItem[] }) {
   return (
     <ul className="y-scroll-x -mx-(--y-gutter) flex gap-3 px-(--y-gutter) md:mx-0 md:grid md:grid-cols-5 md:px-0">
       {items.map((item) => (

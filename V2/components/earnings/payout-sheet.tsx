@@ -3,12 +3,11 @@
 import { CalendarClock, Plus } from "lucide-react";
 import { useState } from "react";
 
-import { Celebrate } from "@/components/ui/celebrate";
 import { FieldShell } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
 import { DAY, NOW, TZ_OFFSET } from "@/lib/clock";
-import { money, weekdayDate } from "@/lib/format";
+import { moneyExact, weekdayDate } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 
@@ -27,9 +26,10 @@ export function arrivalDate(): string {
 }
 
 /**
- * Withdraw: how much (the whole balance to start, whole dollars), where to (the payout methods,
- * default first), and when it arrives. Then a short confirmation. Mounted only while open, so
- * every opening starts from the full balance.
+ * Withdraw: how much (the whole balance to start, in dollars and cents, because earnings are net of
+ * Yapp's 20% and can carry cents), where to (the payout methods, default first), and when it
+ * arrives. Then a short confirmation. Mounted only while open, so every opening starts from the
+ * full balance.
  */
 export function PayoutSheet(props: {
   open: boolean;
@@ -52,7 +52,8 @@ function PayoutFlow({
 }) {
   const s = useDemo();
   const methods = [...me.payoutMethods(s)].sort((a, b) => Number(b.isDefault) - Number(a.isDefault));
-  const [amount, setAmount] = useState(String(available));
+  const full = String(Math.round(available * 100) / 100);
+  const [amount, setAmount] = useState(full);
   const [methodId, setMethodId] = useState(methods[0]?.id ?? "");
   const [touched, setTouched] = useState(false);
   const [done, setDone] = useState<{ amount: number; to: string } | null>(null);
@@ -64,10 +65,10 @@ function PayoutFlow({
       ? "Enter an amount to withdraw."
       : !Number.isFinite(value) || value <= 0
         ? "Enter an amount above $0."
-        : !Number.isInteger(value)
-          ? "Use whole dollars."
-          : value > available
-            ? `You can withdraw up to ${money(available)}.`
+        : !/^\d+(\.\d{1,2})?$/.test(amount.trim())
+          ? "Use dollars and cents, like 120 or 96.40."
+          : value > available + 0.001
+            ? `You can withdraw up to ${moneyExact(available)}.`
             : null;
 
   if (done) {
@@ -87,8 +88,7 @@ function PayoutFlow({
         }
       >
         <div className="flex flex-col items-center gap-4 text-center">
-          <Celebrate className="h-28 w-48" />
-          <p className="y-display y-num text-[40px] leading-none tracking-[-0.03em]">{money(done.amount)}</p>
+          <p className="y-display y-num text-[40px] leading-none tracking-[-0.03em]">{moneyExact(done.amount)}</p>
           <p className="y-body y-fg-2 max-w-[36ch]" aria-live="polite">
             Heading to {done.to}. Expect it by {arrival}. It shows as processing in your activity until
             it lands.
@@ -103,7 +103,7 @@ function PayoutFlow({
       open
       onClose={onClose}
       title="Withdraw"
-      description={`${money(available)} available. Payouts are free.`}
+      description={`${moneyExact(available)} available. Payouts are free.`}
       width="sm"
       footer={
         methods.length ? (
@@ -112,7 +112,7 @@ function PayoutFlow({
               Cancel
             </PillButton>
             <PillButton type="submit" form="payout-form" variant="neon">
-              {error ? "Withdraw" : `Withdraw ${money(value)}`}
+              {error ? "Withdraw" : `Withdraw ${moneyExact(value)}`}
             </PillButton>
           </div>
         ) : null
@@ -145,7 +145,7 @@ function PayoutFlow({
             setDone({ amount: value, to: `${chosen.label} (${chosen.detail.replace(/^Account/, "account")})` });
           }}
         >
-          <FieldShell label="Amount" required hint={`Whole dollars, up to ${money(available)}.`} error={touched ? error : null}>
+          <FieldShell label="Amount" required hint={`Up to ${moneyExact(available)}.`} error={touched ? error : null}>
             {({ id, describedBy }) => (
               <div className="sb-money flex items-center">
                 <span aria-hidden>$</span>
@@ -155,19 +155,19 @@ function PayoutFlow({
                   aria-describedby={describedBy}
                   aria-invalid={touched && error ? true : undefined}
                   className="y-input y-num text-lg font-semibold"
-                  inputMode="numeric"
+                  inputMode="decimal"
                   value={amount}
                   onChange={(event) => setAmount(event.target.value.replace(/[^\d.]/g, ""))}
                   onBlur={() => setTouched(true)}
                   data-autofocus
                 />
-                {value !== available ? (
+                {amount !== full ? (
                   <PillButton
                     variant="soft"
                     size="sm"
                     className="absolute end-1.5"
-                    onClick={() => setAmount(String(available))}
-                    aria-label={`Withdraw everything, ${money(available)}`}
+                    onClick={() => setAmount(full)}
+                    aria-label={`Withdraw everything, ${moneyExact(available)}`}
                   >
                     All
                   </PillButton>

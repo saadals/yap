@@ -6,10 +6,12 @@ import { savedAccounts } from "./saved-accounts";
 import { ACCOUNT_COOKIE, actions } from "./store";
 
 /**
- * UI preferences, stored in cookies (`yapp2_theme`, `yapp2_account`) and read in the browser so the
- * app also works as a fully static site (GitHub Pages):
- * - theme: an inline script in the root layout applies `html.dark` before first paint (no flash);
- *   this provider mirrors it.
+ * UI preferences, stored in cookies (`yapp2_account`, `yapp2_logged_out`) and read in the browser so
+ * the app also works as a fully static site (GitHub Pages):
+ * - theme: dark mode is paused (round 3 answers, item 49), so the theme is always "light":
+ *   `setTheme` and `toggleTheme` do nothing and a `yapp2_theme=dark` cookie is ignored. The API
+ *   stays so callers keep compiling; flip DARK_MODE_ENABLED (and restore the pre-paint lines noted
+ *   in lib/site.ts) to bring it back.
  * - account (prototype session: a demo account id, or signed out): static HTML renders signed
  *   out, then the header switches after hydration. Which account this tab acts as lives in the
  *   store (`activeAccountId`, tab-local); the cookie says "signed in" and gives new tabs a default.
@@ -19,6 +21,9 @@ import { ACCOUNT_COOKIE, actions } from "./store";
  */
 
 export type Theme = "light" | "dark";
+
+/** Dark mode is paused: light only. The dark values in app/globals.css are kept, dormant. */
+export const DARK_MODE_ENABLED = false;
 
 type Prefs = {
   theme: Theme;
@@ -58,7 +63,7 @@ function writeCookie(name: string, value: string | null) {
 }
 
 const themeSnapshot = (): Theme =>
-  document.documentElement.classList.contains("dark") ? "dark" : "light";
+  DARK_MODE_ENABLED && document.documentElement.classList.contains("dark") ? "dark" : "light";
 
 const accountSnapshot = (): string | null => readCookie(ACCOUNT_COOKIE) || null;
 const loggedOutSnapshot = (): boolean => readCookie(LOGGED_OUT_COOKIE) === "1";
@@ -73,6 +78,7 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const loggedOut = useSyncExternalStore(subscribe, loggedOutSnapshot, () => false);
 
   const setTheme = useCallback((next: Theme) => {
+    if (!DARK_MODE_ENABLED) return;
     writeCookie("yapp2_theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
     document.documentElement.style.colorScheme = next;

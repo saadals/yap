@@ -2,15 +2,21 @@
  * Domain model for Yapp, a marketplace where businesses commission creators to make social
  * video content for the business's own accounts and ads.
  *
- * Vocabulary
- * - Content request: a business describes product, audience, desired content, budget, deadline.
+ * Vocabulary (interface names in brackets)
+ * - Content request ["Custom order"]: a business describes product, audience, desired content,
+ *   budget, deadline; creators pitch. A `ContentRequest` with `kind: "campaign"` is a ["UGC
+ *   campaign"]: many creators each pick a slot ("Pick now").
+ * - Job type: a video, or written ad copy (custom orders only). See `JobType`.
  * - Pitch: a creator's response to a request (message, quote, relevant samples).
  * - Commission: agreed work between one business and one creator (from a hired pitch, a direct
  *   offer from the creator's profile, or a repeat of a previous commission).
  * - Delivery: a versioned video upload on a commission; the business approves or asks for changes.
  *
  * All timestamps are ISO strings. The demo clock is fixed (see lib/format.ts `NOW`).
- * All money is whole US dollars.
+ * All money is US dollars. Prices are whole dollars and are always the listed price, what the brand
+ * pays. Yapp keeps 20% of every transaction, deducted from what the creator is paid, so a creator's
+ * net can carry cents ($157 → $125.60). The split is computed in one place: `priceBreakdown()` in
+ * lib/format.ts.
  */
 
 /**
@@ -52,6 +58,19 @@ export type Tint = "violet" | "sun" | "sea" | "coral" | "mint" | "blush";
 /* Taxonomy ids (labels live in lib/taxonomy.tsx)                              */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * What a job produces. "video" covers every format; "ad-copy" is written ad copy, the one non-video
+ * job in this version (round 3 answers, item 27). Ad copy is only ever a custom order: never a
+ * campaign, no slots, no posting, no follower tier, and no format, platform, length or aspect.
+ * Read it with `jobTypeOf()` / `isAdCopy()` in lib/selectors.ts, never from the format.
+ */
+export type JobType = "video" | "ad-copy";
+
+/**
+ * Video formats, plus "ad-copy": the format slot of an ad-copy brief (so any screen that prints a
+ * format says "Ad copy writing" instead of a video format). "ad-copy" is never in the `formats`
+ * list of lib/taxonomy.tsx, so pickers and the format filter only ever offer video formats.
+ */
 export type FormatId =
   | "app-demo"
   | "screen-walkthrough"
@@ -61,9 +80,22 @@ export type FormatId =
   | "testimonial"
   | "talking-head"
   | "voiceover"
-  | "hook-pack";
+  | "hook-pack"
+  | "ad-copy";
 
-export type PlatformId = "tiktok" | "instagram" | "youtube" | "snapchat" | "x" | "linkedin";
+/**
+ * Where the brand will run a custom order's video (and where a creator makes videos for). "meta-ads"
+ * is an ad placement, never a place to post: campaigns use `CampaignPlatformId` instead.
+ */
+export type PlatformId =
+  | "tiktok"
+  | "instagram"
+  | "facebook"
+  | "meta-ads"
+  | "youtube"
+  | "snapchat"
+  | "linkedin"
+  | "x";
 
 /** The language a video is made in (ISO 639-1 codes, so they double as `lang` attributes). */
 export type LanguageId = "en" | "es" | "fr" | "ar" | "pt" | "hi" | "ko" | "zh";
@@ -83,15 +115,18 @@ export type NicheId =
   | "health"
   | "ecommerce";
 
-export type AddonId =
-  | "extra-revision"
-  | "raw-footage"
-  | "subtitles"
-  | "ad-rights-90"
-  | "ad-rights-365"
-  | "rush"
-  | "extra-hooks"
-  | "post-to-account";
+/**
+ * Priced extras on a custom or direct order. Usage rights are not an add-on (the brand picks a
+ * `UsageOptionId` on every order, included in the price) and raw footage comes with every approved
+ * video.
+ */
+export type AddonId = "extra-revision" | "subtitles" | "rush" | "extra-hooks" | "post-to-account";
+
+/**
+ * How the brand may use the videos, chosen on every order (custom orders, direct orders and
+ * campaigns) and included in the price. Labels in lib/taxonomy.tsx (`usageOptions`).
+ */
+export type UsageOptionId = "ads-12m" | "ads-6m" | "organic" | "ads-forever";
 
 export type CountryId = "us" | "ca" | "br" | "eg" | "ng" | "sa" | "ae" | "gb";
 
@@ -229,14 +264,22 @@ export type TeamMember = {
 };
 
 /**
- * How a brand treats creators, from its history on Yapp. Creators see these numbers instead of a
- * star rating (their feedback about a brand is private).
+ * How a brand treats creators, computed by the platform from its history on Yapp (seeded here, as
+ * the store only holds recent work). Creators see these five figures instead of a star rating: their
+ * feedback about a brand is private (round 3 answers, item 20). `null` = not enough data yet, shown
+ * as "—". Format them with `reliabilityFigures()` in lib/selectors.ts.
  */
 export type BrandReliability = {
+  /** Share of orders where the money was held on time (at hire or posting) and released without a dispute. */
+  paysOnTimePct: number | null;
   /** Median hours from a delivered version to the brand's approval or change request. */
-  reviewHours: number;
+  reviewHours: number | null;
+  /** Share of the brand's closed custom orders that ended in a hire. */
+  hireRatePct: number | null;
   /** Share of versions approved by the 3-day timer because the brand didn't respond (lower is better). */
-  timerApprovedPct: number;
+  timerApprovedPct: number | null;
+  /** Whether the brand shares results with its creators. Needs connected ad accounts, which don't exist yet: always null. */
+  sharesResults: null;
 };
 
 export type Business = {
@@ -257,9 +300,15 @@ export type Business = {
   paymentVerified: boolean;
   memberSince: string;
   hires: number;
-  /** Undefined until the brand has reviewed work on Yapp. */
+  /** Undefined until the brand has reviewed work on Yapp (every figure then shows "—"). */
   reliability?: BrandReliability;
   website: string;
+  /**
+   * The brand's own accounts creators must tag on a campaign, one per platform. Saved once (the
+   * campaign form saves what it posts with), so the next order starts filled in; change one with
+   * `actions.saveBrandHandle`. Each starts with "@".
+   */
+  handles?: Partial<Record<CampaignPlatformId, string>>;
 };
 
 export type ProductAsset = {
@@ -307,15 +356,53 @@ export type Product = {
 
 export type Reference = { id: string; label: string; note?: string };
 
-/** What should be made. Shared by requests and commissions. */
+/**
+ * A file the brand attaches to a brief to help creators get it right (simulated: name, kind, size
+ * and duration only, no real upload). Limits in lib/taxonomy.tsx (`BRIEF_ATTACHMENT_LIMITS`), checked
+ * by `checkBriefAttachments()` in lib/files.ts: documents, one reference video of at most 20 seconds,
+ * up to ten images, each at most 10 MB.
+ */
+export type BriefAttachment = {
+  id: string;
+  kind: "document" | "video" | "image";
+  name: string;
+  bytes: number;
+  /** Reference video only. */
+  durationSec?: number;
+};
+
+/** What an ad-copy job asks for (custom orders with `jobType: "ad-copy"`). */
+export type AdCopySpec = {
+  /** What to write, one line each: "5 headlines, up to 40 characters". */
+  pieces: string[];
+  /** Where the brand will run the copy (ad placements; the creator never posts it). */
+  placements: PlatformId[];
+};
+
+/**
+ * What should be made. Shared by requests and commissions (a hire copies the order's brief, so the
+ * job type travels with it).
+ *
+ * Ad copy (`jobType: "ad-copy"`): `format` is "ad-copy", `platforms` is empty, and `aspect`,
+ * `durationSec`, `onCamera` and `languages` beyond the first carry no meaning; read `copy` instead.
+ * Always branch with `isAdCopy()` rather than on these fields.
+ */
 export type Brief = {
   productId: string;
+  /** Absent = "video". */
+  jobType?: JobType;
   format: FormatId;
   platforms: PlatformId[];
   languages: LanguageId[];
   aspect: Aspect;
   videoCount: number;
   durationSec: number;
+  /** The opening: what happens in the first two seconds (ad copy: the opening line). */
+  hook?: string;
+  /** Ad copy only: what to write and where it runs. */
+  copy?: AdCopySpec;
+  /** Files from the brand, visible to creators before they pick or pitch. */
+  attachments?: BriefAttachment[];
   audience: string;
   /** What viewers should do or feel; the objective. */
   goal: string;
@@ -324,6 +411,8 @@ export type Brief = {
   avoid: string[];
   references: Reference[];
   onCamera: boolean;
+  /** How the brand may use the videos; part of the price. Creators see it before they pitch or pick. */
+  usage: UsageOptionId;
   /** Add-ons the business wants included in quotes. */
   addons: AddonId[];
   notes?: string;
@@ -331,34 +420,52 @@ export type Brief = {
 
 export type RequestStatus = "draft" | "open" | "hired" | "closed";
 
-/** Follower tiers set the fixed price per video on a UGC campaign (lib/taxonomy.tsx). */
+/**
+ * Follower tiers decide who may pick a slot on a UGC campaign (lib/taxonomy.tsx). They carry no
+ * price: the brand sets it, with guidance from lib/pricing.ts.
+ */
 export type FollowerTierId = "t10" | "t20" | "t50" | "t100" | "t250";
 
-/** One money movement on a campaign's card: a charge, a top-up or a refund. */
+/**
+ * One money movement on a campaign's card: a charge, a top-up or a refund. Amounts are listed
+ * prices: nothing is added for Yapp (its 20% comes out of each creator's pay when a slot is
+ * released), and a refund returns exactly what was paid for those slots.
+ */
 export type LedgerEntry = {
   id: string;
   at: string;
   kind: "charge" | "top_up" | "refund";
-  /** What moved on the card, service fee included. */
+  /** What moved on the card. */
   amount: number;
-  /** The service-fee share of `amount` (refunds return the matching share). */
-  fee: number;
   note: string;
 };
 
 /**
  * UGC campaign terms. The business buys `slots` videos (min 10, steps of 5), each from a different
- * creator, at a fixed price set by the follower tier. The whole budget plus the service fee is
- * charged when the campaign is posted and held per slot; eligible creators take slots first come,
- * first served. Each taken slot is a Commission with `source: "campaign"` and `campaignSlot`.
+ * creator, at a price per Yapp it sets ($30 to $5,000). The full amount (slots × price) is charged
+ * when the campaign is posted and held; each slot is paid out after its video is approved (7 days
+ * after the post is verified) and unpicked slots are refunded when it closes. Eligible creators take
+ * slots first come, first served. Each taken slot is a Commission with `source: "campaign"` and
+ * `campaignSlot`.
  */
 export type CampaignTerms = {
   tierId: FollowerTierId;
-  /** Price for slots taken from now on. Taken slots keep the price they were taken at. */
+  /**
+   * Listed price per Yapp for slots taken from now on, set by the brand. After posting it can be
+   * raised (a top-up for the unpicked slots is held), never lowered. Taken slots keep their price.
+   */
   pricePerVideo: number;
-  platform: CampaignPlatformId;
-  /** The business account creators must tag (shown to creators; allowed through masking). */
-  brandHandle: string;
+  /**
+   * Where creators may post, one or more of the platforms a creator can connect and verify. Each
+   * creator posts on one of them, chosen when they pick a slot (`Commission.postPlatform`);
+   * eligibility and the post-link check use that one.
+   */
+  platforms: CampaignPlatformId[];
+  /**
+   * The brand's account to tag on each listed platform (shown to creators; allowed through masking).
+   * Read with `brandHandleFor(terms, platform)`.
+   */
+  brandHandles: Partial<Record<CampaignPlatformId, string>>;
   /* Talking points and restrictions live on the brief (`mustInclude` / `avoid`). */
   /** Explainer video about the product (a seeded or simulated upload). */
   explainer?: { name: string; videoId?: string; durationSec: number };
@@ -367,11 +474,14 @@ export type CampaignTerms = {
   /**
    * When the campaign stops taking creators (14 days after posting) unless the brand closes it
    * earlier. The demo clock is fixed, so nothing closes by itself; closing is the brand's action.
+   * Always the same as the order's own `ContentRequest.closesAt`.
    */
   closesAt: string;
-  /** Set when the tier was changed after publishing (allowed once). */
+  /** Set when the tier was changed after publishing (allowed once; no money moves). */
   tierChangedAt?: string;
   previousTierId?: FollowerTierId;
+  /** Set when the brand raised the price after posting (the price it was posted at). */
+  postedPrice?: number;
   /** Card the budget is held on. */
   paymentMethodId: string;
   /** Money movements on the campaign hold. Held = charges + top-ups - refunds - released. */
@@ -381,14 +491,25 @@ export type CampaignTerms = {
   /** Runtime campaigns get simulated creators joining; seeded ones never fill up. */
   simulate?: boolean;
 };
+/**
+ * An order a brand posts: a custom order ("custom": creators pitch, the brand picks one) or a UGC
+ * campaign ("campaign": many creators pick slots). Interface copy calls them "Custom order" and
+ * "UGC campaign" (round 3 answers, item 18); the type keeps its old name.
+ */
 export type ContentRequest = {
   id: string;
   businessId: string;
   title: string;
   brief: Brief;
   budget: { min: number; max: number };
+  /** The latest a hired creator would deliver (custom orders with `deadlineDays`: closing date + deadline). */
   dueDate: string;
   postedAt: string;
+  /**
+   * When the order stops taking pitches or picks: 14 days after posting (`ORDER_OPEN_DAYS`), unless
+   * the brand closes it sooner. Shown, never enforced (the demo clock is fixed).
+   */
+  closesAt: string;
   status: RequestStatus;
   visibility: "public" | "invite";
   invitedCreatorIds: string[];
@@ -396,8 +517,14 @@ export type ContentRequest = {
   /** How many creators the business plans to hire (usually 1). Campaigns: number of videos. */
   slots: number;
   views: number;
-  /** Absent = a custom request (creators pitch, the business picks). */
+  /** Absent = a custom order (creators pitch, the business picks). */
   kind?: "custom" | "campaign";
+  /**
+   * Custom orders: days the hired creator has to deliver version 1, set by the brand (2, 3, 5, 7 or
+   * 10; `ORDER_DEADLINE_OPTIONS`). Absent on older orders, where the pitch names its own days.
+   * Campaigns keep theirs on `campaign.deadlineDays`; read either with `deadlineDaysOf()`.
+   */
+  deadlineDays?: number;
   campaign?: CampaignTerms;
 };
 
@@ -461,24 +588,81 @@ export type CommissionEvent = {
   text: string;
 };
 
-export type DeliveryComment = {
+/**
+ * A reply under a delivery comment (one level deep: replies have no replies). Same rules as the
+ * comment: the author can edit or delete it on the latest version while comments are open.
+ */
+export type CommentReply = {
   id: string;
-  atSec: number;
-  text: string;
   author: Role;
-  resolved: boolean;
+  /**
+   * Who wrote it, for a name and a face: a team member id (business side, when the account has
+   * one), the buyer profile id (business side otherwise), or the creator id (creator side). Resolve
+   * with `commentAuthor()` in lib/selectors.ts.
+   */
+  authorId: string;
+  text: string;
   createdAt: string;
+  editedAt?: string;
+  /** Soft delete: kept for support and disputes, shown as "Comment deleted". */
+  deletedAt?: string;
+  /** The other side hasn't seen it yet (cleared by `actions.markCommentsRead`). */
+  unread?: boolean;
 };
 
+/**
+ * A comment on one delivered version, private to the two sides (Site-wide spec 5.5.4, round 3
+ * answers G1). Either side can comment on any version while the order is open and for 30 days after
+ * completion (`commentsOpen()`), then comments are read-only. Comments never stop the review timer.
+ */
+export type DeliveryComment = {
+  id: string;
+  /** Seconds into the video, or null for a general comment on the whole version (ad copy: always null). */
+  atSec: number | null;
+  text: string;
+  author: Role;
+  /** Who wrote it (see `CommentReply.authorId`). */
+  authorId: string;
+  /** Either side can resolve; only the business can re-open. */
+  resolved: boolean;
+  resolvedAt?: string;
+  resolvedBy?: Role;
+  createdAt: string;
+  editedAt?: string;
+  /** Soft delete: kept for support and disputes, shown as "Comment deleted". */
+  deletedAt?: string;
+  /** Sent to the creator as part of a change request (ticked in "Request changes"). */
+  requestedAt?: string;
+  /** The other side hasn't seen it yet (cleared by `actions.markCommentsRead`). */
+  unread?: boolean;
+  replies: CommentReply[];
+};
+
+/** A file on a delivery. `kind` is absent on older video deliveries. */
+export type DeliveryFile = {
+  name: string;
+  size: string;
+  kind?: "video" | "document" | "subtitles" | "image" | "archive";
+};
+
+/**
+ * One delivered version. Video jobs carry `video`; ad copy (`kind: "text"`) carries the copy as
+ * `text` and/or documents in `files` (PDF, DOC, DOCX, TXT), and has no video.
+ */
 export type Delivery = {
   id: string;
   version: number;
-  video: Video;
+  /** Absent = "video". */
+  kind?: "video" | "text";
+  /** Video deliveries only. */
+  video?: Video;
+  /** Text deliveries: the copy, as typed into the delivery sheet. */
+  text?: string;
   note: string;
   deliveredAt: string;
   status: "in_review" | "changes_requested" | "approved" | "rejected";
   comments: DeliveryComment[];
-  files: { name: string; size: string }[];
+  files: DeliveryFile[];
   /** Campaign review copy: watermarked and low quality until approved. */
   reviewCopy?: boolean;
 };
@@ -488,8 +672,8 @@ export type Delivery = {
  * - held: charged and held, released on approval (campaign slots: while the creator works)
  * - pending: approved campaign work, still held: released 7 days after the creator's post is
  *   verified (`withdrawableFrom`), if the post is still live
- * - released: paid to the creator (available to withdraw)
- * - refunded: back to the business, service fee included
+ * - released: paid to the creator, less Yapp's fee (available to withdraw)
+ * - refunded: back to the business in full (the price it paid)
  * - returned: a campaign slot that ended without being paid; the money went back to the campaign hold
  */
 export type PaymentStatus = "authorized" | "held" | "pending" | "released" | "refunded" | "returned";
@@ -519,12 +703,16 @@ export type Commission = {
   pitchId?: string;
   packageId?: string;
   previousCommissionId?: string;
-  /** Creator's price for the work itself (creators keep 100% of this). */
+  /**
+   * Listed price for the work itself, what the brand pays (add-ons on top of it). Charged at hire
+   * (campaign slots: with the campaign) and held; refunds return it in full.
+   */
   price: number;
   addons: { id: AddonId; price: number }[];
   /**
-   * Service fee the business pays on top of the price: charged with the payment (at hire; campaign
-   * slots with the campaign budget), held with it and refunded with it.
+   * Yapp's share of the total (price + add-ons), deducted from what the creator is paid and never
+   * added to the brand's price. Fixed when the order is placed, so a fee change never applies to an
+   * open order or a picked slot. The split: `priceBreakdown()` in lib/format.ts.
    */
   feeRate: number;
   revisionsIncluded: number;
@@ -548,6 +736,11 @@ export type Commission = {
   cancelReason?: string;
   /** Campaign slots: which slot (1-based) this commission fills. */
   campaignSlot?: number;
+  /**
+   * Campaign slots: the one platform this creator posts on, chosen when picking from the campaign's
+   * `platforms`. Read with `slotPlatform()` (older slots fall back to the campaign's first platform).
+   */
+  postPlatform?: CampaignPlatformId;
   /** Campaign slots: the creator's post on their own account. */
   post?: CampaignPost;
   /**
@@ -597,6 +790,14 @@ export type Message = {
   text: string;
   at: string;
   attachment?: Attachment;
+  /**
+   * Repeated system lines with the same key merge into the last one instead of stacking ("4 new
+   * comments on Version 1"); `count` says how many it stands for.
+   */
+  group?: string;
+  count?: number;
+  /** System lines about comments: the version they're on, so the thread can link back ("View"). */
+  link?: { kind: "comments"; commissionId: string; deliveryId: string; version: number };
 };
 
 export type Thread = {
@@ -615,6 +816,8 @@ export type NotificationKind =
   | "pitch"
   | "delivery"
   | "message"
+  /** A comment or reply on a delivered version. */
+  | "comment"
   | "offer"
   | "payment"
   | "review"
@@ -668,6 +871,11 @@ export type Payout = {
   status: "processing" | "paid";
   methodId: string;
   at: string;
+  /**
+   * Seed only: the commissions this payout paid out, so their earnings don't count as available
+   * again. Seeded payouts without it stand for work from before the seed window.
+   */
+  commissionIds?: string[];
 };
 
 /* -------------------------------------------------------------------------- */

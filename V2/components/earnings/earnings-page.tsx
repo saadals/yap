@@ -6,6 +6,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   BadgeCheck,
+  ChartNoAxesColumn,
+  ChevronRight,
   Clock,
   Hourglass,
   Loader2,
@@ -14,11 +16,13 @@ import {
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 
 import { CreatorSetupSheet } from "@/components/account/creator-setup-sheet";
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { ItemRow } from "@/components/studio-jobs/item-row";
+import { jobChip } from "@/components/studio-jobs/job-status";
 import { SetupPrompt } from "@/components/studio-jobs/setup-prompt";
 import { Badge } from "@/components/ui/badge";
 import { Block } from "@/components/ui/block";
@@ -27,13 +31,14 @@ import { Page, PageHeader, SectionLabel } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { autoApproveAt } from "@/lib/attention";
-import { money, plural, shortDate, weekdayDate } from "@/lib/format";
+import { moneyExact, plural, shortDate, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { businessById, commissionTotals, creatorEarnings, me } from "@/lib/selectors";
+import { businessById, commissionById, commissionTotals, creatorEarnings, me } from "@/lib/selectors";
 import { type DemoState, useDemo, useHydrated } from "@/lib/store";
-import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS } from "@/lib/taxonomy";
+import { CAMPAIGN_KEEP_LIVE_DAYS, CAMPAIGN_RELEASE_DAYS, CAMPAIGN_RESTORE_HOURS, FEE_PCT } from "@/lib/taxonomy";
 import type { Commission, Payout } from "@/lib/types";
 
+import { EarningSheet } from "./earning-sheet";
 import { AddPayoutSheet, PayoutMethodList, payoutLabel } from "./payout-methods";
 import { PayoutSheet, arrivalDate } from "./payout-sheet";
 
@@ -41,6 +46,8 @@ import { PayoutSheet, arrivalDate } from "./payout-sheet";
  * /studio/earnings: one clear top (what you can withdraw, and the one green button), then where
  * the rest of your money is: pending campaign pay with its release dates, money brands are
  * holding for your active jobs, totals, activity and payout methods. Each number appears once.
+ * Every figure is what the creator receives, after Yapp's 20% (the header says so once); a row
+ * opens its split (price, minus Yapp's 20%, what you got) in `EarningSheet`.
  */
 export function EarningsPage() {
   const s = useDemo();
@@ -52,15 +59,16 @@ export function EarningsPage() {
 
   return (
     <Page>
-      <PageHeader title="Earnings" description={creator ? "You keep 100% of your price. Brands pay Yapp's fee." : undefined} />
+      <PageHeader
+        title="Earnings"
+        description={creator ? `What you get, after Yapp's ${FEE_PCT}%. Withdraw what's available any time.` : undefined}
+      />
       {creator ? (
         <EarningsBody key={creator.id} />
       ) : (
         <SetupPrompt
           title="Your earnings start with your first video"
-          body="Set up a creator profile to pitch on orders and take campaign slots. What you earn lands here, and you keep 100% of your price."
-          shape="pill"
-          tint="sun"
+          body={`Set up a creator profile to pitch on custom orders and pick UGC campaign slots. What you earn lands here: your price, after Yapp's ${FEE_PCT}%.`}
           onSetUp={() => setSetupOpen(true)}
         />
       )}
@@ -75,6 +83,8 @@ function EarningsBody() {
   const s = useDemo();
   const [withdrawing, setWithdrawing] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const detail = detailId ? commissionById(s, detailId) : undefined;
   const earnings = creatorEarnings(s);
   const creatorId = me.ids(s).creatorId;
   const mine = s.commissions.filter((c) => c.creatorId === creatorId);
@@ -86,12 +96,18 @@ function EarningsBody() {
     <div className="grid grid-cols-1 items-start gap-x-6 lg:grid-cols-12 [&>*]:min-w-0">
       <div className="flex flex-col lg:col-span-8">
         <AvailableCard available={earnings.available} onWithdraw={() => setWithdrawing(true)} />
-        <PendingSection s={s} items={earnings.pendingItems} total={earnings.pending} waiting={earnings.pendingWaiting} />
-        <InProgressSection s={s} items={held} total={earnings.held} />
+        <PendingSection
+          s={s}
+          items={earnings.pendingItems}
+          total={earnings.pending}
+          waiting={earnings.pendingWaiting}
+          onOpen={setDetailId}
+        />
+        <InProgressSection s={s} items={held} total={earnings.held} onOpen={setDetailId} />
         <div className="lg:hidden">
           <TotalsCard earnings={earnings} id="totals-phone" />
         </div>
-        <ActivitySection s={s} mine={mine} />
+        <ActivitySection s={s} mine={mine} onOpen={setDetailId} />
       </div>
       <aside className="flex flex-col lg:col-span-4" aria-label="Totals and payout methods">
         <div className="y-rail flex flex-col">
@@ -118,8 +134,37 @@ function EarningsBody() {
         onAddMethod={() => setAdding(true)}
       />
       <AddPayoutSheet open={adding} onClose={() => setAdding(false)} />
+      <EarningSheet commission={detail} onClose={() => setDetailId(null)} line={detail ? statusLine(s, detail) : ""} />
     </div>
   );
+}
+
+/** Where a job's money is, in a sentence (the detail sheet's first line). */
+function statusLine(s: DemoState, c: Commission): string {
+  const brand = businessById(s, c.businessId)?.name ?? "The brand";
+  const campaign = c.source === "campaign";
+  switch (c.payment.status) {
+    case "released": {
+      const at = campaign ? (c.withdrawableFrom ?? c.completedAt ?? c.createdAt) : (c.completedAt ?? c.createdAt);
+      return `Released to you ${shortDate(at)}.`;
+    }
+    case "pending":
+      return `${releaseLine(c)}.`;
+    case "held": {
+      const then = campaign
+        ? `Once they approve, it's pending until ${CAMPAIGN_RELEASE_DAYS} days after we verify your post.`
+        : c.status === "delivered"
+          ? `Released when they approve, by ${weekdayDate(autoApproveAt(c))} at the latest.`
+          : "Released when they approve.";
+      if (c.status === "disputed") return `Paid by ${brand} and held while our team helps you both.`;
+      return `Paid by ${brand} and held for you. ${then}`;
+    }
+    case "refunded":
+    case "returned":
+      return `Returned to ${brand}.`;
+    default:
+      return "Not paid yet.";
+  }
 }
 
 /* -------------------------------------------------------------------------- */
@@ -136,7 +181,7 @@ function AvailableCard({ available, onWithdraw }: { available: number; onWithdra
         <h2 id="available-title" className="y-small y-fg-2 font-medium">
           Available to withdraw
         </h2>
-        <p className="y-display y-num text-[44px] leading-none tracking-[-0.035em] md:text-[56px]">{money(available)}</p>
+        <p className="y-display y-num text-[44px] leading-none tracking-[-0.035em] md:text-[56px]">{moneyExact(available)}</p>
         <p className="y-small y-fg-2 mt-2">
           {available <= 0
             ? "Nothing to withdraw yet. Approved work lands here."
@@ -201,7 +246,7 @@ function SectionHead({ id, title, total, hint }: { id: string; title: string; to
         </h2>
         <p className="y-small y-fg-2">{hint}</p>
       </div>
-      {total !== undefined ? <p className="y-head y-num flex-none">{money(total)}</p> : null}
+      {total !== undefined ? <p className="y-head y-num flex-none">{moneyExact(total)}</p> : null}
     </div>
   );
 }
@@ -211,11 +256,13 @@ function PendingSection({
   items,
   total,
   waiting,
+  onOpen,
 }: {
   s: DemoState;
   items: Commission[];
   total: number;
   waiting: number;
+  onOpen: (id: string) => void;
 }) {
   return (
     <section aria-labelledby="pending-title">
@@ -233,12 +280,12 @@ function PendingSection({
               return (
                 <ItemRow
                   key={c.id}
-                  href={paths.job(c.id)}
+                  onClick={() => onOpen(c.id)}
                   lead={business ? <BusinessLogo business={business} size={40} /> : null}
                   title={c.title}
                   meta={[business?.name, releaseLine(c)].filter(Boolean).join(" · ")}
                   chip={postChip(c)}
-                  amount={money(earned(c))}
+                  amount={moneyExact(earned(c))}
                 />
               );
             })}
@@ -246,7 +293,7 @@ function PendingSection({
           <p className="y-micro y-fg-2 flex items-start gap-1.5 px-1 pt-3">
             <Clock size={14} aria-hidden className="mt-px flex-none" />
             <span>
-              {waiting > 0 ? `${money(waiting)} gets its date once the post is verified. ` : ""}
+              {waiting > 0 ? `${moneyExact(waiting)} gets its date once the post is verified. ` : ""}
               Keep each post up for {CAMPAIGN_KEEP_LIVE_DAYS} days after it&apos;s verified.
             </span>
           </p>
@@ -275,11 +322,22 @@ function heldLine(c: Commission): string {
     case "disputed":
       return "In resolution · our team is helping";
     default:
-      return campaign ? "Filming · pending once approved" : "In production · released on approval";
+      // "Filming", "Writing" (ad copy) or "In production".
+      return `${jobChip(c).label} · ${campaign ? "pending once approved" : "released on approval"}`;
   }
 }
 
-function InProgressSection({ s, items, total }: { s: DemoState; items: Commission[]; total: number }) {
+function InProgressSection({
+  s,
+  items,
+  total,
+  onOpen,
+}: {
+  s: DemoState;
+  items: Commission[];
+  total: number;
+  onOpen: (id: string) => void;
+}) {
   return (
     <section aria-labelledby="held-title">
       <SectionHead
@@ -295,11 +353,11 @@ function InProgressSection({ s, items, total }: { s: DemoState; items: Commissio
             return (
               <ItemRow
                 key={c.id}
-                href={paths.job(c.id)}
+                onClick={() => onOpen(c.id)}
                 lead={business ? <BusinessLogo business={business} size={40} /> : null}
                 title={c.title}
                 meta={[business?.name, heldLine(c)].filter(Boolean).join(" · ")}
-                amount={money(earned(c))}
+                amount={moneyExact(earned(c))}
               />
             );
           })}
@@ -327,14 +385,22 @@ function TotalsCard({ earnings, id }: { earnings: ReturnType<typeof creatorEarni
       <dl className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1">
           <dt className="y-small y-fg-2">Released this month</dt>
-          <dd className="y-display y-num text-[26px] leading-none tracking-[-0.02em]">{money(earnings.thisMonth)}</dd>
+          <dd className="y-display y-num text-[26px] leading-none tracking-[-0.02em]">{moneyExact(earnings.thisMonth)}</dd>
         </div>
         <div className="flex flex-col gap-1">
           <dt className="y-small y-fg-2">Lifetime earnings</dt>
-          <dd className="y-display y-num text-[26px] leading-none tracking-[-0.02em]">{money(earnings.lifetime)}</dd>
+          <dd className="y-display y-num text-[26px] leading-none tracking-[-0.02em]">{moneyExact(earnings.lifetime)}</dd>
           <dd className="y-micro y-fg-2">{plural(earnings.completedCount, "job")} approved</dd>
         </div>
       </dl>
+      <Link
+        href={paths.productivity({ as: "creator" })}
+        className="y-small y-fg-2 -mx-2 mt-4 flex min-h-10 items-center gap-2 rounded-(--y-r-sm) border-t border-(--b-line) px-2 pt-3 hover:text-(--b-fg)"
+      >
+        <ChartNoAxesColumn size={16} aria-hidden className="flex-none" />
+        <span className="flex-1">On time, approvals and rehires in Productivity</span>
+        <ChevronRight size={16} aria-hidden className="y-flip flex-none" />
+      </Link>
     </Block>
   );
 }
@@ -349,7 +415,7 @@ type Activity =
 
 const SHOWN = 6;
 
-function ActivitySection({ s, mine }: { s: DemoState; mine: Commission[] }) {
+function ActivitySection({ s, mine, onOpen }: { s: DemoState; mine: Commission[]; onOpen: (id: string) => void }) {
   const [all, setAll] = useState(false);
   const methods = s.payoutMethods;
   const items: Activity[] = [
@@ -377,7 +443,7 @@ function ActivitySection({ s, mine }: { s: DemoState; mine: Commission[] }) {
                 return (
                   <ItemRow
                     key={`r-${c.id}`}
-                    href={paths.job(c.id)}
+                    onClick={() => onOpen(c.id)}
                     lead={
                       <span aria-hidden className="y-tile grid size-10 place-items-center !rounded-full">
                         <ArrowDownLeft size={18} />
@@ -385,7 +451,7 @@ function ActivitySection({ s, mine }: { s: DemoState; mine: Commission[] }) {
                     }
                     title={`Released by ${business?.name ?? "the brand"}`}
                     meta={`${c.title} · ${shortDate(item.at)}`}
-                    amount={`+${money(earned(c))}`}
+                    amount={`+${moneyExact(earned(c))}`}
                   />
                 );
               }
@@ -408,7 +474,7 @@ function ActivitySection({ s, mine }: { s: DemoState; mine: Commission[] }) {
                       </Badge>
                     ) : undefined
                   }
-                  amount={`−${money(payout.amount)}`}
+                  amount={`−${moneyExact(payout.amount)}`}
                 />
               );
             })}

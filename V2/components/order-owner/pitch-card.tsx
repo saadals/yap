@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, BadgeCheck, Star, Undo2, XCircle } from "lucide-react";
+import { AlertTriangle, BadgeCheck, PenLine, Star, Undo2, XCircle } from "lucide-react";
 
 import { Rating } from "@/components/domain/stars";
 import { PitchBadge } from "@/components/domain/status-badge";
@@ -9,8 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { FaceAvatar } from "@/components/ui/face-avatar";
 import { PillButton } from "@/components/ui/pill-button";
 import { RoundIconButton } from "@/components/ui/round-icon-button";
-import { money, plural, quoted } from "@/lib/format";
+import { money, plural, quoted, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
+import { deadlineDaysOf, isAdCopy } from "@/lib/selectors";
 import type { ContentRequest, Creator, Product, Video } from "@/lib/types";
 
 import { OverflowMenu } from "./parts";
@@ -34,9 +35,18 @@ export function PriceText({ price, request, className = "" }: { price: number; r
   );
 }
 
-/** "5 days" with a warning when the first version would land after the due date. */
+/**
+ * How soon the first version lands. Orders with the brand's own deadline give every pitch the same
+ * days (said once, in the header), so this only speaks up when a booked creator starts later:
+ * "starts Thu, Nov 12". Older orders show the pitch's days, with a warning past the due date.
+ */
 export function DaysText({ item, request, className = "" }: { item: RankedPitch; request: ContentRequest; className?: string }) {
-  const late = request.status === "open" && item.pitch.status !== "hired" && deliveryInfo(item.pitch.deliveryDays, request, item.creator).late;
+  const info = deliveryInfo(item.pitch.deliveryDays, request, item.creator);
+  if (deadlineDaysOf(request)) {
+    if (!info.startsOn || item.pitch.status === "hired") return null;
+    return <span className={`y-num ${className}`}>starts {weekdayDate(info.startsOn)}</span>;
+  }
+  const late = request.status === "open" && item.pitch.status !== "hired" && info.late;
   return (
     <span className={`y-num inline-flex items-center gap-1 ${late ? "text-(--y-warning)" : ""} ${className}`}>
       {late ? <AlertTriangle size={14} aria-hidden /> : null}
@@ -44,6 +54,12 @@ export function DaysText({ item, request, className = "" }: { item: RankedPitch;
       {late ? <span className="sr-only"> (after your due date)</span> : null}
     </span>
   );
+}
+
+/** Whether DaysText has anything to say (so the separator before it can go too). */
+export function hasDaysText(item: RankedPitch, request: ContentRequest): boolean {
+  if (!deadlineDaysOf(request)) return true;
+  return item.pitch.status !== "hired" && Boolean(deliveryInfo(item.pitch.deliveryDays, request, item.creator).startsOn);
 }
 
 /** "98% fit · English, App demo, Fintech" */
@@ -54,8 +70,10 @@ export function fitLine(item: RankedPitch, request: ContentRequest, product?: Pr
 
 /**
  * One pitch on the shortlist board: the sample video (plays), the creator, the hook idea as the
- * headline, fit in one line, price and days, and the decision controls. The card opens the full
- * pitch; the thumbnail plays the sample; star, ⋯ and Hire act on their own.
+ * headline, fit in one line, the listed price (and days on older orders), and the decision
+ * controls. The card opens the full pitch; the thumbnail plays the sample; star, ⋯ and Hire act on
+ * their own. An ad-copy pitch without a portfolio video is a written pitch: no video tile, the
+ * sample line as the headline and the start of the message under it.
  */
 export function PitchCard({
   item,
@@ -91,39 +109,43 @@ export function PitchCard({
   const shortlisted = pitch.status === "shortlisted";
   const declined = pitch.status === "declined";
   const hired = pitch.status === "hired";
+  const written = !sample && isAdCopy(request);
+  const newTag =
+    isNew && !declined && !hired ? (
+      <span className="rounded-full bg-[#0e0e10]/80 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
+        New<span className="sr-only"> pitch, not opened yet</span>
+      </span>
+    ) : null;
 
   return (
     <article
       data-tone="paper"
       aria-label={`${creator.name}'s pitch`}
-      className={`y-block y-hoverable relative flex gap-3.5 p-3 ${declined ? "opacity-75" : ""}`}
+      className={`y-block y-hoverable relative flex gap-3.5 p-3 ${written ? "ps-4" : ""} ${declined ? "opacity-75" : ""}`}
     >
-      <div className="relative w-[96px] flex-none self-start sm:w-[104px]">
-        {sample ? (
-          <button
-            type="button"
-            onClick={() => onPlay(sample.id)}
-            aria-label={`Play ${creator.firstName}'s sample: ${sample.title}`}
-            className="relative z-[2] block w-full rounded-(--y-r-tile)"
-          >
-            <VideoThumb video={sample} frame="9:16" playable showHook={false} showMeta={false} decorative />
-          </button>
-        ) : (
-          <span aria-hidden className="grid aspect-[9/16] w-full place-items-center rounded-(--y-r-tile) bg-(--b-chip)">
-            <FaceAvatar id={creator.id} name="" size={44} />
-          </span>
-        )}
-        {isNew && !declined && !hired ? (
-          <span className="pointer-events-none absolute start-1.5 top-1.5 z-[3]">
-            <span className="rounded-full bg-[#0e0e10]/80 px-2 py-0.5 text-[11px] font-semibold text-white backdrop-blur-sm">
-              New<span className="sr-only"> pitch, not opened yet</span>
+      {written ? null : (
+        <div className="relative w-[96px] flex-none self-start sm:w-[104px]">
+          {sample ? (
+            <button
+              type="button"
+              onClick={() => onPlay(sample.id)}
+              aria-label={`Play ${creator.firstName}'s sample: ${sample.title}`}
+              className="relative z-[2] block w-full rounded-(--y-r-tile)"
+            >
+              <VideoThumb video={sample} frame="9:16" playable showHook={false} showMeta={false} decorative />
+            </button>
+          ) : (
+            <span aria-hidden className="grid aspect-[9/16] w-full place-items-center rounded-(--y-r-tile) bg-(--b-chip)">
+              <FaceAvatar id={creator.id} name="" size={44} />
             </span>
-          </span>
-        ) : null}
-      </div>
+          )}
+          {newTag ? <span className="pointer-events-none absolute start-1.5 top-1.5 z-[3]">{newTag}</span> : null}
+        </div>
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col gap-2 py-0.5">
         <div className="flex items-start gap-2">
+          {written ? <FaceAvatar id={creator.id} name="" size={36} className="flex-none" /> : null}
           <div className="min-w-0 flex-1">
             <p className="y-small flex items-center gap-1 font-semibold">
               <span className="truncate">{creator.name}</span>
@@ -155,6 +177,12 @@ export function PitchCard({
           )}
         </div>
 
+        {written ? (
+          <p className="y-micro y-fg-2 -mb-1.5 inline-flex items-center gap-1.5 font-medium">
+            <PenLine size={13} aria-hidden /> Sample line
+            {newTag}
+          </p>
+        ) : null}
         <h3 className="y-head font-semibold" dir="auto">
           <button
             type="button"
@@ -165,14 +193,23 @@ export function PitchCard({
             {quoted(pitch.angle)}
           </button>
         </h3>
+        {written ? (
+          <p className="y-small y-fg-2 line-clamp-2" dir="auto">
+            {pitch.message}
+          </p>
+        ) : null}
 
         <p className="y-micro y-fg-2 truncate">{fitLine(item, request, product)}</p>
 
         <div className="mt-auto flex items-center gap-2 pt-1">
           <p className="y-small min-w-0 flex-1">
             <PriceText price={pitch.price} request={request} className="font-semibold" />
-            <span className="y-fg-2"> · </span>
-            <DaysText item={item} request={request} className="y-fg-2" />
+            {hasDaysText(item, request) ? (
+              <>
+                <span className="y-fg-2"> · </span>
+                <DaysText item={item} request={request} className="y-fg-2" />
+              </>
+            ) : null}
           </p>
           <span className="relative z-[2] flex flex-none items-center gap-1">
             {hired ? (

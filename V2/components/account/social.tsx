@@ -3,7 +3,7 @@
 import { BadgeCheck, CircleCheck, LoaderCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
-import { compact, money } from "@/lib/format";
+import { compact } from "@/lib/format";
 import { campaignPlatformById, followerTiers, tierFor } from "@/lib/taxonomy";
 import type { CampaignPlatformId, SocialAccount } from "@/lib/types";
 
@@ -20,11 +20,11 @@ export const CAMPAIGN_FLOOR = compact(followerTiers[0].min);
 
 export const platformName = (platform: CampaignPlatformId) => campaignPlatformById[platform].name;
 
-/** "10K–20K tier · $30 per campaign video" or the below-10K note. */
+/** "10K–20K tier · you can pick campaigns for this tier" or the below-10K note. Brands set each campaign's price. */
 export function tierLine(followers: number): string {
   const tier = tierFor(followers);
   if (!tier) return `Below ${CAMPAIGN_FLOOR}: campaigns start at ${CAMPAIGN_FLOOR}`;
-  return `${tier.label} tier · ${money(tier.pricePerVideo)} per campaign video`;
+  return `${tier.label} tier · you can pick campaigns for this tier`;
 }
 
 /** "TikTok 18.4K verified · Instagram 9.1K verified". */

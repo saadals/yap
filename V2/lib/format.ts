@@ -41,19 +41,53 @@ export function moneyRange(min: number, max: number): string {
   return `${money(min)}–${Math.round(max).toLocaleString("en-US")}`;
 }
 
-/** Commission arithmetic. Creators keep 100% of price + add-ons; the business pays the fee. */
+const toCents = (amount: number) => Math.round(amount * 100) / 100;
+
+export type PriceBreakdown = {
+  /** The listed price of the work itself. */
+  price: number;
+  addonsTotal: number;
+  /** What the brand pays: price + add-ons, nothing on top. Held at hire; a refund returns it. */
+  total: number;
+  /** Yapp's share of `total` (20%), deducted from the creator's pay. */
+  fee: number;
+  /** What the creator receives: `total` − `fee` (80%). */
+  creatorEarns: number;
+};
+
+/**
+ * The one place the money split is computed. The brand pays the listed price plus add-ons and
+ * nothing on top (`total`); Yapp keeps `feeRate` of it (`fee`), deducted from the creator's pay;
+ * the creator receives the rest (`creatorEarns`). Example: $570 → Yapp $114, creator $456.
+ */
 export function priceBreakdown(
   price: number,
   addons: { price: number }[] = [],
   feeRate = SERVICE_FEE_RATE,
-) {
+): PriceBreakdown {
   const addonsTotal = addons.reduce((sum, item) => sum + item.price, 0);
-  const subtotal = price + addonsTotal;
-  const fee = Math.round(subtotal * feeRate * 100) / 100;
-  return { price, addonsTotal, subtotal, fee, total: subtotal + fee, creatorEarns: subtotal };
+  const total = price + addonsTotal;
+  const fee = toCents(total * feeRate);
+  return { price, addonsTotal, total, fee, creatorEarns: toCents(total - fee) };
 }
 
-/** Allowed price for work covering `videos` Yapps: $30–5,000 each (a pitch never under $30). */
+/** What a creator receives from a listed price ($140 → $112; the $30 floor → $24). */
+export const creatorNet = (amount: number, feeRate = SERVICE_FEE_RATE) =>
+  priceBreakdown(amount, [], feeRate).creatorEarns;
+
+/** "$140 · you earn $112", or with a unit: "$140 per Yapp · you earn $112". */
+export function priceWithNet(amount: number, unit = "", feeRate = SERVICE_FEE_RATE): string {
+  return `${money(amount)}${unit ? ` ${unit}` : ""} · you earn ${moneyExact(creatorNet(amount, feeRate))}`;
+}
+
+/** A budget range as the creator's net ("$160–280"), rounded to whole dollars. */
+export const netRange = (min: number, max: number, feeRate = SERVICE_FEE_RATE) =>
+  moneyRange(creatorNet(min, feeRate), creatorNet(max, feeRate));
+
+/**
+ * Allowed listed price for work covering `videos` Yapps: $30–5,000 each (a pitch never under $30).
+ * The creator's net at the floor is $24.
+ */
 export function priceLimits(videos = 1) {
   const count = Math.max(1, Math.round(videos));
   return { min: Math.max(PITCH_MIN, PRICE_MIN_PER_YAPP * count), max: PRICE_MAX_PER_YAPP * count };

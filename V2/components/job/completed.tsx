@@ -5,8 +5,6 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { StarInput, StarRow } from "@/components/domain/stars";
-import { VideoPlayer } from "@/components/domain/video-player";
-import { Celebrate } from "@/components/ui/celebrate";
 import { TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
@@ -14,12 +12,12 @@ import { plural, quoted, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { reviewById } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { includedRights } from "@/lib/taxonomy";
+import { FEE_PCT } from "@/lib/taxonomy";
 
-import { cash, FORM, reveal, suggestedLearnings, type Job } from "./helpers";
+import { cash, FORM, includedLine, reveal, suggestedLearnings, type Job } from "./helpers";
 import { followUp } from "./next-action";
 import { Panel } from "./panel";
-import type { Delivery } from "@/lib/types";
+import { ReviewArea } from "./review-area";
 
 export type CompletedFlow = {
   afterReview: boolean;
@@ -31,98 +29,84 @@ export type CompletedFlow = {
 
 const MIN_TEXT = 20;
 
-/** The approved version, to watch again: the player without the review tools. */
-export function FinishedVideo({ delivery }: { delivery: Delivery }) {
-  return (
-    <div className="min-w-0">
-      <VideoPlayer key={delivery.id} video={delivery.video} size="md" />
-    </div>
-  );
-}
-
 /* -------------------------------------------------------------------------- */
 /* Ordering side: approved and paid, then review → learnings → order again     */
 /* -------------------------------------------------------------------------- */
 
 export function BusinessCompleted({ job, flow }: { job: Job; flow: CompletedFlow }) {
   const s = useDemo();
-  const { commission: c, creatorName, totals, selected, product } = job;
+  const { commission: c, creatorName, totals, selected, product, adCopy } = job;
   const review = c.reviewId ? reviewById(s, c.reviewId) : undefined;
   const step = followUp(job, flow);
   const saved = product?.learnings.filter((l) => l.sourceCommissionId === c.id) ?? [];
   const [addingMore, setAddingMore] = useState(false);
-  const adRights = c.addons.some((a) => a.id.startsWith("ad-rights"));
+
+  const steps = (
+    <ol className="flex min-w-0 flex-col" aria-label="What's next">
+      <Step n={1} title={review ? "Your review" : `How did ${creatorName} do?`} state={review ? "done" : "current"}>
+        {review ? (
+          <figure className="flex flex-col gap-1.5">
+            <StarRow value={review.rating} size={15} />
+            <blockquote className="y-small">{quoted(review.text)}</blockquote>
+            <figcaption className="y-micro y-fg-2">
+              {shortDate(review.createdAt)}
+              {review.wouldRehire ? " · Would hire again" : ""}
+            </figcaption>
+          </figure>
+        ) : (
+          <ReviewForm job={job} onDone={flow.onReviewed} />
+        )}
+      </Step>
+
+      {product ? (
+        <Step
+          n={2}
+          title="Save what you learned"
+          state={step === "learnings" || addingMore ? "current" : saved.length ? "done" : step === "review" ? "next" : "done"}
+        >
+          {step === "learnings" || addingMore ? (
+            <LearningsForm
+              job={job}
+              onDone={() => {
+                setAddingMore(false);
+                flow.onLearningsDone();
+              }}
+            />
+          ) : step === "review" ? (
+            <p className="y-small y-fg-2">Comments worth keeping go with your next brief for {product.name}.</p>
+          ) : (
+            <p className="y-small y-fg-2">
+              {saved.length
+                ? `${plural(saved.length, "learning")} from this job saved to ${product.name}. `
+                : `Nothing saved from this job. `}
+              <button type="button" className="y-link font-medium text-(--b-fg)" onClick={() => setAddingMore(true)}>
+                Add a learning
+              </button>
+            </p>
+          )}
+        </Step>
+      ) : null}
+
+      <Step n={product ? 3 : 2} title={`Order again from ${creatorName}`} state={step === "again" && !addingMore ? "current" : "next"} last>
+        <p className="y-small y-fg-2">
+          Your brief, the product context and every learning carry over.{" "}
+          {job.latest?.video ? (
+            <Link href={paths.library({ video: job.latest.video.id })} className="y-link font-medium text-(--b-fg)">
+              See it in your Library
+            </Link>
+          ) : null}
+        </p>
+      </Step>
+    </ol>
+  );
 
   return (
     <Panel
-      title={`Approved · ${cash(totals.creatorEarns)} released to ${creatorName}`}
-      line={`${c.completedAt ? `Approved ${shortDate(c.completedAt)}. ` : ""}The video is yours${adRights ? " to post and run as an ad" : ""}. ${includedRights}`}
+      title={`Approved · ${cash(totals.total)} payment released`}
+      line={`${c.completedAt ? `Approved ${shortDate(c.completedAt)}. ` : ""}${adCopy ? "The copy is yours to use." : "The video is yours to post."} ${includedLine(job)}`}
       icon={<CheckCircle2 size={24} aria-hidden className="text-(--y-success)" />}
-      aside={flow.justApproved ? <Celebrate className="-my-2 h-20 w-32" /> : undefined}
     >
-      <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-        {selected ? <FinishedVideo delivery={selected} /> : null}
-        <ol className="flex min-w-0 flex-col" aria-label="What's next">
-          <Step
-            n={1}
-            title={review ? "Your review" : `How did ${creatorName} do?`}
-            state={review ? "done" : "current"}
-          >
-            {review ? (
-              <figure className="flex flex-col gap-1.5">
-                <StarRow value={review.rating} size={15} />
-                <blockquote className="y-small">{quoted(review.text)}</blockquote>
-                <figcaption className="y-micro y-fg-2">
-                  {shortDate(review.createdAt)}
-                  {review.wouldRehire ? " · Would hire again" : ""}
-                </figcaption>
-              </figure>
-            ) : (
-              <ReviewForm job={job} onDone={flow.onReviewed} />
-            )}
-          </Step>
-
-          {product ? (
-            <Step
-              n={2}
-              title="Save what you learned"
-              state={step === "learnings" || addingMore ? "current" : saved.length ? "done" : step === "review" ? "next" : "done"}
-            >
-              {step === "learnings" || addingMore ? (
-                <LearningsForm
-                  job={job}
-                  onDone={() => {
-                    setAddingMore(false);
-                    flow.onLearningsDone();
-                  }}
-                />
-              ) : step === "review" ? (
-                <p className="y-small y-fg-2">Notes worth keeping go with your next brief for {product.name}.</p>
-              ) : (
-                <p className="y-small y-fg-2">
-                  {saved.length
-                    ? `${plural(saved.length, "learning")} from this job saved to ${product.name}. `
-                    : `Nothing saved from this job. `}
-                  <button type="button" className="y-link font-medium text-(--b-fg)" onClick={() => setAddingMore(true)}>
-                    Add a learning
-                  </button>
-                </p>
-              )}
-            </Step>
-          ) : null}
-
-          <Step n={product ? 3 : 2} title={`Order again from ${creatorName}`} state={step === "again" && !addingMore ? "current" : "next"} last>
-            <p className="y-small y-fg-2">
-              Your brief, the product context and every learning carry over.{" "}
-              {job.latest ? (
-                <Link href={paths.library({ video: job.latest.video.id })} className="y-link font-medium text-(--b-fg)">
-                  See it in your Library
-                </Link>
-              ) : null}
-            </p>
-          </Step>
-        </ol>
-      </div>
+      {selected ? <ReviewArea job={job} delivery={selected} aside={steps} collapsed /> : steps}
     </Panel>
   );
 }
@@ -209,7 +193,7 @@ function ReviewForm({ job, onDone }: { job: Job; onDone: () => void }) {
       <div className="flex flex-col">
         {(
           [
-            ["Quality of the video", quality, setQuality],
+            [job.adCopy ? "Quality of the copy" : "Quality of the video", quality, setQuality],
             ["Communication", communication, setCommunication],
             ["On time", timeliness, setTimeliness],
           ] as const
@@ -236,7 +220,11 @@ function ReviewForm({ job, onDone }: { job: Job; onDone: () => void }) {
         value={text}
         onChange={(event) => setText(event.target.value)}
         error={textError}
-        placeholder={`e.g. ${creatorName} got our customers straight away. The hook landed in the first two seconds.`}
+        placeholder={
+          job.adCopy
+            ? `e.g. ${creatorName} wrote the way our customers talk. Headline 1 is already our best ad.`
+            : `e.g. ${creatorName} got our customers straight away. The hook landed in the first two seconds.`
+        }
       />
       <label className="flex cursor-pointer items-center justify-between gap-4">
         <span className="y-small font-medium">I&apos;d hire {creatorName} again</span>
@@ -305,14 +293,14 @@ function LearningsForm({ job, onDone }: { job: Job; onDone: () => void }) {
                 />
                 <span className="flex flex-col gap-0.5">
                   <span className="y-small">{item}</span>
-                  <span className="y-micro y-fg-2">{extra.includes(item) ? "Added by you" : "From your notes on the video"}</span>
+                  <span className="y-micro y-fg-2">{extra.includes(item) ? "Added by you" : "From your comments"}</span>
                 </span>
               </label>
             </li>
           ))}
         </ul>
       ) : (
-        <p className="y-micro y-fg-2">There are no notes on this job to suggest from. Add your own below.</p>
+        <p className="y-micro y-fg-2">There are no comments on this job to suggest from. Add your own below.</p>
       )}
       <div className="flex gap-2">
         <label htmlFor="job-learning" className="sr-only">
@@ -363,48 +351,48 @@ export function CreatorCompleted({ job }: { job: Job; flow: CompletedFlow }) {
   const { commission: c, businessName, totals, selected } = job;
   const review = c.reviewId ? reviewById(s, c.reviewId) : undefined;
   const feedback = c.clientFeedback;
+  const aside = (
+    <div className="flex min-w-0 flex-col gap-6">
+      <section className="flex flex-col gap-2" aria-labelledby="their-review">
+        <h3 id="their-review" className="y-head">
+          {businessName}&apos;s review
+        </h3>
+        {review ? (
+          <figure className="flex flex-col gap-1.5">
+            <StarRow value={review.rating} size={15} />
+            <blockquote className="y-small">{quoted(review.text)}</blockquote>
+            <figcaption className="y-micro y-fg-2">
+              {review.authorName}, {review.authorTitle}
+              {review.wouldRehire ? " · Would hire again" : ""}
+            </figcaption>
+          </figure>
+        ) : (
+          <p className="y-small y-fg-2">No review yet. It shows on your profile when they leave one.</p>
+        )}
+      </section>
+
+      <section className="flex flex-col gap-2 border-t border-(--b-line) pt-5" aria-labelledby="private-rating">
+        <h3 id="private-rating" className="y-head inline-flex items-center gap-2">
+          <EyeOff size={16} aria-hidden /> How was working with {businessName}?
+        </h3>
+        {feedback ? (
+          <p className="y-small inline-flex flex-wrap items-center gap-2">
+            You rated them <StarRow value={feedback.rating} size={14} />
+            <span className="y-fg-2">Only Yapp sees this.</span>
+          </p>
+        ) : (
+          <FeedbackForm job={job} />
+        )}
+      </section>
+    </div>
+  );
   return (
     <Panel
       title={`Paid · ${cash(totals.creatorEarns)} is in your earnings`}
-      line={`${businessName} approved ${job.noun} ${job.latest?.version ?? 1}${c.completedAt ? ` on ${shortDate(c.completedAt)}` : ""}. You keep 100% of it.`}
+      line={`${businessName} approved ${job.noun} ${job.latest?.version ?? 1}${c.completedAt ? ` on ${shortDate(c.completedAt)}` : ""}. That's the ${cash(totals.total)} price after Yapp's ${FEE_PCT}% fee.`}
       icon={<CheckCircle2 size={24} aria-hidden className="text-(--y-success)" />}
     >
-      <div className="grid gap-6 md:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-        {selected ? <FinishedVideo delivery={selected} /> : null}
-        <div className="flex min-w-0 flex-col gap-6">
-          <section className="flex flex-col gap-2" aria-labelledby="their-review">
-            <h3 id="their-review" className="y-head">
-              {businessName}&apos;s review
-            </h3>
-            {review ? (
-              <figure className="flex flex-col gap-1.5">
-                <StarRow value={review.rating} size={15} />
-                <blockquote className="y-small">{quoted(review.text)}</blockquote>
-                <figcaption className="y-micro y-fg-2">
-                  {review.authorName}, {review.authorTitle}
-                  {review.wouldRehire ? " · Would hire again" : ""}
-                </figcaption>
-              </figure>
-            ) : (
-              <p className="y-small y-fg-2">No review yet. It shows on your profile when they leave one.</p>
-            )}
-          </section>
-
-          <section className="flex flex-col gap-2 border-t border-(--b-line) pt-5" aria-labelledby="private-rating">
-            <h3 id="private-rating" className="y-head inline-flex items-center gap-2">
-              <EyeOff size={16} aria-hidden /> How was working with {businessName}?
-            </h3>
-            {feedback ? (
-              <p className="y-small inline-flex flex-wrap items-center gap-2">
-                You rated them <StarRow value={feedback.rating} size={14} />
-                <span className="y-fg-2">Only Yapp sees this.</span>
-              </p>
-            ) : (
-              <FeedbackForm job={job} />
-            )}
-          </section>
-        </div>
-      </div>
+      {selected ? <ReviewArea job={job} delivery={selected} aside={aside} collapsed /> : aside}
     </Panel>
   );
 }

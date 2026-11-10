@@ -317,9 +317,6 @@ function WatchEnd({ creator, own, onTop }: { creator?: Creator; own: boolean; on
               : `Like what you saw? Order from ${creator.firstName}, or look around for more creators.`
             : "New videos show up here as creators add them. Every creator is on Discover, with filters."
         }
-        shape="ball"
-        tint="mint"
-        face="smile"
         action={
           <div className="flex flex-col items-center gap-2">
             <div className="flex flex-wrap justify-center gap-2">
@@ -373,9 +370,6 @@ function WatchMissing() {
             headingLevel={2}
             title="We couldn't find that creator"
             body="The link may be mistyped, or the creator may have changed their handle."
-            shape="tower"
-            tint="sun"
-            face="calm"
             action={
               <PillButton href={paths.discover()} variant="contrast" arrow>
                 Find creators

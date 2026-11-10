@@ -13,8 +13,8 @@ import { useDemo, useHydrated } from "@/lib/store";
 
 /**
  * /account, "Me": the phone tab for everything that isn't in the tab bar (the mode switch, the
- * pages of the current mode, settings, theme, demo tools, log out). Also reachable on desktop,
- * where the avatar opens the same menu in a sheet.
+ * pages of the current mode, Productivity, settings, demo tools, and Log out, which asks first).
+ * It renders the shell's `AccountMenuBody`, the same menu the desktop avatar opens in a sheet.
  */
 export function AccountPage() {
   const s = useDemo();

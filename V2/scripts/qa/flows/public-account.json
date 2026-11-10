@@ -1,144 +1,678 @@
 {
   "steps": [
-    { "go": "/", "after": 4000 },
-    { "text": "Short videos for your app, made by real creators." },
-    { "text": "Get videos made" },
-    { "text": "Make videos, get paid" },
-    { "text": "Three ways to get videos made" },
-    { "text": "From brief to approved video" },
-    { "text": "Paid only when you approve" },
-    { "text": "Creators brands come back to" },
-    { "text": "Make videos for tech brands. Keep 100%." },
-    { "text": "Questions, answered" },
-    { "shot": "public-account-landing" },
-    { "shot": "public-account-landing-full", "full": true },
-
-    { "click": "Get videos made", "after": 3500 },
-    { "text": "Sign in to Yapp" },
-    { "text": "Get short videos made for your product" },
-    { "text": "Continue as" },
-    { "text": "Nour Haddad" },
-    { "text": "Layla Mansour" },
-    { "shot": "public-account-signin" },
-    { "click": "Nour Haddad", "after": 4000 },
-    { "eval": "location.pathname" },
-    { "text": "Switch to Studio" },
-    { "notText": "Sign in to Yapp" },
-
-    { "go": "/account", "after": 3000 },
-    { "text": "Account" },
-    { "text": "Switch to Studio" },
-    { "text": "Skip 7 days" },
-    { "text": "Log out and forget this account" },
-    { "shot": "public-account-account" },
-    { "click": "Log out", "after": 3500 },
-    { "eval": "location.pathname" },
-    { "text": "Short videos for your app, made by real creators." },
-
-    { "go": "/signin?intent=make", "after": 3500 },
-    { "text": "Make videos for tech brands. You keep 100% of your price." },
-    { "type": { "sel": "input[type=tel]", "text": "415 555 0123" } },
-    { "click": "Send code", "after": 1500 },
-    { "text": "Enter the 6-digit code we sent to" },
-    { "text": "Demo: use code 123456" },
-    { "shot": "public-account-code" },
-    { "type": { "sel": "input[aria-label='1 / 6']", "text": "1" } },
-    { "type": { "sel": "input[aria-label='2 / 6']", "text": "2" } },
-    { "type": { "sel": "input[aria-label='3 / 6']", "text": "3" } },
-    { "type": { "sel": "input[aria-label='4 / 6']", "text": "4" } },
-    { "type": { "sel": "input[aria-label='5 / 6']", "text": "5" } },
-    { "type": { "sel": "input[aria-label='6 / 6']", "text": "6" }, "after": 4000 },
-    { "wait": 3000 },
-    { "eval": "location.pathname" },
-    { "text": "Switch to ordering" },
-
-    { "account": "nour" },
-    { "go": "/messages?thread=t-204", "after": 4000 },
-    { "text": "Inbox" },
-    { "text": "Messages" },
-    { "text": "Alerts" },
-    { "text": "Jordan Reyes" },
-    { "text": "Open job" },
-    { "text": "Unread" },
-    { "type": { "sel": "textarea[placeholder='Message Jordan']", "text": "Call me on 415 555 0123 instead" } },
-    { "text": "are hidden when you send" },
-    { "type": { "sel": "textarea[placeholder='Message Jordan']", "text": "Thanks Jordan, the second hook is the strongest. Can you lead with it?" } },
-    { "notText": "are hidden when you send" },
-    { "click": "Send message", "after": 1500 },
-    { "text": "Thanks Jordan, the second hook is the strongest. Can you lead with it?" },
-    { "shot": "public-account-messages" },
-    { "click": "Alerts", "after": 2500 },
-    { "text": "Mark all as read" },
-    { "shot": "public-account-alerts" },
-    { "click": "Mark all as read", "after": 1200 },
-    { "notText": "Mark all as read" },
-    { "click": "Messages", "after": 2500 },
-    { "click": "Nina Holt", "after": 2500 },
-    { "text": "Message Nina" },
-
-    { "go": "/settings", "after": 3500 },
-    { "text": "Settings" },
-    { "text": "Notifications" },
-    { "text": "Business account" },
-    { "text": "Sign-in and security" },
-    { "text": "Appearance" },
-    { "text": "Team" },
-    { "notText": "Change password" },
-    { "text": "Change number" },
-    { "type": { "sel": "input[autocomplete='organization-title']", "text": "Head of growth" } },
-    { "click": "Save your profile", "after": 1500 },
-    { "shot": "public-account-settings" },
-    { "click": "Change number", "after": 1200 },
-    { "text": "Change your number" },
-    { "type": { "sel": "[role=dialog] input[type=tel]", "text": "647 555 0199" } },
-    { "click": "Send code", "after": 1000 },
-    { "type": { "sel": "[role=dialog] input[aria-label='1 / 6']", "text": "1" } },
-    { "type": { "sel": "[role=dialog] input[aria-label='2 / 6']", "text": "2" } },
-    { "type": { "sel": "[role=dialog] input[aria-label='3 / 6']", "text": "3" } },
-    { "type": { "sel": "[role=dialog] input[aria-label='4 / 6']", "text": "4" } },
-    { "type": { "sel": "[role=dialog] input[aria-label='5 / 6']", "text": "5" } },
-    { "type": { "sel": "[role=dialog] input[aria-label='6 / 6']", "text": "6" }, "after": 1500 },
-    { "text": "+1 ••• ••• 0199" },
-    { "click": "Dark", "after": 1000 },
-    { "eval": "document.documentElement.classList.contains('dark')" },
-    { "shot": "public-account-settings-dark" },
-    { "click": "Light", "after": 800 },
-    { "go": "/account", "after": 3000 },
-    { "text": "Head of growth · Daftar" },
-
-    { "go": "/onboarding", "after": 3500 },
-    { "text": "What do you want to do first?" },
-    { "click": "Order videos" },
-    { "click": "Continue", "after": 1500 },
-    { "text": "You and your company" },
-    { "type": { "sel": "#main input[autocomplete='name']", "text": "Sam Rivera" } },
-    { "type": { "sel": "#main input[autocomplete='organization']", "text": "Brightloop" } },
-    { "eval": "(() => { const el = document.querySelector('#main select'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(el, el.options[1].value); el.dispatchEvent(new Event('change', { bubbles: true })); return el.value; })()" },
-    { "click": "Fintech" },
-    { "click": "Continue", "after": 1500 },
-    { "text": "What are the videos about?" },
-    { "text": "Preview · goes into every brief" },
-    { "shot": "public-account-onboarding" },
-    { "click": "Skip for now", "after": 2500 },
-    { "text": "You're ready to order" },
-    { "text": "Place your first order" },
-    { "shot": "public-account-onboarding-done" },
-    { "click": "Go to Home", "after": 3000 },
-    { "eval": "location.pathname" },
-
-    { "go": "/how-it-works", "after": 3500 },
-    { "text": "Simple to order, safe to pay." },
-    { "text": "Clear prices. You see every dollar." },
-    { "text": "Protected on every order" },
-    { "click": "UGC campaign", "after": 800 },
-    { "text": "Creators take slots" },
-    { "go": "/for-creators", "after": 3500 },
-    { "text": "You keep 100% of your price" },
-    { "text": "Open work right now" },
-    { "go": "/legal", "after": 3000 },
-    { "text": "In legal review" },
-    { "text": "Creator Agreement" },
-    { "go": "/404", "after": 3000 },
-    { "text": "This page went off script" }
+    {
+      "go": "/",
+      "after": 4000
+    },
+    {
+      "text": "Short videos for your app, made by real creators."
+    },
+    {
+      "text": "Get videos made"
+    },
+    {
+      "text": "Make videos, get paid"
+    },
+    {
+      "text": "Three ways to get videos made"
+    },
+    {
+      "text": "Post a custom order"
+    },
+    {
+      "text": "You set the price, from $30 a Yapp"
+    },
+    {
+      "text": "From brief to approved video"
+    },
+    {
+      "text": "Review with comments"
+    },
+    {
+      "text": "Easier every time."
+    },
+    {
+      "text": "Paid only when you approve"
+    },
+    {
+      "text": "Nothing added on top: Yapp's 20% comes out of the creator's side"
+    },
+    {
+      "text": "Creators brands come back to"
+    },
+    {
+      "text": "Make videos for tech brands. Get paid when they approve."
+    },
+    {
+      "text": "Earn 80% of every price"
+    },
+    {
+      "text": "you earn"
+    },
+    {
+      "text": "Questions, answered"
+    },
+    {
+      "notText": "Keep 100%"
+    },
+    {
+      "notText": "service fee"
+    },
+    {
+      "notText": "Get pitches"
+    },
+    {
+      "shot": "public-account-landing"
+    },
+    {
+      "shot": "public-account-landing-full",
+      "full": true
+    },
+    {
+      "click": "Get videos made",
+      "after": 3500
+    },
+    {
+      "text": "Sign in to Yapp"
+    },
+    {
+      "text": "Get short videos made for your product"
+    },
+    {
+      "text": "Continue as"
+    },
+    {
+      "text": "Nour Haddad"
+    },
+    {
+      "text": "Layla Mansour"
+    },
+    {
+      "shot": "public-account-signin"
+    },
+    {
+      "clickSel": "button[aria-label='Remove Layla Mansour from this device']",
+      "after": 800
+    },
+    {
+      "text": "Removed Layla Mansour from this device"
+    },
+    {
+      "click": "Undo",
+      "after": 800
+    },
+    {
+      "text": "Layla Mansour"
+    },
+    {
+      "click": "Nour Haddad",
+      "after": 4000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Switch to Studio"
+    },
+    {
+      "notText": "Sign in to Yapp"
+    },
+    {
+      "go": "/account",
+      "after": 3000
+    },
+    {
+      "text": "Account"
+    },
+    {
+      "text": "Switch to Studio"
+    },
+    {
+      "text": "Productivity"
+    },
+    {
+      "text": "Skip 7 days"
+    },
+    {
+      "notText": "Log out and forget"
+    },
+    {
+      "notText": "Dark"
+    },
+    {
+      "shot": "public-account-account"
+    },
+    {
+      "click": "Log out",
+      "after": 800
+    },
+    {
+      "text": "Stay signed in"
+    },
+    {
+      "shot": "public-account-logout-confirm"
+    },
+    {
+      "click": "Log out",
+      "after": 4000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Short videos for your app, made by real creators."
+    },
+    {
+      "text": "Get videos made"
+    },
+    {
+      "shot": "public-account-logged-out"
+    },
+    {
+      "go": "/signin",
+      "after": 3000
+    },
+    {
+      "text": "Continue as"
+    },
+    {
+      "text": "Nour Haddad"
+    },
+    {
+      "go": "/signin?intent=make",
+      "after": 3500
+    },
+    {
+      "text": "Make videos for tech brands. You earn 80% of every price, paid when the brand approves."
+    },
+    {
+      "type": {
+        "sel": "input[type=tel]",
+        "text": "415 555 0123"
+      }
+    },
+    {
+      "click": "Send code",
+      "after": 1500
+    },
+    {
+      "text": "Enter the 6-digit code we sent to"
+    },
+    {
+      "text": "Demo: use code 123456"
+    },
+    {
+      "shot": "public-account-code"
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='1 / 6']",
+        "text": "1"
+      }
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='2 / 6']",
+        "text": "2"
+      }
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='3 / 6']",
+        "text": "3"
+      }
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='4 / 6']",
+        "text": "4"
+      }
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='5 / 6']",
+        "text": "5"
+      }
+    },
+    {
+      "type": {
+        "sel": "input[aria-label='6 / 6']",
+        "text": "6"
+      },
+      "after": 4000
+    },
+    {
+      "wait": 3000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "text": "Switch to ordering"
+    },
+    {
+      "account": "nour"
+    },
+    {
+      "go": "/messages?thread=t-204",
+      "after": 4000
+    },
+    {
+      "text": "Inbox"
+    },
+    {
+      "text": "Messages"
+    },
+    {
+      "text": "Alerts"
+    },
+    {
+      "text": "Jordan Reyes"
+    },
+    {
+      "text": "Open job"
+    },
+    {
+      "text": "Unread"
+    },
+    {
+      "type": {
+        "sel": "textarea[placeholder='Message Jordan']",
+        "text": "Call me on 415 555 0123 instead"
+      }
+    },
+    {
+      "text": "are hidden when you send"
+    },
+    {
+      "type": {
+        "sel": "textarea[placeholder='Message Jordan']",
+        "text": "Thanks Jordan, the second hook is the strongest. Can you lead with it?"
+      }
+    },
+    {
+      "notText": "are hidden when you send"
+    },
+    {
+      "click": "Send message",
+      "after": 1500
+    },
+    {
+      "text": "Thanks Jordan, the second hook is the strongest. Can you lead with it?"
+    },
+    {
+      "shot": "public-account-messages"
+    },
+    {
+      "go": "/messages?thread=t-201",
+      "after": 3500
+    },
+    {
+      "text": "Message Layla"
+    },
+    {
+      "text": "3 new comments on Version 1"
+    },
+    {
+      "text": "View the comments on Version 1"
+    },
+    {
+      "shot": "public-account-messages-comments"
+    },
+    {
+      "click": "Alerts",
+      "after": 2500
+    },
+    {
+      "text": "Mark all as read"
+    },
+    {
+      "text": "Layla replied to a comment on Version 1"
+    },
+    {
+      "shot": "public-account-alerts"
+    },
+    {
+      "click": "Mark all as read",
+      "after": 1200
+    },
+    {
+      "notText": "Mark all as read"
+    },
+    {
+      "click": "Messages",
+      "after": 2500
+    },
+    {
+      "text": "Message Nina"
+    },
+    {
+      "go": "/settings",
+      "after": 3500
+    },
+    {
+      "text": "Settings"
+    },
+    {
+      "text": "Notifications"
+    },
+    {
+      "text": "Brand accounts"
+    },
+    {
+      "text": "@daftar.app"
+    },
+    {
+      "text": "Business account"
+    },
+    {
+      "text": "Sign-in and security"
+    },
+    {
+      "notText": "Appearance"
+    },
+    {
+      "text": "Team"
+    },
+    {
+      "notText": "Change password"
+    },
+    {
+      "notText": "Remove from this device"
+    },
+    {
+      "text": "Change number"
+    },
+    {
+      "text": "We'll remind you 48 hours, 24 hours and 2 hours before."
+    },
+    {
+      "type": {
+        "sel": "input[autocomplete='organization-title']",
+        "text": "Head of growth"
+      }
+    },
+    {
+      "click": "Save your profile",
+      "after": 1500
+    },
+    {
+      "clickSel": "button[aria-label='Add the Snapchat account']",
+      "after": 800
+    },
+    {
+      "type": {
+        "sel": "#brand input",
+        "text": "bad handle!"
+      }
+    },
+    {
+      "click": "Save",
+      "after": 600
+    },
+    {
+      "text": "Use letters, numbers, dots or underscores (2–30)."
+    },
+    {
+      "type": {
+        "sel": "#brand input",
+        "text": "daftar.snaps"
+      }
+    },
+    {
+      "click": "Save",
+      "after": 1000
+    },
+    {
+      "text": "Saved @daftar.snaps for Snapchat"
+    },
+    {
+      "text": "@daftar.snaps"
+    },
+    {
+      "eval": "document.getElementById('brand').scrollIntoView(); 1"
+    },
+    {
+      "wait": 500
+    },
+    {
+      "shot": "public-account-settings-brand"
+    },
+    {
+      "clickSel": "button[aria-label='Remove the Snapchat account']",
+      "after": 800
+    },
+    {
+      "text": "Removed the Snapchat account"
+    },
+    {
+      "click": "Undo",
+      "after": 800
+    },
+    {
+      "text": "@daftar.snaps"
+    },
+    {
+      "shot": "public-account-settings"
+    },
+    {
+      "click": "Change number",
+      "after": 1200
+    },
+    {
+      "text": "Change your number"
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[type=tel]",
+        "text": "647 555 0199"
+      }
+    },
+    {
+      "click": "Send code",
+      "after": 1000
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[aria-label='1 / 6']",
+        "text": "1"
+      }
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[aria-label='2 / 6']",
+        "text": "2"
+      }
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[aria-label='3 / 6']",
+        "text": "3"
+      }
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[aria-label='4 / 6']",
+        "text": "4"
+      }
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[aria-label='5 / 6']",
+        "text": "5"
+      }
+    },
+    {
+      "type": {
+        "sel": "[role=dialog] input[aria-label='6 / 6']",
+        "text": "6"
+      },
+      "after": 1500
+    },
+    {
+      "text": "+1 ••• ••• 0199"
+    },
+    {
+      "go": "/account",
+      "after": 3000
+    },
+    {
+      "text": "Head of growth · Daftar"
+    },
+    {
+      "go": "/onboarding",
+      "after": 3500
+    },
+    {
+      "text": "What do you want to do first?"
+    },
+    {
+      "click": "Order videos"
+    },
+    {
+      "click": "Continue",
+      "after": 1500
+    },
+    {
+      "text": "You and your company"
+    },
+    {
+      "type": {
+        "sel": "#main input[autocomplete='name']",
+        "text": "Sam Rivera"
+      }
+    },
+    {
+      "type": {
+        "sel": "#main input[autocomplete='organization']",
+        "text": "Brightloop"
+      }
+    },
+    {
+      "eval": "(() => { const el = document.querySelector('#main select'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(el, el.options[1].value); el.dispatchEvent(new Event('change', { bubbles: true })); return el.value; })()"
+    },
+    {
+      "click": "Fintech"
+    },
+    {
+      "click": "Continue",
+      "after": 1500
+    },
+    {
+      "text": "What are the videos about?"
+    },
+    {
+      "text": "Preview · goes into every brief"
+    },
+    {
+      "shot": "public-account-onboarding"
+    },
+    {
+      "click": "Skip for now",
+      "after": 2500
+    },
+    {
+      "text": "You're ready to order"
+    },
+    {
+      "text": "Place your first order"
+    },
+    {
+      "text": "Order from a creator, post a custom order, or run a UGC campaign"
+    },
+    {
+      "shot": "public-account-onboarding-done"
+    },
+    {
+      "click": "Go to Home",
+      "after": 3000
+    },
+    {
+      "eval": "location.pathname"
+    },
+    {
+      "go": "/how-it-works",
+      "after": 3500
+    },
+    {
+      "text": "Simple to order, safe to pay."
+    },
+    {
+      "text": "Clear prices. Nothing added on top."
+    },
+    {
+      "text": "Visible prices"
+    },
+    {
+      "text": "Price calculator"
+    },
+    {
+      "text": "The creator receives"
+    },
+    {
+      "text": "usually $100–130 a Yapp"
+    },
+    {
+      "text": "Protected on every order"
+    },
+    {
+      "notText": "Fee calculator"
+    },
+    {
+      "click": "Custom order",
+      "after": 800
+    },
+    {
+      "text": "Post a custom order"
+    },
+    {
+      "click": "UGC campaign",
+      "after": 800
+    },
+    {
+      "text": "Creators pick now"
+    },
+    {
+      "text": "Set the price and the tier"
+    },
+    {
+      "go": "/for-creators",
+      "after": 3500
+    },
+    {
+      "text": "You earn 80% of every price"
+    },
+    {
+      "text": "On a $140 video you earn $112"
+    },
+    {
+      "text": "Open work right now"
+    },
+    {
+      "text": "per Yapp"
+    },
+    {
+      "notText": "Keep 100%"
+    },
+    {
+      "go": "/legal",
+      "after": 3000
+    },
+    {
+      "text": "In legal review"
+    },
+    {
+      "text": "Creator Agreement"
+    },
+    {
+      "go": "/404",
+      "after": 3000
+    },
+    {
+      "text": "This page went off script"
+    },
+    {
+      "text": "Services"
+    }
   ]
 }

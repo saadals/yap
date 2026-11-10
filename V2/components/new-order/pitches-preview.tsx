@@ -1,35 +1,28 @@
 "use client";
 
-import { Eye, History } from "lucide-react";
+import { Eye, History, Paperclip } from "lucide-react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { languageList, platformList } from "@/components/domain/chips";
 import { VideoThumb } from "@/components/domain/video-thumb";
 import { Block } from "@/components/ui/block";
 import { AvatarStack } from "@/components/ui/face-avatar";
-import { lengthLabel, moneyRange, plural, quoted, weekdayDate } from "@/lib/format";
+import { lengthLabel, moneyRange, plural, quoted } from "@/lib/format";
 import { me } from "@/lib/selectors";
 import type { DemoState } from "@/lib/store";
-import { formatById } from "@/lib/taxonomy";
+import { formatById, jobTypeById, usageById } from "@/lib/taxonomy";
 import type { Product, Video } from "@/lib/types";
 
-import {
-  deliverableLabel,
-  dueDateFor,
-  effectiveTitle,
-  totalBudget,
-  type Market,
-  type PitchesForm,
-} from "./pitches-model";
+import { deliverableLabel, effectiveTitle, isAdCopyForm, totalBudget, type Market, type PitchesForm } from "./pitches-model";
 
 /** Videos by matching creators in the chosen format: what "good" looks like for this order. */
 function examples(s: DemoState, form: PitchesForm, market: Market): Video[] {
-  if (!form.format) return [];
+  if (!form.format || isAdCopyForm(form)) return [];
   const ids = new Set(market.pool.map((q) => q.creator.id));
   return s.videos.filter((v) => ids.has(v.creatorId) && v.format === form.format).slice(0, 3);
 }
 
-/** What creators will see, updated as the business answers (desktop rail). */
+/** What creators will see, updated as the brand answers (desktop rail). */
 export function PitchesPreview({
   s,
   form,
@@ -42,21 +35,32 @@ export function PitchesPreview({
   market: Market;
 }) {
   const business = me.business(s);
+  const adCopy = isAdCopyForm(form);
   const format = form.format ? formatById[form.format] : undefined;
   const title = effectiveTitle(form, product);
   const total = totalBudget(form);
   const learnings = product?.learnings.filter((l) => form.learningIds.includes(l.id)).length ?? 0;
-  const meta = [
-    format?.name,
-    `${deliverableLabel(form.format, form.videoCount)} · ${lengthLabel(form.durationSec)}`,
-    form.languages.length ? languageList(form.languages) : null,
-    form.platforms.length ? platformList(form.platforms) : null,
-    form.onCamera ? null : "Voice only",
-  ]
+  const meta = (
+    adCopy
+      ? [
+          jobTypeById["ad-copy"].name,
+          form.copyPieces.length ? plural(form.copyPieces.length, "piece") : null,
+          form.languages.length ? languageList(form.languages) : null,
+          form.copyPlacements.length ? platformList(form.copyPlacements) : null,
+        ]
+      : [
+          format?.name,
+          `${deliverableLabel(form)} · ${lengthLabel(form.durationSec)}`,
+          form.languages.length ? languageList(form.languages) : null,
+          form.platforms.length ? platformList(form.platforms) : null,
+          form.onCamera ? null : "Voice only",
+        ]
+  )
     .filter(Boolean)
     .join(" · ");
   const videos = examples(s, form, market);
   const invited = form.invitedCreatorIds.length;
+  const line = form.hook.trim() || form.keyMessage.trim();
 
   return (
     <>
@@ -75,17 +79,26 @@ export function PitchesPreview({
             <p className="y-small y-fg-2 mt-1">{meta}</p>
           </div>
         </div>
-        {form.keyMessage.trim() ? <p className="y-body leading-snug">{quoted(form.keyMessage)}</p> : null}
+        {line ? <p className="y-body leading-snug">{quoted(line)}</p> : null}
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 border-t border-(--b-line) pt-4">
           <p className="y-display y-num text-[20px]">{moneyRange(total.min, total.max)}</p>
-          {Number.isFinite(form.dueInDays) ? (
-            <p className="y-micro y-fg-2">Due {weekdayDate(dueDateFor(form.dueInDays))}</p>
-          ) : null}
-        </div>
-        {learnings ? (
-          <p className="y-micro y-fg-2 flex items-center gap-1.5">
-            <History size={14} aria-hidden /> {plural(learnings, "learning")} from past work attached
+          <p className="y-micro y-fg-2">
+            {plural(form.deadlineDays, "day")} to deliver · {usageById[form.usage].name}
           </p>
+        </div>
+        {learnings || form.attachments.length ? (
+          <div className="flex flex-col gap-1">
+            {learnings ? (
+              <p className="y-micro y-fg-2 flex items-center gap-1.5">
+                <History size={14} aria-hidden /> {plural(learnings, "learning")} from past work attached
+              </p>
+            ) : null}
+            {form.attachments.length ? (
+              <p className="y-micro y-fg-2 flex items-center gap-1.5">
+                <Paperclip size={14} aria-hidden /> {plural(form.attachments.length, "file")} attached
+              </p>
+            ) : null}
+          </div>
         ) : null}
       </Block>
 
@@ -111,7 +124,9 @@ export function PitchesPreview({
             ? `Only the ${plural(invited, "creator")} you invite will see it.`
             : market.count
               ? `${plural(market.count, "creator")} ${market.count === 1 ? "matches" : "match"} so far.`
-              : "No creators match yet. Try another language or format."}
+              : adCopy
+                ? "No creators write in that language yet. Try another one."
+                : "No creators match yet. Try another language or format."}
         </p>
       </Block>
     </>

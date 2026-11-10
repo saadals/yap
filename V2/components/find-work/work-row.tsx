@@ -13,17 +13,20 @@ import {
   Send,
   Sparkles,
   Star,
+  Type,
   XCircle,
 } from "lucide-react";
 import Link from "next/link";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
 import { Badge } from "@/components/ui/badge";
+import { PillButton } from "@/components/ui/pill-button";
 import { paths } from "@/lib/paths";
+import { jobTypeById } from "@/lib/taxonomy";
 
-import { slotsLine } from "@/components/opportunity/campaign-copy";
+import { pickLabel, slotsLine } from "@/components/opportunity/campaign-copy";
 
-import { deadlineLabel, fitLine, metaLine, myState, payLabel, type WorkItem } from "./work-items";
+import { brandRecord, closingLabel, fitLine, metaLine, myState, netLabel, payLabel, type WorkItem } from "./work-items";
 
 import "@/app/styles/studio-work.css";
 
@@ -53,19 +56,25 @@ function stateIcon(item: WorkItem): React.ReactNode {
 }
 
 /**
- * One open brief or campaign: logo, title (the link), one meta line, then pay, the deadline, the
- * fit (or campaign eligibility) and your own state. "Not interested" sits above the stretched link.
+ * One open custom order or UGC campaign: logo, title (the link), one meta line, then the listed
+ * price with your net, the closing date, the fit (or campaign eligibility in words) and your own
+ * state. A campaign you qualify for carries "Pick now · 3 of 10 left" (green: the one action Find
+ * work repeats per campaign; it opens the pick sheet via `onPick`). "Not interested" and Pick now
+ * sit above the stretched link.
  */
 export function WorkRow({
   item,
   onHide,
   onUnhide,
+  onPick,
   compact = false,
 }: {
   item: WorkItem;
   onHide?: (item: WorkItem) => void;
   onUnhide?: (item: WorkItem) => void;
-  /** Studio Today: no hide button, no meta line. */
+  /** Campaign rows you qualify for: open the pick sheet. Without it the row only links. */
+  onPick?: (item: WorkItem) => void;
+  /** Studio Today: no hide button, no meta line, no green (the count is plain text). */
   compact?: boolean;
 }) {
   const state = myState(item);
@@ -73,21 +82,44 @@ export function WorkRow({
   const canHide = !compact && !item.pitch && !item.slot;
   const elig = item.eligibilityText;
   const brand = item.business?.name ?? "A brand";
+  const record = brandRecord(item.business);
+  const canPick = item.kind === "campaign" && !item.slot && Boolean(item.eligibility?.ok) && (item.openSlots ?? 0) > 0;
+  const total = item.request.slots;
+  const meta = [brand, metaLine(item), record].filter(Boolean).join(" · ");
+
+  const pickButton = (className: string) =>
+    canPick && onPick && !compact ? (
+      <PillButton
+        variant="neon"
+        size="sm"
+        className={`sw-above ${className}`}
+        aria-label={`${pickLabel(item.openSlots ?? 0, total)}: ${item.request.title}`}
+        onClick={() => onPick(item)}
+      >
+        {pickLabel(item.openSlots ?? 0, total)}
+      </PillButton>
+    ) : null;
 
   return (
     <div role="listitem" className="sw-workrow" data-hidden={item.hidden || undefined}>
       {item.business ? <BusinessLogo business={item.business} size={compact ? 36 : 40} className="mt-0.5" /> : null}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-start justify-between gap-3">
-          <Link href={paths.order(item.id)} className="sw-stretch font-semibold leading-snug">
-            {item.request.title}
-          </Link>
-          <span className="y-num hidden flex-none text-end font-semibold sm:block">{payLabel(item)}</span>
-        </div>
-        {compact ? null : <p className="y-small y-fg-2 truncate">{`${brand} · ${metaLine(item)}`}</p>}
+        <Link href={paths.order(item.id)} className="sw-stretch font-semibold leading-snug">
+          {item.request.title}
+        </Link>
+        {compact ? null : <p className="y-small y-fg-2 truncate">{meta}</p>}
         <div className="y-small flex flex-wrap items-center gap-x-3 gap-y-1.5 pt-0.5">
-          <span className="y-num font-semibold sm:hidden">{payLabel(item)}</span>
-          <span className="y-fg-2">{compact ? `${brand} · ${deadlineLabel(item)}` : deadlineLabel(item)}</span>
+          <span className="y-num sm:hidden">
+            <span className="font-semibold">{payLabel(item)}</span>
+            <span className="y-fg-2"> · {netLabel(item)}</span>
+          </span>
+          <span className="y-fg-2">{compact ? `${brand} · ${closingLabel(item)}` : closingLabel(item)}</span>
+          {item.jobType === "ad-copy" && compact ? (
+            <span className="inline-flex items-center gap-1.5">
+              <Type size={15} aria-hidden className="flex-none" />
+              {jobTypeById["ad-copy"].name}
+            </span>
+          ) : null}
           {item.kind === "campaign" && elig && !item.slot ? (
             <span className="inline-flex min-w-0 items-center gap-1.5">
               {elig.state === "ok" ? (
@@ -99,7 +131,9 @@ export function WorkRow({
               )}
               <span className={elig.state === "no" ? "y-fg-2" : ""}>
                 {elig.text}
-                {elig.state === "ok" && item.openSlots !== undefined ? ` · ${slotsLine(item.openSlots, item.request.slots).toLowerCase()}` : ""}
+                {elig.state === "ok" && compact && item.openSlots !== undefined
+                  ? ` · ${slotsLine(item.openSlots, total).toLowerCase()}`
+                  : ""}
               </span>
             </span>
           ) : null}
@@ -120,6 +154,12 @@ export function WorkRow({
             </Badge>
           ) : null}
         </div>
+        {pickButton("mt-1.5 w-full sm:hidden")}
+      </div>
+      <div className="hidden flex-none flex-col items-end gap-0.5 text-end sm:flex">
+        <span className="y-num font-semibold">{payLabel(item)}</span>
+        <span className="y-micro y-num y-fg-2">{netLabel(item)}</span>
+        {pickButton("mt-2")}
       </div>
       {canHide ? (
         <div className="sw-above -me-2 flex-none self-start">
@@ -149,7 +189,12 @@ export function WorkRow({
             </button>
           )}
         </div>
-      ) : null}
+      ) : compact ? null : (
+        // Same width as the hide button, so prices line up down the list.
+        <div className="-me-2 hidden flex-none sm:block" aria-hidden>
+          <span className="y-round invisible" data-size="sm" />
+        </div>
+      )}
     </div>
   );
 }

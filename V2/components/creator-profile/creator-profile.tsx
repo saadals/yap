@@ -122,7 +122,11 @@ function CreatorProfile({ creator, own }: { creator: Creator; own: boolean }) {
           <ReviewsBlock s={s} creator={creator} own={own} />
         </div>
         <aside className="hidden lg:col-span-4 lg:block" aria-label={own ? "Your packages" : `Order from ${creator.firstName}`}>
-          <div className="y-rail">{booking("rail")}</div>
+          {/* Scrolls on its own when opened disclosures make it taller than the window; the padding
+              keeps the card's shadow from being clipped. */}
+          <div className="y-rail lg:-mx-2 lg:-mt-2 lg:max-h-[calc(100dvh-var(--y-header-h)-16px)] lg:overflow-y-auto lg:overscroll-contain lg:px-2 lg:pt-2 lg:pb-8 lg:[scrollbar-width:thin]">
+            {booking("rail")}
+          </div>
         </aside>
       </div>
 
@@ -191,9 +195,6 @@ function CreatorNotFound({ handle }: { handle: string }) {
       <EmptyState
         title={`We couldn't find @${handle || "that creator"}`}
         body="The link may be mistyped, or the creator may have changed their handle. Everyone taking work right now is on Discover."
-        shape="tower"
-        tint="sun"
-        face="calm"
         action={
           <PillButton href={paths.discover()} variant="contrast" arrow>
             Find creators

@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck, CheckCircle2, Repeat2, ShieldCheck } from "lucide-react";
+import { CalendarCheck, CheckCircle2, FileCheck2, Repeat2, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -11,18 +11,19 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { money, moneyExact, plural, priceBreakdown, quoted, weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { me } from "@/lib/selectors";
+import { deadlineDaysOf, isAdCopy, me } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
-import { AUTO_APPROVE_DAYS, addonById } from "@/lib/taxonomy";
+import { AUTO_APPROVE_DAYS, addonById, usageById } from "@/lib/taxonomy";
 import type { ContentRequest } from "@/lib/types";
 
 import { TrustLine } from "./pitch-sheet";
-import { deliverableLabel, deliveryInfo, type RankedPitch } from "./shared";
+import { addonsFor, deliverableLabel, deliveryInfo, type RankedPitch } from "./shared";
 
 /**
  * Checkout for a pitch: the quote, extras the creator offers (the brief's requested ones ticked),
- * the 10% fee, the total held now, the card, the dates and what happens next. "Hire and hold $X"
- * secures the payment and opens the job. Mounted only while open so every visit starts fresh.
+ * the total held now (the listed prices, nothing on top), the usage on this order, the card, the
+ * dates and what happens next. "Hire and hold $X" secures the payment and opens the job. Mounted
+ * only while open so every visit starts fresh.
  */
 export function HireSheet({
   item,
@@ -37,8 +38,9 @@ export function HireSheet({
   const toast = useToast();
   const router = useRouter();
   const { pitch, creator } = item;
+  const offered = addonsFor(request, creator);
   const [addons, setAddons] = useState(() =>
-    creator.addons.filter((a) => request.brief.addons.includes(a.id)).map((a) => a.id),
+    offered.filter((a) => request.brief.addons.includes(a.id)).map((a) => a.id),
   );
   const [note, setNote] = useState("");
   const [methodId, setMethodId] = useState(() => {
@@ -52,11 +54,14 @@ export function HireSheet({
     return () => window.clearTimeout(t.current);
   }, []);
 
-  const chosen = creator.addons.filter((a) => addons.includes(a.id)).map((a) => ({ id: a.id, price: a.price }));
+  const chosen = offered.filter((a) => addons.includes(a.id)).map((a) => ({ id: a.id, price: a.price }));
   const totals = priceBreakdown(pitch.price, chosen);
   const delivery = deliveryInfo(pitch.deliveryDays, request, creator);
-  const missing = request.brief.addons.filter((id) => !creator.addons.some((a) => a.id === id));
+  const missing = request.brief.addons.filter((id) => !offered.some((a) => a.id === id));
   const revisions = 2 + (addons.includes("extra-revision") ? 1 : 0);
+  const adCopy = isAdCopy(request);
+  const deadline = deadlineDaysOf(request);
+  const usage = usageById[request.brief.usage];
 
   const confirm = () => {
     if (!methodId || paying) return;
@@ -111,7 +116,7 @@ export function HireSheet({
             </div>
           </div>
           <p dir="auto" className="y-small border-t border-(--b-line) pt-3">
-            <span className="y-fg-2">Their idea: </span>
+            <span className="y-fg-2">{adCopy ? "Their sample line: " : "Their idea: "}</span>
             {quoted(pitch.angle)}
           </p>
         </div>
@@ -120,22 +125,26 @@ export function HireSheet({
           <div className="y-tile flex flex-col gap-0.5 p-4">
             <dt className="y-micro y-fg-2">Their quote</dt>
             <dd className="y-display y-num text-[24px] leading-tight">{money(pitch.price)}</dd>
-            <dd className="y-micro y-fg-2">{deliverableLabel(request.brief.format, request.brief.videoCount)}, as briefed</dd>
+            <dd className="y-micro y-fg-2">{deliverableLabel(request)}, as briefed</dd>
           </div>
           <div className="y-tile flex flex-col gap-0.5 p-4">
             <dt className="y-micro y-fg-2">First version by</dt>
             <dd className="y-head">{weekdayDate(delivery.date)}</dd>
-            {delivery.startsOn ? <dd className="y-micro y-fg-2">Starts when free, {weekdayDate(delivery.startsOn)}</dd> : null}
+            {delivery.startsOn ? (
+              <dd className="y-micro y-fg-2">Starts when free, {weekdayDate(delivery.startsOn)}</dd>
+            ) : deadline ? (
+              <dd className="y-micro y-fg-2">Your deadline: {plural(deadline, "day")} from hire</dd>
+            ) : null}
             <dd className="y-micro y-fg-2 inline-flex items-center gap-1">
               <Repeat2 size={13} aria-hidden /> {plural(revisions, "round")} of changes included
             </dd>
           </div>
         </dl>
 
-        {creator.addons.length ? (
+        {offered.length ? (
           <fieldset className="flex flex-col gap-2">
             <legend className="y-label mb-2">Extras from {creator.firstName}</legend>
-            {creator.addons.map((addon) => {
+            {offered.map((addon) => {
               const info = addonById[addon.id];
               const Icon = info.icon;
               const on = addons.includes(addon.id);
@@ -175,7 +184,13 @@ export function HireSheet({
         ) : null}
 
         <div className="y-tile p-4">
-          <PriceSummary price={pitch.price} priceLabel={`${creator.firstName}'s quote`} addons={chosen} />
+          <PriceSummary price={pitch.price} priceLabel={`${creator.firstName}'s quote`} addons={chosen} showRights={false} />
+          <p className="y-micro y-fg-2 mt-2.5 inline-flex items-start gap-1.5">
+            <FileCheck2 size={14} aria-hidden className="mt-px flex-none" />
+            {adCopy
+              ? `Usage: ${usage.phrase}, included in the price.`
+              : `Usage: ${usage.phrase}, included in the price. Raw footage included.`}
+          </p>
         </div>
 
         <PaymentMethodPicker value={methodId} onChange={setMethodId} />
@@ -185,7 +200,7 @@ export function HireSheet({
           <ul className="flex flex-col gap-2">
             <li className="y-small flex items-start gap-2.5">
               <ShieldCheck size={18} aria-hidden className="mt-px flex-none" />
-              {moneyExact(totals.total)} is held now. {creator.firstName} gets {money(totals.creatorEarns)} only when you approve.
+              {moneyExact(totals.total)} is held now and paid to {creator.firstName} only when you approve.
             </li>
             <li className="y-small flex items-start gap-2.5">
               <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
@@ -194,12 +209,12 @@ export function HireSheet({
             </li>
             <li className="y-small flex items-start gap-2.5">
               <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
-              You review each version and approve it or ask for changes. A version you don&apos;t answer approves itself{" "}
-              {plural(AUTO_APPROVE_DAYS, "day")} after it arrives.
+              You review each version and approve it or request changes ({plural(revisions, "round")} included). A version
+              you don&apos;t answer approves itself {plural(AUTO_APPROVE_DAYS, "day")} after it arrives.
             </li>
             <li className="y-small flex items-start gap-2.5">
               <CheckCircle2 size={18} aria-hidden className="mt-px flex-none" />
-              Nothing delivered means a full refund, fee included.
+              Nothing delivered means a full refund of {moneyExact(totals.total)}.
             </li>
           </ul>
         </div>

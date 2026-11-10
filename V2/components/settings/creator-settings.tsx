@@ -9,7 +9,7 @@ import { FieldShell, TextArea } from "@/components/ui/field";
 import { PillButton } from "@/components/ui/pill-button";
 import { useToast } from "@/components/ui/toast";
 import { addDays, at, atLocal, localDay } from "@/lib/clock";
-import { longDate, money } from "@/lib/format";
+import { creatorNet, longDate, money, moneyExact } from "@/lib/format";
 import { me, opportunities } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
 import { formats, languages } from "@/lib/taxonomy";
@@ -195,7 +195,7 @@ export function AlertControls({ creator }: { creator: Creator }) {
           onChange={(on) => {
             actions.updateSettings("creator", { matchAlerts: on });
             toast({
-              message: on ? "Match alerts on" : "Match alerts off. You can still browse briefs in Find work.",
+              message: on ? "Match alerts on" : "Match alerts off. You can still browse open work in Find work.",
               action: { label: "Undo", onClick: () => actions.updateSettings("creator", { matchAlerts: !on }) },
             });
           }}
@@ -225,6 +225,9 @@ export function AlertControls({ creator }: { creator: Creator }) {
             onChange={(event) => actions.updateSettings("creator", { minBudget: Number(event.target.value) })}
           />
           <p id="min-budget-hint" className="y-micro y-fg-2" aria-live="polite">
+            {prefs.minBudget > 0 ? (
+              <>At {money(prefs.minBudget)} you earn {moneyExact(creatorNet(prefs.minBudget))}. </>
+            ) : null}
             <span className="font-semibold text-(--b-fg)">
               {matching} open order{matching === 1 ? "" : "s"}
             </span>{" "}

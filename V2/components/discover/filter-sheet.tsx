@@ -17,6 +17,7 @@ import {
   PRICE_FLOOR,
   PRICE_STEP,
   clearSheetFilters,
+  creatorPlatforms,
   fromPrice,
   matches,
   toggleIn,
@@ -183,6 +184,20 @@ export function FilterSheet({
                 onClick={() => set({ niches: toggleIn(draft.niches, niche.id) })}
               >
                 {niche.name}
+              </FilterChip>
+            ))}
+          </div>
+        </Group>
+
+        <Group legend="Platform" hint="Where their videos usually run.">
+          <div className="flex flex-wrap gap-2">
+            {creatorPlatforms.map((platform) => (
+              <FilterChip
+                key={platform.id}
+                pressed={draft.platforms.includes(platform.id)}
+                onClick={() => set({ platforms: toggleIn(draft.platforms, platform.id) })}
+              >
+                {platform.name}
               </FilterChip>
             ))}
           </div>

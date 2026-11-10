@@ -17,12 +17,13 @@ import { PillButton } from "@/components/ui/pill-button";
 import { SegmentedToggle } from "@/components/ui/segmented-toggle";
 
 import { cities } from "@/lib/data";
-import { money, priceBreakdown } from "@/lib/format";
+import { creatorNet, money, moneyExact, priceBreakdown } from "@/lib/format";
 import { hashString } from "@/lib/hash";
 import {
   creatorKindById,
   creatorKinds,
   DEFAULT_LANGUAGE,
+  FEE_PCT,
   formatById,
   formats,
   languageById,
@@ -496,8 +497,8 @@ export function TikTokStep({
   return (
     <>
       <p className="y-small y-fg-2 max-w-[56ch]">
-        Optional. Custom orders hire on your portfolio. UGC campaigns pay a fixed price per video by
-        follower tier, starting at {CAMPAIGN_FLOOR} verified followers.
+        Optional. Custom orders hire on your portfolio. UGC campaigns are open to creators by follower
+        tier, starting at {CAMPAIGN_FLOOR} verified followers, at a price per Yapp the brand sets.
       </p>
       <div className="flex flex-col gap-3">
         <FieldShell
@@ -569,23 +570,29 @@ function PriceField({
   return (
     <FieldShell label={label} required error={error} optionalLabel={false}>
       {({ id, describedBy }) => (
-        <div className="relative">
-          <span
-            aria-hidden
-            className="y-fg-2 pointer-events-none absolute start-5 top-1/2 -translate-y-1/2 font-semibold"
-          >
-            $
-          </span>
-          <input
-            id={id}
-            inputMode="numeric"
-            dir="ltr"
-            aria-describedby={describedBy}
-            aria-invalid={error ? true : undefined}
-            value={value}
-            onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, 5))}
-            className="y-input y-num ps-9 text-lg font-semibold"
-          />
+        <div className="flex flex-col gap-1.5">
+          <div className="relative">
+            <span
+              aria-hidden
+              className="y-fg-2 pointer-events-none absolute start-5 top-1/2 -translate-y-1/2 font-semibold"
+            >
+              $
+            </span>
+            <input
+              id={id}
+              inputMode="numeric"
+              dir="ltr"
+              aria-describedby={describedBy}
+              aria-invalid={error ? true : undefined}
+              value={value}
+              onChange={(event) => onChange(event.target.value.replace(/\D/g, "").slice(0, 5))}
+              className="y-input y-num ps-9 text-lg font-semibold"
+            />
+          </div>
+          {/* Creators always see their net beside a price (round 3 answers, item 6). */}
+          <p className="y-micro y-fg-2 px-1" aria-live="polite">
+            {Number(value) > 0 ? <>You earn {moneyExact(creatorNet(Number(value)))}</> : " "}
+          </p>
         </div>
       )}
     </FieldShell>
@@ -724,7 +731,7 @@ export function MakeLite({ data, set, errors }: { data: MakeData; set: SetMake; 
         autoCapitalize="none"
         spellCheck={false}
         placeholder="yourhandle"
-        hint={`Optional. Connect it to take UGC campaigns (from ${CAMPAIGN_FLOOR} followers). ${READ_ONLY_NOTE}`}
+        hint={`Optional. Connect it to pick Yapps in UGC campaigns (from ${CAMPAIGN_FLOOR} followers). ${READ_ONLY_NOTE}`}
         value={data.tiktok}
         onChange={(event) => set({ tiktok: event.target.value.replace(/^@/, "").replace(/\s+/g, "") })}
       />
@@ -800,19 +807,25 @@ export function KeepAll({ standardPrice }: { standardPrice: number }) {
     <Block as="section" tone="paper" pad="md" className="flex flex-col gap-3" aria-labelledby={titleId}>
       <h2 id={titleId} className="y-head flex items-center gap-2">
         <Wallet size={18} aria-hidden className="flex-none" />
-        You keep 100%
+        What you earn
       </h2>
       <dl className="flex flex-col gap-2">
         <div className="flex justify-between gap-3">
-          <dt className="y-small">You earn</dt>
-          <dd className="y-num y-head">{money(breakdown.creatorEarns)}</dd>
+          <dt className="y-small">The buyer pays</dt>
+          <dd className="y-num y-small">{money(breakdown.total)}</dd>
         </div>
         <div className="flex justify-between gap-3">
-          <dt className="y-small y-fg-2">The buyer pays, with the 10% fee</dt>
-          <dd className="y-num y-small y-fg-2">{money(breakdown.total)}</dd>
+          <dt className="y-small y-fg-2">Yapp fee ({FEE_PCT}%)</dt>
+          <dd className="y-num y-small y-fg-2">−{moneyExact(breakdown.fee)}</dd>
+        </div>
+        <div className="flex justify-between gap-3 border-t border-(--b-line) pt-2">
+          <dt className="y-small font-semibold">You earn</dt>
+          <dd className="y-num y-head">{moneyExact(breakdown.creatorEarns)}</dd>
         </div>
       </dl>
-      <p className="y-micro y-fg-2">On campaign videos you earn the full tier price; the brand pays the fee.</p>
+      <p className="y-micro y-fg-2">
+        The same {FEE_PCT}% applies to campaign videos and add-ons. Nothing is added to the buyer&apos;s price.
+      </p>
     </Block>
   );
 }

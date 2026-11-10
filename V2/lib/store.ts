@@ -17,29 +17,44 @@
 import { useSyncExternalStore } from "react";
 
 import {
+  allBrandHandles,
+  brandHandleFor,
   campaignMoney,
   eligibility,
   isCampaign,
   occupiesSlot,
   openSlotNumbers,
+  platformList,
+  postLinkProblem,
   slotHistory,
-  withCampaignFee,
+  slotPlatform,
 } from "./campaigns";
 import { HOUR, NOW, addDays, at } from "./clock";
+import { commentsAreGeneralOnly, commentsOpen, isLatestDelivery } from "./comments";
 import { maskContacts } from "./contact";
 import * as seedData from "./data";
-import { money, priceBreakdown, shortDate } from "./format";
+import { extensionOf } from "./files";
+import { clock, creatorNet, money, moneyExact, priceBreakdown, shortDate } from "./format";
 import { hashString } from "./hash";
 import { paths } from "./paths";
+import { isPreviewMode, onPreviewModeChange, previewAccountId } from "./preview";
 import {
+  AD_COPY_DOCUMENT_TYPES,
   AUTO_APPROVE_DAYS,
   CAMPAIGN_FEE_RATE,
   CAMPAIGN_OPEN_DAYS,
   CAMPAIGN_RELEASE_DAYS,
+  CHANGE_NOTE_MIN_CHARS,
+  COMMENT_MIN_CHARS,
   DEFAULT_LANGUAGE,
+  DEFAULT_USAGE,
+  FEE_PCT,
+  ORDER_OPEN_DAYS,
+  PRICE_MAX_PER_YAPP,
+  PRICE_MIN_PER_YAPP,
   SERVICE_FEE_RATE,
+  campaignPlatformById,
   formatById,
-  tierById,
 } from "./taxonomy";
 import type {
   Account,
@@ -50,10 +65,13 @@ import type {
   CampaignPlatformId,
   Commission,
   CommissionEvent,
+  CommentReply,
   ContentRequest,
   Creator,
   CreatorKind,
   Delivery,
+  DeliveryComment,
+  DeliveryFile,
   FollowerTierId,
   LanguageId,
   FormatId,
@@ -72,15 +90,24 @@ import type {
   SocialAccount,
   TeamMember,
   Thread,
+  UsageOptionId,
   Video,
 } from "./types";
+
+export { enterPreviewMode, isPreviewMode, usePreviewMode, PREVIEW_PATH } from "./preview";
 
 const STORAGE_KEY = "yapp2-demo";
 /** Tab-local signed-in account (sessionStorage) and the cross-tab default (cookie). */
 const SESSION_KEY = "yapp2-account";
 export const ACCOUNT_COOKIE = "yapp2_account";
-const VERSION = 6;
+/**
+ * 7: round 3 stage 2 money (20% from the creator's side, brand-set campaign prices, usage options).
+ * 8: two-way comments, ad copy jobs, campaign platforms, brand handles, order drafts, closing dates,
+ *    five reliability figures, Layla's earlier history.
+ */
+const VERSION = 9;
 
+/** The previous request wizard's autosave (components/requests/wizard.tsx), one per account. */
 export type RequestDraft = {
   step: number;
   title: string;
@@ -90,6 +117,22 @@ export type RequestDraft = {
   visibility: "public" | "invite";
   invitedCreatorIds: string[];
   preferredKinds: CreatorKind[];
+  savedAt: string;
+};
+
+/** The two kinds of order a draft can be for (paths.ts `OrderType`). */
+export type OrderDraftKind = "custom" | "campaign";
+
+/**
+ * A saved, unposted order from the new-order form, one per kind per account. `data` is whatever the
+ * form needs to restore itself: the store keeps it as given (it must survive JSON), and never reads
+ * it. `title` and `step` are optional, for a "Draft, not posted · saved 2h ago" row.
+ */
+export type OrderDraft<T = unknown> = {
+  kind: OrderDraftKind;
+  data: T;
+  title?: string;
+  step?: number;
   savedAt: string;
 };
 
@@ -121,8 +164,10 @@ export type DemoState = {
   saved: Record<string, string[]>;
   /** Settings, per account. */
   settings: Record<string, Settings>;
-  /** Request wizard autosave, per account. */
+  /** Request wizard autosave, per account (the previous wizard). */
   requestDrafts: Record<string, RequestDraft | null>;
+  /** New-order form drafts, per account, one per kind (`actions.saveOrderDraft`, `me.orderDraft`). */
+  orderDrafts: Record<string, Partial<Record<OrderDraftKind, OrderDraft>>>;
   /** Orders an account dismissed from its feed and Explore, per account. */
   hidden: Record<string, string[]>;
 };
@@ -152,6 +197,7 @@ function fromSeed(): DemoState {
     saved: clone(seedData.savedCreatorIds),
     settings: clone(seedData.settings),
     requestDrafts: {},
+    orderDrafts: {},
     hidden: {},
   };
 }
@@ -189,9 +235,33 @@ const mergeCounters = (a: Record<string, number> = {}, b: Record<string, number>
   return out;
 };
 
+/** Preview mode (lib/preview.ts): the seed in memory, signed in as the preview's account. */
+function previewState(): DemoState {
+  const wanted = previewAccountId();
+  const accountId = seedState.accounts.some((a) => a.id === wanted) ? wanted! : seedData.DEFAULT_ACCOUNT_ID;
+  return { ...seedState, epoch: 0, activeAccountId: accountId };
+}
+
+// Turned on after the store already loaded: drop to the seed in memory and stop writing.
+if (typeof window !== "undefined") {
+  onPreviewModeChange(() => {
+    window.clearTimeout(saveTimer);
+    hydrated = true;
+    lastStamp = NOW;
+    counters = {};
+    state = previewState();
+    listeners.forEach((listener) => listener());
+  });
+}
+
 function load() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
+  if (isPreviewMode()) {
+    // Never read the visitor's storage or cookies.
+    state = previewState();
+    return;
+  }
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -211,7 +281,7 @@ function load() {
 
 let saveTimer: number | undefined;
 function persist() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isPreviewMode()) return;
   window.clearTimeout(saveTimer);
   saveTimer = window.setTimeout(() => {
     try {
@@ -230,14 +300,17 @@ function set(next: DemoState) {
 
 function update(fn: (draft: DemoState) => DemoState) {
   load();
+  if (isPreviewMode()) return;
   set(fn(state));
 }
 
 function subscribe(listener: () => void) {
   load();
   listeners.add(listener);
+  // Preview mode never syncs with other tabs.
+  if (isPreviewMode()) return () => listeners.delete(listener);
   const onStorage = (event: StorageEvent) => {
-    if (event.key !== STORAGE_KEY || !event.newValue) return;
+    if (isPreviewMode() || event.key !== STORAGE_KEY || !event.newValue) return;
     try {
       const incoming = JSON.parse(event.newValue) as DemoState;
       if (incoming.version !== VERSION) return;
@@ -261,6 +334,14 @@ function subscribe(listener: () => void) {
 function getSnapshot() {
   load();
   return state;
+}
+
+/**
+ * The current state outside render: for an event handler that needs what an action just changed,
+ * and for scripts. Render must use `useDemo()` instead (it re-renders on change).
+ */
+export function readDemo(): DemoState {
+  return getSnapshot();
 }
 
 /** The whole demo state. Stable reference until an action changes something. */
@@ -442,32 +523,46 @@ function notifyParty(
   return { ...s, notifications: [item, ...s.notifications] };
 }
 
-/** Handles a thread may mention (the campaign's brand account creators must tag). */
+/** Handles a thread may mention (the campaign's brand accounts creators must tag). */
 function allowedHandles(s: DemoState, threadId: string): string[] {
   const thread = s.threads.find((t) => t.id === threadId);
   const request = thread?.requestId ? s.requests.find((r) => r.id === thread.requestId) : undefined;
-  return request?.campaign ? [request.campaign.brandHandle] : [];
+  return request?.campaign ? allBrandHandles(request.campaign) : [];
 }
 
+/**
+ * Add a message to a thread. With `group` (system lines only), a run of lines with the same key
+ * merges into the last one: `group.text(count)` rewrites it ("4 new comments on Version 1").
+ */
 function appendMessage(
   s: DemoState,
   threadId: string,
   message: Omit<Message, "id" | "at">,
   unreadFor?: Role,
+  group?: { key: string; text: (count: number) => string },
 ): DemoState {
   const text =
     message.from === "system" ? message.text : maskContacts(message.text, allowedHandles(s, threadId)).text;
-  const full: Message = { ...message, text, id: uid("m"), at: nowStamp() };
   return {
     ...s,
-    threads: replaceById(s.threads, threadId, (thread) => ({
-      ...thread,
-      messages: [...thread.messages, full],
-      unread:
-        unreadFor && !thread.unread.includes(unreadFor)
-          ? [...thread.unread, unreadFor]
-          : thread.unread,
-    })),
+    threads: replaceById(s.threads, threadId, (thread) => {
+      const last = thread.messages[thread.messages.length - 1];
+      const unread =
+        unreadFor && !thread.unread.includes(unreadFor) ? [...thread.unread, unreadFor] : thread.unread;
+      if (group && last?.group === group.key) {
+        const count = (last.count ?? 1) + 1;
+        const merged: Message = { ...last, ...message, text: group.text(count), group: group.key, count, at: nowStamp() };
+        return { ...thread, messages: [...thread.messages.slice(0, -1), merged], unread };
+      }
+      const full: Message = {
+        ...message,
+        text: group ? group.text(1) : text,
+        id: uid("m"),
+        at: nowStamp(),
+        ...(group ? { group: group.key, count: 1 } : {}),
+      };
+      return { ...thread, messages: [...thread.messages, full], unread };
+    }),
   };
 }
 
@@ -501,6 +596,133 @@ function ensureThread(
     unread: [],
   };
   return [{ ...s, threads: [thread, ...s.threads] }, thread.id];
+}
+
+/* -------------------------------------------------------------------------- */
+/* Comment helpers                                                             */
+/* -------------------------------------------------------------------------- */
+
+/** The signed-in account's side of a commission (undefined = not theirs). */
+function sideFor(s: DemoState, c: Pick<Commission, "businessId" | "creatorId">): Role | undefined {
+  const ids = activeIds(s);
+  if (c.businessId === ids.businessId) return "business";
+  if (ids.creatorId && c.creatorId === ids.creatorId) return "creator";
+  return undefined;
+}
+
+/** Who is writing: the team member (business accounts), the buyer profile, or the creator profile. */
+function authorIdFor(s: DemoState, side: Role): string {
+  const ids = activeIds(s);
+  return side === "business" ? (ids.memberId ?? ids.businessId) : (ids.creatorId ?? "");
+}
+
+/** Timestamped comments in time order, then general ones in the order they were written. */
+function sortComments(list: DeliveryComment[]): DeliveryComment[] {
+  return [...list].sort((a, b) => {
+    if (a.atSec === null && b.atSec === null) return Date.parse(a.createdAt) - Date.parse(b.createdAt);
+    if (a.atSec === null) return 1;
+    if (b.atSec === null) return -1;
+    return a.atSec - b.atSec || Date.parse(a.createdAt) - Date.parse(b.createdAt);
+  });
+}
+
+function withDelivery(s: DemoState, commissionId: string, deliveryId: string, fn: (d: Delivery) => Delivery): DemoState {
+  return {
+    ...s,
+    commissions: replaceById(s.commissions, commissionId, (c) => ({ ...c, deliveries: replaceById(c.deliveries, deliveryId, fn) })),
+  };
+}
+
+function withComment(
+  s: DemoState,
+  commissionId: string,
+  deliveryId: string,
+  commentId: string,
+  fn: (m: DeliveryComment) => DeliveryComment,
+): DemoState {
+  return withDelivery(s, commissionId, deliveryId, (d) => ({ ...d, comments: replaceById(d.comments, commentId, fn) }));
+}
+
+function findCommentOrReply(d: Delivery, commentId: string, replyId?: string) {
+  const comment = d.comments.find((m) => m.id === commentId);
+  if (!replyId) return comment;
+  return comment?.replies.find((r) => r.id === replyId);
+}
+
+/**
+ * Run a comment change for the signed-in account's side, if comments on this order are open. The
+ * change returns the next state (or a refusal); nothing is written on a refusal.
+ */
+function commentAction(
+  commissionId: string,
+  deliveryId: string,
+  change: (
+    s: DemoState,
+    c: Commission,
+    d: Delivery,
+    side: Role,
+  ) => { ok: true; id: string; next: DemoState } | { ok: false; reason: CommentRefusal },
+): CommentResult {
+  load();
+  const c = state.commissions.find((x) => x.id === commissionId);
+  const d = c?.deliveries.find((x) => x.id === deliveryId);
+  if (!c || !d) return { ok: false, reason: "not_found" };
+  const side = sideFor(state, c);
+  if (!side) return { ok: false, reason: "not_party" };
+  if (!commentsOpen(c, peekNow())) return { ok: false, reason: "closed" };
+  const result = change(state, c, d, side);
+  if (!result.ok) return result;
+  update(() => result.next);
+  return { ok: true, id: result.id };
+}
+
+/**
+ * Tell the other side about a new comment or reply: a grouped notification ("Daftar left 3 comments
+ * on Version 1") and, outside campaigns, one grouped system line in the order's thread. Campaign
+ * slot threads stay quiet, as for review copies (one thread per creator would flood the brand).
+ */
+function announceComment(
+  s: DemoState,
+  c: Commission,
+  d: Delivery,
+  side: Role,
+  what: { kind: "comment"; atSec: number | null; commentId: string } | { kind: "reply"; parentAuthor: Role; commentId: string },
+): DemoState {
+  const recipient = other(side);
+  const who = side === "business" ? nameOfBusiness(s, c.businessId) : nameOfCreator(s, c.creatorId);
+  const version = `Version ${d.version}`;
+  const href = paths.commission(c.id, { version: d.version, comment: what.commentId });
+  const first =
+    what.kind === "reply"
+      ? `${who} replied to ${what.parentAuthor === recipient ? "your" : "a"} comment on ${version} of "${c.title}"`
+      : what.atSec === null
+        ? `${who} left a comment on ${version} of "${c.title}"`
+        : `${who} commented at ${clock(what.atSec)} on ${version} of "${c.title}"`;
+  let next = notifyParty(
+    s,
+    recipient === "business" ? { businessId: c.businessId } : { creatorId: c.creatorId },
+    "comment",
+    first,
+    href,
+    {
+      key: `comments:${c.id}:${d.id}:${recipient}`,
+      text: (n) => (n === 1 ? first : `${who} left ${n} comments on ${version} of "${c.title}"`),
+    },
+  );
+  if (c.source !== "campaign") {
+    next = appendMessage(
+      next,
+      c.threadId,
+      {
+        from: "system",
+        text: "",
+        link: { kind: "comments", commissionId: c.id, deliveryId: d.id, version: d.version },
+      },
+      recipient,
+      { key: `comments:${d.id}`, text: (n) => `${n === 1 ? "1 new comment" : `${n} new comments`} on ${version}` },
+    );
+  }
+  return next;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -556,6 +778,21 @@ function simulateDelivery(commissionId: string, delayMs: number) {
     if (c.status !== "in_progress" && c.status !== "revision") return;
     const version = c.deliveries.length + 1;
     const slug = c.title.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 28);
+    // Open comments on the previous version are marked resolved by `deliver` itself.
+    if (c.brief.jobType === "ad-copy") {
+      const product = state.products.find((p) => p.id === c.brief.productId);
+      actions.deliver({
+        commissionId,
+        kind: "text",
+        text: sampleAdCopy(product?.name ?? c.title, version),
+        note:
+          version === 1
+            ? "Version 1 of the copy is ready. Headlines first, then the primary text. Tell me which lines feel most like you."
+            : `Version ${version} is up. I worked through every comment you left.`,
+        files: [{ name: `${slug || "ad_copy"}_v${version}.docx`, size: "28 KB", kind: "document" }],
+      });
+      return;
+    }
     actions.deliver({
       commissionId,
       note:
@@ -563,31 +800,52 @@ function simulateDelivery(commissionId: string, delayMs: number) {
           ? "Version 1 is ready. I kept the opening tight and showed the app within the first few seconds. Let me know what you think."
           : `Version ${version} is up. I worked through every note you left; each one is marked resolved.`,
       files: [
-        { name: `${slug || "video"}_v${version}_${c.brief.aspect.replace(":", "x")}.mp4`, size: `${(38 + version * 3.4).toFixed(1)} MB` },
+        {
+          name: `${slug || "video"}_v${version}_${c.brief.aspect.replace(":", "x")}.mp4`,
+          size: `${(38 + version * 3.4).toFixed(1)} MB`,
+          kind: "video",
+        },
       ],
     });
-    if (version > 1) {
-      const latest = state.commissions.find((x) => x.id === commissionId)?.deliveries;
-      const previous = latest?.[latest.length - 2];
-      previous?.comments.forEach((comment) =>
-        actions.updateComment(commissionId, previous.id, comment.id, { resolved: true }),
-      );
-    }
   }, delayMs);
+}
+
+/** A believable block of ad copy for simulated deliveries (and the delivery sheet's sample). */
+export function sampleAdCopy(product: string, version = 1): string {
+  return [
+    "Headlines",
+    `1. ${product}: done before your coffee cools`,
+    `2. The ${product} shortcut your team will actually use`,
+    version > 1 ? `3. Less busywork, more of the work you like. Meet ${product}.` : `3. Stop doing it the long way. Try ${product}.`,
+    "",
+    "Primary text",
+    `You don't need another tool to learn. ${product} fits into what you already do, and the first result shows up in minutes.`,
+    "",
+    "Call to action",
+    "Try it free",
+  ].join("\n");
 }
 
 /* -------------------------------------------------------------------------- */
 /* Actions                                                                     */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * A custom order. The brief carries the job type (`jobType: "ad-copy"` for ad copy; the store then
+ * blanks the video-only fields), the hook, attachments and, for ad copy, `copy`.
+ */
 export type NewRequestInput = {
   title: string;
   brief: Brief;
   budget: { min: number; max: number };
-  dueDate: string;
+  /** Optional with `deadlineDays` (then: the closing date plus the deadline). */
+  dueDate?: string;
+  /** Days the hired creator has to deliver version 1, set by the brand (ORDER_DEADLINE_OPTIONS). */
+  deadlineDays?: number;
   visibility: "public" | "invite";
   invitedCreatorIds: string[];
   preferredKinds: CreatorKind[];
+  /** How many creators to hire (usually 1). */
   slots?: number;
   status?: "open" | "draft";
 };
@@ -595,14 +853,20 @@ export type NewRequestInput = {
 export type CampaignInput = {
   title: string;
   productId: string;
-  /** Talking points (brief.mustInclude) and restrictions (brief.avoid) live on the brief. */
+  /** Talking points (brief.mustInclude), restrictions (brief.avoid), the hook and attachments live on the brief. */
   brief: Partial<Brief> & { mustInclude: string[]; avoid: string[] };
   videos: number;
   tierId: FollowerTierId;
-  /** Days a creator has to upload version 1 after taking a slot (CAMPAIGN_DEADLINE_OPTIONS). */
+  /** Listed price per Yapp, set by the brand ($30–5,000; guidance in lib/pricing.ts). */
+  pricePerVideo: number;
+  /** How the brand may use the videos (included in the price). */
+  usage: UsageOptionId;
+  /** Days a creator has to upload version 1 after taking a slot (ORDER_DEADLINE_OPTIONS). */
   deadlineDays: number;
-  platform: CampaignPlatformId;
-  brandHandle: string;
+  /** Where creators may post (at least one); each creator picks one of them. */
+  platforms: CampaignPlatformId[];
+  /** The account to tag on each listed platform; saved to the brand for next time. */
+  brandHandles: Partial<Record<CampaignPlatformId, string>>;
   explainer?: { name: string; durationSec: number };
   paymentMethodId: string;
 };
@@ -642,55 +906,101 @@ export type CreatorProfileInput = {
 };
 
 export type TakeSlotResult =
-  | { ok: true; commissionId: string; slot: number }
+  | { ok: true; commissionId: string; slot: number; platform: CampaignPlatformId }
   | { ok: false; reason: string };
 
+/** Why a comment action was refused (comments are read-only, not your comment, too short, …). */
+export type CommentRefusal = "closed" | "not_party" | "not_found" | "not_author" | "not_latest" | "too_short" | "general_only" | "not_allowed";
+export type CommentResult = { ok: true; id: string } | { ok: false; reason: CommentRefusal };
+
 const mask = (text: string, allow: string[] = []) => maskContacts(text, allow).text;
+
+/** A brand handle to tag: "@", then 2–30 letters, numbers, dots or underscores (Work spec 6.11.6). */
+export const BRAND_HANDLE = /^@[A-Za-z0-9._]{2,30}$/;
+
+/** "@daftar.app" from "daftar.app" or "@daftar.app". */
+const atHandle = (handle: string) => {
+  const clean = handle.trim().replace(/^@+/, "");
+  return clean ? `@${clean}` : "";
+};
+
+function cleanHandles(handles: Partial<Record<CampaignPlatformId, string>>, platforms?: CampaignPlatformId[]) {
+  const out: Partial<Record<CampaignPlatformId, string>> = {};
+  for (const [platform, handle] of Object.entries(handles) as [CampaignPlatformId, string | undefined][]) {
+    if (platforms && !platforms.includes(platform)) continue;
+    const at = handle ? atHandle(handle) : "";
+    if (at) out[platform] = at;
+  }
+  return out;
+}
+
+/**
+ * The video-only fields of an ad-copy brief carry no meaning: blank them so nothing downstream reads
+ * a stale format, platform, length or aspect.
+ */
+function normalizeBrief(brief: Brief): Brief {
+  if (brief.jobType !== "ad-copy" && brief.format !== "ad-copy") return { ...brief, jobType: brief.jobType ?? "video" };
+  return {
+    ...brief,
+    jobType: "ad-copy",
+    format: "ad-copy",
+    platforms: [],
+    aspect: "9:16",
+    durationSec: 0,
+    onCamera: false,
+    copy: brief.copy ?? { pieces: [], placements: [] },
+  };
+}
 
 function campaignBrief(input: CampaignInput, product: Product | undefined): Brief {
   return {
     productId: input.productId,
-    format: "testimonial",
-    platforms: [input.platform],
+    jobType: "video",
+    format: input.brief.format ?? "testimonial",
+    platforms: input.platforms,
     languages: input.brief.languages?.length ? input.brief.languages : [DEFAULT_LANGUAGE],
-    aspect: "9:16",
+    aspect: input.brief.aspect ?? "9:16",
     videoCount: 1,
     durationSec: input.brief.durationSec ?? 30,
+    hook: input.brief.hook,
+    attachments: input.brief.attachments,
     audience: input.brief.audience ?? product?.audience ?? "",
     goal: input.brief.goal ?? "",
     keyMessage: input.brief.keyMessage ?? product?.oneLiner ?? "",
     mustInclude: input.brief.mustInclude,
     avoid: input.brief.avoid,
-    references: [],
-    onCamera: true,
+    references: input.brief.references ?? [],
+    onCamera: input.brief.onCamera ?? true,
+    usage: input.usage ?? DEFAULT_USAGE,
     addons: [],
     notes: input.brief.notes,
   };
 }
 
 /**
- * A ledger entry for `subtotal` of creators' money plus the campaign fee on it (negative = a
- * refund, which returns the matching share of the fee).
+ * A ledger entry for `amount` of listed prices on the campaign's card (negative = a refund). Nothing
+ * is added for Yapp: its 20% comes out of each creator's pay when a slot is released.
  */
-function ledgerEntry(subtotal: number, note: string, kind?: LedgerEntry["kind"]): LedgerEntry {
-  const { fee, total } = withCampaignFee(Math.abs(subtotal));
+function ledgerEntry(amount: number, note: string, kind?: LedgerEntry["kind"]): LedgerEntry {
   return {
     id: uid("lg"),
     at: nowStamp(),
-    kind: kind ?? (subtotal < 0 ? "refund" : "top_up"),
-    amount: total,
-    fee,
+    kind: kind ?? (amount < 0 ? "refund" : "top_up"),
+    amount: Math.abs(amount),
     note,
   };
 }
 
-/** Ledger entry when a slot reopens and its old price differs from the current tier price. */
+/**
+ * Ledger entry when a slot reopens and its old price is below the current price (the brand raised
+ * it after the slot was taken): the difference is topped up so the reopened slot pays the new price.
+ */
 function repriceOnReopen(request: ContentRequest, oldPrice: number): LedgerEntry | undefined {
   const terms = request.campaign;
   if (!terms || terms.pricePerVideo === oldPrice) return undefined;
   return ledgerEntry(
     terms.pricePerVideo - oldPrice,
-    `Slot reopened at the current tier price (${money(terms.pricePerVideo)}), with its fee`,
+    `Slot reopened at the current price (${money(terms.pricePerVideo)} per Yapp)`,
   );
 }
 
@@ -707,11 +1017,11 @@ function syncCampaignStatus(s: DemoState, requestId: string): DemoState {
 
 /**
  * Money moves when a taken slot ends unpaid. On an open campaign the slot reopens: its money stays
- * held (repriced if the tier changed). On a closed campaign nobody can take it again, so its price
- * is refunded to the card with its fee.
+ * held (topped up if the price was raised since). On a closed campaign nobody can take it again, so
+ * the price paid for it is refunded to the card in full.
  */
 function slotEndedEntries(request: ContentRequest, c: Commission, why: string): LedgerEntry[] {
-  if (request.status === "closed") return [ledgerEntry(-c.price, `Slot ${c.campaignSlot}: ${why}, refunded with the fee`)];
+  if (request.status === "closed") return [ledgerEntry(-c.price, `Slot ${c.campaignSlot}: ${why}, refunded`)];
   const reprice = repriceOnReopen(request, c.price);
   return reprice ? [reprice] : [];
 }
@@ -769,7 +1079,7 @@ function returnRemovedSlot(s: DemoState, commissionId: string): DemoState {
   return next;
 }
 
-export const actions = {
+const liveActions = {
   /** Restore the original seed (clears everything done in this browser). Keeps this tab's account. */
   reset() {
     lastStamp = NOW;
@@ -1035,18 +1345,39 @@ export const actions = {
     }));
   },
 
+  /**
+   * Save (or clear, with `null`) the new-order form's draft of one kind for the signed-in account.
+   * `data` is stored as given and must survive JSON; restore it with `me.orderDraft(s, kind)`.
+   * Posting doesn't clear it: call this with `null` once the order is posted.
+   */
+  saveOrderDraft<T>(kind: OrderDraftKind, draft: { data: T; title?: string; step?: number } | null) {
+    update((s) => {
+      const mine = { ...(s.orderDrafts[s.activeAccountId] ?? {}) };
+      if (draft) mine[kind] = { kind, data: draft.data, title: draft.title, step: draft.step, savedAt: nowStamp() };
+      else delete mine[kind];
+      return { ...s, orderDrafts: { ...s.orderDrafts, [s.activeAccountId]: mine } };
+    });
+  },
+
+  /**
+   * Post a custom order (video or ad copy). It closes to pitches 14 days after posting. With
+   * `deadlineDays`, the hired creator has that many days from the hire to deliver version 1.
+   */
   createRequest(input: NewRequestInput): string {
     const id = uid("r");
     update((s) => {
       const me = activeIds(s);
+      const postedAt = nowStamp();
+      const closesAt = addDays(postedAt, ORDER_OPEN_DAYS);
       const request: ContentRequest = {
         id,
         businessId: me.businessId,
         title: input.title,
-        brief: input.brief,
+        brief: normalizeBrief(input.brief),
         budget: input.budget,
-        dueDate: input.dueDate,
-        postedAt: nowStamp(),
+        dueDate: input.dueDate ?? addDays(closesAt, input.deadlineDays ?? 7),
+        postedAt,
+        closesAt,
         status: input.status ?? "open",
         visibility: input.visibility,
         invitedCreatorIds: input.invitedCreatorIds,
@@ -1054,6 +1385,7 @@ export const actions = {
         slots: input.slots ?? 1,
         views: 0,
         kind: "custom",
+        deadlineDays: input.deadlineDays,
       };
       let next: DemoState = {
         ...s,
@@ -1073,7 +1405,14 @@ export const actions = {
   updateRequest(id: string, patch: Partial<ContentRequest>) {
     update((s) => {
       const request = s.requests.find((r) => r.id === id);
-      const next = { ...s, requests: replaceById(s.requests, id, (r) => ({ ...r, ...patch })) };
+      const next = {
+        ...s,
+        requests: replaceById(s.requests, id, (r) => ({
+          ...r,
+          ...patch,
+          ...(patch.brief && !isCampaign(r) ? { brief: normalizeBrief(patch.brief) } : {}),
+        })),
+      };
       if (!isCampaign(request) || (!patch.brief && !patch.title)) return next;
       return {
         ...next,
@@ -1088,9 +1427,15 @@ export const actions = {
 
   publishDraft(id: string) {
     update((s) => {
+      const postedAt = nowStamp();
       let next: DemoState = {
         ...s,
-        requests: replaceById(s.requests, id, (r) => ({ ...r, status: "open", postedAt: nowStamp() })),
+        requests: replaceById(s.requests, id, (r) => ({
+          ...r,
+          status: "open",
+          postedAt,
+          closesAt: addDays(postedAt, ORDER_OPEN_DAYS),
+        })),
       };
       const request = next.requests.find((r) => r.id === id);
       if (request) next = notifyDemoCreatorsOfRequest(next, request);
@@ -1175,6 +1520,8 @@ export const actions = {
         ...input,
         message: mask(input.message),
         angle: mask(input.angle),
+        // The brand sets the deadline on newer orders; the pitch then just repeats it.
+        deliveryDays: request.deadlineDays ?? input.deliveryDays,
         id,
         creatorId,
         status: "sent",
@@ -1255,7 +1602,7 @@ export const actions = {
     });
   },
 
-  /** Hire from a pitch: payment is secured immediately and work starts. */
+  /** Hire from a pitch: the price is charged and held immediately (nothing on top) and work starts. */
   hirePitch(input: {
     pitchId: string;
     addons: { id: AddonId; price: number }[];
@@ -1294,9 +1641,10 @@ export const actions = {
         status: "in_progress",
         createdAt: nowStamp(),
         acceptedAt: nowStamp(),
-        // Starts when the creator is free (booked creators can be hired for later).
+        // The brand's deadline (or the pitch's days on older orders), from when the creator is free
+        // (booked creators can be hired for later).
         dueDate: at(
-          pitch.deliveryDays +
+          (request.deadlineDays ?? pitch.deliveryDays) +
             (creator?.availableFrom && Date.parse(creator.availableFrom) > NOW
               ? Math.ceil((Date.parse(creator.availableFrom) - NOW) / (24 * HOUR))
               : 0),
@@ -1309,7 +1657,7 @@ export const actions = {
       };
       commission.events = [
         event("hired", "business", `Hired ${creator?.firstName ?? "creator"} from their pitch`),
-        event("funded", "system", `${money(totals.total, true)} secured. Released only when you approve the work.`),
+        event("funded", "system", `${moneyExact(totals.total)} charged and held. Released only when you approve the work.`),
       ];
       const hiredCount =
         s.pitches.filter((p) => p.requestId === request.id && p.status === "hired").length + 1;
@@ -1323,12 +1671,12 @@ export const actions = {
       };
       next = appendMessage(next, threadId, {
         from: "system",
-        text: `${nameOfBusiness(s, request.businessId)} hired ${creator?.firstName ?? "the creator"}. Payment of ${money(totals.total, true)} is secured and released when the work is approved.`,
+        text: `${nameOfBusiness(s, request.businessId)} hired ${creator?.firstName ?? "the creator"}. Payment of ${moneyExact(totals.total)} is held and released when the work is approved: ${creator?.firstName ?? "the creator"} receives ${moneyExact(totals.creatorEarns)} after the ${FEE_PCT}% Yapp fee.`,
       });
       if (input.note?.trim()) {
         next = appendMessage(next, threadId, { from: "business", text: input.note.trim() }, "creator");
       }
-      next = notifyParty(next, { creatorId: pitch.creatorId }, "offer", `You're hired. ${nameOfBusiness(s, request.businessId)} accepted your pitch`, paths.commission(commissionId));
+      next = notifyParty(next, { creatorId: pitch.creatorId }, "offer", `You're hired. ${nameOfBusiness(s, request.businessId)} accepted your pitch: you earn ${moneyExact(totals.creatorEarns)}`, paths.commission(commissionId));
       return next;
     });
     const hired = state.commissions.find((c) => c.id === commissionId);
@@ -1378,7 +1726,7 @@ export const actions = {
       };
       commission.events = [
         event("offer_sent", "business", `Offer sent to ${nameOfCreator(s, input.creatorId)}`),
-        event("funded", "system", `${money(totals.total, true)} authorized on your card. You're only charged if they accept.`),
+        event("funded", "system", `${moneyExact(totals.total)} authorized on your card. You're only charged if they accept.`),
       ];
       next = { ...next, commissions: [commission, ...next.commissions] };
       next = appendMessage(
@@ -1390,7 +1738,7 @@ export const actions = {
         },
         "creator",
       );
-      next = notifyParty(next, { creatorId: input.creatorId }, "offer", `${nameOfBusiness(s, me.businessId)} sent you an offer: ${input.title} (${money(input.price + input.addons.reduce((a, b) => a + b.price, 0))})`, paths.commission(commissionId));
+      next = notifyParty(next, { creatorId: input.creatorId }, "offer", `${nameOfBusiness(s, me.businessId)} sent you an offer: ${input.title} (${moneyExact(totals.total)} · you earn ${moneyExact(totals.creatorEarns)})`, paths.commission(commissionId));
       return next;
     });
     // Other creators accept on their own after a short pause so the demo keeps moving.
@@ -1417,7 +1765,7 @@ export const actions = {
           events: [
             ...x.events,
             event("offer_accepted", "creator", `${creator?.firstName ?? "Creator"} accepted the offer`),
-            event("funded", "system", "Payment secured. Released when the work is approved."),
+            event("funded", "system", "Payment charged and held. Released when the work is approved."),
           ],
           dueDate: days && Date.parse(x.dueDate) < Date.parse(at(days)) ? at(days, "18:00") : x.dueDate,
         })),
@@ -1475,47 +1823,72 @@ export const actions = {
 
   /* -------------------------------------------------------- production */
 
-  /** Creator uploads a new version for review (campaigns: a watermarked review copy). */
+  /**
+   * Creator delivers a new version for review (campaigns: a watermarked review copy). Ad copy
+   * (`kind: "text"`, required for an ad-copy job and refused otherwise) delivers the copy as `text`
+   * and/or documents in `files`, and no video. Open comments on the previous version are marked
+   * resolved. Returns the new delivery id ("" when refused).
+   */
   deliver(input: {
     commissionId: string;
     note: string;
-    files: { name: string; size: string }[];
+    files: DeliveryFile[];
     video?: Partial<Video>;
+    /** "text" for ad copy. */
+    kind?: "video" | "text";
+    /** Ad copy: the copy itself. */
+    text?: string;
   }): string {
+    load();
+    const current = state.commissions.find((x) => x.id === input.commissionId);
+    if (!current) return "";
+    const adCopy = current.brief.jobType === "ad-copy";
+    const kind = input.kind ?? (adCopy ? "text" : "video");
+    // Ad copy is always text; a video job never delivers text.
+    if ((kind === "text") !== adCopy) return "";
+    if (kind === "text" && !input.text?.trim() && !input.files.length) return "";
+    // Ad copy attaches documents only (PDF, DOC, DOCX, TXT).
+    if (kind === "text" && input.files.some((f) => f.kind !== "document" && !(AD_COPY_DOCUMENT_TYPES as readonly string[]).includes(extensionOf(f.name))))
+      return "";
     const deliveryId = uid("d");
     update((s) => {
       const c = findCommission(s, input.commissionId);
       const creator = s.creators.find((x) => x.id === c.creatorId);
       const previous = c.deliveries[c.deliveries.length - 1];
-      const ownVideos = s.videos.filter((v) => v.creatorId === c.creatorId);
-      const template =
-        previous?.video ??
-        ownVideos.find((v) => v.format === c.brief.format) ??
-        s.videos.find((v) => v.id === creator?.featuredVideoId) ??
-        ownVideos[0] ??
-        s.videos[0];
       const product = s.products.find((p) => p.id === c.brief.productId);
       const campaign = c.source === "campaign";
-      // A new delivery has no performance yet (portfolio templates carry views).
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { stats, ...base } = template;
-      const video: Video = {
-        ...base,
-        id: uid("v"),
-        creatorId: c.creatorId,
-        title: `${product?.name ?? c.title} — ${campaign ? "review copy " : ""}v${c.deliveries.length + 1}`,
-        format: c.brief.format,
-        aspect: c.brief.aspect,
-        madeFor: nameOfBusiness(s, c.businessId),
-        durationSec: Math.min(Math.max(c.brief.durationSec, 8), 180),
-        ...input.video,
-      };
+      const version = c.deliveries.length + 1;
+      let video: Video | undefined;
+      if (kind === "video") {
+        const ownVideos = s.videos.filter((v) => v.creatorId === c.creatorId);
+        const template =
+          previous?.video ??
+          ownVideos.find((v) => v.format === c.brief.format) ??
+          s.videos.find((v) => v.id === creator?.featuredVideoId) ??
+          ownVideos[0] ??
+          s.videos[0];
+        // A new delivery has no performance yet (portfolio templates carry views).
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { stats, ...base } = template;
+        video = {
+          ...base,
+          id: uid("v"),
+          creatorId: c.creatorId,
+          title: `${product?.name ?? c.title} — ${campaign ? "review copy " : ""}v${version}`,
+          format: c.brief.format,
+          aspect: c.brief.aspect,
+          madeFor: nameOfBusiness(s, c.businessId),
+          durationSec: Math.min(Math.max(c.brief.durationSec, 8), 180),
+          ...input.video,
+        };
+      }
+      const stamp = nowStamp();
       const delivery: Delivery = {
         id: deliveryId,
-        version: c.deliveries.length + 1,
-        video,
+        version,
+        ...(kind === "text" ? { kind: "text" as const, text: mask(input.text?.trim() ?? "") || undefined } : { kind: "video" as const, video }),
         note: mask(input.note),
-        deliveredAt: nowStamp(),
+        deliveredAt: stamp,
         status: "in_review",
         comments: [],
         files: input.files,
@@ -1527,7 +1900,20 @@ export const actions = {
           ...x,
           status: "delivered",
           autoApproveAt: at(AUTO_APPROVE_DAYS, "20:00"),
-          deliveries: [...x.deliveries, delivery],
+          // A new version settles what was open on the last one (its thread stays readable).
+          deliveries: [
+            ...x.deliveries.map((d) =>
+              d.id === previous?.id
+                ? {
+                    ...d,
+                    comments: d.comments.map((m) =>
+                      m.resolved || m.deletedAt ? m : { ...m, resolved: true, resolvedAt: stamp, resolvedBy: "creator" as const },
+                    ),
+                  }
+                : d,
+            ),
+            delivery,
+          ],
           events: [
             ...x.events,
             event("delivered", "creator", campaign ? `Review copy uploaded (version ${delivery.version})` : `Version ${delivery.version} delivered`),
@@ -1537,13 +1923,18 @@ export const actions = {
       // Campaign review copies live on the slot's page; posting each one to the inbox would flood
       // the business with one thread per creator.
       if (!campaign) {
+        const file = input.files[0];
         next = appendMessage(
           next,
           c.threadId,
           {
             from: "creator",
             text: input.note || `Version ${delivery.version} is up for review.`,
-            attachment: { kind: "video", name: input.files[0]?.name ?? `${video.title}.mp4`, size: input.files[0]?.size, videoId: video.id },
+            attachment: video
+              ? { kind: "video", name: file?.name ?? `${video.title}.mp4`, size: file?.size, videoId: video.id }
+              : file
+                ? { kind: "file", name: file.name, size: file.size }
+                : undefined,
           },
           "business",
         );
@@ -1564,56 +1955,178 @@ export const actions = {
     return deliveryId;
   },
 
-  addComment(commissionId: string, deliveryId: string, input: { atSec: number; text: string; author: Role }) {
+  /* ---------------------------------------------------------- comments */
+
+  /**
+   * Comment on a delivered version, as whichever side the signed-in account is on. `atSec: null` is
+   * a general comment (ad copy only takes general ones). Any version, while comments are open (the
+   * order runs, or completed under 30 days ago). Notifies the other side and adds one grouped line
+   * to the order's thread. Never touches the review timer.
+   */
+  addComment(commissionId: string, deliveryId: string, input: { atSec: number | null; text: string }): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      const text = mask(input.text.trim());
+      if (text.length < COMMENT_MIN_CHARS) return { ok: false, reason: "too_short" };
+      if (input.atSec !== null && commentsAreGeneralOnly(d)) return { ok: false, reason: "general_only" };
+      const id = uid("dc");
+      const comment: DeliveryComment = {
+        id,
+        atSec: input.atSec === null ? null : Math.max(0, Math.round(input.atSec)),
+        text,
+        author: side,
+        authorId: authorIdFor(s, side),
+        resolved: false,
+        createdAt: nowStamp(),
+        unread: true,
+        replies: [],
+      };
+      let next = withDelivery(s, c.id, d.id, (x) => ({ ...x, comments: sortComments([...x.comments, comment]) }));
+      next = announceComment(next, c, d, side, { kind: "comment", atSec: comment.atSec, commentId: id });
+      return { ok: true, id, next };
+    });
+  },
+
+  /** Reply under a comment (one level deep), as the signed-in account's side. */
+  replyToComment(commissionId: string, deliveryId: string, commentId: string, text: string): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      const parent = d.comments.find((m) => m.id === commentId);
+      if (!parent || parent.deletedAt) return { ok: false, reason: "not_found" };
+      const body = mask(text.trim());
+      if (body.length < COMMENT_MIN_CHARS) return { ok: false, reason: "too_short" };
+      const id = uid("dr");
+      const reply: CommentReply = { id, author: side, authorId: authorIdFor(s, side), text: body, createdAt: nowStamp(), unread: true };
+      let next = withComment(s, c.id, d.id, commentId, (m) => ({ ...m, replies: [...m.replies, reply] }));
+      next = announceComment(next, c, d, side, { kind: "reply", parentAuthor: parent.author, commentId });
+      return { ok: true, id, next };
+    });
+  },
+
+  /** Edit your own comment (or, with `replyId`, your own reply) on the latest version. */
+  editComment(commissionId: string, deliveryId: string, commentId: string, text: string, replyId?: string): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      if (!isLatestDelivery(c, d.id)) return { ok: false, reason: "not_latest" };
+      const target = findCommentOrReply(d, commentId, replyId);
+      if (!target || target.deletedAt) return { ok: false, reason: "not_found" };
+      if (target.author !== side || target.authorId !== authorIdFor(s, side)) return { ok: false, reason: "not_author" };
+      const body = mask(text.trim());
+      if (body.length < COMMENT_MIN_CHARS) return { ok: false, reason: "too_short" };
+      const editedAt = nowStamp();
+      const next = withComment(s, c.id, d.id, commentId, (m) =>
+        replyId
+          ? { ...m, replies: replaceById(m.replies, replyId, (r) => ({ ...r, text: body, editedAt })) }
+          : { ...m, text: body, editedAt },
+      );
+      return { ok: true, id: replyId ?? commentId, next };
+    });
+  },
+
+  /**
+   * Delete your own comment or reply on the latest version. Soft: the text is kept for support and
+   * disputes, and a comment with replies shows as "Comment deleted". Undo with `restoreComment`.
+   */
+  removeComment(commissionId: string, deliveryId: string, commentId: string, replyId?: string): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      if (!isLatestDelivery(c, d.id)) return { ok: false, reason: "not_latest" };
+      const target = findCommentOrReply(d, commentId, replyId);
+      if (!target || target.deletedAt) return { ok: false, reason: "not_found" };
+      if (target.author !== side || target.authorId !== authorIdFor(s, side)) return { ok: false, reason: "not_author" };
+      const deletedAt = nowStamp();
+      const next = withComment(s, c.id, d.id, commentId, (m) =>
+        replyId ? { ...m, replies: replaceById(m.replies, replyId, (r) => ({ ...r, deletedAt })) } : { ...m, deletedAt },
+      );
+      return { ok: true, id: replyId ?? commentId, next };
+    });
+  },
+
+  /** Undo a delete (the toast's "Undo"). */
+  restoreComment(commissionId: string, deliveryId: string, commentId: string, replyId?: string): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      const target = findCommentOrReply(d, commentId, replyId);
+      if (!target) return { ok: false, reason: "not_found" };
+      if (target.author !== side || target.authorId !== authorIdFor(s, side)) return { ok: false, reason: "not_author" };
+      const next = withComment(s, c.id, d.id, commentId, (m) =>
+        replyId
+          ? { ...m, replies: replaceById(m.replies, replyId, (r) => ({ ...r, deletedAt: undefined })) }
+          : { ...m, deletedAt: undefined },
+      );
+      return { ok: true, id: replyId ?? commentId, next };
+    });
+  },
+
+  /** Mark a comment done. Either side, any version, while comments are open. */
+  resolveComment(commissionId: string, deliveryId: string, commentId: string): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      const target = d.comments.find((m) => m.id === commentId);
+      if (!target || target.deletedAt) return { ok: false, reason: "not_found" };
+      const next = withComment(s, c.id, d.id, commentId, (m) =>
+        m.resolved ? m : { ...m, resolved: true, resolvedAt: nowStamp(), resolvedBy: side },
+      );
+      return { ok: true, id: commentId, next };
+    });
+  },
+
+  /** Re-open a resolved comment. The business only. */
+  reopenComment(commissionId: string, deliveryId: string, commentId: string): CommentResult {
+    return commentAction(commissionId, deliveryId, (s, c, d, side) => {
+      if (side !== "business") return { ok: false, reason: "not_allowed" };
+      const target = d.comments.find((m) => m.id === commentId);
+      if (!target || target.deletedAt) return { ok: false, reason: "not_found" };
+      const next = withComment(s, c.id, d.id, commentId, (m) => ({ ...m, resolved: false, resolvedAt: undefined, resolvedBy: undefined }));
+      return { ok: true, id: commentId, next };
+    });
+  },
+
+  /**
+   * The signed-in account has seen every comment and reply on this order (call it when the order
+   * opens). Clears the unread badge for its side only. Works after comments close, too.
+   */
+  markCommentsRead(commissionId: string) {
+    load();
+    const c = state.commissions.find((x) => x.id === commissionId);
+    const side = c ? sideFor(state, c) : undefined;
+    if (!c || !side) return;
+    const hasUnread = c.deliveries.some((d) =>
+      d.comments.some((m) => (m.unread && m.author !== side) || m.replies.some((r) => r.unread && r.author !== side)),
+    );
+    if (!hasUnread) return;
     update((s) => ({
       ...s,
-      commissions: replaceById(s.commissions, commissionId, (c) => ({
-        ...c,
-        deliveries: replaceById(c.deliveries, deliveryId, (d) => ({
+      commissions: replaceById(s.commissions, commissionId, (x) => ({
+        ...x,
+        deliveries: x.deliveries.map((d) => ({
           ...d,
-          comments: [
-            ...d.comments,
-            { id: uid("dc"), atSec: input.atSec, text: mask(input.text), author: input.author, resolved: false, createdAt: nowStamp() },
-          ].sort((a, b) => a.atSec - b.atSec),
+          comments: d.comments.map((m) => ({
+            ...m,
+            unread: m.author !== side ? undefined : m.unread,
+            replies: m.replies.map((r) => (r.author !== side ? { ...r, unread: undefined } : r)),
+          })),
         })),
       })),
     }));
   },
 
-  updateComment(commissionId: string, deliveryId: string, commentId: string, patch: { text?: string; resolved?: boolean }) {
-    const clean = patch.text !== undefined ? { ...patch, text: mask(patch.text) } : patch;
-    update((s) => ({
-      ...s,
-      commissions: replaceById(s.commissions, commissionId, (c) => ({
-        ...c,
-        deliveries: replaceById(c.deliveries, deliveryId, (d) => ({
-          ...d,
-          comments: replaceById(d.comments, commentId, (m) => ({ ...m, ...clean })),
-        })),
-      })),
-    }));
-  },
-
-  removeComment(commissionId: string, deliveryId: string, commentId: string) {
-    update((s) => ({
-      ...s,
-      commissions: replaceById(s.commissions, commissionId, (c) => ({
-        ...c,
-        deliveries: replaceById(c.deliveries, deliveryId, (d) => ({
-          ...d,
-          comments: d.comments.filter((m) => m.id !== commentId),
-        })),
-      })),
-    }));
-  },
-
-  /** Business asks for changes on the latest delivery (uses its timestamped comments). */
-  requestRevision(commissionId: string, note: string) {
+  /**
+   * Business asks for changes on the latest version: sends the open comments it ticked
+   * (`commentIds`) and an optional note. Needs one ticked comment, or a note of 10 characters or more.
+   * Unticked comments stay open. The review timer stops until the next version arrives.
+   */
+  requestRevision(
+    commissionId: string,
+    input: { commentIds: string[]; note?: string },
+  ): { ok: true } | { ok: false; reason: "pick_or_note" | "not_in_review" | "not_party" } {
+    load();
+    const current = state.commissions.find((x) => x.id === commissionId);
+    if (!current || sideFor(state, current) !== "business") return { ok: false, reason: "not_party" };
+    const latest = current.deliveries[current.deliveries.length - 1];
+    if (!latest || current.status !== "delivered" || latest.status !== "in_review") return { ok: false, reason: "not_in_review" };
+    const ticked = latest.comments.filter((m) => input.commentIds.includes(m.id) && !m.resolved && !m.deletedAt);
+    const note = input.note?.trim() ?? "";
+    if (!ticked.length && note.length < CHANGE_NOTE_MIN_CHARS) return { ok: false, reason: "pick_or_note" };
     update((s) => {
       const c = findCommission(s, commissionId);
-      const latest = c.deliveries[c.deliveries.length - 1];
-      if (!latest) return s;
-      const count = latest.comments.filter((m) => !m.resolved).length;
+      const count = ticked.length;
+      const sentAt = nowStamp();
+      const ids = new Set(ticked.map((m) => m.id));
       let next: DemoState = {
         ...s,
         commissions: replaceById(s.commissions, commissionId, (x) => ({
@@ -1622,17 +2135,28 @@ export const actions = {
           autoApproveAt: undefined,
           revisionsUsed: x.revisionsUsed + 1,
           dueDate: Date.parse(x.dueDate) < Date.parse(at(2)) ? at(2, "18:00") : x.dueDate,
-          deliveries: replaceById(x.deliveries, latest.id, (d) => ({ ...d, status: "changes_requested" })),
+          deliveries: replaceById(x.deliveries, latest.id, (d) => ({
+            ...d,
+            status: "changes_requested",
+            comments: d.comments.map((m) => (ids.has(m.id) ? { ...m, requestedAt: sentAt } : m)),
+          })),
           events: [
             ...x.events,
-            event("revision_requested", "business", `Changes requested on version ${latest.version}${count ? ` (${count} note${count === 1 ? "" : "s"})` : ""}`),
+            event(
+              "revision_requested",
+              "business",
+              `Changes requested on version ${latest.version}${count ? ` (${count} comment${count === 1 ? "" : "s"})` : ""}`,
+            ),
           ],
         })),
       };
       next = appendMessage(
         next,
         c.threadId,
-        { from: "business", text: note || `Left ${count} note${count === 1 ? "" : "s"} on version ${latest.version}. Thank you.` },
+        {
+          from: "business",
+          text: mask(note) || `Sent ${count} comment${count === 1 ? "" : "s"} on version ${latest.version} to change. Thank you.`,
+        },
         "creator",
       );
       if (isDemoCreator(s, c.creatorId)) {
@@ -1644,6 +2168,7 @@ export const actions = {
       }
       return next;
     });
+    return { ok: true };
   },
 
   /**
@@ -1690,8 +2215,8 @@ export const actions = {
               "paid",
               "system",
               campaign
-                ? `${money(c.price)} for ${nameOfCreator(s, x.creatorId)} stays held until ${CAMPAIGN_RELEASE_DAYS} days after the post is verified`
-                : `${money(totals.creatorEarns)} released to ${nameOfCreator(s, x.creatorId)}`,
+                ? `${moneyExact(totals.total)} stays held until ${CAMPAIGN_RELEASE_DAYS} days after the post is verified (${nameOfCreator(s, x.creatorId)} receives ${moneyExact(totals.creatorEarns)} after the ${FEE_PCT}% Yapp fee)`
+                : `${moneyExact(totals.total)} released: ${nameOfCreator(s, x.creatorId)} receives ${moneyExact(totals.creatorEarns)} after the ${FEE_PCT}% Yapp fee`,
             ),
           ],
         })),
@@ -1702,12 +2227,12 @@ export const actions = {
           next,
           { creatorId: c.creatorId },
           "payment",
-          `Approved. Post it with ${request?.campaign?.brandHandle ?? "the brand tag"}: your ${money(c.price)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
+          `Approved. Post it on your ${campaignPlatformById[slotPlatform(c, request)].name} tagging ${request?.campaign ? brandHandleFor(request.campaign, slotPlatform(c, request)) : "the brand"}: your ${moneyExact(totals.creatorEarns)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
           paths.commission(c.id),
         );
       } else {
-        next = appendMessage(next, c.threadId, { from: "system", text: `Approved. ${money(totals.creatorEarns)} was released to ${nameOfCreator(s, c.creatorId)}.` }, "creator");
-        next = notifyParty(next, { creatorId: c.creatorId }, "payment", `${money(totals.creatorEarns)} released by ${nameOfBusiness(s, c.businessId)}`, paths.wallet);
+        next = appendMessage(next, c.threadId, { from: "system", text: `Approved. The ${moneyExact(totals.total)} payment was released: ${nameOfCreator(s, c.creatorId)} receives ${moneyExact(totals.creatorEarns)} after the ${FEE_PCT}% Yapp fee.` }, "creator");
+        next = notifyParty(next, { creatorId: c.creatorId }, "payment", `${moneyExact(totals.creatorEarns)} released by ${nameOfBusiness(s, c.businessId)}`, paths.wallet);
       }
       return next;
     });
@@ -1843,24 +2368,29 @@ export const actions = {
   /* ---------------------------------------------------------- campaigns */
 
   /**
-   * Charge and hold the full budget plus the service fee, and publish a UGC campaign. It stays open
-   * for 14 days unless the business closes it. Returns the new campaign id.
+   * Charge and hold the full amount (videos × price, nothing on top) and publish a UGC campaign. It
+   * stays open for 14 days unless the business closes it. Returns the new campaign id.
    */
   publishCampaign(input: CampaignInput): string {
+    const platforms = [...new Set(input.platforms)].filter((p) => campaignPlatformById[p]);
+    if (!platforms.length) return "";
     const id = uid("r");
+    const price = Math.min(PRICE_MAX_PER_YAPP, Math.max(PRICE_MIN_PER_YAPP, Math.round(input.pricePerVideo)));
+    const brandHandles = cleanHandles(input.brandHandles, platforms);
     update((s) => {
       const me = activeIds(s);
-      const tier = tierById[input.tierId];
       const product = s.products.find((p) => p.id === input.productId);
       const postedAt = nowStamp();
+      const closesAt = addDays(postedAt, CAMPAIGN_OPEN_DAYS);
       const request: ContentRequest = {
         id,
         businessId: me.businessId,
         title: input.title,
-        brief: campaignBrief(input, product),
-        budget: { min: tier.pricePerVideo, max: tier.pricePerVideo },
+        brief: campaignBrief({ ...input, platforms }, product),
+        budget: { min: price, max: price },
         dueDate: at(30, "18:00"),
         postedAt,
+        closesAt,
         status: "open",
         visibility: "public",
         invitedCreatorIds: [],
@@ -1870,40 +2400,67 @@ export const actions = {
         kind: "campaign",
         campaign: {
           tierId: input.tierId,
-          pricePerVideo: tier.pricePerVideo,
-          platform: input.platform,
-          brandHandle: input.brandHandle.startsWith("@") ? input.brandHandle : `@${input.brandHandle}`,
+          pricePerVideo: price,
+          platforms,
+          brandHandles,
           explainer: input.explainer,
           deadlineDays: input.deadlineDays,
-          closesAt: addDays(postedAt, CAMPAIGN_OPEN_DAYS),
+          closesAt,
           paymentMethodId: input.paymentMethodId,
           ledger: [
-            ledgerEntry(
-              input.videos * tier.pricePerVideo,
-              `${input.videos} videos × ${money(tier.pricePerVideo)}, plus the ${Math.round(CAMPAIGN_FEE_RATE * 100)}% service fee`,
-              "charge",
-            ),
+            ledgerEntry(input.videos * price, `${input.videos} Yapps × ${money(price)}`, "charge"),
           ],
           excludedCreatorIds: [],
           simulate: true,
         },
       };
-      let next: DemoState = { ...s, requests: [request, ...s.requests] };
+      let next: DemoState = {
+        ...s,
+        requests: [request, ...s.requests],
+        // The handles are saved to the brand, so the next campaign starts with them filled in.
+        businesses: replaceById(s.businesses, me.businessId, (b) => ({ ...b, handles: { ...b.handles, ...brandHandles } })),
+      };
       next = notifyDemoCreatorsOfRequest(next, request);
       return next;
     });
     return id;
   },
 
-  /** Take the first open slot on a campaign (first come, first served). */
-  acceptCampaignSlot(requestId: string, creatorId?: string): TakeSlotResult {
+  /**
+   * Save (or clear, with null) the account creators should tag on one platform, on the signed-in
+   * account's buyer profile. Returns the saved "@handle" ("" when cleared or invalid).
+   */
+  saveBrandHandle(platform: CampaignPlatformId, handle: string | null): string {
+    const value = handle ? atHandle(handle) : "";
+    if (handle && !BRAND_HANDLE.test(value)) return "";
+    update((s) => {
+      const businessId = activeIds(s).businessId;
+      return {
+        ...s,
+        businesses: replaceById(s.businesses, businessId, (b) => {
+          const handles = { ...b.handles };
+          if (value) handles[platform] = value;
+          else delete handles[platform];
+          return { ...b, handles };
+        }),
+      };
+    });
+    return value;
+  },
+
+  /**
+   * Pick the first open slot on a campaign (first come, first served), posting on `platform`: one of
+   * the campaign's platforms where this creator qualifies (default: the first that does).
+   */
+  acceptCampaignSlot(requestId: string, creatorId?: string, platform?: CampaignPlatformId): TakeSlotResult {
     load();
     const who = creatorId ?? activeIds(state).creatorId;
     const request = state.requests.find((r) => r.id === requestId);
     const creator = who ? state.creators.find((c) => c.id === who) : undefined;
     if (!request || !request.campaign) return { ok: false, reason: "closed" };
-    const check = eligibility(state, creator, request);
+    const check = eligibility(state, creator, request, platform);
     if (!check.ok) return { ok: false, reason: check.reason };
+    const postPlatform = check.platform;
     const slot = openSlotNumbers(state, request)[0];
     const commissionId = uid("c");
     update((s) => {
@@ -1936,10 +2493,17 @@ export const actions = {
         // Version 1 is due within the deadline the brand set (fixed once the campaign was posted).
         dueDate: addDays(takenAt, terms.deadlineDays),
         deliveries: [],
-        events: [event("slot_accepted", "creator", `Took slot ${slot}`)],
+        events: [
+          event(
+            "slot_accepted",
+            "creator",
+            `Picked slot ${slot}, posting on ${campaignPlatformById[postPlatform].name}. Deadline set by ${nameOfBusiness(s, request.businessId)}: ${terms.deadlineDays} days.`,
+          ),
+        ],
         threadId: ensured[1],
         payment: { status: "held", methodId: terms.paymentMethodId },
         campaignSlot: slot,
+        postPlatform,
       };
       next = { ...next, commissions: [commission, ...next.commissions] };
       next = syncCampaignStatus(next, requestId);
@@ -1947,17 +2511,17 @@ export const actions = {
         key: `campaign:${requestId}:joined`,
         text: (n) =>
           n === 1
-            ? `${creator!.firstName} took a slot on "${request.title}"`
-            : `${n} creators took slots on "${request.title}"`,
+            ? `${creator!.firstName} picked a slot on "${request.title}"`
+            : `${n} creators picked slots on "${request.title}"`,
       });
       return next;
     });
-    return { ok: true, commissionId, slot };
+    return { ok: true, commissionId, slot, platform: postPlatform };
   },
 
   /**
    * Business removes an accepted creator before filming; the slot reopens for others (on a closed
-   * campaign its money is refunded with its fee instead).
+   * campaign its money is refunded in full instead).
    */
   removeCampaignCreator(commissionId: string, reason = "") {
     update((s) => {
@@ -2009,7 +2573,7 @@ export const actions = {
 
   /**
    * Business rejects a review copy: the slot goes to another creator and the money stays held (on a
-   * closed campaign it is refunded with its fee instead).
+   * closed campaign it is refunded in full instead).
    */
   rejectCampaignVideo(commissionId: string, reason = "") {
     update((s) => {
@@ -2063,15 +2627,30 @@ export const actions = {
    * Creator posts the approved video on their own account; verification runs on the next tick. A
    * restored post keeps its first verification (the 7 and 30 days don't restart).
    */
-  submitPost(commissionId: string, url: string) {
+  /**
+   * The link must be on the platform the creator picked (`postLinkProblem`); otherwise nothing
+   * changes and the reason comes back for the sheet to show.
+   */
+  submitPost(commissionId: string, url: string): { ok: true } | { ok: false; reason: string } {
+    load();
+    const c = state.commissions.find((x) => x.id === commissionId);
+    if (!c || c.source !== "campaign") return { ok: false, reason: "This isn't a campaign slot." };
+    const request = c.requestId ? state.requests.find((r) => r.id === c.requestId) : undefined;
+    const platform = slotPlatform(c, request);
+    const problem = postLinkProblem(url, platform);
+    if (problem) return { ok: false, reason: problem };
     update((s) => ({
       ...s,
       commissions: replaceById(s.commissions, commissionId, (x) => ({
         ...x,
         post: { status: "checking", url: url.trim(), at: nowStamp(), verifiedAt: x.post?.verifiedAt },
-        events: [...x.events, event("posted", "creator", "Posted on their account. Checking the tag and disclosure…")],
+        events: [
+          ...x.events,
+          event("posted", "creator", `Posted on their ${campaignPlatformById[platform].name}. Checking the tag and disclosure…`),
+        ],
       })),
     }));
+    return { ok: true };
   },
 
   /**
@@ -2088,47 +2667,64 @@ export const actions = {
   },
 
   /**
-   * Change the follower tier once after publishing. Taken slots keep their price; open slots are
-   * topped up or refunded, with their share of the fee. Returns the card difference, fee included.
+   * Change the follower tier once after publishing. Tiers only decide who may pick a slot, so no
+   * money moves: taken and open slots keep the price.
    */
-  changeCampaignTier(requestId: string, tierId: FollowerTierId): { ok: boolean; diff: number } {
+  changeCampaignTier(requestId: string, tierId: FollowerTierId): { ok: boolean } {
     load();
     const request = state.requests.find((r) => r.id === requestId);
     const terms = request?.campaign;
-    if (!request || !terms || terms.tierChangedAt || terms.tierId === tierId) return { ok: false, diff: 0 };
-    const tier = tierById[tierId];
-    const open = openSlotNumbers(state, request).length;
-    const subtotal = (tier.pricePerVideo - terms.pricePerVideo) * open;
-    const diff = Math.sign(subtotal) * withCampaignFee(Math.abs(subtotal)).total;
+    if (!request || !terms || terms.tierChangedAt || terms.tierId === tierId) return { ok: false };
     update((s) => ({
       ...s,
       requests: replaceById(s.requests, requestId, (r) => ({
         ...r,
-        budget: { min: tier.pricePerVideo, max: tier.pricePerVideo },
-        campaign: {
-          ...r.campaign!,
-          tierId,
-          previousTierId: r.campaign!.tierId,
-          pricePerVideo: tier.pricePerVideo,
-          tierChangedAt: nowStamp(),
-          ledger:
-            subtotal === 0
-              ? r.campaign!.ledger
-              : [
-                  ...r.campaign!.ledger,
-                  ledgerEntry(
-                    subtotal,
-                    `Tier changed to ${tier.label}: ${open} open slot${open === 1 ? "" : "s"} × ${money(Math.abs(tier.pricePerVideo - terms.pricePerVideo))}, with the fee`,
-                  ),
-                ],
-        },
+        campaign: { ...r.campaign!, tierId, previousTierId: r.campaign!.tierId, tierChangedAt: nowStamp() },
       })),
     }));
-    return { ok: true, diff };
+    return { ok: true };
   },
 
   /**
-   * Stop new acceptances. Open slots are refunded with their fee; slots in progress carry on. A
+   * Raise the price per Yapp after posting (never lower it). The unpicked slots are topped up on the
+   * campaign's card and held; taken slots keep the price they were picked at. Returns the top-up.
+   */
+  raiseCampaignPrice(requestId: string, price: number): { ok: boolean; topUp: number } {
+    load();
+    const request = state.requests.find((r) => r.id === requestId);
+    const terms = request?.campaign;
+    const next = Math.round(price);
+    if (!request || !terms || request.status === "closed" || next <= terms.pricePerVideo || next > PRICE_MAX_PER_YAPP)
+      return { ok: false, topUp: 0 };
+    const open = openSlotNumbers(state, request).length;
+    const topUp = (next - terms.pricePerVideo) * open;
+    update((s) => ({
+      ...s,
+      requests: replaceById(s.requests, requestId, (r) => ({
+        ...r,
+        budget: { min: next, max: next },
+        campaign: {
+          ...r.campaign!,
+          pricePerVideo: next,
+          postedPrice: r.campaign!.postedPrice ?? r.campaign!.pricePerVideo,
+          ledger:
+            topUp > 0
+              ? [
+                  ...r.campaign!.ledger,
+                  ledgerEntry(
+                    topUp,
+                    `Price raised to ${money(next)} per Yapp: ${open} open slot${open === 1 ? "" : "s"} × ${money(next - terms.pricePerVideo)}`,
+                  ),
+                ]
+              : r.campaign!.ledger,
+        },
+      })),
+    }));
+    return { ok: true, topUp };
+  },
+
+  /**
+   * Stop new acceptances. Open slots are refunded in full; slots in progress carry on. A
    * campaign also closes 14 days after posting, but the demo clock is fixed, so here closing is
    * always the business's own action.
    */
@@ -2148,7 +2744,7 @@ export const actions = {
           ledger: refund
             ? [
                 ...r.campaign!.ledger,
-                ledgerEntry(-refund, `Closed with ${open} open slot${open === 1 ? "" : "s"}: refunded with the fee`),
+                ledgerEntry(-refund, `Closed with ${open} unpicked slot${open === 1 ? "" : "s"}: ${open} × ${money(request.campaign!.pricePerVideo)} refunded`),
               ]
             : r.campaign!.ledger,
         },
@@ -2160,17 +2756,20 @@ export const actions = {
    * Demo control ("Skip 7 days"). The demo clock is fixed (lib/clock.ts `NOW`), so this button
    * stands in for a week passing on every pending campaign slot:
    * - a verified post that is still live: its pay is released (7 days after verification);
-   * - a post that came down and wasn't restored within 48 hours: the slot ends, its money (with the
-   *   fee) goes back to the campaign and the slot reopens (refunded to the card if the campaign is
-   *   closed);
+   * - a post that came down and wasn't restored within 48 hours: the slot ends, its money goes back
+   *   to the campaign and the slot reopens (refunded to the card if the campaign is closed);
    * - a post not made or not verified yet: still pending, it has no date until it's verified.
+   */
+  /**
+   * Returns listed prices released, returned and still waiting, and `mine`: what the signed-in
+   * account's own creator profile received (its net, after Yapp's fee).
    */
   skipSevenDays(): { released: number; returned: number; waiting: number; mine: number } {
     load();
     let released = 0;
     let returned = 0;
     let waiting = 0;
-    /** Released to the signed-in account's own creator profile. */
+    /** Released to the signed-in account's own creator profile, net of the fee. */
     let mine = 0;
     update((s) => {
       let next: DemoState = s;
@@ -2178,8 +2777,9 @@ export const actions = {
       const due = s.commissions.filter((c) => c.source === "campaign" && c.payment.status === "pending");
       for (const c of due) {
         if (c.post?.status === "live" && c.post.verifiedAt) {
-          released += c.price;
-          if (c.creatorId === me.creatorId) mine += c.price;
+          const totals = priceBreakdown(c.price, c.addons, c.feeRate);
+          released += totals.total;
+          if (c.creatorId === me.creatorId) mine += totals.creatorEarns;
           next = {
             ...next,
             commissions: replaceById(next.commissions, c.id, (x) => ({
@@ -2187,19 +2787,23 @@ export const actions = {
               payment: { ...x.payment, status: "released" },
               events: [
                 ...x.events,
-                event("payout_available", "system", `${CAMPAIGN_RELEASE_DAYS} days since the post was verified, and it's still up: ${money(x.price)} released`),
+                event(
+                  "payout_available",
+                  "system",
+                  `${CAMPAIGN_RELEASE_DAYS} days since the post was verified, and it's still up: ${moneyExact(totals.total)} released (${nameOfCreator(s, x.creatorId)} receives ${moneyExact(totals.creatorEarns)} after the ${FEE_PCT}% Yapp fee)`,
+                ),
               ],
             })),
           };
           next = notifyParty(next, { creatorId: c.creatorId }, "payment", "", paths.wallet, {
             key: "campaign:released",
-            text: (n) => (n === 1 ? `${money(c.price)} from "${c.title}" is ready to withdraw` : `${n} campaign payments are ready to withdraw`),
+            text: (n) => (n === 1 ? `${moneyExact(totals.creatorEarns)} from "${c.title}" is ready to withdraw` : `${n} campaign payments are ready to withdraw`),
           });
         } else if (c.post?.status === "removed") {
-          returned += c.price;
+          returned += priceBreakdown(c.price, c.addons, c.feeRate).total;
           next = returnRemovedSlot(next, c.id);
         } else {
-          waiting += c.price;
+          waiting += priceBreakdown(c.price, c.addons, c.feeRate).total;
         }
       }
       return next;
@@ -2214,9 +2818,10 @@ export const actions = {
     scheduleReply(threadId, other(from), text);
   },
 
+  /** Open (or reuse) a conversation between the signed-in account's buyer profile and a creator. */
   /**
-   * Open (or reuse) a conversation between the signed-in account's buyer profile and a creator.
-   * A creator asking a brand about its order passes `from: "creator"` and the brand's `businessId`.
+   * Open (or reuse) a conversation between a buyer profile and a creator. V2: a creator asking a
+   * brand about its order passes `from: "creator"` and the brand's `businessId`.
    */
   startThread(input: {
     creatorId: string;
@@ -2425,6 +3030,24 @@ export const actions = {
   },
 };
 
+/**
+ * Every mutation the interface may make. In preview mode (lib/preview.ts) each one is refused: it
+ * does nothing, touches no storage, and returns `undefined` whatever its type says, so a preview
+ * page should hide controls that call actions (`usePreviewMode()`).
+ */
+export const actions: typeof liveActions = Object.fromEntries(
+  Object.entries(liveActions).map(([name, fn]) => [
+    name,
+    (...args: unknown[]) => {
+      if (isPreviewMode()) {
+        if (process.env.NODE_ENV !== "production") console.info(`[preview] actions.${name} refused`);
+        return undefined;
+      }
+      return (fn as (...a: unknown[]) => unknown)(...args);
+    },
+  ]),
+) as typeof liveActions;
+
 /** Tell demo creators about a new open order they can act on (invited, or public and eligible). */
 function notifyDemoCreatorsOfRequest(s: DemoState, request: ContentRequest): DemoState {
   let next = s;
@@ -2438,7 +3061,7 @@ function notifyDemoCreatorsOfRequest(s: DemoState, request: ContentRequest): Dem
         next,
         { creatorId },
         "campaign",
-        `New campaign for you: "${request.title}". ${money(request.campaign!.pricePerVideo)} per Yapp, ${request.slots} slots open.`,
+        `New UGC campaign for you: "${request.title}". ${money(request.campaign!.pricePerVideo)} per Yapp · you earn ${moneyExact(creatorNet(request.campaign!.pricePerVideo, CAMPAIGN_FEE_RATE))}, ${request.slots} slots open on ${platformList(request.campaign!.platforms)}.`,
         paths.order(request.id),
       );
       continue;
@@ -2451,7 +3074,7 @@ function notifyDemoCreatorsOfRequest(s: DemoState, request: ContentRequest): Dem
       "request",
       invited
         ? `${nameOfBusiness(s, request.businessId)} invited you to pitch: ${request.title}`
-        : `New request that fits you: ${request.title}`,
+        : `New custom order that fits you: ${request.title}`,
       paths.order(request.id),
     );
   }
@@ -2496,7 +3119,8 @@ const SIM_VERIFY_MS = 2_500;
 export function simulationTick() {
   if (typeof window === "undefined") return;
   load();
-  if (!holdsSimLock()) return;
+  // Preview mode never moves (and never touches the lock in localStorage).
+  if (isPreviewMode() || !holdsSimLock()) return;
   const now = peekNow();
   const since = (iso?: string) => (iso ? now - Date.parse(iso) : Number.POSITIVE_INFINITY);
 
@@ -2526,7 +3150,7 @@ export function simulationTick() {
         return;
       }
       if (c.status === "completed" && c.post?.status === "due" && since(c.completedAt) > SIM_POST_MS) {
-        actions.submitPost(c.id, `https://www.tiktok.com/@${state.creators.find((x) => x.id === c.creatorId)?.handle ?? "creator"}/video/${7300000000 + (hashString(c.id) % 99999)}`);
+        actions.submitPost(c.id, simulatedPostUrl(c, request, state.creators.find((x) => x.id === c.creatorId)?.handle ?? "creator"));
         return;
       }
     }
@@ -2552,6 +3176,19 @@ export function simulationTick() {
   }
 }
 
+/** A link of the right shape for the slot's platform. */
+function simulatedPostUrl(c: Commission, request: ContentRequest, handle: string): string {
+  const n = 7300000000 + (hashString(c.id) % 99999);
+  switch (slotPlatform(c, request)) {
+    case "instagram":
+      return `https://www.instagram.com/reel/C${n.toString(36)}/`;
+    case "snapchat":
+      return `https://www.snapchat.com/spotlight/${n.toString(36)}`;
+    default:
+      return `https://www.tiktok.com/@${handle}/video/${n}`;
+  }
+}
+
 function simulatedUpload(c: Commission) {
   const version = c.deliveries.length + 1;
   actions.deliver({
@@ -2560,12 +3197,9 @@ function simulatedUpload(c: Commission) {
       version === 1
         ? "Review copy is up (watermarked). I kept it natural and hit every talking point."
         : `Version ${version} is up. I fixed what you asked for.`,
-    files: [{ name: `review_copy_v${version}.mp4`, size: `${(9 + version * 1.4).toFixed(1)} MB` }],
+    files: [{ name: `review_copy_v${version}.mp4`, size: `${(9 + version * 1.4).toFixed(1)} MB`, kind: "video" }],
   });
-  if (version > 1) {
-    const previous = c.deliveries[c.deliveries.length - 1];
-    previous?.comments.forEach((comment) => actions.updateComment(c.id, previous.id, comment.id, { resolved: true }));
-  }
+  // Open comments on the previous version are marked resolved by `deliver` itself.
 }
 
 /**
@@ -2577,7 +3211,7 @@ function verifyPost(commissionId: string) {
     const c = s.commissions.find((x) => x.id === commissionId);
     if (!c?.post) return s;
     const request = c.requestId ? s.requests.find((r) => r.id === c.requestId) : undefined;
-    const handle = request?.campaign?.brandHandle ?? "the brand";
+    const handle = request?.campaign ? brandHandleFor(request.campaign, slotPlatform(c, request)) : "the brand";
     const verifiedAt = c.post.verifiedAt ?? nowStamp();
     const releaseOn = c.withdrawableFrom ?? addDays(verifiedAt, CAMPAIGN_RELEASE_DAYS);
     let next: DemoState = {
@@ -2589,7 +3223,7 @@ function verifyPost(commissionId: string) {
         events: [...x.events, event("post_verified", "system", `Post verified: ${handle} tagged, paid partnership label on`)],
       })),
     };
-    next = notifyParty(next, { creatorId: c.creatorId }, "campaign", `Your post for "${c.title}" is verified. ${money(c.price)} is released on ${shortDate(releaseOn)} if it's still up.`, paths.commission(c.id));
+    next = notifyParty(next, { creatorId: c.creatorId }, "campaign", `Your post for "${c.title}" is verified. Your ${moneyExact(priceBreakdown(c.price, c.addons, c.feeRate).creatorEarns)} is released on ${shortDate(releaseOn)} if it's still up.`, paths.commission(c.id));
     if (c.requestId) {
       next = notifyParty(next, { businessId: c.businessId }, "campaign", "", paths.order(c.requestId), {
         key: `campaign:${c.requestId}:posted`,

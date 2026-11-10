@@ -21,7 +21,7 @@ import { useToast } from "@/components/ui/toast";
 import { hashString } from "@/lib/hash";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
-import { savedAccounts, useSavedAccounts } from "@/lib/saved-accounts";
+import { useSavedAccounts } from "@/lib/saved-accounts";
 import { cityLabel, me } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 
@@ -43,7 +43,8 @@ const fallbackNumber = (accountId: string) => `+1 ••• ••• ${String(1
 /**
  * Sign-in and security. Yapp signs in with a phone number and a 6-digit code (or Apple, Google,
  * TikTok, Instagram), so there is no password to change: the number can be changed (with a code),
- * devices signed out, this device's saved accounts removed, and the account deleted (simulated).
+ * devices signed out, and the account deleted (simulated). Log out asks first, like the account
+ * menu's; a saved account is removed from this device only on the sign-in screen.
  */
 export function SecurityControls() {
   const s = useDemo();
@@ -62,6 +63,7 @@ export function SecurityControls() {
   const [devices, setDevices] = useState(seedDevices);
   const [changing, setChanging] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const signOutDevice = (device: Device) => {
     setDevices((list) => list.filter((d) => d.id !== device.id));
@@ -158,44 +160,17 @@ export function SecurityControls() {
 
       <div className="flex flex-wrap items-center justify-between gap-3 py-5">
         <div className="min-w-0 flex-1">
-          <h3 className="y-small font-semibold">Saved accounts</h3>
-          <p className="y-micro y-fg-2">
-            {saved.length
-              ? `${saved.length === 1 ? "One account is" : `${saved.length} accounts are`} saved for one-tap sign in on this device.`
-              : "No accounts are saved on this device."}
-          </p>
-        </div>
-        <PillButton
-          variant="ghost"
-          size="sm"
-          disabled={saved.length === 0}
-          onClick={() => {
-            const before = saved;
-            savedAccounts.clear();
-            toast({
-              message: "Saved accounts removed from this device",
-              action: { label: "Undo", onClick: () => [...before].reverse().forEach((r) => savedAccounts.remember(r)) },
-            });
-          }}
-        >
-          Remove from this device
-        </PillButton>
-      </div>
-
-      <div className="flex flex-wrap items-center justify-between gap-3 py-5">
-        <div className="min-w-0 flex-1">
           <h3 className="y-small font-semibold">Log out</h3>
-          <p className="y-micro y-fg-2">This account stays saved here, so signing back in is one tap.</p>
+          <p className="y-micro y-fg-2">
+            This account stays saved on this device, so signing back in is one tap. To take it off this device,
+            remove it on the sign-in screen.
+          </p>
         </div>
         <PillButton
           variant="soft"
           size="sm"
           icon={<LogOut size={16} aria-hidden className="y-flip" />}
-          onClick={() => {
-            signOut();
-            toast({ message: "Logged out", tone: "info" });
-            router.push(paths.landing);
-          }}
+          onClick={() => setLoggingOut(true)}
         >
           Log out
         </PillButton>
@@ -211,6 +186,19 @@ export function SecurityControls() {
         </PillButton>
       </div>
 
+      <ConfirmSheet
+        open={loggingOut}
+        onClose={() => setLoggingOut(false)}
+        title="Log out of Yapp?"
+        description={`${account.firstName}'s account stays saved on this device for one-tap sign in.`}
+        confirmLabel="Log out"
+        onConfirm={() => {
+          setLoggingOut(false);
+          signOut();
+          toast({ message: "Logged out", tone: "info" });
+          router.push(paths.landing);
+        }}
+      />
       <ChangeNumberSheet
         open={changing}
         onClose={() => setChanging(false)}

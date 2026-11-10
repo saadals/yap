@@ -41,6 +41,8 @@ const sceneFor: Record<FormatId, Scene> = {
   "talking-head": "selfie",
   voiceover: "screen",
   "hook-pack": "selfie",
+  // Never a portfolio video format (pickers offer video formats only); kept for the type.
+  "ad-copy": "desk",
 };
 
 function sizeLabel(bytes: number) {

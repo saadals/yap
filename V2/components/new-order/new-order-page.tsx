@@ -13,8 +13,8 @@ import { FlowSkeleton } from "./flow-frame";
 import { PitchesFlow } from "./pitches-flow";
 
 /**
- * /orders/new. Without `?type` it asks how you want to work; `?type=custom` (or `?draft=`) is
- * Get pitches, `?type=campaign` the UGC campaign. `?again=` an earlier request opens the same kind
+ * /orders/new. Without `?type` it asks how you want to work; `?type=custom` (or `?draft=`) is a
+ * custom order (video or ad copy), `?type=campaign` the UGC campaign. `?again=` an earlier request opens the same kind
  * of flow; `?again=` a commission opens the chooser with that work carried through.
  * `?product=` and `?creator=` carry through everywhere.
  */

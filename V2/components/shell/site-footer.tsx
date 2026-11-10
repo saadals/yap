@@ -5,7 +5,6 @@ import Link from "next/link";
 
 import { Block } from "@/components/ui/block";
 import { Lockup } from "@/components/ui/brand";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { paths } from "@/lib/paths";
 
 const columns = [
@@ -15,7 +14,16 @@ const columns = [
       { label: "Find creators", href: paths.discover() },
       { label: "Place an order", href: paths.newOrder() },
       { label: "How it works", href: paths.howItWorks },
-      { label: "Pricing", href: "/how-it-works#pricing" },
+          ],
+  },
+  {
+    title: "Services",
+    links: [
+      { label: "UGC ads", href: paths.service("ugc-ads") },
+      { label: "Native posts", href: paths.service("native-posts") },
+      { label: "Hook Lab", href: paths.service("hook-lab") },
+      { label: "Go to market", href: paths.service("go-to-market") },
+      { label: "For tech teams", href: paths.forTechTeams },
     ],
   },
   {
@@ -31,9 +39,8 @@ const columns = [
     links: [
       { label: "Help centre", href: "/how-it-works#faq" },
       { label: "Payment protection", href: "/how-it-works#protection" },
-      { label: "Terms", href: paths.legal },
-      { label: "Privacy", href: paths.legal },
-    ],
+      { label: "All legal documents", href: paths.legal },
+          ],
   },
 ];
 
@@ -43,7 +50,7 @@ export function SiteFooter() {
     <footer className="px-(--y-gutter) pb-(--y-gutter)">
       <Block tone="night" pad="lg" className="mx-auto max-w-[1440px] overflow-hidden bg-(--y-footer)">
         <div className="grid gap-10 md:grid-cols-12">
-          <div className="flex flex-col gap-5 md:col-span-5">
+          <div className="flex flex-col gap-5 md:col-span-4">
             <p className="y-display y-title max-w-sm">
               Social videos for your app, made by people your customers trust.
             </p>
@@ -52,7 +59,6 @@ export function SiteFooter() {
               Every payment is held safely until you approve the work. Full refund if a creator
               doesn&apos;t deliver.
             </p>
-            <ThemeToggle />
           </div>
           {columns.map((column) => (
             <nav key={column.title} aria-label={column.title} className="flex flex-col gap-2 md:col-span-2">

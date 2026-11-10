@@ -130,8 +130,6 @@ export function PortfolioSection({ creator }: { creator: Creator }) {
           headingLevel={3}
           title="Your portfolio is empty"
           body="Brands can't order what they can't see. Add two or three finished videos to start getting invites."
-          shape="bean"
-          tint="mint"
           action={
             <PillButton variant="contrast" icon={<Plus size={18} aria-hidden />} onClick={() => setAdding(true)}>
               Add your first video

@@ -330,17 +330,14 @@ function AllTab({
           <Block tone="paper" pad="md">
             <EmptyState
               title="No creators match all of that"
-              body="Try removing a filter or two. Or describe what you need and let creators who fit pitch to you."
-              shape="bean"
-              tint="violet"
-              face="calm"
+              body="Try removing a filter or two. Or post a custom order and let creators who fit pitch to you."
               action={
                 <div className="flex flex-wrap justify-center gap-2">
                   <PillButton variant="contrast" onClick={clearAll}>
                     Clear filters
                   </PillButton>
                   <PillButton variant="outline" href={paths.newOrder({ type: "custom" })}>
-                    Get pitches instead
+                    Post a custom order
                   </PillButton>
                 </div>
               }
@@ -352,7 +349,7 @@ function AllTab({
               <CreatorTile
                 key={creator.id}
                 creator={creator}
-                reason={fitProduct ? productFit(s, creator, fitProduct).reasons.slice(0, 2).join(" · ") || undefined : undefined}
+                reason={fitProduct ? reasonLine(productFit(s, creator, fitProduct).reasons) : undefined}
               />
             ))}
           </div>
@@ -360,6 +357,13 @@ function AllTab({
       </section>
     </>
   );
+}
+
+/** The tile's "why it fits" line: the strongest reason, and the next one only when both fit on a tile. */
+function reasonLine(reasons: string[]): string | undefined {
+  const [first, second] = reasons;
+  if (!first) return undefined;
+  return second && first.length + second.length <= 34 ? `${first} · ${second}` : first;
 }
 
 /** All + every format, one horizontally scrolling row of chips. */
@@ -414,9 +418,6 @@ function SavedTab({ saved, onBrowse }: { saved: ReturnType<typeof savedCreators>
           <EmptyState
             title="No saved creators yet"
             body="Tap the heart on any creator to keep them here while you decide."
-            shape="ball"
-            tint="sea"
-            face="smile"
             action={
               <PillButton variant="contrast" onClick={onBrowse}>
                 Browse creators

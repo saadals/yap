@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Block } from "@/components/ui/block";
-import { Celebrate } from "@/components/ui/celebrate";
 import { Page } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
 import { Sheet } from "@/components/ui/sheet";
@@ -148,7 +147,6 @@ export function NewProductFlow({ returnTo }: { returnTo: string | null }) {
     return (
       <Page width="narrow">
         <Block tone="paper" pad="lg" className="y-enter mt-4 flex flex-col items-center gap-5 text-center">
-          <Celebrate className="h-32 w-52" />
           <div className="flex max-w-[46ch] flex-col gap-2">
             <h1 className="y-display y-t-display">{created.name} is ready to brief</h1>
             <p className="y-body y-fg-2">
@@ -158,7 +156,7 @@ export function NewProductFlow({ returnTo }: { returnTo: string | null }) {
           </div>
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
             <PillButton href={paths.newOrder({ product: created.id })} variant="neon" arrow>
-              Order a video for it
+              Start an order for it
             </PillButton>
             <PillButton href={paths.product(created.id)} variant="soft">
               See the product

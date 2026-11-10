@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, History, RotateCcw, UserPlus } from "lucide-react";
+import { Check, CircleCheck, History, RotateCcw, UserPlus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,31 +14,34 @@ import { useToast } from "@/components/ui/toast";
 import { plural, timeOf } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { cityById, me } from "@/lib/selectors";
-import { actions, useDemo, useHydrated, type DemoState, type RequestDraft } from "@/lib/store";
+import { actions, useDemo, useHydrated, type DemoState, type OrderDraft } from "@/lib/store";
 
 import { FlowActions, FlowFrame, FlowSkeleton } from "./flow-frame";
 import { Spinner } from "./parts";
 import {
+  LAST_STEP,
   STEPS,
   applyProduct,
   defaultForm,
+  dueDateFor,
   effectiveTitle,
   firstInvalidStep,
   formFromCommission,
-  formFromDraft,
   formFromRequest,
   formToDraft,
   formToRequest,
   inviteCandidates,
+  isAdCopyForm,
   marketFor,
   median,
+  normalizeForm,
   stepOfField,
   validateStep,
   type FieldKey,
   type PitchesForm,
 } from "./pitches-model";
 import { PitchesPreview } from "./pitches-preview";
-import { ProductStep, ReviewStep, TermsStep, VideoStep, type FormPatch, type StepProps } from "./pitches-steps";
+import { ProductStep, ReviewStep, TermsStep, WorkStep, type FormPatch, type StepProps } from "./pitches-steps";
 import { SuccessScreen } from "./success";
 
 /* -------------------------------------------------------------------------- */
@@ -64,7 +67,15 @@ type Init = {
 
 type InitResult = ({ kind: "ok" } & Init) | { kind: "missing" } | { kind: "live"; requestId: string };
 
-const LAST = STEPS.length - 1;
+const LAST = LAST_STEP;
+
+/** The custom order form's saved draft (one per account). */
+const savedDraft = (s: DemoState) => me.orderDraft<Partial<PitchesForm>>(s, "custom");
+
+const fromDraft = (draft: OrderDraft<Partial<PitchesForm>>) => ({
+  form: normalizeForm(draft.data),
+  step: Math.min(Math.max(0, draft.step ?? 0), LAST),
+});
 
 function initialState(s: DemoState, params: URLSearchParams): InitResult {
   const { businessId, creatorId: selfId } = me.ids(s);
@@ -100,7 +111,6 @@ function initialState(s: DemoState, params: URLSearchParams): InitResult {
     const commission = request ? undefined : s.commissions.find((c) => c.id === againId && c.businessId === businessId);
     if (request || commission) {
       let form = request ? formFromRequest(s, request) : formFromCommission(s, commission!, selfId);
-      if (request) form = { ...form, dueInDays: 14 };
       if (!products.some((p) => p.id === form.productId)) form = { ...form, productId: "", learningIds: [] };
       if (paramProduct) form = applyProduct(form, paramProduct);
       return {
@@ -115,15 +125,19 @@ function initialState(s: DemoState, params: URLSearchParams): InitResult {
     }
   }
 
-  const draft = me.draft(s);
+  const draft = savedDraft(s);
   let form: PitchesForm;
   let step = 0;
   let maxStep = 0;
   let banner: Banner = null;
-  if (draft && (!paramProduct || !draft.brief.productId || draft.brief.productId === paramProduct.id)) {
-    form = formFromDraft(s, draft);
+  const draftProduct = draft?.data.productId;
+  if (draft && (!paramProduct || !draftProduct || draftProduct === paramProduct.id)) {
+    const restored = fromDraft(draft);
+    form = restored.form;
+    // A product deleted since the draft was saved can't be used.
+    if (form.productId && !products.some((p) => p.id === form.productId)) form = { ...form, productId: "", learningIds: [] };
     if (paramProduct && !form.productId) form = applyProduct(form, paramProduct);
-    step = Math.min(Math.max(0, draft.step), LAST);
+    step = form.productId ? restored.step : 0;
     maxStep = step;
     banner = { kind: "restored", at: draft.savedAt };
   } else {
@@ -153,8 +167,6 @@ function Loader({ params }: { params: URLSearchParams }) {
           <EmptyState
             title="We couldn't find that draft"
             body="It may have been posted or deleted. All your orders are in one place."
-            shape="dome"
-            tint="violet"
             action={
               <PillButton href={paths.orders()} variant="contrast">
                 See your orders
@@ -171,10 +183,7 @@ function Loader({ params }: { params: URLSearchParams }) {
         <Block tone="paper" pad="lg">
           <EmptyState
             title="This order is already live"
-            body="It's posted, so creators may be pitching. You can change the budget, the date and who can pitch from the order."
-            shape="pill"
-            tint="mint"
-            face="smile"
+            body="It's posted, so creators may be pitching. You can change the budget, the deadline and who can pitch from the order."
             action={
               <PillButton href={paths.order(init.requestId)} variant="contrast" arrow>
                 Open the order
@@ -191,12 +200,6 @@ function Loader({ params }: { params: URLSearchParams }) {
 /* -------------------------------------------------------------------------- */
 /* The flow                                                                    */
 /* -------------------------------------------------------------------------- */
-
-const withoutStamp = (draft: RequestDraft): Omit<RequestDraft, "savedAt"> => {
-  const copy: Partial<RequestDraft> = { ...draft };
-  delete copy.savedAt;
-  return copy as Omit<RequestDraft, "savedAt">;
-};
 
 function Flow({ init }: { init: Init }) {
   const s = useDemo();
@@ -229,9 +232,13 @@ function Flow({ init }: { init: Init }) {
     const timer = window.setTimeout(() => {
       if (init.mode === "draft" && init.draftId) {
         const data = formToRequest(form, product);
-        actions.updateRequest(init.draftId, { ...data, title: data.title || "Untitled order" });
+        actions.updateRequest(init.draftId, {
+          ...data,
+          title: data.title || "Untitled custom order",
+          dueDate: dueDateFor(form.deadlineDays),
+        });
       } else {
-        actions.saveRequestDraft(formToDraft(form, step, product));
+        actions.saveOrderDraft("custom", formToDraft(form, step, product));
       }
       setSaveState("saved");
     }, 700);
@@ -279,11 +286,12 @@ function Flow({ init }: { init: Init }) {
       if (init.mode === "draft" && init.draftId) {
         id = init.draftId;
         // Invite after posting, so invited creators are notified.
-        actions.updateRequest(id, { ...data, invitedCreatorIds: [] });
+        actions.updateRequest(id, { ...data, dueDate: dueDateFor(form.deadlineDays), invitedCreatorIds: [] });
         actions.publishDraft(id);
         data.invitedCreatorIds.forEach((creatorId) => actions.inviteToRequest(id, creatorId));
       } else {
         id = actions.createRequest({ ...data, status: "open" });
+        actions.saveOrderDraft("custom", null);
       }
       setPostedId(id);
       setPhase("done");
@@ -303,7 +311,7 @@ function Flow({ init }: { init: Init }) {
       return;
     }
     // Entering the budget step for the first time: start from what creators usually charge.
-    if (step + 1 === 2 && !form.budgetTouched && market.count >= 3) {
+    if (step + 1 === 2 && !form.budgetTouched && market.quoted >= 3) {
       setForm((f) => ({ ...f, perVideo: { min: market.low, max: Math.max(market.low, market.high) } }));
     }
     goTo(step + 1);
@@ -311,22 +319,30 @@ function Flow({ init }: { init: Init }) {
 
   const saveAsDraft = () => {
     if (busy) return;
-    if (!product || !form.format) {
-      toast({ message: "Pick a product and a format first, then you can save it as a draft.", tone: "info" });
+    if (!product || (!isAdCopyForm(form) && !form.format)) {
+      toast({
+        message: isAdCopyForm(form)
+          ? "Pick a product first, then you can save it as a draft."
+          : "Pick a product and a format first, then you can save it as a draft.",
+        tone: "info",
+      });
       return;
     }
     setPhase("leaving");
     const data = formToRequest(form, product);
-    if (init.mode === "draft" && init.draftId) actions.updateRequest(init.draftId, data);
-    else actions.createRequest({ ...data, title: data.title || "Untitled order", status: "draft" });
+    if (init.mode === "draft" && init.draftId) actions.updateRequest(init.draftId, { ...data, dueDate: dueDateFor(form.deadlineDays) });
+    else {
+      actions.createRequest({ ...data, title: data.title || "Untitled custom order", status: "draft" });
+      actions.saveOrderDraft("custom", null);
+    }
     toast({ message: "Saved to your drafts. Pick it up any time from Orders." });
     router.push(paths.orders());
   };
 
   const startOver = () => {
-    const previous = me.draft(s);
+    const previous = savedDraft(s);
     const snapshot = { form, step, maxStep, banner };
-    actions.saveRequestDraft(null);
+    actions.saveOrderDraft("custom", null);
     const paramProduct = products.find((p) => p.id === init.paramProductId);
     setForm(defaultForm(paramProduct ?? (products.length === 1 ? products[0] : undefined)));
     setStep(paramProduct ? 1 : 0);
@@ -340,7 +356,7 @@ function Flow({ init }: { init: Init }) {
       action: {
         label: "Undo",
         onClick: () => {
-          if (previous) actions.saveRequestDraft(withoutStamp(previous));
+          if (previous) actions.saveOrderDraft("custom", { data: previous.data, title: previous.title, step: previous.step });
           setForm(snapshot.form);
           setStep(snapshot.step);
           setMaxStep(snapshot.maxStep);
@@ -352,12 +368,12 @@ function Flow({ init }: { init: Init }) {
   };
 
   const resume = () => {
-    const draft = me.draft(s);
+    const draft = savedDraft(s);
     if (!draft) return;
-    const restoredStep = Math.min(Math.max(0, draft.step), LAST);
-    setForm(formFromDraft(s, draft));
-    setStep(restoredStep);
-    setMaxStep(restoredStep);
+    const restored = fromDraft(draft);
+    setForm(restored.form);
+    setStep(restored.step);
+    setMaxStep(restored.step);
     setBanner({ kind: "restored", at: draft.savedAt });
     setDirty(false);
     setSaveState("saved");
@@ -369,15 +385,15 @@ function Flow({ init }: { init: Init }) {
   }
 
   const props: StepProps = { s, form, set, product, products, market, error, goTo, pinnedInvites: init.form.invitedCreatorIds };
-  const savedDraft = me.draft(s);
+  const draftNow = savedDraft(s);
   const savedLabel =
     saveState === "saving"
       ? "Saving…"
       : saveState === "saved"
         ? init.mode === "draft"
           ? "Saved to drafts"
-          : savedDraft
-            ? `Draft saved ${timeOf(savedDraft.savedAt)}`
+          : draftNow
+            ? `Draft saved ${timeOf(draftNow.savedAt)}`
             : "Draft saved"
         : "Saves as you go";
   const firstError = Object.values(stepErrors)[0];
@@ -397,7 +413,7 @@ function Flow({ init }: { init: Init }) {
         {banner.kind === "restored"
           ? `Picked up your draft from ${timeOf(banner.at)}.`
           : banner.kind === "available"
-            ? `You have an unfinished order from ${timeOf(banner.at)}. Carrying on here replaces it.`
+            ? `You have an unfinished custom order from ${timeOf(banner.at)}. Carrying on here replaces it.`
             : `Starting from “${banner.title}”. Change anything before you post.`}
       </p>
       {banner.kind === "restored" ? (
@@ -419,7 +435,7 @@ function Flow({ init }: { init: Init }) {
 
   return (
     <FlowFrame
-      flowName="Get pitches"
+      flowName="Custom order"
       closeHref={init.mode === "draft" ? paths.orders() : paths.newOrder()}
       closeLabel="Close. Your progress is saved."
       steps={STEPS}
@@ -458,7 +474,7 @@ function Flow({ init }: { init: Init }) {
       }
     >
       {step === 0 ? <ProductStep {...props} /> : null}
-      {step === 1 ? <VideoStep {...props} /> : null}
+      {step === 1 ? <WorkStep {...props} /> : null}
       {step === 2 ? <TermsStep {...props} /> : null}
       {step === 3 ? <ReviewStep {...props} /> : null}
     </FlowFrame>
@@ -482,7 +498,7 @@ function NextSteps({ invited, typicalHours }: { invited: number; typicalHours?: 
       body: `Each one has a hook idea, a price and samples${typicalHours ? `. Creators who match usually reply within ${plural(typicalHours, "hour")}` : ""}${invited === 1 ? ". The creator you invited hears first" : invited > 1 ? `. The ${plural(invited, "creator")} you invited hear first` : ""}.`,
     },
     { title: "We let you know", body: "You get a notification for every pitch, so there's nothing to check." },
-    { title: "Compare and hire", body: "Shortlist, compare side by side and hire one. Payment is held only when you hire." },
+    { title: "Compare and hire", body: "Shortlist, compare side by side and hire one. You pay the price you agree on, held from the hire until you approve." },
   ];
   return (
     <ol className="flex flex-col gap-4">
@@ -513,6 +529,7 @@ function Posted({ requestId, form, typicalHours }: { requestId: string; form: Pi
   const invitedIds = request?.invitedCreatorIds ?? form.invitedCreatorIds;
   return (
     <SuccessScreen
+      icon={<CircleCheck size={28} aria-hidden />}
       title="Your order is live"
       lead={`“${request?.title ?? effectiveTitle(form, product)}” is open for pitches.`}
       primary={

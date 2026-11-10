@@ -217,7 +217,7 @@ function Form({ initial, onSaved }: { initial: BillingDetails; onSaved: () => vo
           />
           <TextField
             label="Tax ID"
-            hint="Your business or sales tax number (an EIN, a GST/HST number or a VAT number). Add it to claim back tax on the service fee."
+            hint="Your business or sales tax number (an EIN, a GST/HST number or a VAT number). It's printed on every receipt so you can claim back sales tax."
             value={form.vat}
             onChange={(event) => set("vat", event.target.value)}
             onBlur={blur("vat")}
