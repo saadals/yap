@@ -160,7 +160,8 @@ function WaysToOrder() {
     {
       icon: <Megaphone size={20} />,
       title: "Run a UGC campaign",
-      body: `${campaign.minVideos} or more creators each make a video and post it on their own account.`,
+      // The price line below is where a visitor first meets the word: say what one Yapp is.
+      body: `${campaign.minVideos} or more creators each make a video and post it on their own account. A Yapp is one creator's video.`,
       price: `You set the price, from ${money(campaign.fromPrice)} a Yapp`,
       facts: ["The follower tier decides who can pick", "Every post checked for your tag and the label"],
       cta: { label: "Start a campaign", href: paths.signIn({ intent: "order", next: paths.newOrder({ type: "campaign" }) }) },

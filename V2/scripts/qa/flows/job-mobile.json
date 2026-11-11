@@ -6,7 +6,7 @@
   "steps": [
     { "go": "/jobs/c-201", "after": 4000 },
     { "text": "Review version 1 from Layla" },
-    { "text": "Approve and release $300" },
+    { "text": "Approve · $300" },
     {
       "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
     },
@@ -24,7 +24,7 @@
     {
       "eval": "document.documentElement.scrollWidth <= innerWidth ? 'no horizontal scroll' : 'HORIZONTAL SCROLL ' + document.documentElement.scrollWidth"
     },
-    { "click": "Request changes (4)" },
+    { "click": "Request changes" },
     { "text": "Send 4 comments to Layla" },
     { "text": "4 of 4" },
     { "eval": "[...document.querySelectorAll('[role=dialog] label')].find((l) => l.innerText.includes('Love this opening'))?.click() ?? 'unticked'" },

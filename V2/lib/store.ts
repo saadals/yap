@@ -1536,7 +1536,8 @@ const liveActions = {
         { businessId: request.businessId },
         "pitch",
         `${nameOfCreator(s, creatorId)} pitched on "${request.title}" for ${money(input.price)}`,
-        paths.order(request.id),
+        // V2: open the pitch itself; the board may open on the shortlist, where a new pitch isn't.
+        paths.order(request.id, { pitch: pitch.id }),
       );
       return next;
     });

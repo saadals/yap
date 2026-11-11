@@ -28,7 +28,7 @@ import { Sheet } from "@/components/ui/sheet";
 import { useToast } from "@/components/ui/toast";
 import { urgentCount } from "@/lib/attention";
 import { money, plural } from "@/lib/format";
-import { defaultMode, homeFor, rememberMode, sideForMode, type Mode } from "@/lib/mode";
+import { defaultMode, homeFor, modeLabel, rememberMode, sideForMode, type Mode } from "@/lib/mode";
 import { paths } from "@/lib/paths";
 import { usePrefs } from "@/lib/prefs";
 import { me } from "@/lib/selectors";
@@ -64,6 +64,22 @@ export function useSwitchMode() {
   return (to: Mode) => {
     rememberMode(s.activeAccountId, to);
     router.push(homeFor(to));
+  };
+}
+
+/**
+ * What is waiting in the mode you're not in (tiers 0 and 1 of `attention()`), as a count and the
+ * words for it. The switch itself lives in the account menu; the count shows on the desktop avatar
+ * and as a dot on the phone's Me tab.
+ */
+export function useOtherModeWaiting(mode: Mode) {
+  const s = useDemo();
+  const other = switchCopy[mode].to;
+  const count = urgentCount(s, sideForMode[other]);
+  return {
+    count,
+    /** "2 things need you in Studio" (empty when nothing waits). */
+    text: count ? `${plural(count, "thing needs", "things need")} you in ${modeLabel[other]}` : "",
   };
 }
 

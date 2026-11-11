@@ -125,29 +125,25 @@ function BusinessReview({ job }: { job: Job }) {
   const auto = autoApproveDate(c);
   const delivery = selected ?? latest;
   if (!delivery || !latest) return null;
-  const mine = openComments(latest).filter((m) => m.author === "business").length;
   const left = revisionsLeft(c);
   const onLatest = delivery.id === latest.id;
 
+  // Approve and Request changes sit together in the header (desktop) and the phone bar; what's left
+  // here is the revisions count as a quiet line, and Reject for a campaign slot.
   const footer = onLatest ? (
-    <div className="flex flex-col gap-3 border-t border-(--b-line) pt-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <PillButton variant="outline" onClick={() => job.openSheet("requestChanges")}>
-          Request changes{mine ? ` (${mine})` : ""}
-        </PillButton>
-        {slot ? (
-          <PillButton variant="ghost" onClick={() => job.openSheet("reject")}>
-            Reject
-          </PillButton>
-        ) : null}
-      </div>
-      <p className="y-micro y-fg-2">
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-(--b-line) pt-4">
+      <p className="y-micro y-fg-2 min-w-0 flex-1 basis-[24ch]">
         {left > 0
           ? `${plural(left, "revision")} left of ${c.revisionsIncluded}.`
           : slot
             ? "You've used the included revisions. You can still ask, or reject it to free the slot."
             : `You've used the ${plural(c.revisionsIncluded, "included revision")}. You can approve, agree a paid extra revision, or open a dispute.`}
       </p>
+      {slot ? (
+        <PillButton variant="ghost" size="sm" onClick={() => job.openSheet("reject")}>
+          Reject
+        </PillButton>
+      ) : null}
     </div>
   ) : null;
 

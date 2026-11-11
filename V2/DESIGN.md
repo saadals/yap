@@ -43,8 +43,9 @@ tones, writing, accessibility). Where the two differ, this file wins inside V2.
 | Buttons (`PillButton` sm / md / lg) | 34 / 40 / 48 (44 / 40 min on touch) | 40 / 48 / 56 |
 | Inputs | 44 (48 on touch), radius 12 | 48, radius 14 |
 | Card radius / tile / sheet | 20 / 14 / 24 | 28 / 18 / 30 |
-| Content width | 1200px (`Page`), narrow 760, full 1440 (browsing grids) | 1360 / 880 |
+| Content width | 1200px (`Page`), narrow 760. Every page, Discover included, shares the header's 1200px column | 1360 / 880 |
 | Header | full-width glass bar, 60px (`.y-header`) | floating pill, 64px |
+| Phone tab bar | five fixed slots, icon over a label on every tab, 60px (`--y-bar-h`) | six tabs, label on the active one |
 
 Big numbers (money, KPIs) stay light: `y-display y-num` renders at 400 (V1 rule). Use them sparingly:
 one per card at most.
@@ -65,11 +66,16 @@ Pick one per page:
   (back link, title, one meta line, status chip, the one next action), a main column, and on
   desktop a sticky 340px side rail (`.y-rail`) with money, dates and details. On phones the rail
   content moves below or into a sheet, and the next action sits in a sticky bottom bar
-  (`.y-bar`, glass).
+  (`.y-bar`, glass). **One bottom bar per phone screen:** a page with an action bar has no tab
+  bar. Pass `<AppShell detail back={{ href, label }}>`: the tab bar goes, the phone header shows
+  the back link in place of the logo (give the page's own back link the class `y-backlink` so
+  phones don't show two), and the bar uses `bottom: var(--y-bar-bottom)` with no spacer.
 - **Focused flow** (`/orders/new`, `/creators/[handle]/order`, `/onboarding`, sign-in): `<AppShell
-  focus>` (no tab bar), narrow column, a step indicator, one question per step, a sticky bottom
-  bar with Back and Continue, and a live preview on desktop.
-- **Full screen** (`/discover/watch`): `<AppShell fullscreen>`, the vertical video viewer.
+  focus>` (no tab bar; the header shows only the logo, plus the avatar on desktop), a step
+  indicator, one question per step, and a live preview on desktop. The bottom bar spans the page:
+  Back at its left edge, Continue at its right. Continue is never dimmed; a click with something
+  missing shows what is missing.
+- **Full screen** (`/discover/watch`): `<AppShell fullscreen detail>`, the vertical video viewer.
 - **Marketing** (`/`, `/how-it-works`, `/for-creators`, `/legal`): `PublicShell`, marketing type
   scale, generous spacing, the dark footer.
 
@@ -106,12 +112,17 @@ the lead. Build what you need in your own feature folder (a local row, a local c
 component has a bug or truly needs a new prop, keep the change small and backward-compatible and
 mention it in your report.
 
-## Status chips (unchanged from V1)
+## Status chips
 
 Five looks, always icon + label: `neutral` waiting on someone else, `active` moving, `success`
 done, `warning` needs your attention, `danger` negative or closed. The side that has to act sees
 "needs attention" (warning); the other side sees "waiting" (neutral). Labels and tones live in
 `lib/taxonomy.tsx` (`commissionStatus`, `requestStatus`, `pitchStatus`).
+
+In V2 the `active` look is drawn like `neutral` (grey, with its icon), so a list of work in
+progress doesn't compete with the one green action. This is a V2-only deviation from round 3
+answers item 51, decided by the owner on 10 Nov 2026 and waiting on the sender; the tones stay
+separate in the taxonomy and one CSS rule in `app/globals.css` restores the mint.
 
 ## Writing
 

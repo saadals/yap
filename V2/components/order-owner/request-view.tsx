@@ -38,7 +38,7 @@ import type { ContentRequest, Video } from "@/lib/types";
 
 import { CompareView } from "./compare";
 import { HireSheet } from "./hire-sheet";
-import { BarSpacer, MetaLine, MobileBar, OverflowMenu, RailSection, type MenuItem } from "./parts";
+import { MetaLine, MobileBar, OverflowMenu, RailSection, type MenuItem } from "./parts";
 import { PitchCard } from "./pitch-card";
 import { MessageSheet, PitchSheet, SampleSheet } from "./pitch-sheet";
 import { BriefExtras, BriefSheet, CloseRequestSheet, DeleteDraftSheet, EditRequestSheet, InviteSheet } from "./request-sheets";
@@ -56,6 +56,9 @@ import {
 } from "./shared";
 
 type Tab = "new" | "shortlist" | "all" | "declined";
+const TABS: readonly Tab[] = ["new", "shortlist", "all", "declined"];
+/** `?tab=new` (and the others) from a link; anything else is ignored. */
+const asTab = (value: string | null): Tab | null => (TABS as readonly string[]).includes(value ?? "") ? (value as Tab) : null;
 
 /** What's on top of the page: one sheet at a time; closing one returns to the one under it. */
 type Overlay =
@@ -71,7 +74,8 @@ type Overlay =
  * held payment (the pitch's listed price, nothing on top). Works for both job types: video, and
  * ad copy writing (written pitches, no video facts). The header says once when the order closes
  * and the delivery deadline the brand set. Side rail: the brief, the product and its learnings,
- * who can pitch. `?pitch=<id>` opens that pitch (Home's "Decide on Nina's pitch").
+ * who can pitch. `?pitch=<id>` opens that pitch (Home's "Decide on Nina's pitch") over the tab
+ * that holds it; `?tab=new` (or shortlist, all, declined) opens that tab.
  */
 export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const s = useDemo();
@@ -79,6 +83,7 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const router = useRouter();
   const search = useSearchParams();
   const urlPitch = search.get("pitch");
+  const urlTab = asTab(search.get("tab"));
 
   const product = productById(s, request.brief.productId);
   const pitches = pitchesForRequest(s, request.id);
@@ -87,6 +92,12 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const canHire = request.status === "open";
 
   const [tabChoice, setTabChoice] = useState<Tab | null>(null);
+  // Decided once per visit: a board that opens with a shortlist (and nobody hired) starts on the
+  // Shortlist, where the header's Hire / Compare points. Fixed for the visit so starring a pitch on
+  // New doesn't move you, and un-starring the last one doesn't jump you away.
+  const [startOnShortlist] = useState(
+    () => canHire && pitches.some((p) => p.status === "shortlisted") && !pitches.some((p) => p.status === "hired"),
+  );
   const [sort, setSort] = useState<PitchSort>("fit");
   const [comparing, setComparing] = useState(false);
   // Pitches you open, star or decline during this visit stay in "New" until you leave, so cards
@@ -117,6 +128,8 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
   const pop = () => {
     if (stack === null && fromUrl) {
       keep(fromUrl);
+      // Stay on the tab the board showed behind the pitch once the address loses `?pitch`.
+      setTabChoice((current) => current ?? tab);
       router.replace(paths.order(request.id), { scroll: false });
     }
     setStack(overlays.slice(0, -1));
@@ -131,8 +144,26 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
     all: ranked.length,
     declined: ranked.filter((r) => r.pitch.status === "declined").length,
   };
-  // Start on what needs reading; once someone is hired (or hiring is closed), on everything.
-  const tab: Tab = tabChoice ?? (canHire && counts.new > 0 && !ranked.some((r) => r.pitch.status === "hired") ? "new" : "all");
+  // Where the board opens: a tab you picked (or `?tab=`); behind a deep-linked pitch, the tab that
+  // holds it; with a shortlist, the Shortlist; else what needs reading; once someone is hired (or
+  // hiring is closed), everything.
+  const fromItem = fromUrl ? ranked.find((r) => r.pitch.id === fromUrl) : undefined;
+  const tab: Tab =
+    tabChoice ??
+    urlTab ??
+    (fromItem
+      ? isNew(fromItem)
+        ? "new"
+        : fromItem.pitch.status === "shortlisted"
+          ? "shortlist"
+          : fromItem.pitch.status === "declined"
+            ? "declined"
+            : "all"
+      : startOnShortlist
+        ? "shortlist"
+        : canHire && counts.new > 0 && !ranked.some((r) => r.pitch.status === "hired")
+          ? "new"
+          : "all");
   const shown = sortPitches(
     ranked.filter((r) =>
       tab === "new"
@@ -273,14 +304,20 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
           : null
       : null;
 
+  // On the Shortlist tab the cards, the tab's count and the header already say who's on it: the
+  // hint only says how to add one (an empty Shortlist explains itself).
   const hint =
     !canHire || hired.length
       ? null
-      : shortlist.length === 0
-        ? "Star the pitches you like. With two or more, you can compare them side by side."
-        : shortlist.length === 1
-          ? "Star one more to compare them side by side."
-          : `${plural(shortlist.length, "pitch", "pitches")} on your shortlist.`;
+      : tab === "shortlist"
+        ? shortlist.length === 1
+          ? "Star one more to compare them side by side: the other pitches are in New and All."
+          : null
+        : shortlist.length === 0
+          ? "Star the pitches you like. With two or more, you can compare them side by side."
+          : shortlist.length === 1
+            ? "Star one more to compare them side by side."
+            : `${plural(shortlist.length, "pitch", "pitches")} on your shortlist.`;
 
   return (
     <Page>
@@ -512,15 +549,12 @@ export function RequestOwnerView({ request }: { request: ContentRequest }) {
       </div>
 
       {boardStep ? (
-        <>
-          <BarSpacer />
-          <MobileBar label="Next step">
-            <p className="y-small min-w-0 flex-1 truncate font-medium">{boardStep.short}</p>
-            <PillButton variant="neon" onClick={boardStep.onClick}>
-              {boardStep.cta}
-            </PillButton>
-          </MobileBar>
-        </>
+        <MobileBar label="Next step">
+          <p className="y-small min-w-0 flex-1 truncate font-medium">{boardStep.short}</p>
+          <PillButton variant="neon" onClick={boardStep.onClick}>
+            {boardStep.cta}
+          </PillButton>
+        </MobileBar>
       ) : null}
 
       {/* Sheets: one at a time, mounted only while open */}

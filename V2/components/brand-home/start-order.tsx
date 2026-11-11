@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useId, useState } from "react";
 
 import { Block } from "@/components/ui/block";
+import { List } from "@/components/ui/list";
 import { plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import { me } from "@/lib/selectors";
@@ -27,10 +28,42 @@ export function myProducts(s: DemoState): Product[] {
 }
 
 /**
- * Start an order: three ways to work, in plain words, with the product the brief starts from.
- * When nothing needs you, the custom order carries the screen's one green action.
+ * Start an order. When nothing needs you (or the account is new) it is the full card: three ways
+ * to work, in plain words, with the product the brief starts from, and the custom order carries
+ * the screen's one green action. Otherwise it is one quiet row into the chooser (the header has
+ * "New order" too, so the page doesn't offer it a third time).
  */
 export function StartOrder({ highlight }: { highlight: boolean }) {
+  return highlight ? <StartOrderCard /> : <StartOrderRow />;
+}
+
+/** One row into the chooser, starting from the product with the most orders. */
+function StartOrderRow() {
+  const s = useDemo();
+  const product = myProducts(s)[0];
+  const learnings = product?.learnings.length ?? 0;
+  return (
+    <List label="Start an order">
+      <RowLink
+        href={paths.newOrder({ product: product?.id })}
+        lead={
+          <IconTile>
+            <Plus size={18} />
+          </IconTile>
+        }
+        title="Start an order"
+        meta={
+          product
+            ? `For ${product.name}${learnings ? ` · ${plural(learnings, "learning")} carried forward` : ""}`
+            : "From one creator, a custom order or a UGC campaign"
+        }
+        wrap
+      />
+    </List>
+  );
+}
+
+function StartOrderCard() {
   const s = useDemo();
   const products = myProducts(s);
   const selectId = useId();
@@ -104,7 +137,7 @@ export function StartOrder({ highlight }: { highlight: boolean }) {
       </div>
       <div role="list" aria-label="Ways to order" className="y-list border-t border-(--b-line)">
         {choices.map((choice) => {
-          const green = highlight && choice.key === "pitches";
+          const green = choice.key === "pitches";
           return (
             <RowLink
               key={choice.key}

@@ -18,7 +18,6 @@ import { useRouter } from "next/navigation";
 
 import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Sheet } from "@/components/ui/sheet";
 import { timeAgo } from "@/lib/format";
 import { notificationsFor } from "@/lib/selectors";
 import { actions, useDemo } from "@/lib/store";
@@ -39,9 +38,9 @@ const icons: Record<NotificationKind, React.ReactNode> = {
 };
 
 /**
- * The alerts list as rows (icon, text, time, unread dot) with "Mark all as read": the bell's
- * sheet on desktop, the Inbox's Alerts tab everywhere. `card` puts the rows in one white card
- * (a page); without it they sit straight in the surrounding sheet.
+ * The alerts list as rows (icon, text, time, unread dot) with "Mark all as read": the Inbox's
+ * Alerts tab, the one place for alerts on every screen size (the header has no bell). `card` puts
+ * the rows in one white card (a page); without it they sit straight in the surrounding container.
  */
 export function NotificationList({ onNavigate, card = false }: { onNavigate?: () => void; card?: boolean }) {
   const s = useDemo();
@@ -122,22 +121,5 @@ export function NotificationList({ onNavigate, card = false }: { onNavigate?: ()
         rows
       )}
     </div>
-  );
-}
-
-export function NotificationsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const s = useDemo();
-  const unread = notificationsFor(s).filter((n) => n.unread).length;
-
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      title="Notifications"
-      description={unread ? `${unread} unread` : "You're all caught up"}
-      width="sm"
-    >
-      <NotificationList onNavigate={onClose} />
-    </Sheet>
   );
 }

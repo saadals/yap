@@ -151,28 +151,33 @@ export function StepIndicator({
 }
 
 /**
- * Glass bar fixed to the bottom edge. `flow`: content lines up with a flow's main column;
- * `narrow`: with a 760px page; `wide`: with the 1200px page (checkout).
+ * Glass bar fixed to the bottom edge. Its content spans the page's whole column, so Back sits at
+ * the page's start edge and Continue at its end edge: `flow` and `wide` line up with the 1200px
+ * page (a flow's main column and preview together; the checkout), `narrow` with a 760px page.
+ * Children sit in one row that may wrap (FlowActions puts its phone hint on a line of its own).
  */
 export function FlowBar({ children, width = "flow" }: { children: React.ReactNode; width?: "flow" | "narrow" | "wide" }) {
   return (
     <div className="y-bar fixed inset-x-0 bottom-0 z-40 !rounded-none !border-x-0 !border-b-0 pb-[env(safe-area-inset-bottom)]">
       <div
-        className={`mx-auto grid grid-cols-1 gap-6 px-(--y-gutter) py-3 ${
-          width === "narrow"
-            ? "max-w-[calc(760px+var(--y-gutter)*2)]"
-            : "max-w-[calc(1200px+var(--y-gutter)*2)] lg:grid-cols-12"
+        className={`mx-auto flex min-w-0 flex-wrap items-center gap-x-2 px-(--y-gutter) py-3 md:flex-nowrap ${
+          width === "narrow" ? "max-w-[calc(760px+var(--y-gutter)*2)]" : "max-w-[calc(1200px+var(--y-gutter)*2)]"
         }`}
       >
-        <div className={`flex min-w-0 items-center gap-2 ${width === "flow" ? "lg:col-span-7" : width === "wide" ? "lg:col-span-12" : ""}`}>
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );
 }
 
-/** Back (round on phones, labelled on desktop), a hint, and the one green Continue. */
+/**
+ * Back (round on phones, labelled on desktop), a hint, and the one green Continue.
+ *
+ * Continue is always at full strength: pressing it with something missing is how the step shows
+ * its errors and moves focus to the first one, so it never looks disabled (only `busy` dims it).
+ * The hint sits beside Continue on wider screens; on phones it shows only when it says what's
+ * missing (`blocked`), as a line of its own above the buttons. It is one live region for both.
+ */
 export function FlowActions({
   backLabel,
   onBack,
@@ -225,7 +230,13 @@ export function FlowActions({
           </button>
         </>
       ) : null}
-      <div className="y-small y-fg-2 hidden min-w-0 flex-1 truncate px-2 text-end md:block" aria-live="polite">
+      {/* Phones: first in the wrapped row, full width, up to two lines, and no height while empty. */}
+      <div
+        className={`y-small min-w-0 max-md:order-first max-md:basis-full max-md:line-clamp-2 max-md:[&:not(:empty)]:mb-2 md:flex-1 md:truncate md:px-2 md:text-end ${
+          blocked ? "font-medium text-(--y-danger)" : "y-fg-2 max-md:hidden"
+        }`}
+        aria-live="polite"
+      >
         {hint}
       </div>
       {secondary}
@@ -235,7 +246,7 @@ export function FlowActions({
         data-variant="neon"
         data-arrow="true"
         data-size="lg"
-        aria-disabled={blocked || busy ? "true" : undefined}
+        aria-disabled={busy ? "true" : undefined}
         onClick={onContinue}
       >
         <span className="min-w-0 truncate">

@@ -107,11 +107,82 @@
     }
   }
 
-  /* --------------------------------------------- phone action bar (above the tab bar) */
+  /* "Not interested" (eye-off): with a mouse, only on row hover or keyboard focus inside the row
+     (it stays in the DOM and in the tab order); on touch, not in the row at all (the order page's
+     ⋯ menu has it), and neither is the spacer that lines prices up with it. */
+  @media (hover: hover) and (pointer: fine) {
+    .yapp .sw-workrow .sw-hide {
+      opacity: 0;
+      transition: opacity var(--y-dur-1) var(--y-ease);
+    }
+    .yapp .sw-workrow:hover .sw-hide,
+    .yapp .sw-workrow:focus-within .sw-hide {
+      opacity: 1;
+    }
+  }
+  @media (hover: none), (pointer: coarse) {
+    .yapp .sw-workrow .sw-hide,
+    .yapp .sw-workrow .sw-hide-slot {
+      display: none !important;
+    }
+  }
+
+  /* ------------------------------------------- phones: one Filters button beside the sort */
+  .yapp .sw-filterbtn {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+    min-height: 36px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    box-shadow: inset 0 0 0 1px var(--y-line-strong);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--y-dur-1) var(--y-ease),
+      box-shadow var(--y-dur-1) var(--y-ease);
+  }
+  .yapp .sw-filterbtn:hover {
+    box-shadow: inset 0 0 0 1px var(--y-ink-2);
+  }
+  .yapp .sw-filterbtn:focus-visible {
+    outline: 2px solid var(--y-ink);
+    outline-offset: 2px;
+  }
+  .yapp .sw-filterbtn[data-set="true"] {
+    background: var(--y-ink);
+    color: var(--y-paper);
+    box-shadow: none;
+  }
+  .yapp .sw-filterbtn .sw-count {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding-inline: 6px;
+    border-radius: 999px;
+    background: var(--y-paper);
+    color: var(--y-ink);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  @media (pointer: coarse) {
+    .yapp .sw-filterbtn {
+      min-height: 44px;
+    }
+  }
+
+  /* --------------------------------------------- phone action bar (the order page has no tab bar) */
   .yapp .sw-actionbar {
     position: fixed;
     inset-inline: 12px;
-    bottom: calc(env(safe-area-inset-bottom) + 10px + var(--y-bar-h) + 10px);
+    bottom: var(--y-bar-bottom);
     z-index: 45;
     display: flex;
     align-items: center;
@@ -124,15 +195,6 @@
   @media (min-width: 1024px) {
     .yapp .sw-actionbar {
       display: none;
-    }
-  }
-  /* Room under the page for the bar, on top of the tab bar's own padding. */
-  .yapp .sw-has-bar {
-    padding-bottom: 76px;
-  }
-  @media (min-width: 1024px) {
-    .yapp .sw-has-bar {
-      padding-bottom: 0;
     }
   }
 

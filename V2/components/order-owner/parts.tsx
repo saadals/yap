@@ -343,26 +343,21 @@ export function RailSection({ title, children, action }: { title: string; childr
 }
 
 /* -------------------------------------------------------------------------- */
-/* Phones: the next step in a sticky glass bar above the tab bar               */
+/* Phones: the next step in a sticky glass bar at the bottom edge              */
 /* -------------------------------------------------------------------------- */
 
 /**
- * The order's single next action on phones, floating above the tab bar. Renders nothing on
- * desktop (the header carries it there). Leave room for it with <BarSpacer />.
+ * The order's single next action on phones, floating at the bottom edge (the order page is an
+ * AppShell `detail` page: no tab bar, and the shell leaves room for one bar). Renders nothing on
+ * desktop (the header carries it there).
  */
 export function MobileBar({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <div
-      role="region"
-      aria-label={label}
-      className="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+10px+var(--y-bar-h)+10px)] z-40 lg:hidden"
-    >
+    <div role="region" aria-label={label} className="fixed inset-x-3 bottom-(--y-bar-bottom) z-40 lg:hidden">
       <div className="y-bar mx-auto flex max-w-md items-center gap-3 rounded-full p-1.5 ps-5">{children}</div>
     </div>
   );
 }
-
-export const BarSpacer = () => <div aria-hidden className="h-20 lg:hidden" />;
 
 /* -------------------------------------------------------------------------- */
 /* Video bits                                                                  */

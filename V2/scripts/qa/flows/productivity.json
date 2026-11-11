@@ -48,7 +48,8 @@
 
     { "go": "/productivity?as=creator", "after": 3000 },
     { "text": "How your orders are going" },
-    { "text": "Switch to Studio" },
+    { "eval": "(() => { document.querySelectorAll('.qa-mode').forEach((e) => e.remove()); const m = document.querySelector('[data-mode]')?.dataset.mode; document.body.insertAdjacentHTML('beforeend', '<p class=qa-mode>qa-mode-' + m + '</p>'); return m; })()" },
+    { "text": "qa-mode-order" },
 
     { "account": "layla" },
     { "go": "/productivity", "after": 3500 },
@@ -61,7 +62,8 @@
     { "text": "Win rate" },
     { "text": "Brands you worked with" },
     { "text": "ready to withdraw" },
-    { "text": "Switch to ordering" },
+    { "eval": "(() => { document.querySelectorAll('.qa-mode').forEach((e) => e.remove()); const m = document.querySelector('[data-mode]')?.dataset.mode; document.body.insertAdjacentHTML('beforeend', '<p class=qa-mode>qa-mode-' + m + '</p>'); return m; })()" },
+    { "text": "qa-mode-studio" },
     { "shot": "productivity-creator", "full": true },
     { "click": "Daftar", "after": 1200 },
     { "text": "Their review time" },
@@ -72,10 +74,12 @@
     { "eval": "location.search.includes('as=brand')" },
     { "text": "Nothing ordered yet" },
     { "text": "Start an order" },
-    { "text": "Switch to Studio" },
+    { "eval": "(() => { document.querySelectorAll('.qa-mode').forEach((e) => e.remove()); const m = document.querySelector('[data-mode]')?.dataset.mode; document.body.insertAdjacentHTML('beforeend', '<p class=qa-mode>qa-mode-' + m + '</p>'); return m; })()" },
+    { "text": "qa-mode-order" },
     { "shot": "productivity-layla-brand" },
     { "click": "See your Studio figures", "after": 2500 },
     { "text": "How your work is going" },
-    { "text": "Switch to ordering" }
+    { "eval": "(() => { document.querySelectorAll('.qa-mode').forEach((e) => e.remove()); const m = document.querySelector('[data-mode]')?.dataset.mode; document.body.insertAdjacentHTML('beforeend', '<p class=qa-mode>qa-mode-' + m + '</p>'); return m; })()" },
+    { "text": "qa-mode-studio" }
   ]
 }

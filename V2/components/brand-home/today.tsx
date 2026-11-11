@@ -1,6 +1,5 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
 import { libraryVideos } from "@/components/library/data";
@@ -11,19 +10,19 @@ import { Page, PageHeader, SectionLabel } from "@/components/ui/page";
 import { Skeleton } from "@/components/ui/skeleton";
 import { attention } from "@/lib/attention";
 import { HOUR, NOW, TIME_ZONE, TZ_OFFSET } from "@/lib/clock";
-import { money, plural } from "@/lib/format";
+import { plural } from "@/lib/format";
 import { paths } from "@/lib/paths";
-import { businessSpend, me } from "@/lib/selectors";
+import { me } from "@/lib/selectors";
 import { useDemo, useHydrated } from "@/lib/store";
 
-import { FiguresLink } from "./figures-link";
 import { LatestVideos } from "./latest-videos";
+import { MoneyCard } from "./money-card";
 import { NeedsYou } from "./needs-you";
 import { orderItems, sortItems } from "./order-items";
 import { OrderRow } from "./order-row";
 import { StartOrder } from "./start-order";
 
-const IN_PROGRESS_ROWS = 5;
+const IN_PROGRESS_ROWS = 3;
 const LATEST_VIDEOS = 5;
 
 /** "Good morning" from the demo clock (Eastern). */
@@ -39,10 +38,11 @@ const today = new Intl.DateTimeFormat("en-US", {
 }).format(NOW);
 
 /**
- * Ordering's Home ("Today"): what needs you, what's in progress, a way to start an order with a
- * quiet line of figures into Productivity under it, and your latest approved videos. Five blocks at
- * most; the one green action is the most urgent thing to do, or starting an order when nothing
- * waits.
+ * Ordering's Home ("Today"): what needs you, a glance at what's in progress (three rows, then all
+ * orders), a side column with the money held and the last 30 days' figures, then a way to start an
+ * order, and your latest approved videos. Five blocks at most; the one green action is the most
+ * urgent thing to do, or starting an order when nothing waits (only then is "Start an order" the
+ * full card; otherwise it is one row, since the header has "New order" too).
  */
 export function BrandToday() {
   const s = useDemo();
@@ -63,7 +63,6 @@ export function BrandToday() {
       .map((item) => ({ ...item, needsYou: false })),
   );
   const allOpen = orderItems(s).filter((item) => item.stage !== "done").length;
-  const held = businessSpend(s).held;
   const videos = libraryVideos(s).slice(0, LATEST_VIDEOS);
 
   const header = (description: string) => (
@@ -98,22 +97,7 @@ export function BrandToday() {
         ) : null}
 
         <section aria-labelledby="progress-title" className="min-w-0 lg:col-start-1">
-          <SectionLabel
-            id="progress-title"
-            className={needs.length ? "" : "!pt-0"}
-            action={
-              held > 0 ? (
-                <Link href={paths.billing} className="y-small y-fg-2 inline-flex items-center gap-1.5 hover:text-(--y-ink)">
-                  <ShieldCheck size={15} aria-hidden />
-                  <span>
-                    <span className="y-num font-medium text-(--y-ink)">{money(held)}</span> held
-                    <span aria-hidden> · </span>
-                    <span className="y-link">Billing</span>
-                  </span>
-                </Link>
-              ) : undefined
-            }
-          >
+          <SectionLabel id="progress-title" className={needs.length ? "" : "!pt-0"}>
             In progress
           </SectionLabel>
           {inProgress.length ? (
@@ -135,12 +119,12 @@ export function BrandToday() {
         </section>
 
         <aside
-          aria-label="Start an order"
+          aria-label="Money and new orders"
           className="min-w-0 pt-8 lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start lg:pt-[34px]"
         >
           <div className="flex flex-col gap-3 lg:sticky lg:top-[calc(var(--y-header-h)+16px)]">
+            <MoneyCard />
             <StartOrder highlight={needs.length === 0} />
-            <FiguresLink />
           </div>
         </aside>
 

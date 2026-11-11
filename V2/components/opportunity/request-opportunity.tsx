@@ -236,10 +236,10 @@ export function RequestOpportunity({ request }: { request: ContentRequest }) {
   );
 
   return (
-    <Page className={isOpen || job ? "sw-has-bar" : ""}>
+    <Page>
       <Link
         href={paths.findWork()}
-        className="y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
+        className="y-backlink y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
       >
         <ArrowLeft size={16} aria-hidden className="y-flip" />
         Find work

@@ -1,6 +1,6 @@
 "use client";
 
-import { CircleCheckBig, Hourglass, MessagesSquare, Plus, Search, X } from "lucide-react";
+import { CircleCheckBig, Hourglass, MessagesSquare, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -46,12 +46,6 @@ export function OrdersPage() {
     <PageHeader
       title="Orders"
       description="Everything you ordered, from the first pitch to the approved video."
-      actions={
-        // Desktop has "New order" in the header; phones get it here, with a label.
-        <PillButton href={paths.newOrder()} variant="contrast" icon={<Plus size={18} aria-hidden />} className="lg:hidden">
-          New order
-        </PillButton>
-      }
     />
   );
 

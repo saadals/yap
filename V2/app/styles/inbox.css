@@ -3,7 +3,7 @@
 
 @layer components {
   /* Desktop: one white card, list 360px + conversation. Phones: the list as a card; an open
-     conversation fills the screen under the header (the tab bar hides, see <AppShell focus>). */
+     conversation fills the screen under the header (the tab bar hides, see <AppShell detail>). */
   .yapp .y-inbox {
     display: flex;
     flex-direction: column;

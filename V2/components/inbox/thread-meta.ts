@@ -56,6 +56,7 @@ export type ThreadContext = {
   href: string;
   /** "App demo", or "UGC campaign". */
   kind: string;
+  /** The order's title: the job's or the custom order's, the campaign's for a slot. Rows lead with it. */
   title: string;
   status: string;
   /** "Open job" / "Open order". */
@@ -65,10 +66,11 @@ export type ThreadContext = {
 export function threadContext(s: DemoState, side: Role, thread: Thread): ThreadContext | null {
   const commission = thread.commissionId ? commissionById(s, thread.commissionId) : undefined;
   if (commission) {
+    const campaign = commission.source === "campaign" && commission.requestId ? requestById(s, commission.requestId) : undefined;
     return {
       href: paths.job(commission.id),
       kind: commission.source === "campaign" ? "UGC campaign" : (formatById[commission.brief.format]?.name ?? "Video"),
-      title: commission.title,
+      title: campaign?.title ?? commission.title,
       status:
         commission.source === "campaign"
           ? slotStatus(commission, side).label
@@ -97,4 +99,16 @@ export function threadContext(s: DemoState, side: Role, thread: Thread): ThreadC
     status: pitch ? `Pitch ${pitchStatus[pitch.status].label.toLowerCase()}` : requestLabel,
     linkLabel: "Open order",
   };
+}
+
+/**
+ * What a thread row and the conversation header say a conversation is about, title first: the
+ * order's title, then its kind ("App demo", "UGC campaign"), left out when the title already starts
+ * with it ("App demo: invoice on WhatsApp…"). Threads without an order fall back to their subject.
+ */
+export function threadAbout(context: ThreadContext | null, thread: Thread): { title: string; kind?: string } {
+  const title = context?.title ?? thread.subject;
+  const kind = context?.kind;
+  if (!kind || title.toLowerCase().startsWith(kind.toLowerCase())) return { title };
+  return { title, kind };
 }

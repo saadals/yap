@@ -672,9 +672,14 @@ function FilledSlot({
   request: CampaignRequest;
   onRemove: (commissionId: string) => void;
 }) {
-  // Where this creator posts (chosen when picking) and the brand account to tag there.
+  // Where this creator posts (chosen when picking) and the brand account to tag there. Only worth
+  // a line when the campaign runs on more than one platform: with one, the header line and the
+  // rail already say it.
   const platform = slotPlatform(c, request);
-  const postsOn = `Posts on ${campaignPlatformById[platform].name} · tags ${brandHandleFor(request.campaign, platform)}`;
+  const postsOn =
+    request.campaign.platforms.length > 1
+      ? `Posts on ${campaignPlatformById[platform].name} · tags ${brandHandleFor(request.campaign, platform)}`
+      : null;
   const postUrl = c.post?.status === "live" || c.post?.status === "checking" ? c.post.url : undefined;
   const items: MenuItem[] = [
     { label: "Open the job", icon: <ArrowUpRight size={16} aria-hidden />, href: paths.job(c.id) },
@@ -696,7 +701,7 @@ function FilledSlot({
           <span className="sr-only">, slot {slot}</span>
         </Link>
         <span className="y-micro y-fg-2 max-sm:line-clamp-2 sm:truncate">{slotMeta(c)}</span>
-        <span className="y-micro y-fg-2 max-sm:line-clamp-2 sm:truncate">{postsOn}</span>
+        {postsOn ? <span className="y-micro y-fg-2 max-sm:line-clamp-2 sm:truncate">{postsOn}</span> : null}
         <SlotBadge commission={c} side="business" className="relative z-[2] mt-1 w-fit sm:!hidden" />
         {postUrl ? (
           <a

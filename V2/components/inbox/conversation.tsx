@@ -12,11 +12,12 @@ import type { DemoState } from "@/lib/store";
 import type { Role, Thread } from "@/lib/types";
 
 import { Messages } from "./messages";
-import { counterpart, sideLabel, threadContext } from "./thread-meta";
+import { counterpart, sideLabel, threadAbout, threadContext } from "./thread-meta";
 
 /**
- * One open conversation: who it's with, what it's about (with a link to the job or the order),
- * then the messages and the composer. On phones it fills the screen under the header, with Back.
+ * One open conversation: who it's with, what it's about (the order's title, its kind and status,
+ * with a link to the job or the order), then the messages and the composer. On phones it fills the
+ * screen under the header, with Back.
  */
 export function Conversation({
   s,
@@ -34,7 +35,7 @@ export function Conversation({
   const verified = other.kind === "creator" ? other.creator?.verified : other.business?.verified;
   const profileHref = other.kind === "creator" && other.creator ? paths.creator(other.creator.handle) : undefined;
   const context = threadContext(s, side, thread);
-  const line = [showSide ? sideLabel(side) : null, context?.kind, context?.status].filter(Boolean).join(" · ");
+  const about = threadAbout(context, thread);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -64,7 +65,13 @@ export function Conversation({
             )}
             {verified ? <BadgeCheck size={16} role="img" aria-label="Verified" className="flex-none" /> : null}
           </h2>
-          {line ? <p className="y-small y-fg-2 truncate">{line}</p> : null}
+          {/* The order's title first, then its kind (from 640px) and status, on one truncating line. */}
+          <p className="y-small y-fg-2 truncate">
+            {showSide ? `${sideLabel(side)} · ` : ""}
+            {about.title}
+            {about.kind ? <span className="max-sm:hidden"> · {about.kind}</span> : null}
+            {context?.status ? <span> · {context.status}</span> : null}
+          </p>
         </div>
         {context ? (
           <PillButton

@@ -12,17 +12,13 @@ export function Page({
 }: {
   children: React.ReactNode;
   className?: string;
-  /** wide = 1200px app pages, narrow = 760px forms and focused tasks, full = 1440px browsing grids. */
-  width?: "wide" | "narrow" | "full";
+  /** wide = 1200px app pages (the header's column), narrow = 760px forms and focused tasks. */
+  width?: "wide" | "narrow";
 }) {
   return (
     <div
       className={`mx-auto w-full px-(--y-gutter) pt-4 md:pt-8 ${
-        width === "narrow"
-          ? "max-w-[calc(760px+var(--y-gutter)*2)]"
-          : width === "full"
-            ? "max-w-[calc(1440px+var(--y-gutter)*2)]"
-            : "max-w-[calc(1200px+var(--y-gutter)*2)]"
+        width === "narrow" ? "max-w-[calc(760px+var(--y-gutter)*2)]" : "max-w-[calc(1200px+var(--y-gutter)*2)]"
       } ${className}`}
     >
       {children}
@@ -31,7 +27,8 @@ export function Page({
 }
 
 /**
- * Page title row. Use once per page. `back` renders a small back link above the title.
+ * Page title row. Use once per page. `back` renders a small back link above the title (marked
+ * `.y-backlink`: on phones it hides when the shell's header shows the same way back, AppShell `back`).
  * Actions sit on the end side on desktop and wrap below on mobile.
  */
 export function PageHeader({
@@ -55,7 +52,7 @@ export function PageHeader({
         {back ? (
           <Link
             href={back.href}
-            className="y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
+            className="y-backlink y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
           >
             <ArrowLeft size={16} aria-hidden className="y-flip" />
             {back.label}

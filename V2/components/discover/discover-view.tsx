@@ -43,7 +43,7 @@ import {
 export function DiscoverPage() {
   return (
     <BrowseShell>
-      <Page width="full">
+      <Page>
         <Suspense fallback={<DiscoverSkeleton />}>
           <Discover />
         </Suspense>
@@ -98,10 +98,11 @@ function Discover() {
 
   return (
     <div className="flex flex-col">
-      {/* The Watch button stays beside the title on phones too, so creators show sooner. */}
+      {/* The Watch button stays beside the title on phones too, and the description is left out
+          there (it hides below 768px), so creators show sooner. */}
       <div className="flex items-start justify-between gap-3 md:items-end">
         <PageHeader
-          className="!pb-4 min-w-0 flex-1"
+          className="!pb-4 min-w-0 flex-1 max-md:[&_p]:hidden"
           title="Find creators"
           description="Watch their work, then order. Payment is held until you approve."
         />
@@ -192,6 +193,10 @@ function AllTab({
   const chips = activeChips(filters);
   const sheetCount = sheetFilterCount(filters);
   const filtered = chips.length > 0 || filters.format !== null;
+  // The plain total ("16 creators") says nothing on a phone, where it costs a line above the first
+  // tile: there it stays for screen readers only. A count after filtering, "No matches" and the
+  // best-fit order are feedback, so they always show.
+  const quietCount = results.length > 0 && !filtered && !fitProduct;
   const clearAll = () => commit({ ...emptyFilters, sort: filters.sort, product: filters.product });
   const bestFor = products.find((p) => p.id === filters.product) ?? products[0];
   const sortValue = filters.sort === "fit" && fitProduct ? `fit:${fitProduct.id}` : filters.sort === "fit" ? "recommended" : filters.sort;
@@ -316,7 +321,7 @@ function AllTab({
           id="results-heading"
           ref={resultsRef}
           tabIndex={-1}
-          className="y-small y-fg-2 scroll-mt-24 font-medium outline-none"
+          className={`y-small y-fg-2 scroll-mt-24 font-medium outline-none ${quietCount ? "max-md:sr-only" : ""}`}
           aria-live="polite"
         >
           {results.length
@@ -469,7 +474,7 @@ export function DiscoverSkeleton() {
     <div className="flex flex-col gap-4" aria-busy="true" aria-label="Loading creators">
       <div className="flex flex-col gap-2 pb-2" aria-hidden>
         <Skeleton className="h-9 w-56" />
-        <Skeleton className="h-4 w-80 max-w-full" />
+        <Skeleton className="h-4 w-80 max-w-full max-md:hidden" />
       </div>
       <Skeleton className="h-11 w-full max-w-[560px] !rounded-(--y-r-field)" />
       <div className="flex gap-2 overflow-hidden" aria-hidden>

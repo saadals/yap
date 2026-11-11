@@ -21,7 +21,6 @@ import { dueLabel, moneyExact, plural, shortDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
 import {
   businessById,
-  commissionById,
   commissionsForCreator,
   creatorEarnings,
   isActive,
@@ -32,6 +31,7 @@ import { useDemo, useHydrated } from "@/lib/store";
 import { CAMPAIGN_RELEASE_DAYS, FEE_PCT } from "@/lib/taxonomy";
 import type { Commission } from "@/lib/types";
 
+import { ShowMore } from "@/components/brand-home/needs-you";
 import { WorkList, WorkRow } from "@/components/find-work/work-row";
 import { sortItems, workItems } from "@/components/find-work/work-items";
 
@@ -47,9 +47,6 @@ function greeting(): string {
   const hour = new Date(NOW + TZ_OFFSET).getUTCHours();
   return hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
 }
-
-/** A version due within three days (or late) needs you now; later ones are simply in progress. */
-const dueSoon = (c?: Commission) => Boolean(c && dueLabel(c.dueDate).urgency !== "ok");
 
 /**
  * Studio Home ("Today"): what needs you (from `attention()`), money (all net: what you receive after
@@ -83,10 +80,8 @@ export function StudioToday() {
       </>
     );
 
-  const items = attention(s, "creator");
-  const needs = items.filter(
-    (item) => item.kind !== "deliver" || dueSoon(item.commissionId ? commissionById(s, item.commissionId) : undefined),
-  );
+  // A version due later than three days isn't in `attention()` (see `dueSoon`): it's in progress.
+  const needs = attention(s, "creator");
   const listed = new Set(needs.map((n) => n.commissionId).filter(Boolean));
   const inProgress = commissionsForCreator(s).filter((c) => isActive(c) && !listed.has(c.id) && c.status !== "offered");
   const earnings = creatorEarnings(s);
@@ -136,16 +131,7 @@ export function StudioToday() {
                   )}
                 </div>
                 {needs.length > NEEDS_SHOWN ? (
-                  <div className="border-t border-(--b-line) px-5 py-2">
-                    <button
-                      type="button"
-                      className="y-small min-h-10 font-semibold"
-                      onClick={() => setShowAll((v) => !v)}
-                      aria-expanded={showAll}
-                    >
-                      {showAll ? "Show fewer" : `Show ${plural(needs.length - NEEDS_SHOWN, "more item")}`}
-                    </button>
-                  </div>
+                  <ShowMore more={needs.length - NEEDS_SHOWN} expanded={showAll} onToggle={() => setShowAll((v) => !v)} />
                 ) : null}
               </div>
             ) : (

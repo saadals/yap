@@ -23,13 +23,14 @@ import {
   matchesFilter,
   previewText,
   sideLabel,
+  threadAbout,
   threadContext,
 } from "./thread-meta";
 
 /**
  * The conversation list: filter chips (All · Unread, plus Ordering · Studio for accounts that do
- * both), then one row per conversation: who, the last message, when, an unread dot, and a quiet
- * line saying what it's about.
+ * both), then one row per conversation: who and when, what it's about (the order's title, then its
+ * kind), then the last message with an unread dot.
  */
 export function ThreadList({
   s,
@@ -155,8 +156,7 @@ function ThreadRow({
   const other = counterpart(s, thread, side);
   const last = lastMessage(thread);
   const isUnread = thread.unread.includes(side);
-  const context = threadContext(s, side, thread);
-  const about = [showSide ? sideLabel(side) : null, context?.kind ?? thread.subject].filter(Boolean).join(" · ");
+  const about = threadAbout(threadContext(s, side, thread), thread);
 
   return (
     <li className="y-inbox-rowwrap">
@@ -184,6 +184,12 @@ function ThreadRow({
               {last ? stamp(last.at) : ""}
             </span>
           </span>
+          {/* What it's about, title first: two conversations with one person differ here. */}
+          <span className="y-small truncate">
+            {showSide ? <span className="y-fg-2">{sideLabel(side)} · </span> : null}
+            {about.title}
+            {about.kind ? <span className="y-fg-2"> · {about.kind}</span> : null}
+          </span>
           <span className="flex items-center gap-2">
             <span className={`y-small min-w-0 flex-1 truncate ${isUnread ? "font-medium" : "y-fg-2"}`}>
               {previewText(last, side)}
@@ -195,7 +201,6 @@ function ThreadRow({
               </span>
             ) : null}
           </span>
-          <span className="y-micro y-fg-2 truncate">{about}</span>
         </span>
       </Link>
     </li>

@@ -13,9 +13,19 @@ import { paths } from "@/lib/paths";
 import { commissionById, requestById } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import { formatById, languageById } from "@/lib/taxonomy";
-import type { Commission } from "@/lib/types";
+import type { Commission, Role } from "@/lib/types";
 
 import { jobStatus, type Job, type NextAction } from "./helpers";
+
+/**
+ * Where "back" goes from a job: Jobs for the creator, the campaign for a brand's campaign slot,
+ * Orders otherwise. The page's own link (desktop) and the shell's phone header both use it.
+ */
+export function jobBack(c: Commission, side: Role): { href: string; label: string } {
+  if (side === "creator") return { href: paths.studioJobs(), label: "Jobs" };
+  if (c.source === "campaign" && c.requestId) return { href: paths.order(c.requestId), label: "Campaign" };
+  return { href: paths.orders(), label: "Orders" };
+}
 
 /* -------------------------------------------------------------------------- */
 /* Header                                                                      */
@@ -33,12 +43,7 @@ export function JobHeader({
 }) {
   const { commission: c, side, slot } = job;
   const status = jobStatus(c, side);
-  const back =
-    side === "creator"
-      ? { href: paths.studioJobs(), label: "Jobs" }
-      : slot && c.requestId
-        ? { href: paths.order(c.requestId), label: "Campaign" }
-        : { href: paths.orders(), label: "Orders" };
+  const back = jobBack(c, side);
   // Ad copy has no format, length or platform to show: what to write, and the language.
   const meta = (
     job.adCopy
@@ -61,7 +66,7 @@ export function JobHeader({
     <header className="flex flex-col gap-4 pb-5 md:pb-6">
       <Link
         href={back.href}
-        className="y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
+        className="y-backlink y-small y-fg-2 -ms-1 inline-flex w-fit items-center gap-1.5 rounded-full py-1 pe-2 font-medium hover:text-(--y-ink)"
       >
         <ArrowLeft size={16} aria-hidden className="y-flip" />
         {back.label}
@@ -216,24 +221,47 @@ export function ActionButtons({ action, where }: { action: NextAction | null; wh
   // Forms in the stage panel show their own button on desktop; the phone bar submits them.
   if (action.form && !bar) return null;
   const size = bar ? "md" : where === "strip" ? "sm" : "md";
-  const secondary = action.secondary ? (
-    action.secondary.href ? (
-      <PillButton href={action.secondary.href} variant="outline" size={size}>
-        {action.secondary.label}
-      </PillButton>
-    ) : (
-      <PillButton variant="outline" size={size} onClick={action.secondary.run}>
-        {action.secondary.label}
-      </PillButton>
-    )
-  ) : null;
+  // The phone bar uses the short labels so two buttons fit at 375px; the full label stays the name.
+  const words = (full: string, short?: string) =>
+    bar && short && short !== full ? { text: short, aria: full } : { text: full, aria: undefined };
+  const second = action.secondary;
+  const secondWords = second ? words(second.label, second.short) : null;
+  const secondary =
+    second && secondWords ? (
+      second.href ? (
+        <PillButton href={second.href} variant="outline" size={size} aria-label={secondWords.aria}>
+          {secondWords.text}
+        </PillButton>
+      ) : (
+        <PillButton variant="outline" size={size} onClick={second.run} aria-label={secondWords.aria}>
+          {secondWords.text}
+        </PillButton>
+      )
+    ) : null;
+  const main = words(action.label, action.short);
   const primary = action.form ? (
-    <PillButton type="submit" form={action.form} variant={action.variant} size={size} icon={action.icon} className={bar ? "flex-1" : ""}>
-      {action.label}
+    <PillButton
+      type="submit"
+      form={action.form}
+      variant={action.variant}
+      size={size}
+      icon={action.icon}
+      className={bar ? "flex-1" : ""}
+      aria-label={main.aria}
+    >
+      {main.text}
     </PillButton>
   ) : action.href ? (
-    <PillButton href={action.href} variant={action.variant} size={size} icon={action.icon} arrow={action.arrow && !bar} className={bar ? "flex-1" : ""}>
-      {action.label}
+    <PillButton
+      href={action.href}
+      variant={action.variant}
+      size={size}
+      icon={action.icon}
+      arrow={action.arrow && !bar}
+      className={bar ? "flex-1" : ""}
+      aria-label={main.aria}
+    >
+      {main.text}
     </PillButton>
   ) : (
     <PillButton
@@ -243,9 +271,9 @@ export function ActionButtons({ action, where }: { action: NextAction | null; wh
       arrow={action.arrow && !bar}
       onClick={action.run}
       className={bar && !action.waiting ? "flex-1" : ""}
-      aria-label={bar && action.waiting ? action.label : undefined}
+      aria-label={bar && action.waiting ? action.label : main.aria}
     >
-      {bar && action.waiting ? "Message" : action.label}
+      {bar && action.waiting ? "Message" : main.text}
     </PillButton>
   );
   return (
@@ -292,7 +320,7 @@ export function StickyStrip({
   );
 }
 
-/** Phones: the next step in a glass bar above the tab bar, always within thumb reach. */
+/** Phones: the next step in a glass bar at the bottom edge (the job page has no tab bar). */
 export function PhoneBar({ action }: { action: NextAction | null }) {
   if (!action) return null;
   return (

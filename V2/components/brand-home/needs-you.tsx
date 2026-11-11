@@ -1,48 +1,59 @@
 "use client";
 
-import { CheckCircle2, FilePen } from "lucide-react";
+import { CheckCircle2, FilePen, Megaphone, MessageSquareText, MessagesSquare, Star } from "lucide-react";
 import { useState } from "react";
 
 import { BusinessLogo } from "@/components/domain/business-logo";
+import { VideoThumb } from "@/components/domain/video-thumb";
 import { Block } from "@/components/ui/block";
-import { AvatarStack, FaceAvatar } from "@/components/ui/face-avatar";
-import { List } from "@/components/ui/list";
 import { type AttentionItem } from "@/lib/attention";
-import { plural } from "@/lib/format";
-import { businessById, campaignSlots, creatorById, requestById } from "@/lib/selectors";
+import { businessById, commissionById, isAdCopy, latestDelivery } from "@/lib/selectors";
 import { type DemoState, useDemo } from "@/lib/store";
+import { formatById, jobTypeById } from "@/lib/taxonomy";
 
 import { IconTile } from "./order-row";
 import { RowLink } from "./row-link";
 
 const SHOWN = 4;
 
+/**
+ * The row's lead shows the thing waiting, not the person (the creator's name is already in the
+ * title, and two rows about one creator would otherwise look the same): the delivered video as a
+ * small thumbnail, or an icon tile for ad copy, pitches, a shortlist, campaign review copies and
+ * drafts.
+ */
 function Lead({ s, item }: { s: DemoState; item: AttentionItem }) {
-  if (item.kind === "review-copies" && item.requestId) {
-    const request = requestById(s, item.requestId);
-    const people = request
-      ? campaignSlots(s, request)
-          .map((view) => view.commission)
-          .filter((c) => c?.status === "delivered")
-          .map((c) => ({ id: c!.creatorId, name: creatorById(s, c!.creatorId)?.name ?? "" }))
-      : [];
-    if (people.length > 1)
+  const icon = (Icon: React.ComponentType<{ size?: number }>) => (
+    <IconTile>
+      <Icon size={18} />
+    </IconTile>
+  );
+  switch (item.kind) {
+    case "review-copies":
+      return icon(Megaphone);
+    case "pitches":
+      return icon(MessagesSquare);
+    case "shortlist":
+      return icon(Star);
+    case "draft":
+      return icon(FilePen);
+  }
+  const commission = item.commissionId ? commissionById(s, item.commissionId) : undefined;
+  if (commission) {
+    if (isAdCopy(commission)) return icon(jobTypeById["ad-copy"].icon);
+    const video = latestDelivery(commission)?.video;
+    // A vertical frame (a square one draws the wide scene), trimmed to 40×44 so the row keeps the
+    // height of its neighbours.
+    if (video)
       return (
-        <span className="flex w-10 items-center">
-          <AvatarStack people={people} size={25} max={2} />
+        <span aria-hidden className="grid h-11 w-10 flex-none place-items-center overflow-hidden rounded-(--y-r-sm)">
+          <VideoThumb video={video} frame="4:5" showHook={false} showMeta={false} decorative rounded={false} />
         </span>
       );
-    if (people.length) return <FaceAvatar id={people[0].id} name={people[0].name} size={40} />;
+    return icon(formatById[commission.brief.format]?.icon ?? MessageSquareText);
   }
-  if (item.creatorId) return <FaceAvatar id={item.creatorId} name={creatorById(s, item.creatorId)?.name ?? ""} size={40} />;
-  if (item.kind === "draft")
-    return (
-      <IconTile>
-        <FilePen size={18} />
-      </IconTile>
-    );
   const business = item.businessId ? businessById(s, item.businessId) : undefined;
-  return business ? <BusinessLogo business={business} size={40} /> : null;
+  return business ? <BusinessLogo business={business} size={40} /> : icon(MessageSquareText);
 }
 
 /** The action as a pill-shaped label (the whole row is the link, so this is not a second control). */
@@ -57,7 +68,7 @@ function ActionPill({ label, primary }: { label: string; primary: boolean }) {
 /**
  * Needs you: every action waiting on the ordering side (lib/attention.ts), most urgent first. The
  * first row's action is the screen's one green; the rest are soft. On phones only the first row
- * shows its action (under the text); the others are plain rows.
+ * shows its action (under the text); the others are plain rows. Four rows, then "Show n more".
  */
 export function NeedsYou({ items }: { items: AttentionItem[] }) {
   const s = useDemo();
@@ -78,37 +89,47 @@ export function NeedsYou({ items }: { items: AttentionItem[] }) {
   }
 
   const shown = expanded ? items : items.slice(0, SHOWN);
-  const hidden = items.length - shown.length;
+  const more = items.length - SHOWN;
   return (
-    <List label="Needs you">
-      {shown.map((item, index) => {
-        const primary = index === 0;
-        const pill = <ActionPill label={item.action} primary={primary} />;
-        return (
-          <RowLink
-            key={`${item.kind}-${item.commissionId ?? item.requestId ?? index}`}
-            href={item.href}
-            lead={<Lead s={s} item={item} />}
-            title={item.title}
-            meta={item.line}
-            wrap
-            ariaLabel={`${item.title}. ${item.line} ${item.action}`}
-            end={primary ? pill : <span className="max-sm:hidden">{pill}</span>}
-            phoneEnd={primary ? pill : undefined}
-            chevron={primary ? false : "phone"}
-          />
-        );
-      })}
-      {hidden > 0 ? (
-        <button
-          type="button"
-          role="listitem"
-          onClick={() => setExpanded(true)}
-          className="y-row y-small !min-h-12 justify-center font-medium"
-        >
-          Show {plural(hidden, "more thing", "more things")}
-        </button>
-      ) : null}
-    </List>
+    <Block tone="paper" pad="none" className="overflow-hidden">
+      <div role="list" aria-label="Needs you" className="y-list">
+        {shown.map((item, index) => {
+          const primary = index === 0;
+          const pill = <ActionPill label={item.action} primary={primary} />;
+          return (
+            <RowLink
+              key={`${item.kind}-${item.commissionId ?? item.requestId ?? index}`}
+              href={item.href}
+              lead={<Lead s={s} item={item} />}
+              title={item.title}
+              meta={item.line}
+              wrap
+              ariaLabel={`${item.title}. ${item.line} ${item.action}`}
+              end={primary ? pill : <span className="max-sm:hidden">{pill}</span>}
+              phoneEnd={primary ? pill : undefined}
+              chevron={primary ? false : "phone"}
+            />
+          );
+        })}
+      </div>
+      {more > 0 ? <ShowMore more={more} expanded={expanded} onToggle={() => setExpanded((v) => !v)} /> : null}
+    </Block>
+  );
+}
+
+/**
+ * "Show 3 more" / "Show fewer" under a list, inside its card: the same words and look on both Home
+ * pages (Studio Home imports it).
+ */
+export function ShowMore({ more, expanded, onToggle }: { more: number; expanded: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={expanded}
+      className="y-row y-small !min-h-12 justify-center border-t border-(--b-line) font-medium"
+    >
+      {expanded ? "Show fewer" : `Show ${more} more`}
+    </button>
   );
 }

@@ -30,7 +30,7 @@ import { actions, useDemo, useHydrated } from "@/lib/store";
 import type { Commission, Role } from "@/lib/types";
 
 import type { CompletedFlow } from "./completed";
-import { JobHeader, PhoneBar, StickyStrip } from "./header";
+import { JobHeader, PhoneBar, StickyStrip, jobBack } from "./header";
 import { cash, reveal, slotContext, unreadIds, type CommentFocus, type Job, type SheetName } from "./helpers";
 import { nextAction } from "./next-action";
 import { Rail } from "./rail";
@@ -52,22 +52,23 @@ export function JobPage({ id }: { id: string }) {
   const commission = commissionById(s, id);
   const side = commission ? sideOf(s, commission) : undefined;
 
+  // `detail` on every state (the skeleton and not-found too), so the tab bar never flashes.
   if (!hydrated) {
     return (
-      <AppShell>
+      <AppShell detail>
         <JobSkeleton />
       </AppShell>
     );
   }
   if (!commission || !side) {
     return (
-      <AppShell>
+      <AppShell detail>
         <Missing exists={Boolean(commission)} />
       </AppShell>
     );
   }
   return (
-    <AppShell mode={modeForSide(side)}>
+    <AppShell mode={modeForSide(side)} detail back={jobBack(commission, side)}>
       {/* `?comment=` / `?version=` are read with useSearchParams, which needs a boundary. */}
       <Suspense fallback={<JobSkeleton />}>
         <JobView key={`${commission.id}:${side}`} commission={commission} side={side} />
@@ -292,7 +293,7 @@ function JobView({ commission, side }: { commission: Commission; side: Role }) {
 
   return (
     <>
-      <Page className="pb-24 lg:pb-0">
+      <Page>
         <JobHeader job={job} action={action} actionsRef={actionsRef} />
 
         <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">

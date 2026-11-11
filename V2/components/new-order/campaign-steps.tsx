@@ -518,7 +518,9 @@ export function PayStep({ form, d, set, product, error, goTo }: CampaignStepProp
         <h2 id="q-c-summary" className="y-head">
           {form.title.trim()}
         </h2>
+        {/* Labels (some with "Change") keep their width; a long value, like two platforms, wraps. */}
         <KeyValues
+          className="grid-cols-[auto_minmax(0,1fr)]"
           rows={[
             { label: "Product", value: product?.name ?? "" },
             {

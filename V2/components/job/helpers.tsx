@@ -148,6 +148,8 @@ export type CommentFocus = { deliveryId: string; commentId?: string; key: number
 /** The single next step for the viewer: the header (desktop), the sticky strip and the phone bar show it. */
 export type NextAction = {
   label: string;
+  /** A shorter label for the phone bar only ("Approve · $300"); the full label becomes its aria-label. */
+  short?: string;
   variant: PillVariant;
   icon?: React.ReactNode;
   arrow?: boolean;
@@ -155,7 +157,8 @@ export type NextAction = {
   href?: string;
   /** Submits a form in the stage panel. The form shows its own button on desktop; the phone bar submits it. */
   form?: string;
-  secondary?: { label: string; run?: () => void; href?: string };
+  /** An outline button before the primary (header, strip and phone bar), so one green holds. */
+  secondary?: { label: string; short?: string; run?: () => void; href?: string };
   /** A waiting state: one line beside the (quiet) button on phones. */
   waiting?: string;
 };

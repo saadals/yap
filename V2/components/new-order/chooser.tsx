@@ -1,6 +1,6 @@
 "use client";
 
-import { MessagesSquare, Megaphone, RotateCcw, ShieldCheck, UserRound, X } from "lucide-react";
+import { Clock, MessagesSquare, Megaphone, RotateCcw, ShieldCheck, Smartphone, Tag, UserRound, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -12,12 +12,13 @@ import { paths } from "@/lib/paths";
 import { isAdCopy, me, startingPrice } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import {
+  BUDGET_MIN,
+  CAMPAIGN_DEADLINE_OPTIONS,
   CAMPAIGN_MAX_VIDEOS,
   CAMPAIGN_MIN_VIDEOS,
   ORDER_DEADLINE_OPTIONS,
   ORDER_OPEN_DAYS,
-  campaignPlatforms,
-  followerTiers,
+  PRICE_MIN_PER_YAPP,
   orderKinds,
 } from "@/lib/taxonomy";
 import type { Creator } from "@/lib/types";
@@ -29,19 +30,29 @@ import { median } from "./pitches-model";
 
 type Way = "creator" | "custom" | "campaign";
 
+/** One short fact on a card: how the price is set, how fast, or who posts it. */
+type Fact = { icon: React.ReactNode; text: string };
+
 type Option = {
   id: Way;
   title: string;
   body: string;
-  meta: string;
+  /** The three facts that differ between the ways, in the same order on every card. */
+  facts?: [Fact, Fact, Fact];
+  /** In place of the facts: one line about a named creator (`?creator=`, `?again=`). */
+  meta?: string;
   icon: React.ReactNode;
   href: string;
   cta: string;
 };
 
+/** "2–10 days", or "5 days" when both ends are the same. */
+const dayRange = (from: number, to: number) => (from === to ? plural(from, "day") : `${from}–${to} days`);
+
 /**
- * /orders/new without a type: "How do you want to work?" Three ways, in plain words, each with a
- * real number from the seed; a comparison behind a disclosure; one line on money. `?product=`,
+ * /orders/new without a type: "How do you want to work?" Three ways, in plain words, each with the
+ * three facts that differ between them (how the price is set, how fast, who posts it), from the
+ * seed and the constants; the full comparison behind a disclosure; one line on money. `?product=`,
  * `?creator=` and `?again=` (an earlier commission) carry through to whichever way is picked.
  */
 export function Chooser({ params }: { params: URLSearchParams }) {
@@ -62,17 +73,15 @@ export function Chooser({ params }: { params: URLSearchParams }) {
   const productId = product?.id ?? again?.brief.productId;
 
   const cheapest = Math.min(...others.map(startingPrice));
-  // Creators who could pick a campaign slot today: a verified account inside a follower tier.
-  const minFollowers = Math.min(...followerTiers.map((t) => t.min));
-  const canPick = others.filter((c) =>
-    (c.socials ?? []).some((a) => a.verified && campaignPlatforms.some((p) => p.id === a.platform) && a.followers >= minFollowers),
-  ).length;
   const shortest = ORDER_DEADLINE_OPTIONS[0];
   const longest = ORDER_DEADLINE_OPTIONS[ORDER_DEADLINE_OPTIONS.length - 1];
   const replyHours = Math.max(1, Math.round(median(others.map((c) => c.responseHours))));
   const days = others.flatMap((c) => c.packages.map((p) => p.deliveryDays));
   const fastest = Math.min(...days);
   const slowest = Math.max(...days);
+  const uploadRange = dayRange(CAMPAIGN_DEADLINE_OPTIONS[0], CAMPAIGN_DEADLINE_OPTIONS[CAMPAIGN_DEADLINE_OPTIONS.length - 1]);
+  // Short enough for one line in a third of the card (desktop) and for a phone.
+  const youPost: Fact = { icon: <Smartphone size={15} aria-hidden />, text: "You post it" };
   // Packages are for videos: ad copy is ordered again as a custom order, with the writer invited.
   const againAdCopy = again ? isAdCopy(again) : false;
   const repeatOfNamed = again && named && !againAdCopy && again.creatorId === named.id ? again.id : undefined;
@@ -91,8 +100,12 @@ export function Chooser({ params }: { params: URLSearchParams }) {
       : {
           id: "creator",
           title: "Pick a creator",
-          body: "Browse portfolios and order from one creator at their package price. It starts when they accept.",
-          meta: `Packages from ${money(cheapest)} · ${plural(others.length, "creator")} to choose from`,
+          body: "Browse portfolios and order from the creator you like. It starts when they accept.",
+          facts: [
+            { icon: <Tag size={15} aria-hidden />, text: `Packages from ${money(cheapest)}` },
+            { icon: <Clock size={15} aria-hidden />, text: `Delivered in ${dayRange(fastest, slowest)}` },
+            youPost,
+          ],
           icon: <UserRound size={20} aria-hidden />,
           href: paths.discover(),
           cta: "Browse creators",
@@ -101,7 +114,11 @@ export function Chooser({ params }: { params: URLSearchParams }) {
       id: "custom",
       title: orderKinds.custom.name,
       body: "Describe the video or the ad copy you need. Creators pitch an idea and a price, and you pick one.",
-      meta: `${plural(others.length, "creator")} could pitch · you set the budget and the deadline`,
+      facts: [
+        { icon: <Tag size={15} aria-hidden />, text: `Your budget, from ${money(BUDGET_MIN)}` },
+        { icon: <Clock size={15} aria-hidden />, text: `Pitches in about ${plural(replyHours, "hour")}` },
+        youPost,
+      ],
       icon: <MessagesSquare size={20} aria-hidden />,
       href: paths.newOrder({ type: "custom", product: productId, creator: named?.handle, again: again?.id }),
       cta: "Write the brief",
@@ -109,8 +126,13 @@ export function Chooser({ params }: { params: URLSearchParams }) {
     {
       id: "campaign",
       title: orderKinds.campaign.name,
-      body: `${CAMPAIGN_MIN_VIDEOS} or more creators each make a video and post it on their own account, at a price per Yapp you set. First come, first served.`,
-      meta: `${plural(canPick, "creator")} with verified accounts can pick · ${CAMPAIGN_MIN_VIDEOS} to ${CAMPAIGN_MAX_VIDEOS} Yapps`,
+      // Where a newcomer first meets the word, it says what one Yapp is.
+      body: `${CAMPAIGN_MIN_VIDEOS} or more creators each make a video, at a price per Yapp you set: a Yapp is one creator's video. First come, first served.`,
+      facts: [
+        { icon: <Tag size={15} aria-hidden />, text: `From ${money(PRICE_MIN_PER_YAPP)} a Yapp` },
+        { icon: <Clock size={15} aria-hidden />, text: `Due within ${uploadRange}` },
+        { icon: <Smartphone size={15} aria-hidden />, text: "Creators post it" },
+      ],
       icon: <Megaphone size={20} aria-hidden />,
       href: paths.newOrder({ type: "campaign", product: productId }),
       cta: "Set up the campaign",
@@ -178,11 +200,6 @@ export function Chooser({ params }: { params: URLSearchParams }) {
           </div>
         </div>
 
-        {tried && !chosen ? (
-          <p className="y-small mb-3 font-medium text-(--y-danger) md:hidden" role="status">
-            Pick one to continue.
-          </p>
-        ) : null}
         <div role="radiogroup" aria-label="How you want to work" className="flex flex-col gap-3">
           {options.map((option) => {
             const checked = choice === option.id;
@@ -200,7 +217,19 @@ export function Chooser({ params }: { params: URLSearchParams }) {
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="y-title">{option.title}</span>
                   <span className="y-body y-fg-2">{option.body}</span>
-                  <span className="y-small mt-2 font-medium">{option.meta}</span>
+                  {option.facts ? (
+                    // Stacked on phones; three aligned columns from md, so the cards compare at a glance.
+                    <span className="mt-2 grid gap-1.5 md:grid-cols-3 md:gap-x-4">
+                      {option.facts.map((fact) => (
+                        <span key={fact.text} className="y-small flex min-w-0 items-start gap-2 font-medium">
+                          <span className="y-fg-2 mt-[3px] flex-none">{fact.icon}</span>
+                          <span className="min-w-0">{fact.text}</span>
+                        </span>
+                      ))}
+                    </span>
+                  ) : (
+                    <span className="y-small mt-2 font-medium">{option.meta}</span>
+                  )}
                 </span>
                 <input
                   type="radio"
@@ -211,7 +240,9 @@ export function Chooser({ params }: { params: URLSearchParams }) {
                     setChoice(option.id);
                     setTried(false);
                   }}
-                  aria-label={`${option.title}. ${option.body}`}
+                  aria-label={`${option.title}. ${option.body} ${
+                    option.facts ? option.facts.map((fact) => fact.text).join(". ") : option.meta
+                  }.`}
                 />
               </label>
             );

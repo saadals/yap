@@ -78,7 +78,8 @@ html.dark body {
   /* Status. Text colours reach 4.5:1 on their own -soft fill, on white and on the canvas, so
      small chip text stays legible: the package's #16a34a and #e5483b (3.3:1 and 3.9:1) become
      the darker greens and reds below, and amber goes one step darker. The brand red stays for the
-     notification dot and urgent marks only (--y-red). --y-active-soft fills "moving" chips. */
+     notification dot and urgent marks only (--y-red). --y-active-soft and --y-active-fg were the
+     "moving" chip's look; V2 draws that chip grey for now (see the active badge rule). */
   --y-success: #0a7a33;
   --y-success-soft: rgb(52 240 108 / 0.14);
   --y-active-fg: #0b0b0c;
@@ -180,9 +181,13 @@ html.dark body {
   --y-detail-card: rgb(255 255 255 / 0.82);
   --y-detail-card-edge: inset 0 1px 0 rgb(255 255 255 / 0.8);
 
-  /* page */
+  /* page. --y-bar-h is the phone tab bar's height (every bottom offset reads it). --y-bar-bottom
+     is where a page's own phone action bar sits (`bottom: var(--y-bar-bottom)`): above the tab
+     bar here; at the bottom edge on pages without one (`.y-no-tabbar`, set by AppShell `focus` /
+     `detail` and by PublicShell without its bar). */
   --y-gutter: 12px;
-  --y-bar-h: 56px;
+  --y-bar-h: 60px;
+  --y-bar-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--y-bar-h) + 8px);
 
   color-scheme: light;
   background: var(--y-canvas);
@@ -265,6 +270,18 @@ html.dark .yapp {
 @media (min-width: 768px) {
   .yapp {
     --y-gutter: 24px;
+  }
+}
+
+/* A shell with no phone tab bar: action bars sit 10px above the safe area. */
+.yapp .y-no-tabbar {
+  --y-bar-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+/* Phones: when the header shows the page's back link (AppShell `back`), the page's own back link
+   (`.y-backlink`) hides, so there is one. Unlayered so it beats the link's display utility. */
+@media (max-width: 1023.98px) {
+  .yapp [data-header-back] .y-backlink {
+    display: none;
   }
 }
 
@@ -865,9 +882,13 @@ html.dark .yapp {
     background: var(--b-chip, var(--y-mist));
     color: var(--b-chip-fg, var(--y-ink));
   }
+  /* V2 only: a "moving" chip looks like the neutral chip (grey fill, ink text; its icon stays), so
+     lists don't read as mostly green. The owner's decision of 10 Nov 2026, a deviation from the
+     round 3 chip colours (answers item 51). Restoring the two old values (background:
+     var(--y-active-soft); color: var(--y-active-fg)) undoes it; the tokens are kept for that. */
   .yapp .y-badge[data-tone-badge="active"] {
-    background: var(--y-active-soft);
-    color: var(--y-active-fg);
+    background: var(--b-chip, var(--y-mist));
+    color: var(--b-chip-fg, var(--y-ink));
   }
   .yapp .y-badge[data-tone-badge="success"] {
     background: var(--y-success-soft);
@@ -1602,13 +1623,6 @@ html[data-reel-tone="light"] .yapp {
     opacity: 0;
   }
 }
-@keyframes y-tab-label {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
-}
-
 @layer components {
   .yapp .y-feed-col {
     position: relative;
@@ -2317,17 +2331,21 @@ html[data-reel-tone="light"] .yapp {
       0 6px 16px -6px rgb(20 20 40 / 0.12);
   }
 
-  /* The phone's glass tab bar. Icons follow the reel in view on the feed. */
+  /* The phone's glass tab bar: five equal columns, each an icon over an always-visible label.
+     The active tab is a dark pill the same size as the others, so nothing moves between tabs.
+     The stronger glass keeps the small labels legible over whatever scrolls behind (V2 never
+     shows the bar over a reel: Watch has none). */
   .yapp .y-tabbar {
     position: relative;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     align-items: center;
-    justify-content: space-between;
+    gap: 2px;
     height: var(--y-bar-h);
-    padding-inline: 7px;
+    padding-inline: 5px;
     border: 1px solid var(--reel-glass-line);
     border-radius: 22px;
-    background: var(--reel-glass);
+    background: var(--y-glass-strong);
     -webkit-backdrop-filter: var(--y-glass-blur);
     backdrop-filter: var(--y-glass-blur);
     box-shadow:
@@ -2346,24 +2364,27 @@ html[data-reel-tone="light"] .yapp {
     pointer-events: none;
     background: linear-gradient(180deg, rgb(255 255 255 / 0.22), rgb(255 255 255 / 0) 55%);
   }
+  .yapp .y-tabbar > li {
+    min-width: 0;
+  }
   .yapp .y-tab {
     position: relative;
-    display: inline-flex;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    height: 44px;
+    gap: 3px;
+    width: 100%;
+    height: 48px;
     min-width: 44px;
-    border-radius: 999px;
+    padding-inline: 2px;
+    border-radius: 17px;
     color: inherit;
-    font-size: 0.8125rem;
-    font-weight: 600;
     transition:
       background-color var(--y-dur-2) var(--y-ease),
-      padding var(--y-dur-2) var(--y-ease);
+      color var(--y-dur-2) var(--y-ease);
   }
   .yapp .y-tab[aria-current="page"] {
-    padding-inline: 12px 14px;
     background: var(--y-glossy-black);
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
     color: #fff;
@@ -2372,25 +2393,36 @@ html[data-reel-tone="light"] .yapp {
     background: var(--y-btn-light);
     color: #0b0b0c;
   }
-  .yapp .y-tab[aria-current="page"] .y-tab-label {
-    animation: y-tab-label 220ms var(--y-ease);
+  /* The icon (or the Me avatar) in a fixed 24px box, so the dot sits in one place on every tab. */
+  .yapp .y-tab-icon {
+    position: relative;
+    display: grid;
+    width: 24px;
+    height: 24px;
+    flex: none;
+    place-items: center;
+  }
+  .yapp .y-tab-label {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: 0;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .yapp .y-tab-dot {
     position: absolute;
-    top: 9px;
-    inset-inline-end: 11px;
+    top: -1px;
+    inset-inline-end: -3px;
     width: 8px;
     height: 8px;
     border-radius: 50%;
     background: var(--y-red);
     box-shadow: 0 0 0 1.5px #fff;
   }
-  .yapp .y-tab[aria-current="page"] .y-tab-dot {
-    inset-inline-start: 26px;
-    inset-inline-end: auto;
-  }
   .yapp .y-tab-me {
-    flex: none;
     display: inline-flex;
     border-radius: 999px;
     box-shadow: 0 0 0 1.5px #fff;
@@ -2641,21 +2673,6 @@ html[data-reel-tone="light"] .yapp {
   }
   html.dark .yapp .y-header {
     background: rgb(11 11 12 / 0.78);
-  }
-  .yapp .y-modepill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 34px;
-    padding-inline: 12px;
-    border-radius: 999px;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    color: var(--y-ink);
-    transition: background-color var(--y-dur-1) var(--y-ease);
-  }
-  .yapp .y-modepill:hover {
-    background: var(--y-mist);
   }
 
   /* ----------------------------------------------------- lists as rows */

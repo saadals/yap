@@ -37,6 +37,9 @@ export const SORTS: { value: WorkSort; label: string }[] = [
 
 export const MIN_PAY_STEPS = [0, 100, 200, 300, 500];
 
+/** How many custom orders a list marks "Top match". */
+const TOP_MATCHES = 3;
+
 export type WorkItem = {
   id: string;
   kind: WorkKind;
@@ -46,6 +49,12 @@ export type WorkItem = {
   business?: Business;
   /** Custom orders, with a creator profile: how well you fit (in your voice). */
   fit?: Fit;
+  /**
+   * One of the few custom orders that fit you best (unhidden, not pitched on yet), by the raw fit
+   * score. Rows say "Top match" instead of a percentage. Set across the whole list, so a row (and
+   * Studio Home's compact rows) can show it without knowing its position.
+   */
+  topMatch: boolean;
   invited: boolean;
   pitch?: Pitch;
   pitchCount: number;
@@ -123,6 +132,7 @@ export function workItems(s: DemoState): WorkItem[] {
           request: o.request,
           business: businessById(s, o.request.businessId),
           fit,
+          topMatch: false,
           invited: o.invited,
           pitch: o.pitch,
           pitchCount: o.pitchCount,
@@ -142,6 +152,7 @@ export function workItems(s: DemoState): WorkItem[] {
           jobType: jobTypeOf(request),
           request,
           business: businessById(s, request.businessId),
+          topMatch: false,
           invited: false,
           pitchCount: pitchesForRequest(s, request.id).length,
           hidden: hidden.includes(request.id),
@@ -165,6 +176,7 @@ export function workItems(s: DemoState): WorkItem[] {
         jobType: "video" as const,
         request,
         business: businessById(s, request.businessId),
+        topMatch: false,
         invited: false,
         pitchCount: 0,
         eligibility,
@@ -178,7 +190,21 @@ export function workItems(s: DemoState): WorkItem[] {
       };
     });
 
-  return [...custom, ...campaigns];
+  // "Top match": the custom orders that fit you best among those you can still act on (not hidden,
+  // not pitched on), by the raw fit. The sort score isn't used: it adds the invite bonus. Ties go
+  // to the newer order. Only with a creator profile (no fit without one).
+  const top = new Set(
+    custom
+      .filter((i) => i.fit && !i.hidden && !i.pitch)
+      .sort(
+        (a, b) =>
+          (b.fit?.score ?? 0) - (a.fit?.score ?? 0) || Date.parse(b.request.postedAt) - Date.parse(a.request.postedAt),
+      )
+      .slice(0, TOP_MATCHES)
+      .map((i) => i.id),
+  );
+
+  return [...custom.map((i) => (top.has(i.id) ? { ...i, topMatch: true } : i)), ...campaigns];
 }
 
 export type WorkFilters = {
@@ -295,14 +321,18 @@ export function openSummary(items: WorkItem[]): string {
   return `${plural(custom, "custom order")} and ${plural(campaigns, "UGC campaign")}`;
 }
 
-/** The single top reason a row shows ("92% fit · You speak English"). */
-export function fitLine(item: WorkItem): string | undefined {
+/** Said about you, not the order, so it would read the same on every row. */
+const BOOKED = creatorVoice("Booked right now");
+
+/**
+ * What a row says about fit, if anything: "Top match" on the few that fit you best, otherwise the
+ * first thing that's missing ("You haven't listed screen walkthroughs"), otherwise nothing. No
+ * percentage and no shared reason: those read the same on nearly every row. The full reasons are
+ * on the order's page ("Your fit").
+ */
+export function fitLine(item: WorkItem): { text: string; top: boolean } | undefined {
   if (!item.fit) return undefined;
-  // The most telling reason first: matching work in the portfolio, then the category.
-  const top =
-    item.fit.reasons.find((r) => r.includes("in your portfolio")) ??
-    item.fit.reasons.find((r) => r.startsWith("You work with")) ??
-    item.fit.reasons[0] ??
-    item.fit.gaps[0];
-  return top ? `${item.fit.score}% fit · ${top}` : `${item.fit.score}% fit`;
+  if (item.topMatch) return { text: "Top match", top: true };
+  const gap = item.fit.gaps.find((g) => g !== BOOKED);
+  return gap ? { text: gap, top: false } : undefined;
 }

@@ -1,18 +1,18 @@
 "use client";
 
 import { Download, FileText, FileVideo, Lock } from "lucide-react";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { VideoPlayer } from "@/components/domain/video-player";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { plural } from "@/lib/format";
-import { commentAuthor, openComments, requestedComments, visibleComments } from "@/lib/selectors";
+import { commentAuthor, commentPermissions, openComments, requestedComments, visibleComments } from "@/lib/selectors";
 import { useDemo } from "@/lib/store";
 import type { Aspect, Delivery, DeliveryComment, Video } from "@/lib/types";
 
-import { CommentItem, CommentsPanel } from "./comments";
-import { ago, versionStatus, type Job } from "./helpers";
+import { CommentComposer, CommentItem, CommentsPanel } from "./comments";
+import { ago, reveal, versionStatus, type Job } from "./helpers";
 
 type Seek = { at: number; key: number; id: string };
 
@@ -66,11 +66,42 @@ export function ReviewArea({
     if (owner && owner.atSec !== null) setSeek({ at: owner.atSec, key: (seek?.key ?? 0) + 1, id: delivery.id });
   }
 
+  const text = delivery.kind === "text" || !delivery.video;
+  const wide = delivery.video?.aspect === "16:9";
+  const playerRef = useRef<HTMLDivElement>(null);
+  // The comment list brings the highlighted comment into view; a tap that scrolled to the player
+  // (or a comment sent from the box under it) skips that once, so one scroll runs per tap.
+  const quiet = useRef(false);
+  const skipReveal = useCallback(() => {
+    const skip = quiet.current;
+    quiet.current = false;
+    return skip;
+  }, []);
+  // From md a vertical player is sticky beside its comments; below md (and for 16:9) it's above them.
+  const beside = () => !text && !wide && window.matchMedia("(min-width: 768px)").matches;
+
   const seekTo = (comment: DeliveryComment) => {
+    const changed = comment.id !== activeId;
     setActiveId(comment.id);
     const at = comment.atSec;
     if (at === null) return;
     setSeek((current) => ({ at, key: (current?.key ?? 0) + 1, id: delivery.id }));
+    if (beside()) return;
+    // Phones: show the player at that second instead of keeping the comment in view.
+    const el = playerRef.current;
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const top = parseFloat(getComputedStyle(el).scrollMarginTop) || 0;
+    const bar = document.querySelector(".job-bar")?.getBoundingClientRect().top ?? window.innerHeight;
+    if (box.top >= top - 1 && box.bottom <= bar) return;
+    if (changed) quiet.current = true;
+    reveal(el, "start");
+  };
+
+  const onSent = (id: string) => {
+    // The box sits under the player on phones: stay there to keep reviewing (the pin shows it).
+    if (!beside() && id !== activeId) quiet.current = true;
+    setActiveId(id);
   };
 
   // While making changes: what the brand sent with its request (older data: its open comments).
@@ -82,14 +113,18 @@ export function ReviewArea({
     : [];
   const exclude = requested.length ? new Set(requested.map((m) => m.id)) : undefined;
 
-  const text = delivery.kind === "text" || !delivery.video;
   const watermarked = Boolean(delivery.reviewCopy) && side === "business" && delivery.status !== "approved";
-  const wide = delivery.video?.aspect === "16:9";
+  // A vertical player gets the sticky column (job.css: its width follows the screen's height).
+  const vertical = !text && !wide;
   const grid = text
     ? "grid gap-6 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]"
     : wide
       ? "flex flex-col gap-6"
-      : `grid gap-6 ${size === "sm" ? "md:grid-cols-[minmax(0,260px)_minmax(0,1fr)]" : "md:grid-cols-[minmax(0,340px)_minmax(0,1fr)]"}`;
+      : "job-review grid gap-6";
+  // The box to write a comment: kept in reach in the right column (job.css), unless the comments
+  // are folded (finished jobs), where it stays inside the panel and shows when it's opened.
+  const perms = commentPermissions(commission, delivery, side);
+  const composer = !collapsed && perms.canComment;
 
   return (
     <div className="flex flex-col gap-6">
@@ -123,8 +158,15 @@ export function ReviewArea({
         </section>
       ) : null}
 
-      <div className={grid}>
-        <div className="relative min-w-0">
+      <div
+        className={grid}
+        data-size={vertical ? size : undefined}
+        style={vertical && delivery.video ? ({ "--job-aspect": String(ratio[delivery.video.aspect]) } as React.CSSProperties) : undefined}
+      >
+        <div
+          ref={playerRef}
+          className={`relative min-w-0 scroll-mt-[calc(var(--y-header-h)+12px)] ${vertical ? "job-player" : ""}`}
+        >
           {text ? (
             <CopyBlock delivery={delivery} />
           ) : delivery.video ? (
@@ -172,7 +214,22 @@ export function ReviewArea({
             exclude={exclude}
             collapsed={collapsed && !opened}
             title={requested.length ? "Other comments" : "Comments"}
+            composer={collapsed ? "inside" : "outside"}
+            skipReveal={skipReveal}
           />
+
+          {composer ? (
+            <div className="job-composer max-md:order-first">
+              <CommentComposer
+                key={delivery.id}
+                job={job}
+                delivery={delivery}
+                time={now}
+                timestamps={perms.canTimestamp && !text}
+                onSent={onSent}
+              />
+            </div>
+          ) : null}
 
           {job.slot && side === "business" ? null : text ? null : <Files files={delivery.files} watermarked={watermarked} />}
 

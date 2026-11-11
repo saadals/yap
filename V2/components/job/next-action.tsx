@@ -2,6 +2,7 @@ import { Download, FileText, MessageSquare, UploadCloud } from "lucide-react";
 
 import { weekdayDate } from "@/lib/format";
 import { paths } from "@/lib/paths";
+import { openComments } from "@/lib/selectors";
 
 import { cash, FORM, possessive, type Job, type NextAction } from "./helpers";
 
@@ -52,15 +53,26 @@ export function nextAction(job: Job, flow: Flow): NextAction | null {
         return message(`${creatorName} is working on ${job.noun} ${nextVersion}`);
       case "disputed":
         return message("Yapp support is on it");
-      case "delivered":
+      case "delivered": {
+        // Both decisions side by side: Request changes (outline) before the one green Approve. The
+        // count is the brand's own open comments on the latest version (they start ticked in the sheet).
+        const mine = job.latest ? openComments(job.latest).filter((m) => m.author === "business").length : 0;
+        const changes = {
+          label: mine ? `Request changes (${mine})` : "Request changes",
+          short: "Request changes",
+          run: () => job.openSheet("requestChanges"),
+        };
         return slot
-          ? { label: "Approve video", variant: "neon", arrow: true, run: () => job.openSheet("approve") }
+          ? { label: "Approve video", variant: "neon", arrow: true, run: () => job.openSheet("approve"), secondary: changes }
           : {
               label: `Approve and release ${cash(job.totals.total)}`,
+              short: `Approve · ${cash(job.totals.total)}`,
               variant: "neon",
               arrow: true,
               run: () => job.openSheet("approve"),
+              secondary: changes,
             };
+      }
       case "completed": {
         if (slot) {
           return {

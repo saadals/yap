@@ -23,7 +23,7 @@ better user experience/UI". V1 stays untouched as the reference; V2 is the same 
 
 | V2 | V1 | Why |
 | --- | --- | --- |
-| **Two modes on one account: Ordering and Studio** (`lib/mode.ts`). Ordering: Home, Discover, Orders, Library, Messages. Studio: Home, Find work, Jobs, Earnings, Messages. One tap switches ("Switch to Studio" / "Switch to ordering" in the header, with a count when the other side has something waiting) | One merged app: "Ordered / Making" toggles on Work, both sides mixed in alerts, feed and lists | Most people are one side most of the time. The closest products (Fiverr's "Switch to selling", Airbnb's "Switch to hosting") use one account with two modes. It keeps the PM's "one account, like Instagram" and removes a toggle from every screen. The owner chose the merged app for V1; V2 is where the alternative can be compared |
+| **Two modes on one account: Ordering and Studio** (`lib/mode.ts`). Ordering: Home, Discover, Orders, Library, Inbox. Studio: Home, Find work, Jobs, Earnings, Profile, Inbox. The switch ("Switch to Studio" / "Switch to ordering") is the first item of the account menu (desktop: the avatar; phones: Me), with a count on the avatar and a dot on Me when the other side has something waiting | One merged app: "Ordered / Making" toggles on Work, both sides mixed in alerts, feed and lists | Most people are one side most of the time. The closest products (Fiverr's "Switch to selling", Airbnb's "Switch to hosting") use one account with two modes. It keeps the PM's "one account, like Instagram" and removes a toggle from every screen. The owner chose the merged app for V1; V2 is where the alternative can be compared |
 | The mode is **in the URL**: `/studio/*` is Studio, the ordering pages are Ordering. An order (`/orders/[id]`) and a job (`/jobs/[id]`) are one URL for both sides and take the mode from your side of the deal. Messages, account and settings keep the mode the tab was last in | No modes | Links, notifications and Back always land in the right place, with no hidden state |
 | **Home is a "Today" page**, per mode: what needs you (one row per action, most urgent first, from `lib/attention.ts`), what's in progress, one way to start something new, and one discovery rail | Home was a reels feed; the dashboards were under Work | A brand's first question is "what do I need to do and where is my video", not "show me reels". The feed was good at one job, judging presenters, so it moved there (next row) |
 | **Watch** (`/discover/watch`): the full-screen vertical feed, creators' videos only, from Discover and from any video | Reels feed mixed videos, orders and campaigns | Watching is how you judge a presenter. Briefs are text and read better as lists (Find work) |
@@ -48,11 +48,11 @@ first". Copy still says "Yapp"; the logo says "yapping". Since 11 Nov V2 is ligh
 | --- | --- |
 | V2 is a separate app in `V2/` that reuses V1's `lib/` (copied, not imported) and V1's `components/ui` and `components/domain` (copied, restyled through CSS) | V1 must stay untouched and runnable; V2 must be free to change anything. Copying keeps both independent |
 | V2's browser storage never collides with V1's (same origin on GitHub Pages): localStorage/sessionStorage keys start with `yapp2-` (not `yapp-`, which V1's reset deletes), cookies are `yapp2_account`, `yapp2_theme`, `yapp2_logged_out` | Two demos on one origin |
-| Mode names: **Ordering** (`order`) and **Studio** (`studio`). Header switch: "Switch to Studio" / "Switch to ordering". The Studio header shows a "Studio" tag beside the logo | "Studio" is what creator tools are called (YouTube Studio, TikTok Studio); "ordering" says what the other side does without assuming a company (Layla orders in her own name) |
+| Mode names: **Ordering** (`order`) and **Studio** (`studio`). The switch reads "Switch to Studio" / "Switch to ordering" and lives in the account menu, not the header (design fixes, 10 Nov: it sat on every screen and read as a location on phones). The Studio header shows a "Studio" tag beside the logo | "Studio" is what creator tools are called (YouTube Studio, TikTok Studio); "ordering" says what the other side does without assuming a company (Layla orders in her own name) |
 | An account's starting mode: a personal account with a creator profile starts in Studio (Layla), everyone else in Ordering (Nour) (`defaultMode`) | Matches what each demo person mostly does |
 | Opening Studio without a creator profile shows the setup on Studio Home (never a dead end) | The switch is always available |
 | A non-owner opening an order sees it in Studio (as an opportunity); the owner sees it in Ordering | Looking at someone else's order is looking for work |
-| Phone tab bars: Ordering **Home · Discover · Orders · Inbox · Me**; Studio **Home · Find work · Jobs · Inbox · Me**. Inbox holds Messages and Alerts. Me (`/account`) holds the mode switch, the pages not in the bar, theme and demo tools | Five items; the money pages (Billing, Earnings) and Library are one tap from Home and Me |
+| Phone tab bars: Ordering **Home · Discover · Orders · Inbox · Me**; Studio **Home · Find work · Jobs · Inbox · Me**. Every tab shows its icon and its label in a fixed slot, so nothing moves between tabs. Inbox holds Messages and Alerts (on desktop too: the nav item is "Inbox" and there is no bell). Me (`/account`) holds the mode switch, the pages not in the bar, theme and demo tools | Five items; the money pages (Billing, Earnings) and Library are one tap from Home and Me |
 | The reels feed is **Watch**, creator videos only | See the table above |
 
 ## Routes
@@ -80,7 +80,7 @@ Every URL comes from `lib/paths.ts`. The names the store and seed data use (`pat
 - `useMode()` resolves explicit → route → remembered (sessionStorage `yapp2-mode`, per account) →
   `defaultMode(account)`.
 - `lib/attention.ts`: `attention(s, side)` lists what needs the account on one side (both Home pages
-  use it); `urgentCount(s, side)` is the mode switch's count.
+  use it); `urgentCount(s, side)` is the count on the avatar (and the dot on Me) for the other mode.
 
 ## Architecture
 
@@ -133,8 +133,8 @@ no emoji, no exclamation marks; lint is strict (React Compiler rules).
 Each area was built by one agent (the map is DESIGN.md's appendix). What they decided, and why.
 
 **Shell and modes (lead).** Full-width glass header aligned to the 1200px column; the active nav item
-is a quiet fill. The mode switch sits in the header (desktop: "Switch to Studio", phones: the
-target mode's name) with a count of tier 0–1 items waiting on the other side. Studio shows a
+is a quiet fill. The mode switch is the first tile of the account menu; a count of tier 0–1 items
+waiting on the other side shows on the avatar (desktop) and as a dot on Me (phones). Studio shows a
 "Studio" tag beside the logo. The account menu (`AccountMenuBody`) is one component for the
 desktop avatar sheet and the phone's Me page; demo tools are grouped in one quiet card.
 
@@ -160,7 +160,7 @@ desktop avatar sheet and the phone's Me page; demo tools are grouped in one quie
   `yapp2-billing-details`.
 
 **New order and direct order** (`components/new-order`, `direct-order`)
-- The chooser's three cards each carry a real number from the seed; one green Continue names
+- The chooser's three cards each carry three facts that differ (how the price is set, how fast, who posts it), from the seed and constants; one green Continue names
   where it goes ("Browse creators", "Describe the video", "Set up the campaign"). `?creator=` or
   `?again=` turns the first card into "Order from Layla (again)".
 - Focused-flow frame: the question is the page title; thin step segments you can jump back
@@ -193,8 +193,9 @@ desktop avatar sheet and the phone's Me page; demo tools are grouped in one quie
 - Steps that are forms (review, learnings, private rating, post link) keep their button in the
   form on desktop; the phone bar submits the same form, so only one green ever shows. Waiting
   states get a quiet "Message {name}" that focuses the composer.
-- Approve stays the green while reviewing; "Ask for changes (n)" sits under the notes with the
-  revisions left (V1 swapped the green to the changes button, which was unpredictable).
+- Approve stays the green while reviewing, and "Request changes (n)" is the outline button beside
+  it wherever the next step shows (header, sticky strip, phone bar); the revisions left sit under
+  the comments (V1 swapped the green to the changes button, which was unpredictable).
 - A finished job walks through review → save what you learned (suggested from the notes) → order
   again + Library, on the page; the learnings step only appears right after a review on that visit.
 - One timeline merges messages, events and versions (system messages that repeat an event are
@@ -353,6 +354,96 @@ saved before the port.
   order it runs on; Settings has Brand accounts (`#brand`) and no Appearance; comment lines in
   Messages link to the job at that version; removing a saved account on sign-in has Undo.
 
+## Design fixes (10 Nov 2026)
+
+The owner asked for a critique of V2's design, then for a plan to address all of it, and approved
+the plan (`~/.claude/plans/make-a-plan-to-polymorphic-hellman.md` on the owner's machine). The
+critique was written from screenshots of every main screen (signed out, Nour, Layla; 1440 and 390
+wide). What changed, and the decisions behind it. Everything is inside `V2/`.
+
+**Two earlier decisions changed, with the owner's sign-off:**
+- **The mode switch left the header.** It is the first tile of the account menu (the desktop
+  avatar sheet and the phone's Me page). Why: V2's own argument is that most people are one side
+  most of the time, yet the switch sat on every screen, and on phones "⇆ Studio" read as where you
+  are. `urgentCount` for the other side shows on the avatar and as a dot on the Me tab.
+- **"Moving" status chips are grey in V2** (`[data-tone-badge="active"]` in `app/globals.css`
+  matches the neutral chip). Why: lists read as mostly green and competed with the one green
+  action. This deviates from round 3 answers item 51 and is **for the sender to confirm**; the
+  `--y-active-*` tokens are untouched, so restoring the old rule undoes it. Done, needs-you and
+  negative chips keep the ruled colours.
+
+**Decided and not built:** real sample clips. The generated scenes stay (owner), so "judge a
+creator by watching" cannot be assessed in a design review.
+
+**Shell (`components/shell`, `app/globals.css`).**
+- `AppShell` props: `focus` (flows: no tab bar and a minimal header, logo plus avatar on desktop,
+  logo only on phones), `detail` (one thing's own page: no tab bar, normal header, phone padding
+  for exactly one action bar), `back` (`{ href, label }`: the phone header shows it in place of
+  the logo, and any in-page link with class `y-backlink` hides below 1024px). `detail` is used by
+  `/jobs/[id]`, `/orders/[id]`, `/creators/[handle]` (through `BrowseShell`'s passthrough), an
+  open conversation and Watch.
+- **One bottom bar per phone screen.** A page with an action bar has no tab bar. Every bar reads
+  `bottom: var(--y-bar-bottom)` (declared on `.yapp`; `.y-no-tabbar`, set by `focus` and `detail`,
+  lowers it to the screen edge). A new bar sits inside the shell's DOM and needs no spacer.
+- Phone tab bar: five fixed slots, icon over a label that is always visible (`--y-bar-h` 60px).
+- Desktop nav: "Inbox" (was "Messages") with one count for unread threads plus unread alerts; the
+  bell and its sheet are gone (`NotificationList` stays for the Inbox's Alerts tab); Studio gains
+  **Profile**.
+- `dueSoon()` moved into `lib/attention.ts`, so `urgentCount` and Studio Home's "n things need you
+  today" agree.
+
+**Job page (`components/job`).**
+- The brand's review shows both decisions together: outline "Request changes (n)" beside the green
+  "Approve and release $X" (`secondary` on `nextAction()`); the phone bar uses short labels
+  ("Request changes", "Approve · $300") with the full ones as aria-labels.
+- A vertical player stays in view from 768px (sticky column, width capped by the viewport height
+  so the controls never fall off a short screen; at most 45% of the panel).
+- The comment box (`CommentComposer`) renders once in the review's right column: pinned to the
+  bottom from 1024px, directly under the player on phones. On a phone a tap on a time chip brings
+  the player into view.
+- The timeline shows the last five items; older ones sit behind "Show n earlier updates".
+
+**Homes and Inbox (`components/brand-home`, `studio-home`, `inbox`).**
+- Needs you rows lead with the thing: a 40px thumbnail of the delivered video, or an icon tile
+  (ad copy, pitches, shortlist, review copies, draft). Review copies say "Review".
+- In progress shows three rows, then "All orders n".
+- The right column leads with money: `MoneyCard` ("Held for work in progress", then "Last 30
+  days"; `figures-link.tsx` is gone). `StartOrder` is the full three-row card only when nothing is
+  waiting or the account is new; otherwise one row into the chooser.
+- Both homes say "Show n more" / "Show fewer" (`ShowMore` in `needs-you.tsx`).
+- The phone-only "New order" pill on `/orders` is gone (the header "+" is the one entry).
+- Inbox rows and the conversation header lead with the order's title (`threadAbout()` in
+  `inbox/thread-meta.ts`), so two conversations with one person are told apart.
+- "Read pitches" on Home opens the board's New tab (`?tab=new`), and a new-pitch alert opens that
+  pitch (`?pitch=`). The second is one line in `lib/store.ts`: **a V2-only change to keep in the
+  next merge with V1's `lib/`**.
+
+**Order flows and Discover (`components/new-order`, `discover`, `landing`).**
+- Discover uses the 1200px `Page` like every other page; `Page`'s `full` width is removed.
+- The flow bar spans the page: Back at the left edge, Continue at the right. Continue is never
+  dimmed; a click with something missing shows the errors, and the "To continue: …" hint shows on
+  phones too (red when it names what is missing).
+- The chooser's cards show three facts each, in the same order (price, speed, who posts).
+- On phones Discover hides its description and the unfiltered count (kept for screen readers).
+- "A Yapp is one creator's video" is said once on the chooser's campaign card, the landing's
+  campaign card and Find work's description. The word itself is unchanged.
+
+**Order owner and Find work (`components/order-owner`, `find-work`).**
+- The pitch board opens on Shortlist when one exists and nobody is hired (decided once per
+  visit); `?tab=` and `?pitch=` choose the tab explicitly.
+- A slot's "Posts on {platform} · tags {handle}" line shows only on campaigns with several
+  platforms.
+- Find work rows carry no fit percentage: the three best custom orders get "Top match"
+  (`WorkItem.topMatch`), other rows show what is missing, if anything. The hide button shows on
+  hover or keyboard focus with a mouse and not at all on touch (the opportunity page's ⋯ menu has
+  "Not interested"). Below 640px the filters are one "Filters" button and a sheet.
+
+**Left as found, worth knowing:** on the job page at 1440 the pinned comment box covers the end
+of a long first comment until you scroll; on a phone its text field sits behind the action bar
+until you scroll a little; a 40px video thumbnail on Home reads as a small scene, not obviously a
+video (a play glyph needs a `VideoThumb` change); on a touch tablet with "Show hidden" on, hidden
+rows' prices sit about 34px left of the others.
+
 ## QA
 
 ```bash
@@ -381,7 +472,27 @@ run where the seed has no suitable record (an open ad-copy order or a two-platfo
 Nour's, an approved ad copy). As in V1, a flow occasionally fails on its very first page load in a
 cold browser or under CPU load; rerun it before debugging.
 
-## Status (11 Nov 2026, after the round 3 stage 2 port)
+## Status (10 Nov 2026, after the design fixes)
+
+**The design fixes above are built and verified.** `typecheck` and `lint` are clean; `build`
+passes; `build:pages` exports 411 pages (407 routes). Served under `/yap/V2`, the sweep passes
+(67 routes × 3 sessions + 404s) and all 21 flows pass against the export (`discover`,
+`discover-mobile` and `public-account` on their second run: the first-page-load and Watch-swipe
+flakes). All 21 also pass against `next start`. Nine flows were updated for the deliberate
+changes (the header switch, Home, Orders, the job page's buttons, the pitch board's tab, the
+single-platform slot line). The lead re-took the critique's screenshots (signed out, Nour, Layla;
+1440×900 and 390×844) and read them against each finding.
+
+**Not verified in this round:** a real phone (the glass bars, safe areas and the sticky comment
+box were only seen in headless Chrome, which draws no backdrop blur), Safari, a touch tablet, a
+screen reader. Nothing was committed: the owner commits.
+
+**Waiting on someone:** the sender, to confirm grey "moving" chips (answers item 51).
+
+Everything below describes the state before the design fixes; where the two differ, the "Design
+fixes" section wins.
+
+## Status before the design fixes (after the round 3 stage 2 port)
 
 **Built and verified.** Every route in the table above plus `/productivity`, `/services` (and four
 service pages) and `/for/tech-teams`, both modes, desktop and phones, light only, on the stage 2

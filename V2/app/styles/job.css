@@ -19,9 +19,9 @@ html.dark .yapp .job-strip {
   }
 }
 
-/* Above the phone tab bar (which floats 10px over the safe area). */
+/* The phone action bar: at the bottom edge (the job page is an AppShell `detail` page, no tab bar). */
 .yapp .job-bar {
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 10px + var(--y-bar-h) + 8px);
+  bottom: var(--y-bar-bottom);
 }
 
 @media (min-width: 1024px) {
@@ -29,6 +29,57 @@ html.dark .yapp .job-strip {
   .yapp .job-rail {
     position: sticky;
     top: calc(var(--y-header-h) + 72px);
+  }
+}
+
+/* The review area with a vertical player (review-area.tsx). From 768px the player column stays in
+   view beside the comments. Its width follows the screen's height, so the frame plus its controls
+   always fit under the header (and the strip from 1024px): frame height = 100dvh - 232px. It
+   also never takes more than 45% of the row, so the comments keep room beside the rail at 1024px.
+   --job-aspect is the video's width / height (9:16 → 0.5625), set inline. */
+.yapp .job-review {
+  --job-player-max: 340px;
+}
+.yapp .job-review[data-size="sm"] {
+  --job-player-max: 260px;
+}
+@media (min-width: 768px) {
+  .yapp .job-review {
+    grid-template-columns:
+      minmax(0, min(var(--job-player-max), 45%, max(220px, calc((100dvh - 232px) * var(--job-aspect, 0.5625)))))
+      minmax(0, 1fr);
+  }
+  .yapp .job-player {
+    position: sticky;
+    top: calc(var(--y-header-h) + 16px);
+    align-self: start;
+  }
+}
+
+/* The comment box: under the player on phones (order-first in the markup), in the flow from 768px
+   (the phone bar is still shown below 1024px and would cover it), and from 1024px held at the
+   bottom of the screen while the comments above it scroll. Comments keep clear of it when a pin or
+   a deep link brings one into view. */
+@media (min-width: 1024px) {
+  .yapp .job-player {
+    top: calc(var(--y-header-h) + 72px);
+  }
+  .yapp .job-composer {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+    background: var(--b-bg, var(--y-paper));
+    border-top: 1px solid var(--b-line);
+    padding-block: 12px 16px;
+  }
+  .yapp .job-comment {
+    scroll-margin-bottom: 140px;
+  }
+  /* The one-line box beside a narrow column (1024px): the example ends in "…" instead of wrapping. */
+  .yapp .job-composer textarea::placeholder {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

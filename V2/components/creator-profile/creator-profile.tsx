@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 
-import { BrowseShell, useBottomBarOffset } from "@/components/discover/browse-shell";
+import { BrowseShell } from "@/components/discover/browse-shell";
 import { CreatorTile } from "@/components/discover/creator-tile";
 import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -39,7 +39,11 @@ export function CreatorProfilePage() {
   const own = Boolean(account && creator && me.creator(s)?.id === creator.id);
 
   return (
-    <BrowseShell mode={own ? "studio" : undefined}>
+    <BrowseShell
+      mode={own ? "studio" : undefined}
+      detail
+      back={own ? { href: paths.studioProfile(), label: "Your profile" } : { href: paths.discover(), label: "Find creators" }}
+    >
       <Page>
         {creator ? (
           // A different account (or creator) starts fresh: its own package selection.
@@ -58,7 +62,6 @@ function CreatorProfile({ creator, own }: { creator: Creator; own: boolean }) {
   const s = useDemo();
   const { account } = usePrefs();
   const signedIn = Boolean(account);
-  const barOffset = useBottomBarOffset();
   const packages = packagesInOrder(creator);
   // Starts on the cheapest package ("From $140"); Standard is marked as the most popular.
   const [selectedId, setSelectedId] = useState(packages[0]?.id ?? "");
@@ -88,7 +91,7 @@ function CreatorProfile({ creator, own }: { creator: Creator; own: boolean }) {
       {own ? null : (
         <Link
           href={paths.discover()}
-          className="y-small y-fg-2 -ms-1 mb-2 inline-flex min-h-9 w-fit items-center gap-1.5 rounded-full pe-2 font-medium hover:text-(--y-ink)"
+          className="y-backlink y-small y-fg-2 -ms-1 mb-2 inline-flex min-h-9 w-fit items-center gap-1.5 rounded-full pe-2 font-medium hover:text-(--y-ink)"
         >
           <ArrowLeft size={16} aria-hidden className="y-flip" />
           Find creators
@@ -150,9 +153,8 @@ function CreatorProfile({ creator, own }: { creator: Creator; own: boolean }) {
         </section>
       ) : null}
 
-      {/* Phones: the next step stays in reach, above the tab bar. */}
-      <div aria-hidden className="h-24 lg:hidden" />
-      <div className={`fixed inset-x-0 z-40 px-3 lg:hidden ${barOffset}`}>
+      {/* Phones: the next step stays in reach at the bottom edge (the shell leaves room for it). */}
+      <div className="fixed inset-x-0 bottom-(--y-bar-bottom) z-40 px-3 lg:hidden">
         <div className="y-bar mx-auto flex max-w-md items-center gap-3 rounded-full p-1.5 ps-5">
           {own ? (
             <>

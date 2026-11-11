@@ -46,6 +46,8 @@ export function CommentsPanel({
   exclude,
   collapsed = false,
   title = "Comments",
+  composer = "inside",
+  skipReveal,
 }: {
   job: Job;
   delivery: Delivery;
@@ -60,6 +62,10 @@ export function CommentsPanel({
   /** Start folded behind "Comments (n)" (finished jobs); opens itself for a requested comment. */
   collapsed?: boolean;
   title?: string;
+  /** "outside": the parent renders `CommentComposer` itself (the review area keeps it in reach). */
+  composer?: "inside" | "outside";
+  /** Asked before bringing the highlighted comment into view; true skips it once (the parent scrolled elsewhere). */
+  skipReveal?: () => boolean;
 }) {
   const s = useDemo();
   const { commission, side } = job;
@@ -83,9 +89,10 @@ export function CommentsPanel({
   // Bring the highlighted comment into view (a pin on the player, a time chip, ?comment=).
   useEffect(() => {
     if (!activeId) return;
+    if (skipReveal?.()) return;
     const node = listRef.current?.querySelector<HTMLElement>(`[data-comment="${activeId}"]`);
     if (node) reveal(node, "nearest");
-  }, [activeId, resolvedOpen, expanded]);
+  }, [activeId, resolvedOpen, expanded, skipReveal]);
 
   const closesAt = commentsCloseAt(commission);
   // Without a player (ad copy, the posting step) comments are general.
@@ -220,7 +227,9 @@ export function CommentsPanel({
       )}
 
       {perms.canComment ? (
-        <Composer key={delivery.id} job={job} delivery={delivery} time={time} timestamps={timestamps} onSent={onActivate} />
+        composer === "inside" ? (
+          <CommentComposer key={delivery.id} job={job} delivery={delivery} time={time} timestamps={timestamps} onSent={onActivate} />
+        ) : null
       ) : (
         <p className="y-micro y-fg-2">
           {closesAt
@@ -386,7 +395,7 @@ export function CommentItem({
   return (
     <li
       data-comment={comment.id}
-      className={`y-tile flex scroll-mt-[calc(var(--y-header-h)+80px)] flex-col gap-1.5 p-3 ${active ? "shadow-[inset_0_0_0_2px_var(--b-fg)]" : ""}`}
+      className={`y-tile job-comment flex scroll-mt-[calc(var(--y-header-h)+80px)] flex-col gap-1.5 p-3 ${active ? "shadow-[inset_0_0_0_2px_var(--b-fg)]" : ""}`}
     >
       <div className="flex min-w-0 items-center gap-2">
         <Avatar author={author} size={26} />
@@ -451,7 +460,7 @@ export function CommentItem({
             const view = commentAuthor(s, commission, r);
             const editingReply = editing?.replyId === r.id;
             return (
-              <li key={r.id} data-comment={r.id} className="flex flex-col gap-1">
+              <li key={r.id} data-comment={r.id} className="job-comment flex flex-col gap-1">
                 <div className="flex min-w-0 items-center gap-2">
                   <Avatar author={view} size={20} />
                   <span className="y-small min-w-0 truncate">
@@ -576,8 +585,11 @@ function Avatar({ author, size }: { author: CommentAuthorView; size: number }) {
   return <FaceAvatar id={author.name} name="" size={size} />;
 }
 
-/** The comment box: pinned to the playhead (tap the chip for a general comment), or general only. */
-function Composer({
+/**
+ * The comment box: pinned to the playhead (tap the chip for a general comment), or general only.
+ * `CommentsPanel` renders it last; the review area renders it itself to keep it in reach.
+ */
+export function CommentComposer({
   job,
   delivery,
   time,

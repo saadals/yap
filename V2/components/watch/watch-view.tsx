@@ -71,7 +71,7 @@ function Watch() {
   );
   if (account)
     return (
-      <AppShell fullscreen focus mode={own ? "studio" : undefined}>
+      <AppShell fullscreen detail mode={own ? "studio" : undefined}>
         {body}
       </AppShell>
     );

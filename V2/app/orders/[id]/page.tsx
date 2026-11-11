@@ -24,9 +24,10 @@ export default function OrderPage() {
   const hydrated = useHydrated();
   const request = requestById(s, id);
 
+  // `detail` on every state (no tab bar; the page's phone action bar sits at the bottom edge).
   if (!request) {
     return (
-      <AppShell>
+      <AppShell detail>
         <Page>
           {hydrated ? (
             <EmptyState
@@ -51,11 +52,15 @@ export default function OrderPage() {
 
   const owner = request.businessId === me.ids(s).businessId;
   return owner ? (
-    <AppShell mode="order">
+    <AppShell mode="order" detail back={{ href: paths.orders(), label: "Orders" }}>
       <OrderOwnerView request={request} />
     </AppShell>
   ) : (
-    <AppShell mode="studio">
+    <AppShell
+      mode="studio"
+      detail
+      back={{ href: request.kind === "campaign" && request.campaign ? paths.findWork({ kind: "campaign" }) : paths.findWork(), label: "Find work" }}
+    >
       <OpportunityView request={request} />
     </AppShell>
   );

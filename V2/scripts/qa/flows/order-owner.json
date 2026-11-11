@@ -16,6 +16,7 @@
     { "notText": "service fee" },
     { "shot": "order-owner-02-board" },
 
+    { "go": "/orders/r-101?tab=new", "after": 3500 },
     { "click": "Split screen race" },
     { "text": "Hire Jordan for $240" },
     { "text": "What clients said" },
@@ -97,7 +98,7 @@
     { "text": "Approves itself Sat, Nov 7" },
     { "text": "Request changes" },
     { "text": "7 of 10 slots picked" },
-    { "text": "Posts on TikTok · tags @daftar.app" },
+    { "notText": "Posts on TikTok · tags @daftar.app" },
     { "text": "3 open slots" },
     { "text": "$1,200 in all, nothing added on top" },
     { "text": "Held now $1,200" },

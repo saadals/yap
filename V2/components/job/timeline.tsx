@@ -137,7 +137,8 @@ function dayLabel(iso: string) {
   return weekdayDate(iso);
 }
 
-const SHOW = 10;
+/** The newest items shown; older ones fold behind "Show n earlier updates" once there are more than SHOW + 1. */
+const SHOW = 5;
 
 /** The composer's id: "Message …" buttons scroll to it and focus it. */
 export const COMPOSER_ID = "job-composer";
@@ -149,8 +150,9 @@ export function Timeline({ job }: { job: Job }) {
   const typing = useTyping(thread?.id);
   const [expanded, setExpanded] = useState(false);
   const items = buildTimeline(thread, c.events, c.deliveries, c.status === "offered" ? c.offerMessage : undefined);
-  // Collapse only when there's a real amount to hide: "Show 1 earlier update" helps nobody.
-  const hidden = expanded || items.length <= SHOW + 4 ? 0 : items.length - SHOW;
+  // Oldest first; the last SHOW items, so the message box is a short scroll below the stage panel.
+  // Collapse only when at least two would fold: "Show 1 earlier update" helps nobody.
+  const hidden = expanded || items.length <= SHOW + 1 ? 0 : items.length - SHOW;
   const shown = items.slice(hidden);
 
   // Mark the conversation read for this side while it's on screen.

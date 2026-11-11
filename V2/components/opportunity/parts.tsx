@@ -182,7 +182,7 @@ export function MoreMenu({
   );
 }
 
-/** The phone's sticky action bar, floating above the tab bar (glass). Hidden from 1024px. */
+/** The phone's sticky action bar (glass) at the bottom edge: the order page has no tab bar. Hidden from 1024px. */
 export function ActionBar({ children, label }: { children: React.ReactNode; label: string }) {
   return (
     <div role="region" aria-label={label} className="sw-actionbar y-bar">

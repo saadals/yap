@@ -66,7 +66,7 @@ export function Inbox() {
   const unreadAlerts = hydrated ? unreadNotificationCount(s) : 0;
 
   return (
-    <AppShell focus={open}>
+    <AppShell detail={open}>
       <Page>
         <div className={open ? "max-lg:hidden" : ""}>
           <PageHeader title="Inbox" className="!pb-3" />

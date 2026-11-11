@@ -112,7 +112,10 @@
       "eval": "location.pathname"
     },
     {
-      "text": "Switch to Studio"
+      "eval": "(() => { document.querySelectorAll('.qa-mode').forEach((e) => e.remove()); const m = document.querySelector('[data-mode]')?.dataset.mode; document.body.insertAdjacentHTML('beforeend', '<p class=qa-mode>qa-mode-' + m + '</p>'); return m; })()"
+    },
+    {
+      "text": "qa-mode-order"
     },
     {
       "notText": "Sign in to Yapp"
@@ -248,7 +251,10 @@
       "eval": "location.pathname"
     },
     {
-      "text": "Switch to ordering"
+      "eval": "(() => { document.querySelectorAll('.qa-mode').forEach((e) => e.remove()); const m = document.querySelector('[data-mode]')?.dataset.mode; document.body.insertAdjacentHTML('beforeend', '<p class=qa-mode>qa-mode-' + m + '</p>'); return m; })()"
+    },
+    {
+      "text": "qa-mode-studio"
     },
     {
       "account": "nour"

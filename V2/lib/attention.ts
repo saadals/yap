@@ -1,6 +1,7 @@
 /**
  * What needs the signed-in account, per side of the marketplace. Both Home pages list these, and
- * the mode switch shows a count for the side you're not looking at, so nothing waits unseen.
+ * the side you're not looking at shows a count (on the desktop avatar, the phone's Me tab and the
+ * account menu's mode switch), so nothing waits unseen.
  *
  * Ported from V1's components/work/needs-you.ts (which picked one item across both sides); V2
  * returns every item for one side, most urgent first:
@@ -81,6 +82,12 @@ export const agoLower = (iso: string) => {
 export const unreadPitches = (s: DemoState, requestId: string) =>
   pitchesForRequest(s, requestId).filter((p) => p.status === "sent");
 
+/**
+ * A version due within three days (or late) needs the creator now; one due later is simply in
+ * progress, so it isn't an attention item (Studio Home lists it under In progress).
+ */
+export const dueSoon = (c: Commission) => dueLabel(c.dueDate).urgency !== "ok";
+
 /** When a delivery in review approves itself if the business doesn't respond. */
 export const autoApproveAt = (c: Commission) =>
   c.autoApproveAt ??
@@ -127,7 +134,7 @@ function ordering(s: DemoState): AttentionItem[] {
       title:
         progress.review === 1 ? "A review copy is ready" : `${progress.review} review copies are ready`,
       line: `On “${request.title}”. Each one approves itself 3 days after upload.`,
-      action: progress.review === 1 ? "Review it" : "Review them",
+      action: "Review",
       href: paths.order(request.id),
       requestId: request.id,
       businessId: request.businessId,
@@ -169,7 +176,8 @@ function ordering(s: DemoState): AttentionItem[] {
       title: `${plural(unread.length, "new pitch", "new pitches")} to read`,
       line: `On “${request.title}”.`,
       action: "Read pitches",
-      href: paths.order(request.id),
+      // The board opens on the shortlist when there is one, so this row names the tab it means.
+      href: paths.order(request.id, { tab: "new" }),
       requestId: request.id,
       creatorId: unread[0].creatorId,
     });
@@ -278,7 +286,7 @@ function studio(s: DemoState): AttentionItem[] {
           : `Your ${moneyExact(commissionTotals(c).creatorEarns)} is released ${CAMPAIGN_RELEASE_DAYS} days after we verify the post.`,
         action: removed ? "See what to do" : "Post it",
       });
-    } else if (c.status === "in_progress") {
+    } else if (c.status === "in_progress" && dueSoon(c)) {
       out.push({
         ...base,
         kind: "deliver",
@@ -340,6 +348,6 @@ export function attention(s: DemoState, side: Role): AttentionItem[] {
   return items.sort((a, b) => a.tier - b.tier || a.at - b.at);
 }
 
-/** How many items on a side have someone waiting (tiers 0 and 1): the mode switch's count. */
+/** How many items on a side have someone waiting (tiers 0 and 1): the other mode's count, and Studio Home's "n things need you today". */
 export const urgentCount = (s: DemoState, side: Role) =>
   attention(s, side).filter((item) => item.tier <= 1).length;

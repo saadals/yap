@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, SearchX, Sparkles, X } from "lucide-react";
+import { ChevronDown, SearchX, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 
@@ -9,10 +9,11 @@ import { Block } from "@/components/ui/block";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Page, PageHeader } from "@/components/ui/page";
 import { PillButton } from "@/components/ui/pill-button";
+import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/toast";
-import { money } from "@/lib/format";
+import { money, plural } from "@/lib/format";
 import { paths, type OrderType } from "@/lib/paths";
 import { me, requestById } from "@/lib/selectors";
 import { actions, useDemo, useHydrated } from "@/lib/store";
@@ -53,6 +54,7 @@ export function FindWorkPage() {
   const toast = useToast();
   const [setupOpen, setSetupOpen] = useState(false);
   const [pickId, setPickId] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   if (!hydrated) return <FindWorkSkeleton />;
 
@@ -117,6 +119,44 @@ export function FindWorkPage() {
   );
   const minOptions = [...new Set([...MIN_PAY_STEPS, min])].sort((a, b) => a - b);
 
+  // The filters, drawn as a row from 640px and in the Filters sheet on phones. No job type on the
+  // campaign tab (campaigns are always video), no format for ad copy.
+  const filterSelects: SelectProps[] = [
+    ...(kind !== "campaign"
+      ? [
+          {
+            label: "Job type",
+            value: job ?? "",
+            onChange: (v: string) => go({ job: v || undefined, format: v === "ad-copy" ? undefined : format }),
+            options: [{ value: "", label: "Any job type" }, ...jobTypes.map((j) => ({ value: j.id, label: j.name }))],
+          },
+        ]
+      : []),
+    ...(job !== "ad-copy"
+      ? [
+          {
+            label: "Format",
+            value: format ?? "",
+            onChange: (v: string) => go({ format: v || undefined }),
+            options: [{ value: "", label: "Any format" }, ...formatOptions.map((f) => ({ value: f.id, label: f.name }))],
+          },
+        ]
+      : []),
+    {
+      label: "Language",
+      value: lang ?? "",
+      onChange: (v: string) => go({ lang: v || undefined }),
+      options: [{ value: "", label: "Any language" }, ...languageOptions.map((l) => ({ value: l.id, label: l.name }))],
+    },
+    {
+      label: "Minimum pay",
+      value: String(min),
+      onChange: (v: string) => go({ min: Number(v) || undefined }),
+      options: minOptions.map((m) => ({ value: String(m), label: m ? `${money(m)}+ pay` : "Any pay" })),
+    },
+  ];
+  const activeFilters = [job, format, lang, min].filter(Boolean).length;
+
   const tabHref = (k?: OrderType) =>
     paths.findWork({
       kind: k,
@@ -134,8 +174,8 @@ export function FindWorkPage() {
         title="Find work"
         description={
           creator
-            ? "Custom orders to pitch on and UGC campaigns to pick from, best fit first. Every price shows what you earn."
-            : "Custom orders to pitch on and UGC campaigns to pick from. Look around, then set up your profile to take one on."
+            ? "Custom orders to pitch on and UGC campaigns that pay per Yapp (a Yapp is one creator's video), best fit first. Every price shows what you earn."
+            : "Custom orders to pitch on and UGC campaigns that pay per Yapp (a Yapp is one creator's video). Look around, then set up your profile to take one on."
         }
       />
 
@@ -168,36 +208,29 @@ export function FindWorkPage() {
         ]}
       />
 
-      <div className="flex flex-col gap-3 pt-4 pb-4 md:flex-row md:items-center md:justify-between">
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center" role="group" aria-label="Filters">
-          {kind !== "campaign" ? (
-            <PillSelect
-              label="Job type"
-              value={job ?? ""}
-              onChange={(v) => go({ job: v || undefined, format: v === "ad-copy" ? undefined : format })}
-              options={[{ value: "", label: "Any job type" }, ...jobTypes.map((j) => ({ value: j.id, label: j.name }))]}
-            />
+      {/* Phones: one Filters button (with how many are set) beside the sort; the selects are in a
+          sheet. From 640px: the selects in a row, then the sort. */}
+      <div className="flex items-center justify-between gap-2 pt-4 pb-4 sm:flex-col sm:items-stretch sm:justify-start sm:gap-3 md:flex-row md:items-center md:justify-between">
+        <button
+          type="button"
+          className="sw-filterbtn sm:hidden"
+          data-set={activeFilters > 0 || undefined}
+          aria-haspopup="dialog"
+          onClick={() => setFiltersOpen(true)}
+        >
+          <SlidersHorizontal size={15} aria-hidden />
+          Filters
+          {activeFilters ? (
+            <span className="sw-count">
+              {activeFilters}
+              <span className="sr-only"> set</span>
+            </span>
           ) : null}
-          {job !== "ad-copy" ? (
-            <PillSelect
-              label="Format"
-              value={format ?? ""}
-              onChange={(v) => go({ format: v || undefined })}
-              options={[{ value: "", label: "Any format" }, ...formatOptions.map((f) => ({ value: f.id, label: f.name }))]}
-            />
-          ) : null}
-          <PillSelect
-            label="Language"
-            value={lang ?? ""}
-            onChange={(v) => go({ lang: v || undefined })}
-            options={[{ value: "", label: "Any language" }, ...languageOptions.map((l) => ({ value: l.id, label: l.name }))]}
-          />
-          <PillSelect
-            label="Minimum pay"
-            value={String(min)}
-            onChange={(v) => go({ min: Number(v) || undefined })}
-            options={minOptions.map((m) => ({ value: String(m), label: m ? `${money(m)}+ pay` : "Any pay" }))}
-          />
+        </button>
+        <div className="hidden gap-2 sm:flex sm:flex-wrap sm:items-center" role="group" aria-label="Filters">
+          {filterSelects.map((f) => (
+            <PillSelect key={f.label} {...f} />
+          ))}
           {filtered ? (
             <button
               type="button"
@@ -258,6 +291,35 @@ export function FindWorkPage() {
         </div>
       ) : null}
 
+      {/* Phones: the same filters with visible labels; each applies as you pick it. */}
+      <Sheet
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        title="Filters"
+        width="sm"
+        footer={
+          <div className="flex items-center justify-between gap-3 pb-3 md:pb-0">
+            <PillButton variant="ghost" onClick={clearFilters} disabled={!filtered}>
+              Clear
+            </PillButton>
+            <PillButton variant="contrast" onClick={() => setFiltersOpen(false)} disabled={list.length === 0} aria-live="polite">
+              {list.length ? `Show ${plural(list.length, "result")}` : "Nothing matches"}
+            </PillButton>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-4 pt-1">
+          {filterSelects.map((f) => (
+            <div key={f.label} className="flex flex-col gap-1.5">
+              <span className="y-small font-medium" aria-hidden>
+                {f.label}
+              </span>
+              <PillSelect {...f} className="w-full" />
+            </div>
+          ))}
+        </div>
+      </Sheet>
+
       <CreatorSetupSheet
         open={setupOpen}
         reason="to pitch on custom orders and pick UGC campaign Yapps"
@@ -279,6 +341,13 @@ export function FindWorkPage() {
   );
 }
 
+type SelectProps = {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (value: string) => void;
+};
+
 /** A native select drawn as a pill (filled when a filter is set). */
 function PillSelect({
   label,
@@ -286,17 +355,15 @@ function PillSelect({
   options,
   onChange,
   neutral = false,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (value: string) => void;
+  className = "",
+}: SelectProps & {
   /** Never drawn as "set" (the sort always has a value). */
   neutral?: boolean;
+  className?: string;
 }) {
   const set = !neutral && value !== "" && value !== "0";
   return (
-    <span className="sw-select-wrap">
+    <span className={`sw-select-wrap ${className}`}>
       <select
         aria-label={label}
         className="sw-select"

@@ -12,6 +12,7 @@
     { "shot": "order-owner-m01-board" },
     { "shot": "order-owner-m02-board-full", "full": true },
 
+    { "go": "/orders/r-101?tab=new", "after": 3500 },
     { "click": "Split screen race" },
     { "text": "Hire Jordan for $240" },
     { "shot": "order-owner-m03-pitch-sheet" },

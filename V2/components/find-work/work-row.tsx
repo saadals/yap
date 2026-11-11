@@ -57,10 +57,11 @@ function stateIcon(item: WorkItem): React.ReactNode {
 
 /**
  * One open custom order or UGC campaign: logo, title (the link), one meta line, then the listed
- * price with your net, the closing date, the fit (or campaign eligibility in words) and your own
- * state. A campaign you qualify for carries "Pick now · 3 of 10 left" (green: the one action Find
- * work repeats per campaign; it opens the pick sheet via `onPick`). "Not interested" and Pick now
- * sit above the stretched link.
+ * price with your net, the closing date, the fit ("Top match", or what's missing; campaigns:
+ * eligibility in words) and your own state. A campaign you qualify for carries "Pick now · 3 of 10
+ * left" (green: the one action Find work repeats per campaign; it opens the pick sheet via
+ * `onPick`). "Not interested" (on hover or focus, never on touch) and Pick now sit above the
+ * stretched link.
  */
 export function WorkRow({
   item,
@@ -74,11 +75,14 @@ export function WorkRow({
   onUnhide?: (item: WorkItem) => void;
   /** Campaign rows you qualify for: open the pick sheet. Without it the row only links. */
   onPick?: (item: WorkItem) => void;
-  /** Studio Today: no hide button, no meta line, no green (the count is plain text). */
+  /** Studio Today: no hide button, no meta line, no "Top match", no green (the count is plain text). */
   compact?: boolean;
 }) {
   const state = myState(item);
-  const fit = fitLine(item);
+  // Studio Today's rail is already "Work that fits you" (its best fits), so a "Top match" tag there
+  // would repeat on most rows; it still says what's missing.
+  const fitInfo = fitLine(item);
+  const fit = compact && fitInfo?.top ? undefined : fitInfo;
   const canHide = !compact && !item.pitch && !item.slot;
   const elig = item.eligibilityText;
   const brand = item.business?.name ?? "A brand";
@@ -138,10 +142,17 @@ export function WorkRow({
             </span>
           ) : null}
           {item.kind === "custom" && fit && !state ? (
-            <span className="inline-flex min-w-0 items-center gap-1.5">
-              <Sparkles size={15} aria-hidden className="flex-none" />
-              {fit}
-            </span>
+            fit.top ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5 font-medium">
+                <Sparkles size={15} aria-hidden className="flex-none" />
+                {fit.text}
+              </span>
+            ) : (
+              <span className="y-fg-2 inline-flex min-w-0 items-center gap-1.5">
+                <AlertCircle size={15} aria-hidden className="flex-none" />
+                {fit.text}
+              </span>
+            )
           ) : null}
           {item.invited && !item.pitch ? (
             <Badge tone="ink" icon={<MailOpen size={13} aria-hidden />}>
@@ -162,7 +173,10 @@ export function WorkRow({
         {pickButton("mt-2")}
       </div>
       {canHide ? (
-        <div className="sw-above -me-2 flex-none self-start">
+        // "Not interested" shows on hover or keyboard focus (at rest it would be the loudest thing
+        // in every row) and not at all on touch, where the order page's ⋯ menu has it. "Show
+        // again" on a hidden row always shows.
+        <div className={`sw-above -me-2 flex-none self-start ${item.hidden ? "" : "sw-hide"}`}>
           {item.hidden ? (
             <button
               type="button"
@@ -190,8 +204,8 @@ export function WorkRow({
           )}
         </div>
       ) : compact ? null : (
-        // Same width as the hide button, so prices line up down the list.
-        <div className="-me-2 hidden flex-none sm:block" aria-hidden>
+        // Same width as the hide button, so prices line up down the list (gone on touch, with it).
+        <div className="sw-hide-slot -me-2 hidden flex-none sm:block" aria-hidden>
           <span className="y-round invisible" data-size="sm" />
         </div>
       )}
